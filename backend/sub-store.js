@@ -10,7 +10,6 @@
  */
 
 const $ = API("sub-store");
-
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
@@ -22,9 +21,6 @@ if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
 // BACKEND API
 const $app = express();
 
-// subscriptions
-$app.get("/download/:name", downloadSub)
-
 $app.route("/sub/:name")
     .get(getSub)
     .patch(updateSub)
@@ -34,6 +30,9 @@ $app.route("/sub")
     .get(getAllSubs)
     .post(newSub)
     .delete(deleteAllSubs);
+
+// subscriptions
+$app.get("/download/:name", downloadSub);
 
 // collections
 $app.get("/download/collection/:name", downloadCollection);
@@ -53,7 +52,6 @@ $app.all("/", (req, res) => {
 $app.start();
 
 // SOME CONSTANTS
-const FALL_BACK_TARGET = "Raw";
 const DEFAULT_SUPPORTED_PLATFORMS = {
     QX: true,
     Loon: true,
@@ -405,7 +403,6 @@ function ProxyParser(targetPlatform) {
                         // skip unsupported proxies
                         // if proxy.supported is undefined, assume that all platforms are supported.
                         if (typeof proxy.supported === 'undefined' || proxy.supported[targetPlatform]) {
-                            delete proxy.supported;
                             result.push(proxy);
                             break;
                         }
@@ -418,9 +415,6 @@ function ProxyParser(targetPlatform) {
                 console.log(`ERROR: Failed to find a rule to parse line: \n${line}\n`);
             }
         }
-        if (result.length === 0) {
-            throw new Error(`ERROR: Input does not contains any valid node for platform ${targetPlatform}`)
-        }
         return result;
     }
 
@@ -429,7 +423,7 @@ function ProxyParser(targetPlatform) {
             if (p.targetPlatform === targetPlatform) {
                 return proxies.map(proxy => {
                     try {
-                        return p.output(proxy)
+                        return p.output(proxy);
                     } catch (err) {
                         console.log(`ERROR: cannot produce proxy: ${JSON.stringify(proxy)}\nReason: ${err}`);
                         return "";
@@ -1238,6 +1232,7 @@ function QX_Producer() {
 }
 
 function Loon_Producer() {
+    $.notify("LOON")
     const targetPlatform = "Loon";
     const output = (proxy) => {
         let obfs_opts, tls_opts;
@@ -1730,7 +1725,7 @@ function getPlatformFromHeaders(headers) {
     const keys = Object.keys(headers);
     let UA = "";
     for (let k of keys) {
-        if (k.match(/USER-AGENT/i)) {
+        if (/USER-AGENT/i.test(k)) {
             UA = headers[k];
             break;
         }
@@ -1743,7 +1738,7 @@ function getPlatformFromHeaders(headers) {
         return "Loon";
     } else {
         // browser
-        return FALL_BACK_TARGET;
+        return "Raw";
     }
 }
 
@@ -2078,6 +2073,10 @@ function express(port = 3000) {
     // dispatch url to route
     const dispatch = (request, start = 0) => {
         let {method, url, headers, body} = request;
+        if (/json/i.test(headers['Content-Type'])) {
+            body = JSON.parse(body);
+        }
+
         method = method.toUpperCase();
         const {path, query} = extractURL(url);
         let handler = null;
@@ -2093,6 +2092,7 @@ function express(port = 3000) {
             }
         }
         if (handler) {
+            $.notify(`DISPATCHING:`, `${method}, ${url}`, path);
             // dispatch to next handler
             const next = () => {
                 dispatch(method, url, i);
@@ -2106,7 +2106,7 @@ function express(port = 3000) {
             handler.callback(req, res, next).catch(err => {
                 res.status(500).json({
                     status: "failed",
-                    message: err
+                    message: "Internal Server Error"
                 });
             });
         } else {
