@@ -1,4 +1,4 @@
-# sub-store-web
+# web
 
 ## Project setup
 ```
