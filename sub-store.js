@@ -1322,7 +1322,7 @@ function Raw_Producer() {
 // force to set some properties (e.g., scert, udp, tfo, etc.)
 function SetPropertyOperator(key, val) {
     return {
-        name: "Set",
+        name: "Set Property Operator",
         func: proxies => {
             return proxies.map(p => {
                 p[key] = val;
