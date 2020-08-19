@@ -7,7 +7,7 @@ Core functionality:
 2. Subscription formatting.
 3. Collect multiple subscription in one URL.
 ## 1. Subscription Conversion
-### Supported input formats
+### Supported Input Formats
 - [x] SS URI
 - [x] SSR URI
 - [x] V2RayN URI
@@ -15,7 +15,7 @@ Core functionality:
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP)
 - [x] Surge (SS, VMess, Trojan, HTTP)
 
-### Supported target platforms
+### Supported Target Platforms
 - [x] QX
 - [x] Loon
 - [x] Surge
