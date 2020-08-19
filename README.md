@@ -42,3 +42,5 @@ Core functionality:
 - [x] **Regex delete operator**: delete by regex in proxy names.
 - [x] **Script operator**: modify proxy by script.
 
+## LICENSE
+This project is under the GPL V3 LICENSE.
