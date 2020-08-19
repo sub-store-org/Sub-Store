@@ -125,19 +125,27 @@ async function parseSub(sub, platform) {
     const $operator = ProxyOperator();
 
     for (const item of sub.process || []) {
+        if (item.type.indexOf("Script") !== -1) {
+            if (item.args && item.args[0].indexOf("http") !== -1) {
+                // if this is remote script
+                item.args[0] = await $.http.get(item.args[0]).then(resp => resp.body).catch(err => {
+                    throw new Error(`Error when downloading remote script: ${item.args[0]}.\n Reason: ${err}`);
+                });
+            }
+        }
         if (item.type.indexOf("Filter") !== -1) {
             const filter = AVAILABLE_FILTERS[item.type];
             if (filter) {
                 $filter.addFilters(filter(...(item.args || [])));
                 proxies = $filter.process(proxies);
-                console.log(`Applying filter "${item.type}" with arguments: ${item.args || "None"}`);
+                console.log(`Applying filter "${item.type}" with arguments:\n >>> ${item.args || "None"}`);
             }
         } else if (item.type.indexOf("Operator") !== -1) {
             const operator = AVAILABLE_OPERATORS[item.type];
             if (operator) {
                 $operator.addOperators(operator(...(item.args || [])));
                 proxies = $operator.process(proxies);
-                console.log(`Applying operator "${item.type}" with arguments: ${item.args || "None"}`);
+                console.log(`Applying operator "${item.type}" with arguments: \n >>> ${item.args || "None"}`);
             }
         }
     }
@@ -1481,12 +1489,7 @@ function RegexDeleteOperator(...regex) {
  1. This function name should be `func`!
  2. Always declare variable before using it!
  */
-function ScriptOperator(script, encoded = true) {
-    if (encoded) {
-        const Base64 = new Base64Code();
-        script = Base64.safeDecode(script);
-    }
-
+function ScriptOperator(script) {
     return {
         name: "Script Operator",
         func: (proxies) => {
@@ -1592,11 +1595,7 @@ function TypeFilter(...types) {
  1. This function name should be `func`!
  2. Always declare variable before using it!
  */
-function ScriptFilter(script, encoded = true) {
-    if (encoded) {
-        const Base64 = new Base64Code();
-        script = Base64.safeDecode(script);
-    }
+function ScriptFilter(script) {
     return {
         name: "Script Filter",
         func: (proxies) => {
