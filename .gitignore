@@ -1,6 +1,6 @@
 # json config
-sub-store.json
-root.json
+backend/sub-store.json
+backend/root.json
 
 # Logs
 logs
