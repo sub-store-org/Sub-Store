@@ -2,13 +2,16 @@ const $ = API("sub-store");
 
 // Constants
 const SUBS_KEY = "subs";
+const COLLECTIONS_KEY = "collections";
 
 // SOME INITIALIZATIONS
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
+if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
 
 // BACKEND API
 const $app = express();
 
+// subscriptions
 $app.get("/v1/download/:name", downloadSub)
 
 $app.route("/v1/sub/:name")
@@ -20,6 +23,17 @@ $app.route("/v1/sub")
     .get(getAllSubs)
     .post(newSub)
     .delete(deleteAllSubs);
+
+// collections
+$app.get("/v1/download/collection/:name", downloadCollection);
+$app.route("/v1/collection/:name")
+    .get(getCollection)
+    .patch(updateCollection)
+    .delete(deleteCollection);
+$app.route("/v1/collection")
+    .get(getAllCollections)
+    .post(newCollection)
+    .delete(deleteAllCollections);
 
 $app.all("/", (req, res) => {
     res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.")
@@ -68,58 +82,67 @@ async function downloadSub(req, res) {
     const allSubs = $.read(SUBS_KEY);
     if (allSubs[name]) {
         const sub = allSubs[name];
-        // download from url
-        const raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
+        try {
+            const output = await parseSub(sub, platform);
+            res.send(output);
+        } catch (err) {
             $.notify('[Sub-Store]', '❌ 无法获取订阅！', `错误信息：${err}`)
             res.status(500).json({
                 status: "failed",
                 message: err
             });
-        });
-        const $parser = ProxyParser(platform);
-        let proxies = $parser.parse(raw);
-
-        // filters
-        const $filter = ProxyFilter();
-        // create filters from sub conf
-        const userFilters = [];
-        for (const item of sub.filters || []) {
-            const filter = AVAILABLE_FILTERS[item.type];
-            if (filter) {
-                userFilters.push(filter(...(item.args || [])));
-                console.log(`Filter "${item.type}" added. Arguments: ${item.args || "None"}`);
-            }
         }
-        $filter.addFilters(...userFilters);
-
-        // operators
-        const $operator = ProxyOperator();
-        const userOperators = [];
-        for (const item of sub.operators || []) {
-            const operator = AVAILABLE_OPERATORS[item.type];
-            if (operator) {
-                userOperators.push(operator(...(item.args || [])));
-                console.log(`Operator "${item.type}" added. Arguments: ${item.args || "None"}`);
-            }
-        }
-        $operator.addOperators(...userOperators);
-
-        // process filters and operators
-        console.log("\nApplying filters...");
-        proxies = $filter.process(proxies);
-        console.log("\nApplying operators...");
-        proxies = $operator.process(proxies);
-
-        // convert to target platform and output
-        res.send($parser.produce(proxies));
     } else {
         res.status(404).json({
             status: "failed",
             message: `订阅${name}不存在！`
-        })
+        });
     }
 }
 
+async function parseSub(sub, platform) {
+    if (!sub) throw new Error("Subscription is undefined!")
+    // download from url
+    const raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
+        throw new Error(err);
+    });
+    const $parser = ProxyParser(platform);
+    let proxies = $parser.parse(raw);
+
+    // filters
+    const $filter = ProxyFilter();
+    // create filters from sub conf
+    const userFilters = [];
+    for (const item of sub.filters || []) {
+        const filter = AVAILABLE_FILTERS[item.type];
+        if (filter) {
+            userFilters.push(filter(...(item.args || [])));
+            console.log(`Filter "${item.type}" added. Arguments: ${item.args || "None"}`);
+        }
+    }
+    $filter.addFilters(...userFilters);
+
+    // operators
+    const $operator = ProxyOperator();
+    const userOperators = [];
+    for (const item of sub.operators || []) {
+        const operator = AVAILABLE_OPERATORS[item.type];
+        if (operator) {
+            userOperators.push(operator(...(item.args || [])));
+            console.log(`Operator "${item.type}" added. Arguments: ${item.args || "None"}`);
+        }
+    }
+    $operator.addOperators(...userOperators);
+
+    // process filters and operators
+    console.log("\nApplying filters...");
+    proxies = $filter.process(proxies);
+    console.log("\nApplying operators...");
+    proxies = $operator.process(proxies);
+    return $parser.produce(proxies)
+}
+
+// Subscriptions
 async function getSub(req, res) {
     const {name} = req.params;
     const sub = $.read(SUBS_KEY)[name];
@@ -130,14 +153,15 @@ async function getSub(req, res) {
         });
     } else {
         res.status(404).json({
-            status: "failed"
+            status: "failed",
+            message: `未找到订阅：${name}!`
         });
     }
 }
 
 async function newSub(req, res) {
     const sub = req.body;
-    const allSubs = $.read('subs');
+    const allSubs = $.read(SUBS_KEY);
     if (allSubs[sub.name]) {
         res.status(500).json({
             status: "failed",
@@ -147,7 +171,7 @@ async function newSub(req, res) {
     // validate name
     if (/^[\w-_]*$/.test(sub.name)) {
         allSubs[sub.name] = sub;
-        $.write(allSubs, 'subs');
+        $.write(allSubs, SUBS_KEY);
         res.status(201).json({
             status: "success",
             data: sub
@@ -163,14 +187,14 @@ async function newSub(req, res) {
 async function updateSub(req, res) {
     const {name} = req.params;
     let sub = req.body;
-    const allSubs = $.read('subs');
+    const allSubs = $.read(SUBS_KEY);
     if (allSubs[name]) {
         const newSub = {
             ...allSubs[name],
             ...sub
         };
         allSubs[name] = newSub;
-        $.write(allSubs, 'subs');
+        $.write(allSubs, SUBS_KEY);
         res.json({
             status: "success",
             data: newSub
@@ -187,7 +211,7 @@ async function deleteSub(req, res) {
     const {name} = req.params;
     let allSubs = $.read(SUBS_KEY);
     delete allSubs[name];
-    $.write(allSubs, "subs");
+    $.write(allSubs, SUBS_KEY);
     res.json({
         status: "success"
     });
@@ -202,7 +226,122 @@ async function getAllSubs(req, res) {
 }
 
 async function deleteAllSubs(req, res) {
-    $.write({}, "subs");
+    $.write({}, SUBS_KEY);
+    res.json({
+        status: "success"
+    });
+}
+
+// Collections
+async function downloadCollection(req, res) {
+    const {name} = req.params;
+    const collection = $.read(COLLECTIONS_KEY)[name];
+    const platform = getPlatformFromHeaders(req.headers);
+    if (collection) {
+        const subs = collection.subscriptions || [];
+        const output = await Promise.all(subs.map(async id => {
+            const sub = $.read(SUBS_KEY)[id];
+            try {
+                return parseSub(sub, platform);
+            } catch (err) {
+                console.log(`ERROR when process subscription: ${id}`);
+                return "";
+            }
+        }));
+        res.send(output.join("\n"));
+    } else {
+        $.notify('[Sub-Store]', `❌ 未找到订阅集：${name}！`)
+        res.status(404).json({
+            status: "failed",
+            message: `❌ 未找到订阅集：${name}！`
+        });
+    }
+}
+
+async function getCollection(req, res) {
+    const {name} = req.params;
+    const collection = $.read(COLLECTIONS_KEY)[name];
+    if (collection) {
+        res.json({
+            status: "success",
+            data: collection
+        });
+    } else {
+        res.status(404).json({
+            status: "failed",
+            message: `未找到订阅集：${name}!`
+        });
+    }
+}
+
+async function newCollection(req, res) {
+    const collection = req.body;
+    const allCol = $.read(COLLECTIONS_KEY);
+    if (allCol[collection.name]) {
+        res.status(500).json({
+            status: "failed",
+            message: `订阅集${collection.name}已存在！`
+        });
+    }
+    // validate name
+    if (/^[\w-_]*$/.test(collection.name)) {
+        allCol[collection.name] = collection;
+        $.write(allCol, COLLECTIONS_KEY);
+        res.status(201).json({
+            status: "success",
+            data: collection
+        });
+    } else {
+        res.status(500).json({
+            status: "failed",
+            message: `订阅集名称 ${collection.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`
+        })
+    }
+}
+
+async function updateCollection(req, res) {
+    const {name} = req.params;
+    let collection = req.body;
+    const allCol = $.read(COLLECTIONS_KEY);
+    if (allCol[name]) {
+        const newCol = {
+            ...allCol[name],
+            ...collection
+        };
+        allCol[name] = newCol;
+        $.write(allCol, COLLECTIONS_KEY);
+        res.json({
+            status: "success",
+            data: newCol
+        })
+    } else {
+        res.status(500).json({
+            status: "failed",
+            message: `订阅集${name}不存在，无法更新！`
+        });
+    }
+}
+
+async function deleteCollection(req, res) {
+    const {name} = req.params;
+    let allCol = $.read(COLLECTIONS_KEY);
+    delete allCol[name];
+    $.write(allCol, COLLECTIONS_KEY);
+    res.json({
+        status: "success"
+    });
+}
+
+async function getAllCollections(req, res) {
+    const allCols = $.read(COLLECTIONS_KEY);
+    res.json({
+        status: "success",
+        data: Object.keys(allCols)
+    });
+}
+
+async function deleteAllCollections(req, res) {
+    $.write({}, COLLECTIONS_KEY);
     res.json({
         status: "success"
     });
