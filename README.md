@@ -5,7 +5,7 @@ Subscription manager for QX, Loon and Surge.
 Core functionality:
 1. Conversion among various formats.
 2. Subscription formatting.
-3. Collect multiple subscription in one URL.
+3. Collect multiple subscriptions in one URL.
 ## 1. Subscription Conversion
 ### Supported Input Formats
 - [x] SS URI
