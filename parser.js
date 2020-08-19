@@ -83,7 +83,7 @@ async function downloadSub(req, res) {
         const $filter = ProxyFilter();
         // create filters from sub conf
         const userFilters = [];
-        for (const item of sub.filters) {
+        for (const item of sub.filters || []) {
             const filter = AVAILABLE_FILTERS[item.type];
             if (filter) {
                 userFilters.push(filter(...(item.args || [])));
@@ -95,7 +95,7 @@ async function downloadSub(req, res) {
         // operators
         const $operator = ProxyOperator();
         const userOperators = [];
-        for (const item of sub.operators) {
+        for (const item of sub.operators || []) {
             const operator = AVAILABLE_OPERATORS[item.type];
             if (operator) {
                 userOperators.push(operator(...(item.args || [])));
