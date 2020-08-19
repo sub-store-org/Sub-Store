@@ -1,0 +1,11 @@
+{
+  "name": "sub-store-backend",
+  "version": "0.0.1",
+  "description": "Advanced Subscription Manager for QX, Loon, and Surge.",
+  "main": "sub-store.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "GPL"
+}
