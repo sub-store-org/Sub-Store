@@ -1,62 +1,181 @@
-const $ = API("my-store");
+const $ = API("sub-store");
+
+// Constants
+const SUBS_KEY = "subs";
+
+// SOME INITIALIZATIONS
+if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
+
+// BACKEND API
+const $app = express();
+
+$app.get("/v1/download/:name", downloadSub)
+
+$app.route("/v1/sub/:name")
+    .get(getSub)
+    .patch(updateSub)
+    .delete(deleteSub);
+
+$app.route("/v1/sub")
+    .get(getAllSubs)
+    .post(newSub)
+    .delete(deleteAllSubs);
+
+$app.all("/", (req, res) => {
+    res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.")
+});
+
+$app.start();
 
 // SOME CONSTANTS
 const DEFAULT_SUPPORTED_PLATFORMS = {
     QX: true,
     Loon: true,
     Surge: true,
-    Clash: true
+    Node: true
 }
 
-const $parser = ProxyParser("QX");
+/**************************** API -- Subscriptions ***************************************/
+// download subscription, for APP only
+async function downloadSub(req, res) {
+    const {name} = req.params;
+    const allSubs = $.read(SUBS_KEY);
+    if (allSubs[name]) {
+        const sub = allSubs[name];
+        // download from url
+        const raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
+            $.notify('[Sub-Store]', '❌ 无法获取订阅！', `错误信息：${err}`)
+            res.status(500).json({
+                status: "failed",
+                message: err
+            });
+        });
+        const platform = getPlatformFromHeaders(req.headers);
+        const $parser = ProxyParser(platform);
+        let proxies = $parser.parse(raw);
 
-;(async () => {
-    // Test QX format
-    // const URL = "https://raw.githubusercontent.com/crossutility/Quantumult-X/master/server-complete.txt";
+        // filters
+        const $filter = ProxyFilter();
+        $filter.addFilters(
+            RegionFilter(['HK', 'TW', 'SG', 'US', 'JP']),
+            DiscardKeywordFilter("试用")
+        );
+        proxies = $filter.process(proxies);
 
-    // Test SS URI
-    // const URL = "https://gist.githubusercontent.com/Peng-YM/ace5e187b28dc90350df70a4d19d415a/raw/ad3b02a29eef46912aa45aeab4eddd4b90eb9cdb/server_complete.txt";
+        // operators
+        const $operator = ProxyOperator();
+        $operator.addOperators(
+            // SetPropertyOperator('tfo', true),
+            // SetPropertyOperator('udp', true),
+            FlagOperator(1),
+            KeywordRenameOperator([
+                {old: "Hong Kong", now: "HK"},
+                {old: "Japan", now: "JP"},
+                {old: "Taiwan", now: "TW"},
+                {old: "Singapore", now: "SG"},
+                {old: "USA", now: "US"}
+            ]),
+            KeywordSortOperator(['HK', 'TW', 'SG', 'US', 'JP']),
+        );
+        proxies = $operator.process(proxies);
+        res.send($parser.produce(proxies));
+    } else {
+        res.status(404).json({
+            status: "failed",
+            message: `订阅${name}不存在！`
+        })
+    }
+}
 
-    // Test Based64 encoded format
-    const URL = "http://127.0.0.1:8080/nex.list";
+async function getSub(req, res) {
+    const {name} = req.params;
+    const sub = $.read(SUBS_KEY)[name];
+    if (sub) {
+        res.json({
+            status: "success",
+            data: sub
+        });
+    } else {
+        res.status(404).json({
+            status: "failed"
+        });
+    }
+}
 
-    // Test Loon format
-    // const URL = "https://skapi.cool/sub?target=loon&url=https%3A%2F%2Fraw.githubusercontent.com%2Fcrossutility%2FQuantumult-X%2Fmaster%2Fserver-complete.txt&insert=false&config=https%3A%2F%2Fraw.githubusercontent.com%2FACL4SSR%2FACL4SSR%2Fmaster%2FClash%2Fconfig%2FACL4SSR_Online.ini&emoji=true&list=true&udp=false&tfo=false&scv=false&fdn=false&sort=false";
+async function newSub(req, res) {
+    const sub = req.body;
+    const allSubs = $.read('subs');
+    if (allSubs[sub.name]) {
+        res.status(500).json({
+            status: "failed",
+            message: `订阅${sub.name}已存在！`
+        });
+    }
+    // validate name
+    if (/^[\w-_]*$/.test(sub.name)) {
+        allSubs[sub.name] = sub;
+        $.write(allSubs, 'subs');
+        res.status(201).json({
+            status: "success",
+            data: sub
+        });
+    } else {
+        res.status(500).json({
+            status: "failed",
+            message: `订阅名称 ${sub.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`
+        })
+    }
+}
 
-    // Test Surge format
-    // const URL = "https://skapi.cool/sub?target=surge&ver=4&url=https%3A%2F%2Fraw.githubusercontent.com%2Fcrossutility%2FQuantumult-X%2Fmaster%2Fserver-complete.txt&insert=false&config=https%3A%2F%2Fraw.githubusercontent.com%2FACL4SSR%2FACL4SSR%2Fmaster%2FClash%2Fconfig%2FACL4SSR_Online.ini&emoji=true&list=true&udp=false&tfo=false&scv=false&fdn=false&sort=false";
+async function updateSub(req, res) {
+    const {name} = req.params;
+    let sub = req.body;
+    const allSubs = $.read('subs');
+    if (allSubs[name]) {
+        const newSub = {
+            ...allSubs[name],
+            ...sub
+        };
+        allSubs[name] = newSub;
+        $.write(allSubs, 'subs');
+        res.json({
+            status: "success",
+            data: newSub
+        })
+    } else {
+        res.status(500).json({
+            status: "failed",
+            message: `订阅${name}不存在，无法更新！`
+        });
+    }
+}
 
-    const raw = await $.http.get(URL).then(resp => resp.body);
+async function deleteSub(req, res) {
+    const {name} = req.params;
+    let allSubs = $.read(SUBS_KEY);
+    delete allSubs[name];
+    $.write(allSubs, "subs");
+    res.json({
+        status: "success"
+    });
+}
 
-    let proxies = $parser.parse(raw);
+async function getAllSubs(req, res) {
+    const allSubs = $.read(SUBS_KEY);
+    res.json({
+        status: "success",
+        data: Object.keys(allSubs)
+    });
+}
 
-    // filters
-    const $filter = ProxyFilter();
-    $filter.addFilters(
-        KeywordFilter(["Hong Kong", "Singapore", "USA", "Taiwan", "Japan"]),
-        DiscardKeywordFilter("[Premium]")
-    );
-    proxies = $filter.process(proxies);
+async function deleteAllSubs(req, res) {
+    $.write({}, "subs");
+    res.json({
+        status: "success"
+    });
+}
 
-    // operators
-    const $operator = ProxyOperator();
-    $operator.addOperators(
-        SetPropertyOperator('tfo', true),
-        FlagOperator(1),
-        SortOperator('asc'),
-        KeywordRenameOperator([
-            {old: "Hong Kong", now: "HK"},
-            {old: "Japan", now: "JP"},
-            {old: "Taiwan", now: "TW"},
-            {old: "Singapore", now: "SGP"}
-        ])
-    );
-    proxies = $operator.process(proxies);
-
-
-    console.log($parser.produce(proxies));
-})();
-
+/**************************** Proxy Handlers ***************************************/
 function ProxyParser(targetPlatform) {
     // parser collections
     const parsers = [];
@@ -161,8 +280,7 @@ function ProxyParser(targetPlatform) {
         return output.join("\n");
     }
 
-    /********************* PARSERS *******************************/
-
+    // Parsers
     addParsers(
         // URI format parsers
         URI_SS, URI_SSR, URI_VMess, URI_Trojan,
@@ -174,9 +292,9 @@ function ProxyParser(targetPlatform) {
         Surge_SS, Surge_VMess, Surge_Trojan, Surge_Http
     );
 
-    /********************* PRODUCERS *******************************/
+    // Producers
     addProducers(
-        QX_Producer, Loon_Producer, Surge_Producer, Clash_Producer
+        QX_Producer, Loon_Producer, Surge_Producer, Node_Producer
     );
 
     return {
@@ -234,18 +352,6 @@ function ProxyOperator() {
     return {addOperators, process}
 }
 
-function RuleParser(targetPlatform) {
-    // TODO
-}
-
-function RuleFilter() {
-    // TODO
-}
-
-function RuleOperator() {
-    // TODO
-}
-
 /**************************** URI Format ***************************************/
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
 // reference: https://shadowsocks.org/en/spec/SIP002-URI-Scheme.html
@@ -266,8 +372,11 @@ function URI_SS() {
         }
         content = content.split("#")[0]; // strip proxy name
 
-        proxy.server = content.match(/@([^\/]*)\//)[1].split(":")[0];
-        proxy.port = content.match(/@([^\/]*)\//)[1].split(":")[1];
+        // handle IPV4 and IPV6
+        const serverAndPort = content.match(/@([^\/]*)\//)[1];
+        const portIdx = serverAndPort.lastIndexOf(":");
+        proxy.server = serverAndPort.substring(0, portIdx);
+        proxy.port = serverAndPort.substring(portIdx + 1);
 
         const userInfo = Base64.safeDecode(content.split("@")[0]).split(":");
         proxy.cipher = userInfo[0];
@@ -325,15 +434,25 @@ function URI_SSR() {
 
     const func = (line) => {
         line = Base64.safeDecode(line.split("ssr://")[1]);
-        let params = line.split("/?")[0].split(":");
+
+        // handle IPV6 & IPV4 format
+        let splitIdx = line.indexOf(':origin');
+        if (splitIdx === -1) {
+            splitIdx = line.indexOf(":auth_");
+        }
+        const serverAndPort = line.substring(0, splitIdx);
+        const server = serverAndPort.substring(0, serverAndPort.lastIndexOf(":"));
+        const port = serverAndPort.substring(serverAndPort.lastIndexOf(":") + 1);
+
+        let params = line.substring(splitIdx + 1).split("/?")[0].split(":");
         let proxy = {
             type: "ssr",
-            server: params[0],
-            port: params[1],
-            protocol: params[2],
-            cipher: params[3],
-            obfs: params[4],
-            password: Base64.safeDecode(params[5]),
+            server,
+            port,
+            protocol: params[0],
+            cipher: params[1],
+            obfs: params[2],
+            password: Base64.safeDecode(params[3]),
             supported
         }
         // get other params
@@ -348,8 +467,8 @@ function URI_SSR() {
         proxy = {
             ...proxy,
             name: Base64.safeDecode(params.remarks),
-            "protocol-param": Base64.safeDecode(params.protoparam).replace(/\s/g, ""),
-            "obfs-param": Base64.safeDecode(params.obfsparam).replace(/\s/g, "")
+            "protocol-param": Base64.safeDecode(params.protoparam).replace(/\s/g, "") || "",
+            "obfs-param": Base64.safeDecode(params.obfsparam).replace(/\s/g, "") || ""
         }
         return proxy;
     }
@@ -901,9 +1020,9 @@ function QX_Producer() {
                     const {tls, host, path} = proxy['plugin-opts'];
                     obfs_opts = `,obfs=${tls ? 'wss' : 'ws'},obfs-host=${host}${path ? ',obfs-uri=' + path : ""}`;
                 }
-                return `shadowsocks=${proxy.server}:${proxy.port},method=${proxy.cipher},password=${proxy.password}${obfs_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name}`
+                return `shadowsocks = ${proxy.server}:${proxy.port}, method=${proxy.cipher}, password=${proxy.password}${obfs_opts}${proxy.tfo ? ", fast-open=true" : ", fast-open=false"}${proxy.udp ? ", udp-relay=true" : ", udp-relay=false"}, tag=${proxy.name}`
             case 'ssr':
-                return `shadowsocks=${proxy.server}:${proxy.port},method=${proxy.cipher},password=${proxy.password},ssr-protocol=${proxy.protocol},ssr-protocol-param=${proxy['protocol-param']},obfs=${proxy.obfs},obfs-host=${proxy['obfs-param']}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name}`
+                return `shadowsocks=${proxy.server}:${proxy.port},method=${proxy.cipher},password=${proxy.password},ssr-protocol=${proxy.protocol}${proxy['protocol-param'] ? ",ssr-protocol-param=" + proxy['protocol-param'] : ""}${proxy.obfs ? ",obfs=" + proxy.obfs : ""}${proxy['obfs-param'] ? ",obfs-host=" + proxy['obfs-param'] : ""}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name}`
             case 'vmess':
                 obfs_opts = "";
                 if (proxy.network === 'ws') {
@@ -1014,12 +1133,15 @@ function Surge_Producer() {
         }
         throw new Error(`Platform ${targetPlatform} does not support proxy type: ${proxy.type}`);
     }
-    return {targetPlatform, output}
+    return {targetPlatform, output};
 }
 
-function Clash_Producer() {
-    const targetPlatform = "Clash";
-    const output = proxy => JSON.stringify(proxy)
+function Node_Producer() {
+    const targetPlatform = "Node";
+    const output = (proxy) => {
+        return JSON.stringify(proxy);
+    }
+    return {targetPlatform, output};
 }
 
 /**************************** Operators ***************************************/
@@ -1073,7 +1195,7 @@ function SortOperator(order = 'asc') {
                 case "asc":
                 case 'desc':
                     return proxies.sort((a, b) => {
-                        let res = (a > b) ? -1 : 1;
+                        let res = (a.name > b.name) ? 1 : -1;
                         res *= order === 'desc' ? -1 : 1;
                         return res
                     })
@@ -1084,6 +1206,33 @@ function SortOperator(order = 'asc') {
             }
         }
     }
+}
+
+// sort by keywords
+function KeywordSortOperator(keywords) {
+    if (!(keywords instanceof Array)) keywords = [keywords];
+    return {
+        name: "Keyword Sort",
+        func: proxies => proxies.sort((a, b) => {
+            const oA = getKeywordOrder(keywords, a.name);
+            const oB = getKeywordOrder(keywords, b.name);
+            if (oA && !oB) return -1;
+            if (oB && !oA) return 1;
+            if (oA && oB) return oA < oB ? -1 : 1;
+            if ((!oA && !oB) || (oA && oB && oA === oB)) return a.name < b.name ? -1 : 1; // fallback to normal sort
+        })
+    }
+}
+
+function getKeywordOrder(keywords, str) {
+    let order = null;
+    for (let i = 0; i < keywords.length; i++) {
+        if (str.indexOf(keywords[i]) !== -1) {
+            order = i + 1; // plus 1 is important! 0 will be treated as false!!!
+            break;
+        }
+    }
+    return order;
 }
 
 // rename by keywords
@@ -1153,33 +1302,34 @@ function RegexDeleteOperator(regex) {
 
 // use base64 encoded script to rename
 /** Example script
- function rename(proxies) {
+ function func(proxies) {
     // do something
     return proxies;
  }
 
  WARNING:
- 1. This function name should be `rename`!
+ 1. This function name should be `func`!
  2. Always declare variable before using it!
  */
-function ScriptRenameOperator(script, encoded = true) {
+function ScriptOperator(script, encoded = true) {
     if (encoded) {
         const Base64 = new Base64Code();
         script = Base64.safeDecode(script);
     }
 
     return {
-        name: "Script Rename",
+        name: "Script Operator",
         func: (proxies) => {
             ;(function () {
                 eval(script);
-                return rename(proxies);
+                return func(proxies);
             })();
         }
     }
 }
 
 /**************************** Filters ***************************************/
+// filter by keywords
 function KeywordFilter(keywords) {
     if (!(keywords instanceof Array)) keywords = [keywords];
     return {
@@ -1201,6 +1351,40 @@ function DiscardKeywordFilter(keywords) {
     }
 }
 
+// filter useless proxies
+function UselessFilter() {
+    const KEYWORDS = ["流量", "时间", "应急", "过期", "Bandwidth", "expire"];
+    return {
+        name: "Useless Filter",
+        func: DiscardKeywordFilter(KEYWORDS).func
+    }
+}
+
+// filter by regions
+function RegionFilter(regions) {
+    if (!(regions instanceof Array)) regions = [regions];
+    const REGION_MAP = {
+        "HK": "🇭🇰",
+        "TW": "🇹🇼",
+        "US": "🇺🇸",
+        "SG": "🇸🇬",
+        "JP": "🇯🇵",
+        "UK": "🇬🇧",
+        "KR": "🇰🇷"
+    };
+    return {
+        name: "Region Filter",
+        func: (proxies) => {
+            // this would be high memory usage
+            return proxies.map(proxy => {
+                const flag = getFlag(proxy.name);
+                return regions.some(r => REGION_MAP[r] === flag);
+            })
+        }
+    }
+}
+
+// filter by regex
 function RegexFilter(regex) {
     if (!(regex instanceof Array)) regex = [regex];
     return {
@@ -1222,6 +1406,7 @@ function DiscardRegexFilter(regex) {
     }
 }
 
+// filter by proxy types
 function TypeFilter(types) {
     if (!(types instanceof Array)) types = [types];
     return {
@@ -1234,11 +1419,14 @@ function TypeFilter(types) {
 
 // use base64 encoded script to filter proxies
 /** Script Example
- function filter(proxies) {
+ function func(proxies) {
     const selected = FULL(proxies.length, true);
     // do something
     return selected;
  }
+ WARNING:
+ 1. This function name should be `func`!
+ 2. Always declare variable before using it!
  */
 function ScriptFilter(script, encoded = true) {
     if (encoded) {
@@ -1365,6 +1553,36 @@ function FULL(length, bool) {
     return [...Array(length).keys()].map(() => bool);
 }
 
+// UUID
+// source: https://stackoverflow.com/questions/105034/how-to-create-guid-uuid
+function UUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+// get platform form UA
+function getPlatformFromHeaders(headers) {
+    const keys = Object.keys(headers);
+    let UA = "";
+    for (let k of keys) {
+        if (k.match(/USER-AGENT/i)) {
+            UA = headers[k];
+            break;
+        }
+    }
+    if (UA.indexOf("Quantumult%20X") !== -1) {
+        return "QX";
+    } else if (UA.indexOf("Surge") !== -1) {
+        return "Surge";
+    } else if (UA.indexOf("Decar") !== -1) {
+        return "Loon";
+    } else {
+        return "Loon"
+    }
+}
+
 /*********************************** OpenAPI *************************************/
 // OpenAPI
 // prettier-ignore
@@ -1471,7 +1689,245 @@ function API(e = "untitled", t = !1) {
 }
 
 /*********************************** Mini Express *************************************/
-function express(){const t=[],e=["GET","POST","PUT","DELETE","PATCH","OPTIONS","HEAD'","ALL"],n=(e,s,h=0)=>{const{path:u,query:l}=function(t){const e=(t.match(/https?:\/\/[^\/]+(\/[^?]*)/)||[])[1]||"/",n=t.indexOf("?"),s={};if(-1!==n){let e=t.slice(t.indexOf("?")+1).split("&");for(let t=0;t<e.length;t++)hash=e[t].split("="),s[hash[0]]=hash[1]}return{path:e,query:s}}(s);let a,f=null;for(a=h;a<t.length;a++)if("ALL"===t[a].method||e===t[a].method){const{pattern:e}=t[a];if(r(e,u)){f=t[a];break}}if(f){const t=()=>{n(e,s,a)},r={method:e,url:s,path:u,query:l,params:i(f.pattern,u)},h=o();f.callback(r,h,t)}else{o().status("404").send("ERROR: 404 not found")}},s={};return e.forEach(e=>{s[e.toLowerCase()]=((n,s)=>{t.push({method:e,pattern:n,callback:s})})}),s.route=(n=>{const s={};return e.forEach(e=>{s[e.toLowerCase()]=(o=>(t.push({method:e,pattern:n,callback:o}),s))}),s}),s.start=(()=>{const{method:t,url:e}=$request;n(t,e)}),s;function o(){let t="200";const{isQX:e,isLoon:n,isSurge:s}=function(){const t="undefined"!=typeof $task,e="undefined"!=typeof $loon,n="undefined"!=typeof $httpClient&&!this.isLoon;return{isQX:t,isLoon:e,isSurge:n}}(),o={"Content-Type":"text/plain;charset=UTF-8"};return new class{status(e){return t=e,this}send(r=""){const i={status:t,body:r,headers:o};e?$done(...i):(n||s)&&$done({response:i})}end(){this.send()}html(t){this.set("Content-Type","text/html;charset=UTF-8"),this.send(t)}json(t){this.set("Content-Type","application/json;charset=UTF-8"),this.send(JSON.stringify(t))}set(t,e){return o[t]=e,this}}}function r(t,e){if(t instanceof RegExp&&t.test(e))return!0;if(-1===t.indexOf(":")){const n=e.split("/"),s=t.split("/");for(let t=0;t<s.length;t++)if(n[t]!==s[t])return!1;return!0}return!!i(t,e)}function i(t,e){if(-1===t.indexOf(":"))return null;{const n={};for(let s=0,o=0;s<t.length;s++,o++)if(":"===t[s]){let r=[],i=[];for(;"/"!==t[++s]&&s<t.length;)r.push(t[s]);for(;"/"!==e[o]&&o<e.length;)i.push(e[o++]);n[r.join("")]=i.join("")}else if(t[s]!==e[o])return null;return n}}}
+function express(port = 3000) {
+    const {isNode} = ENV();
+
+    // node support
+    if (isNode) {
+        const express_ = require("express");
+        const bodyParser = require("body-parser");
+        const app = express_();
+        app.use(bodyParser.json({verify: rawBodySaver}));
+        app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: true}));
+        app.use(bodyParser.raw({verify: rawBodySaver, type: '*/*'}));
+
+        // adapter
+        app.start = () => {
+            app.listen(port, () => {
+                console.log(`Express started on port: ${port}`);
+            })
+        }
+        return app;
+    }
+
+    // route handlers
+    const handlers = [];
+
+    // http methods
+    const METHODS_NAMES = [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS",
+        "HEAD'",
+        "ALL",
+    ];
+
+    // dispatch url to route
+    const dispatch = (request, start = 0) => {
+        let {method, url, headers, body} = request;
+        method = method.toUpperCase();
+        const {path, query} = extractURL(url);
+        let handler = null;
+        let i;
+
+        for (i = start; i < handlers.length; i++) {
+            if (handlers[i].method === "ALL" || method === handlers[i].method) {
+                const {pattern} = handlers[i];
+                if (patternMatched(pattern, path)) {
+                    handler = handlers[i];
+                    break;
+                }
+            }
+        }
+        if (handler) {
+            // dispatch to next handler
+            const next = () => {
+                dispatch(method, url, i);
+            };
+            const req = {
+                method, url, path, query,
+                params: extractPathParams(handler.pattern, path),
+                headers, body
+            };
+            const res = Response();
+            handler.callback(req, res, next).catch(err => {
+                res.status(500).json({
+                    status: "failed",
+                    message: err
+                });
+            });
+        } else {
+            // no route, return 404
+            const res = Response();
+            res.status("404").json({
+                status: "failed",
+                message: "ERROR: 404 not found"
+            });
+        }
+    };
+
+    const app = {};
+
+    // attach http methods
+    METHODS_NAMES.forEach((method) => {
+        app[method.toLowerCase()] = (pattern, callback) => {
+            // add handler
+            handlers.push({method, pattern, callback});
+        };
+    });
+
+    // chainable route
+    app.route = (pattern) => {
+        const chainApp = {};
+        METHODS_NAMES.forEach((method) => {
+            chainApp[method.toLowerCase()] = (callback) => {
+                // add handler
+                handlers.push({method, pattern, callback});
+                return chainApp;
+            };
+        });
+        return chainApp;
+    };
+
+    // start service
+    app.start = () => {
+        dispatch($request);
+    };
+
+    return app;
+
+    /************************************************
+     Utility Functions
+     *************************************************/
+    function rawBodySaver(req, res, buf, encoding) {
+        if (buf && buf.length) {
+            req.rawBody = buf.toString(encoding || 'utf8');
+        }
+    }
+
+    function Response() {
+        let statusCode = "200";
+        const {isQX, isLoon, isSurge} = ENV();
+        const headers = {
+            "Content-Type": "text/plain;charset=UTF-8",
+        };
+        return new (class {
+            status(code) {
+                statusCode = code;
+                return this;
+            }
+
+            send(body = "") {
+                const response = {
+                    status: statusCode,
+                    body,
+                    headers,
+                };
+                if (isQX) {
+                    $done(...response);
+                } else if (isLoon || isSurge) {
+                    $done({
+                        response,
+                    });
+                }
+            }
+
+            end() {
+                this.send();
+            }
+
+            html(data) {
+                this.set("Content-Type", "text/html;charset=UTF-8");
+                this.send(data);
+            }
+
+            json(data) {
+                this.set("Content-Type", "application/json;charset=UTF-8");
+                this.send(JSON.stringify(data));
+            }
+
+            set(key, val) {
+                headers[key] = val;
+                return this;
+            }
+        })();
+    }
+
+    function patternMatched(pattern, path) {
+        if (pattern instanceof RegExp && pattern.test(path)) {
+            return true;
+        } else {
+            // root pattern, match all
+            if (pattern === "/") return true;
+            // normal string pattern
+            if (pattern.indexOf(":") === -1) {
+                const spath = path.split("/");
+                const spattern = pattern.split("/");
+                for (let i = 0; i < spattern.length; i++) {
+                    if (spath[i] !== spattern[i]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            // string pattern with path parameters
+            else if (extractPathParams(pattern, path)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function extractURL(url) {
+        // extract path
+        const match = url.match(/https?:\/\/[^\/]+(\/[^?]*)/) || [];
+        const path = match[1] || "/";
+
+        // extract query string
+        const split = url.indexOf("?");
+        const query = {};
+        if (split !== -1) {
+            let hashes = url.slice(url.indexOf("?") + 1).split("&");
+            for (let i = 0; i < hashes.length; i++) {
+                hash = hashes[i].split("=");
+                query[hash[0]] = hash[1];
+            }
+        }
+        return {
+            path,
+            query,
+        };
+    }
+
+    function extractPathParams(pattern, path) {
+        if (pattern.indexOf(":") === -1) {
+            return null;
+        } else {
+            const params = {};
+            for (let i = 0, j = 0; i < pattern.length; i++, j++) {
+                if (pattern[i] === ":") {
+                    let key = [];
+                    let val = [];
+                    while (pattern[++i] !== "/" && i < pattern.length) {
+                        key.push(pattern[i]);
+                    }
+                    while (path[j] !== "/" && j < path.length) {
+                        val.push(path[j++]);
+                    }
+                    params[key.join("")] = val.join("");
+                } else {
+                    if (pattern[i] !== path[j]) {
+                        return null;
+                    }
+                }
+            }
+            return params;
+        }
+    }
+}
 
 /******************************** Base 64 *********************************************/
 // Base64 Coding Library
