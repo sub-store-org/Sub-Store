@@ -1,0 +1,27 @@
+{
+    "name": "The Name of Subscription",
+    "url": "The URL of Subscription",
+    "filters": [
+        {
+            "type": "Useless Filter"
+        },
+        {
+            "type": "Keyword Filter",
+            "args": ["IEPL", "IPLC"]
+        },
+        {
+            "type": "Region Filter",
+            "args": ["HK", "TW", "JP"]
+        }
+    ],
+    "operators": [
+        {
+            "type": "Flag Operator",
+            "args": [1]
+        },
+        {
+            "type": "Keyword Sort Operator",
+            "args": ["HK", "TW", "JP"]
+        }
+    ]
+}

@@ -28,17 +28,43 @@ $app.all("/", (req, res) => {
 $app.start();
 
 // SOME CONSTANTS
+const FALL_BACK_TARGET = "Loon";
 const DEFAULT_SUPPORTED_PLATFORMS = {
     QX: true,
     Loon: true,
     Surge: true,
     Node: true
 }
+const AVAILABLE_FILTERS = {
+    "Keyword Filter": KeywordFilter,
+    "Discard Keyword Filter": DiscardKeywordFilter,
+    "Useless Filter": UselessFilter,
+    "Region Filter": RegionFilter,
+    "Regex Filter": RegexFilter,
+    "Discard Regex Filter": DiscardRegexFilter,
+    "Type Filter": TypeFilter,
+    "Script Filter": ScriptFilter
+}
+
+const AVAILABLE_OPERATORS = {
+    "Set Property Operator": SetPropertyOperator,
+    "Flag Operator": FlagOperator,
+    "Sort Operator": SortOperator,
+    "Keyword Sort Operator": KeywordSortOperator,
+    "Keyword Rename Operator": KeywordRenameOperator,
+    "Keyword Delete Operator": KeywordDeleteOperator,
+    "Regex Rename Operator": RegexRenameOperator,
+    "Regex Delete Operator": RegexDeleteOperator,
+    "Script Operator": ScriptOperator
+}
 
 /**************************** API -- Subscriptions ***************************************/
 // download subscription, for APP only
 async function downloadSub(req, res) {
     const {name} = req.params;
+    const platform = getPlatformFromHeaders(req.headers);
+    console.log('=======================================')
+    console.log(`Downloading subscription: ${name}. Target platform ==> ${platform}\n`);
     const allSubs = $.read(SUBS_KEY);
     if (allSubs[name]) {
         const sub = allSubs[name];
@@ -50,34 +76,41 @@ async function downloadSub(req, res) {
                 message: err
             });
         });
-        const platform = getPlatformFromHeaders(req.headers);
         const $parser = ProxyParser(platform);
         let proxies = $parser.parse(raw);
 
         // filters
         const $filter = ProxyFilter();
-        $filter.addFilters(
-            RegionFilter(['HK', 'TW', 'SG', 'US', 'JP']),
-            DiscardKeywordFilter("试用")
-        );
-        proxies = $filter.process(proxies);
+        // create filters from sub conf
+        const userFilters = [];
+        for (const item of sub.filters) {
+            const filter = AVAILABLE_FILTERS[item.type];
+            if (filter) {
+                userFilters.push(filter(...(item.args || [])));
+                console.log(`Filter "${item.type}" added. Arguments: ${item.args || "None"}`);
+            }
+        }
+        $filter.addFilters(...userFilters);
 
         // operators
         const $operator = ProxyOperator();
-        $operator.addOperators(
-            // SetPropertyOperator('tfo', true),
-            // SetPropertyOperator('udp', true),
-            FlagOperator(1),
-            KeywordRenameOperator([
-                {old: "Hong Kong", now: "HK"},
-                {old: "Japan", now: "JP"},
-                {old: "Taiwan", now: "TW"},
-                {old: "Singapore", now: "SG"},
-                {old: "USA", now: "US"}
-            ]),
-            KeywordSortOperator(['HK', 'TW', 'SG', 'US', 'JP']),
-        );
+        const userOperators = [];
+        for (const item of sub.operators) {
+            const operator = AVAILABLE_OPERATORS[item.type];
+            if (operator) {
+                userOperators.push(operator(...(item.args || [])));
+                console.log(`Operator "${item.type}" added. Arguments: ${item.args || "None"}`);
+            }
+        }
+        $operator.addOperators(...userOperators);
+
+        // process filters and operators
+        console.log("\nApplying filters...");
+        proxies = $filter.process(proxies);
+        console.log("\nApplying operators...");
         proxies = $operator.process(proxies);
+
+        // convert to target platform and output
         res.send($parser.produce(proxies));
     } else {
         res.status(404).json({
@@ -1161,7 +1194,7 @@ function SetPropertyOperator(key, val) {
 // add or remove flag for proxies
 function FlagOperator(type) {
     return {
-        name: "Flag",
+        name: "Flag Operator",
         func: proxies => {
             return proxies.map(proxy => {
                 switch (type) {
@@ -1189,7 +1222,7 @@ function FlagOperator(type) {
 // sort proxies according to their names
 function SortOperator(order = 'asc') {
     return {
-        name: "Sort",
+        name: "Sort Operator",
         func: proxies => {
             switch (order) {
                 case "asc":
@@ -1209,10 +1242,9 @@ function SortOperator(order = 'asc') {
 }
 
 // sort by keywords
-function KeywordSortOperator(keywords) {
-    if (!(keywords instanceof Array)) keywords = [keywords];
+function KeywordSortOperator(...keywords) {
     return {
-        name: "Keyword Sort",
+        name: "Keyword Sort Operator",
         func: proxies => proxies.sort((a, b) => {
             const oA = getKeywordOrder(keywords, a.name);
             const oB = getKeywordOrder(keywords, b.name);
@@ -1237,9 +1269,9 @@ function getKeywordOrder(keywords, str) {
 
 // rename by keywords
 // keywords: [{old: "old", now: "now"}]
-function KeywordRenameOperator(keywords) {
+function KeywordRenameOperator(...keywords) {
     return {
-        name: "Keyword Rename",
+        name: "Keyword Rename Operator",
         func: proxies => {
             return proxies.map(proxy => {
                 for (const {old, now} of keywords) {
@@ -1253,10 +1285,9 @@ function KeywordRenameOperator(keywords) {
 
 // rename by regex
 // keywords: [{expr: "string format regex", now: "now"}]
-function RegexRenameOperator(regex) {
-    if (!(regex instanceof Array)) regex = [regex];
+function RegexRenameOperator(...regex) {
     return {
-        name: "Regex Rename",
+        name: "Regex Rename Operator",
         func: proxies => {
             return proxies.map(proxy => {
                 for (const {expr, now} of regex) {
@@ -1270,8 +1301,7 @@ function RegexRenameOperator(regex) {
 
 // delete keywords operator
 // keywords: ['a', 'b', 'c']
-function KeywordDeleteOperator(keywords) {
-    if (!(keywords instanceof Array)) keywords = [keywords];
+function KeywordDeleteOperator(...keywords) {
     const keywords_ = keywords.map(k => {
         return {
             old: k,
@@ -1279,15 +1309,14 @@ function KeywordDeleteOperator(keywords) {
         }
     })
     return {
-        name: "Keyword Delete",
+        name: "Keyword Delete Operator",
         func: KeywordRenameOperator(keywords_).func
     }
 }
 
 // delete regex operator
 // regex: ['a', 'b', 'c']
-function RegexDeleteOperator(regex) {
-    if (!(regex instanceof Array)) regex = [regex];
+function RegexDeleteOperator(...regex) {
     const regex_ = regex.map(r => {
         return {
             expr: r,
@@ -1295,7 +1324,7 @@ function RegexDeleteOperator(regex) {
         }
     });
     return {
-        name: "Regex Delete",
+        name: "Regex Delete Operator",
         func: RegexRenameOperator(regex_).func
     }
 }
@@ -1330,8 +1359,7 @@ function ScriptOperator(script, encoded = true) {
 
 /**************************** Filters ***************************************/
 // filter by keywords
-function KeywordFilter(keywords) {
-    if (!(keywords instanceof Array)) keywords = [keywords];
+function KeywordFilter(...keywords) {
     return {
         name: "Keyword Filter",
         func: (proxies) => {
@@ -1340,8 +1368,7 @@ function KeywordFilter(keywords) {
     }
 }
 
-function DiscardKeywordFilter(keywords) {
-    if (!(keywords instanceof Array)) keywords = [keywords];
+function DiscardKeywordFilter(...keywords) {
     return {
         name: "Discard Keyword Filter",
         func: proxies => {
@@ -1361,8 +1388,7 @@ function UselessFilter() {
 }
 
 // filter by regions
-function RegionFilter(regions) {
-    if (!(regions instanceof Array)) regions = [regions];
+function RegionFilter(...regions) {
     const REGION_MAP = {
         "HK": "🇭🇰",
         "TW": "🇹🇼",
@@ -1385,8 +1411,7 @@ function RegionFilter(regions) {
 }
 
 // filter by regex
-function RegexFilter(regex) {
-    if (!(regex instanceof Array)) regex = [regex];
+function RegexFilter(...regex) {
     return {
         name: "Regex Filter",
         func: (proxies) => {
@@ -1395,8 +1420,7 @@ function RegexFilter(regex) {
     }
 }
 
-function DiscardRegexFilter(regex) {
-    if (!(regex instanceof Array)) regex = [regex];
+function DiscardRegexFilter(...regex) {
     return {
         name: "Discard Regex Filter",
         func: proxies => {
@@ -1407,8 +1431,7 @@ function DiscardRegexFilter(regex) {
 }
 
 // filter by proxy types
-function TypeFilter(types) {
-    if (!(types instanceof Array)) types = [types];
+function TypeFilter(...types) {
     return {
         name: "Type Filter",
         func: (proxies) => {
@@ -1579,7 +1602,7 @@ function getPlatformFromHeaders(headers) {
     } else if (UA.indexOf("Decar") !== -1) {
         return "Loon";
     } else {
-        return "Loon"
+        return FALL_BACK_TARGET;
     }
 }
 
