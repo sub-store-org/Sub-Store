@@ -1,3 +1,14 @@
+/**
+ * Sub-Store v0.1 (Backend only)
+ * @Author: Peng-YM
+ * @Description:
+ * 适用于QX，Loon，Surge的订阅管理工具。
+ * - 功能
+ * 1. 订阅转换，支持SS, SSR, V2RayN, QX, Loon, Surge格式的互相转换。
+ * 2. 节点过滤，重命名，排序等。
+ * 3. 订阅拆分，组合。
+ */
+
 const $ = API("sub-store");
 
 // Constants
@@ -12,25 +23,25 @@ if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
 const $app = express();
 
 // subscriptions
-$app.get("/v1/download/:name", downloadSub)
+$app.get("/download/:name", downloadSub)
 
-$app.route("/v1/sub/:name")
+$app.route("/sub/:name")
     .get(getSub)
     .patch(updateSub)
     .delete(deleteSub);
 
-$app.route("/v1/sub")
+$app.route("/sub")
     .get(getAllSubs)
     .post(newSub)
     .delete(deleteAllSubs);
 
 // collections
-$app.get("/v1/download/collection/:name", downloadCollection);
-$app.route("/v1/collection/:name")
+$app.get("/download/collection/:name", downloadCollection);
+$app.route("/collection/:name")
     .get(getCollection)
     .patch(updateCollection)
     .delete(deleteCollection);
-$app.route("/v1/collection")
+$app.route("/collection")
     .get(getAllCollections)
     .post(newCollection)
     .delete(deleteAllCollections);
@@ -42,12 +53,12 @@ $app.all("/", (req, res) => {
 $app.start();
 
 // SOME CONSTANTS
-const FALL_BACK_TARGET = "Loon";
+const FALL_BACK_TARGET = "Raw";
 const DEFAULT_SUPPORTED_PLATFORMS = {
     QX: true,
     Loon: true,
     Surge: true,
-    Node: true
+    Raw: true
 }
 const AVAILABLE_FILTERS = {
     "Keyword Filter": KeywordFilter,
@@ -77,8 +88,6 @@ const AVAILABLE_OPERATORS = {
 async function downloadSub(req, res) {
     const {name} = req.params;
     const platform = getPlatformFromHeaders(req.headers);
-    console.log('=======================================')
-    console.log(`Downloading subscription: ${name}. Target platform ==> ${platform}\n`);
     const allSubs = $.read(SUBS_KEY);
     if (allSubs[name]) {
         const sub = allSubs[name];
@@ -101,45 +110,38 @@ async function downloadSub(req, res) {
 }
 
 async function parseSub(sub, platform) {
-    if (!sub) throw new Error("Subscription is undefined!")
     // download from url
     const raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
         throw new Error(err);
     });
+    console.log("=======================================================================");
+    console.log(`Processing subscription: ${sub.name}, target platform ==> ${platform}.`);
     const $parser = ProxyParser(platform);
     let proxies = $parser.parse(raw);
 
     // filters
     const $filter = ProxyFilter();
-    // create filters from sub conf
-    const userFilters = [];
-    for (const item of sub.filters || []) {
-        const filter = AVAILABLE_FILTERS[item.type];
-        if (filter) {
-            userFilters.push(filter(...(item.args || [])));
-            console.log(`Filter "${item.type}" added. Arguments: ${item.args || "None"}`);
-        }
-    }
-    $filter.addFilters(...userFilters);
-
     // operators
     const $operator = ProxyOperator();
-    const userOperators = [];
-    for (const item of sub.operators || []) {
-        const operator = AVAILABLE_OPERATORS[item.type];
-        if (operator) {
-            userOperators.push(operator(...(item.args || [])));
-            console.log(`Operator "${item.type}" added. Arguments: ${item.args || "None"}`);
+
+    for (const item of sub.process || []) {
+        if (item.type.indexOf("Filter") !== -1) {
+            const filter = AVAILABLE_FILTERS[item.type];
+            if (filter) {
+                $filter.addFilters(filter(...(item.args || [])));
+                proxies = $filter.process(proxies);
+                console.log(`Applying filter "${item.type}" with arguments: ${item.args || "None"}`);
+            }
+        } else if (item.type.indexOf("Operator") !== -1) {
+            const operator = AVAILABLE_OPERATORS[item.type];
+            if (operator) {
+                $operator.addOperators(operator(...(item.args || [])));
+                proxies = $operator.process(proxies);
+                console.log(`Applying operator "${item.type}" with arguments: ${item.args || "None"}`);
+            }
         }
     }
-    $operator.addOperators(...userOperators);
-
-    // process filters and operators
-    console.log("\nApplying filters...");
-    proxies = $filter.process(proxies);
-    console.log("\nApplying operators...");
-    proxies = $operator.process(proxies);
-    return $parser.produce(proxies)
+    return $parser.produce(proxies);
 }
 
 // Subscriptions
@@ -466,7 +468,7 @@ function ProxyParser(targetPlatform) {
 
     // Producers
     addProducers(
-        QX_Producer, Loon_Producer, Surge_Producer, Node_Producer
+        QX_Producer, Loon_Producer, Surge_Producer, Raw_Producer
     );
 
     return {
@@ -1308,8 +1310,8 @@ function Surge_Producer() {
     return {targetPlatform, output};
 }
 
-function Node_Producer() {
-    const targetPlatform = "Node";
+function Raw_Producer() {
+    const targetPlatform = "Raw";
     const output = (proxy) => {
         return JSON.stringify(proxy);
     }
@@ -1741,6 +1743,7 @@ function getPlatformFromHeaders(headers) {
     } else if (UA.indexOf("Decar") !== -1) {
         return "Loon";
     } else {
+        // browser
         return FALL_BACK_TARGET;
     }
 }
@@ -1749,105 +1752,291 @@ function getPlatformFromHeaders(headers) {
 // OpenAPI
 // prettier-ignore
 function ENV() {
-    const e = "undefined" != typeof $task, t = "undefined" != typeof $loon,
-        s = "undefined" != typeof $httpClient && !this.isLoon,
-        o = "function" == typeof require && "undefined" != typeof $jsbox;
-    return {isQX: e, isLoon: t, isSurge: s, isNode: "function" == typeof require && !o, isJSBox: o}
+    const isQX = typeof $task != "undefined";
+    const isLoon = typeof $loon != "undefined";
+    const isSurge = typeof $httpClient != "undefined" && !this.isLoon;
+    const isJSBox = typeof require == "function" && typeof $jsbox != "undefined";
+    const isNode = typeof require == "function" && !isJSBox;
+    const isRequest = typeof $request !== "undefined";
+    return {isQX, isLoon, isSurge, isNode, isJSBox, isRequest};
 }
 
-function HTTP(e, t = {}) {
-    const {isQX: s, isLoon: o, isSurge: n} = ENV();
-    const i = {};
-    return ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"].forEach(r => i[r.toLowerCase()] = (i => (function (i, r) {
-        (r = "string" == typeof r ? {url: r} : r).url = e ? e + r.url : r.url;
-        const u = (r = {...t, ...r}).timeout, h = {
-            onRequest: () => {
-            }, onResponse: e => e, onTimeout: () => {
-            }, ...r.events
+function HTTP(baseURL, defaultOptions = {}) {
+    const {isQX, isLoon, isSurge} = ENV();
+    const methods = ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"];
+
+    function send(method, options) {
+        options = typeof options === "string" ? {url: options} : options;
+        options.url = baseURL ? baseURL + options.url : options.url;
+        options = {...defaultOptions, ...options};
+        const timeout = options.timeout;
+        const events = {
+            ...{
+                onRequest: () => {
+                },
+                onResponse: (resp) => resp,
+                onTimeout: () => {
+                },
+            },
+            ...options.events,
         };
-        let c, l;
-        h.onRequest(i, r), c = s ? $task.fetch({method: i, ...r}) : new Promise((e, t) => {
-            (n || o ? $httpClient : require("request"))[i.toLowerCase()](r, (s, o, n) => {
-                s ? t(s) : e({statusCode: o.status || o.statusCode, headers: o.headers, body: n})
+
+        events.onRequest(method, options);
+
+        let worker;
+        if (isQX) {
+            worker = $task.fetch({method, ...options});
+        } else {
+            worker = new Promise((resolve, reject) => {
+                const request = isSurge || isLoon ? $httpClient : require("request");
+                request[method.toLowerCase()](options, (err, response, body) => {
+                    if (err) reject(err);
+                    else
+                        resolve({
+                            statusCode: response.status || response.statusCode,
+                            headers: response.headers,
+                            body,
+                        });
+                });
+            });
+        }
+
+        let timeoutid;
+        const timer = timeout
+            ? new Promise((_, reject) => {
+                timeoutid = setTimeout(() => {
+                    events.onTimeout();
+                    return reject(
+                        `${method} URL: ${options.url} exceeds the timeout ${timeout} ms`
+                    );
+                }, timeout);
             })
-        });
-        const a = u ? new Promise((e, t) => {
-            l = setTimeout(() => (h.onTimeout(), t(`${i} URL: ${r.url} exceeds the timeout ${u} ms`)), u)
-        }) : null;
-        return (a ? Promise.race([a, c]).then(e => (clearTimeout(l), e)) : c).then(e => h.onResponse(e))
-    })(r, i))), i
+            : null;
+
+        return (timer
+                ? Promise.race([timer, worker]).then((res) => {
+                    clearTimeout(timeoutid);
+                    return res;
+                })
+                : worker
+        )
+            .then((resp) => events.onResponse(resp))
+    }
+
+    const http = {};
+    methods.forEach(
+        (method) =>
+            (http[method.toLowerCase()] = (options) => send(method, options))
+    );
+    return http;
 }
 
-function API(e = "untitled", t = !1) {
-    const {isQX: s, isLoon: o, isSurge: n, isNode: i, isJSBox: r} = ENV();
-    return new class {
-        constructor(e, t) {
-            this.name = e, this.debug = t, this.http = HTTP(), this.env = ENV(), this.node = (() => {
-                if (i) {
-                    return {fs: require("fs")}
+function API(name = "untitled", debug = false) {
+    const {isQX, isLoon, isSurge, isNode, isJSBox} = ENV();
+    return new (class {
+        constructor(name, debug) {
+            this.name = name;
+            this.debug = debug;
+
+            this.http = HTTP();
+            this.env = ENV();
+
+            this.node = (() => {
+                if (isNode) {
+                    const fs = require("fs");
+
+                    return {
+                        fs,
+                    };
+                } else {
+                    return null;
                 }
-                return null
-            })(), this.initCache();
-            Promise.prototype.delay = function (e) {
-                return this.then(function (t) {
-                    return ((e, t) => new Promise(function (s) {
-                        setTimeout(s.bind(null, t), e)
-                    }))(e, t)
-                })
-            }
+            })();
+            this.initCache();
+
+            const delay = (t, v) =>
+                new Promise(function (resolve) {
+                    setTimeout(resolve.bind(null, v), t);
+                });
+
+            Promise.prototype.delay = function (t) {
+                return this.then(function (v) {
+                    return delay(t, v);
+                });
+            };
         }
 
+        // persistance
+
+        // initialize cache
         initCache() {
-            if (s && (this.cache = JSON.parse($prefs.valueForKey(this.name) || "{}")), (o || n) && (this.cache = JSON.parse($persistentStore.read(this.name) || "{}")), i) {
-                let e = "root.json";
-                this.node.fs.existsSync(e) || this.node.fs.writeFileSync(e, JSON.stringify({}), {flag: "wx"}, e => console.log(e)), this.root = {}, e = `${this.name}.json`, this.node.fs.existsSync(e) ? this.cache = JSON.parse(this.node.fs.readFileSync(`${this.name}.json`)) : (this.node.fs.writeFileSync(e, JSON.stringify({}), {flag: "wx"}, e => console.log(e)), this.cache = {})
+            if (isQX) this.cache = JSON.parse($prefs.valueForKey(this.name) || "{}");
+            if (isLoon || isSurge)
+                this.cache = JSON.parse($persistentStore.read(this.name) || "{}");
+
+            if (isNode) {
+                // create a json for root cache
+                let fpath = "root.json";
+                if (!this.node.fs.existsSync(fpath)) {
+                    this.node.fs.writeFileSync(
+                        fpath,
+                        JSON.stringify({}),
+                        {flag: "wx"},
+                        (err) => console.log(err)
+                    );
+                }
+                this.root = {};
+
+                // create a json file with the given name if not exists
+                fpath = `${this.name}.json`;
+                if (!this.node.fs.existsSync(fpath)) {
+                    this.node.fs.writeFileSync(
+                        fpath,
+                        JSON.stringify({}),
+                        {flag: "wx"},
+                        (err) => console.log(err)
+                    );
+                    this.cache = {};
+                } else {
+                    this.cache = JSON.parse(
+                        this.node.fs.readFileSync(`${this.name}.json`)
+                    );
+                }
             }
         }
 
+        // store cache
         persistCache() {
-            const e = JSON.stringify(this.cache);
-            s && $prefs.setValueForKey(e, this.name), (o || n) && $persistentStore.write(e, this.name), i && (this.node.fs.writeFileSync(`${this.name}.json`, e, {flag: "w"}, e => console.log(e)), this.node.fs.writeFileSync("root.json", JSON.stringify(this.root), {flag: "w"}, e => console.log(e)))
+            const data = JSON.stringify(this.cache);
+            if (isQX) $prefs.setValueForKey(data, this.name);
+            if (isLoon || isSurge) $persistentStore.write(data, this.name);
+            if (isNode) {
+                this.node.fs.writeFileSync(
+                    `${this.name}.json`,
+                    data,
+                    {flag: "w"},
+                    (err) => console.log(err)
+                );
+                this.node.fs.writeFileSync(
+                    "root.json",
+                    JSON.stringify(this.root),
+                    {flag: "w"},
+                    (err) => console.log(err)
+                );
+            }
         }
 
-        write(e, t) {
-            this.log(`SET ${t}`), -1 !== t.indexOf("#") ? (t = t.substr(1), n & o && $persistentStore.write(e, t), s && $prefs.setValueForKey(e, t), i && (this.root[t] = e)) : this.cache[t] = e, this.persistCache()
+        write(data, key) {
+            this.log(`SET ${key}`);
+            if (key.indexOf("#") !== -1) {
+                key = key.substr(1);
+                if (isSurge & isLoon) {
+                    $persistentStore.write(data, key);
+                }
+                if (isQX) {
+                    $prefs.setValueForKey(data, key);
+                }
+                if (isNode) {
+                    this.root[key] = data;
+                }
+            } else {
+                this.cache[key] = data;
+            }
+            this.persistCache();
         }
 
-        read(e) {
-            return this.log(`READ ${e}`), -1 === e.indexOf("#") ? this.cache[e] : (e = e.substr(1), n & o ? $persistentStore.read(e) : s ? $prefs.valueForKey(e) : i ? this.root[e] : void 0)
+        read(key) {
+            this.log(`READ ${key}`);
+            if (key.indexOf("#") !== -1) {
+                key = key.substr(1);
+                if (isSurge & isLoon) {
+                    return $persistentStore.read(key);
+                }
+                if (isQX) {
+                    return $prefs.valueForKey(key);
+                }
+                if (isNode) {
+                    return this.root[key];
+                }
+            } else {
+                return this.cache[key];
+            }
         }
 
-        delete(e) {
-            this.log(`DELETE ${e}`), -1 !== e.indexOf("#") ? (e = e.substr(1), n & o && $persistentStore.write(null, e), s && $prefs.removeValueForKey(e), i && delete this.root[e]) : delete this.cache[e], this.persistCache()
+        delete(key) {
+            this.log(`DELETE ${key}`);
+            if (key.indexOf("#") !== -1) {
+                key = key.substr(1);
+                if (isSurge & isLoon) {
+                    $persistentStore.write(null, key);
+                }
+                if (isQX) {
+                    $prefs.removeValueForKey(key);
+                }
+                if (isNode) {
+                    delete this.root[key];
+                }
+            } else {
+                delete this.cache[key];
+            }
+            this.persistCache();
         }
 
-        notify(e, t = "", u = "", h = {}) {
-            const c = h["open-url"], l = h["media-url"], a = u + (c ? `\n点击跳转: ${c}` : "") + (l ? `\n多媒体: ${l}` : "");
-            if (s && $notify(e, t, u, h), n && $notification.post(e, t, a), o && $notification.post(e, t, u, c), i) if (r) {
-                require("push").schedule({title: e, body: (t ? t + "\n" : "") + a})
-            } else console.log(`${e}\n${t}\n${a}\n\n`)
+        // notification
+        notify(title, subtitle = "", content = "", options = {}) {
+            const openURL = options["open-url"];
+            const mediaURL = options["media-url"];
+
+            const content_ =
+                content +
+                (openURL ? `\n点击跳转: ${openURL}` : "") +
+                (mediaURL ? `\n多媒体: ${mediaURL}` : "");
+
+            if (isQX) $notify(title, subtitle, content, options);
+            if (isSurge) $notification.post(title, subtitle, content_);
+            if (isLoon) $notification.post(title, subtitle, content, openURL);
+            if (isNode) {
+                if (isJSBox) {
+                    const push = require("push");
+                    push.schedule({
+                        title: title,
+                        body: (subtitle ? subtitle + "\n" : "") + content_,
+                    });
+                } else {
+                    console.log(`${title}\n${subtitle}\n${content_}\n\n`);
+                }
+            }
         }
 
-        log(e) {
-            this.debug && console.log(e)
+        // other helper functions
+        log(msg) {
+            if (this.debug) console.log(msg);
         }
 
-        info(e) {
-            console.log(e)
+        info(msg) {
+            console.log(msg);
         }
 
-        error(e) {
-            console.log("ERROR: " + e)
+        error(msg) {
+            console.log("ERROR: " + msg);
         }
 
-        wait(e) {
-            return new Promise(t => setTimeout(t, e))
+        wait(millisec) {
+            return new Promise((resolve) => setTimeout(resolve, millisec));
         }
 
-        done(e = {}) {
-            s || o || n ? $done(e) : i && !r && "undefined" != typeof $context && ($context.headers = e.headers, $context.statusCode = e.statusCode, $context.body = e.body)
+        done(value = {}) {
+            if (isQX || isLoon || isSurge) {
+                $done(value);
+            } else if (isNode && !isJSBox) {
+                if (typeof $context !== "undefined") {
+                    $context.headers = value.headers;
+                    $context.statusCode = value.statusCode;
+                    $context.body = value.body;
+                }
+            }
         }
-    }(e, t)
+    })(name, debug);
 }
 
 /*********************************** Mini Express *************************************/
