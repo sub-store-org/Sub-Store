@@ -20,7 +20,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8b97a098-48b2-4e64-a9ef-522fe2d30b52" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/../web/src/router/index.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../web/src/views/Dashboard.vue" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../web/src/views/Subscription.vue" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../web/src/views/User.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sub-store.js" beforeDir="false" afterPath="$PROJECT_DIR$/sub-store.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../web/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../web/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/src/assets/logo.svg" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/assets/logo.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/src/components/BottomNav.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/BottomNav.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/src/components/TopToolbar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/TopToolbar.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/src/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/src/plugins/vuetify.js" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/plugins/vuetify.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,6 +65,8 @@
       <option name="presentableId" value="Default" />
       <updated>1597827738046</updated>
       <workItem from="1597827739128" duration="775000" />
+      <workItem from="1597902241253" duration="776000" />
+      <workItem from="1598004165212" duration="170000" />
     </task>
     <servers />
   </component>
@@ -68,5 +83,6 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
 </project>

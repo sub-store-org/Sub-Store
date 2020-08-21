@@ -123,6 +123,7 @@ async function parseSub(sub, platform) {
     const $operator = ProxyOperator();
 
     for (const item of sub.process || []) {
+        // process script
         if (item.type.indexOf("Script") !== -1) {
             if (item.args && item.args[0].indexOf("http") !== -1) {
                 // if this is remote script
@@ -201,7 +202,9 @@ async function updateSub(req, res) {
             ...allSubs[name],
             ...sub
         };
-        allSubs[name] = newSub;
+        // allow users to update the subscription name
+        delete allSubs[name];
+        allSubs[sub.name || name] = newSub;
         $.write(allSubs, SUBS_KEY);
         res.json({
             status: "success",
@@ -316,7 +319,9 @@ async function updateCollection(req, res) {
             ...allCol[name],
             ...collection
         };
-        allCol[name] = newCol;
+        // allow users to update collection name
+        delete allCol[name];
+        allCol[collection.name || name] = newCol;
         $.write(allCol, COLLECTIONS_KEY);
         res.json({
             status: "success",
@@ -1489,6 +1494,15 @@ function ScriptOperator(script) {
         name: "Script Operator",
         func: (proxies) => {
             ;(function () {
+                // interface to get internal operators
+                const $get = (name, args) => {
+                    const operator = AVAILABLE_OPERATORS[name];
+                    if (operator) {
+                        return operator(args).func;
+                    } else {
+                        throw new Error(`No operator named ${name} is found!`);
+                    }
+                };
                 eval(script);
                 return func(proxies);
             })();
@@ -1588,15 +1602,24 @@ function TypeFilter(...types) {
  }
  WARNING:
  1. This function name should be `func`!
- 2. Always declare variable before using it!
+ 2. Always declare variables before using them!
  */
 function ScriptFilter(script) {
     return {
         name: "Script Filter",
         func: (proxies) => {
             !(function () {
+                // interface to get internal filters
+                const $get = (name, args) => {
+                    const filter = AVAILABLE_FILTERS[name];
+                    if (filter) {
+                        return filter(args).func;
+                    } else {
+                        throw new Error(`No filter named ${name} is found!`);
+                    }
+                };
                 eval(script);
-                return filter(proxies);
+                return func(proxies);
             })();
         }
     }
