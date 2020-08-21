@@ -2,24 +2,24 @@
 
   <v-bottom-navigation
       app
+      color="primary"
       fixed
       grow
       v-model="activeItem"
-      color="primary"
   >
-    <v-btn value="dashboard">
+    <v-btn :to="{path:'/dashboard'}" value="dashboard">
       <span>首页</span>
       <v-icon>dashboard</v-icon>
     </v-btn>
 
-    <v-btn value="collection">
+    <v-btn :to="{path: '/'}" value="subscription">
       <span>订阅</span>
       <v-icon>favorite</v-icon>
     </v-btn>
 
-    <v-btn value="subscription">
-      <span>机场</span>
-      <v-icon>code</v-icon>
+    <v-btn :to="{path: '/user'}" value="user">
+      <span>我的</span>
+      <v-icon>settings</v-icon>
     </v-btn>
 
 
@@ -31,7 +31,7 @@
 export default {
   data: () => {
     return {
-      activeItem: 'collection'
+      activeItem: 'subscription'
     }
   }
 }

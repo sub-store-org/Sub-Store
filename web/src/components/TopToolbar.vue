@@ -28,9 +28,9 @@
 
     <v-app-bar
         app
-        fixed
-        dark
         color="primary"
+        dark
+        fixed
     >
       <v-app-bar-nav-icon @click.stop="toggleMenu"></v-app-bar-nav-icon>
 
@@ -50,10 +50,10 @@ export default {
   },
 
   methods: {
-    toggleMenu: function() {
+    toggleMenu: function () {
       this.showMenu = !this.showMenu;
     },
-    doNothing: function() {
+    doNothing: function () {
 
     }
   }

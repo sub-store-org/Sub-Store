@@ -1,6 +1,9 @@
 <template>
   <v-app>
     <TopToolbar></TopToolbar>
+    <v-content>
+      <router-view></router-view>
+    </v-content>
     <BottomNav></BottomNav>
   </v-app>
 </template>
@@ -15,16 +18,15 @@ export default {
     BottomNav
   },
 
-  props: {
-    source: String,
-  },
-
-  data: () => ({
-    drawer: null,
-  }),
-
   created() {
-    this.$vuetify.theme.dark = true
+    this.$vuetify.theme.dark = true;
+    this.$vuetify.theme.themes.dark.primary = '#d02f2f';
   },
+
+  computed: {
+    isDarkMode() {
+      return true;
+    }
+  }
 }
 </script>
