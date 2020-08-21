@@ -2,7 +2,7 @@
 > This project is still under active development. Current version: v0.1 (backend only).
 
 Subscription manager for QX, Loon and Surge.
-Core functionality:
+Core functionalities:
 1. Conversion among various formats.
 2. Subscription formatting.
 3. Collect multiple subscriptions in one URL.
