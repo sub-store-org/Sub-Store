@@ -21,12 +21,12 @@ if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
 // BACKEND API
 const $app = express();
 
-$app.route("/sub/:name")
+$app.route("/api/sub/:name")
     .get(getSub)
     .patch(updateSub)
     .delete(deleteSub);
 
-$app.route("/sub")
+$app.route("/api/sub")
     .get(getAllSubs)
     .post(newSub)
     .delete(deleteAllSubs);
@@ -36,11 +36,11 @@ $app.get("/download/:name", downloadSub);
 
 // collections
 $app.get("/download/collection/:name", downloadCollection);
-$app.route("/collection/:name")
+$app.route("/api/collection/:name")
     .get(getCollection)
     .patch(updateCollection)
     .delete(deleteCollection);
-$app.route("/collection")
+$app.route("/api/collection")
     .get(getAllCollections)
     .post(newCollection)
     .delete(deleteAllCollections);
@@ -203,8 +203,21 @@ async function updateSub(req, res) {
             ...sub
         };
         // allow users to update the subscription name
-        delete allSubs[name];
-        allSubs[sub.name || name] = newSub;
+        if (name !== sub.name) {
+            // we need to find out all collections refer to this name
+            const allCols = $.read(COLLECTIONS_KEY);
+            for (const k of Object.keys(allCols)) {
+                const idx = allCols[k].subscriptions.indexOf(name);
+                if (idx !== -1) {
+                    allCols[k].subscriptions[idx] = sub.name;
+                }
+            }
+            // update subscriptions
+            delete allSubs[name];
+            allSubs[sub.name] = newSub;
+        } else {
+            allSubs[name] = newSub;
+        }
         $.write(allSubs, SUBS_KEY);
         res.json({
             status: "success",
@@ -232,7 +245,7 @@ async function getAllSubs(req, res) {
     const allSubs = $.read(SUBS_KEY);
     res.json({
         status: "success",
-        data: Object.keys(allSubs)
+        data: allSubs
     });
 }
 
@@ -349,7 +362,7 @@ async function getAllCollections(req, res) {
     const allCols = $.read(COLLECTIONS_KEY);
     res.json({
         status: "success",
-        data: Object.keys(allCols)
+        data: allCols
     });
 }
 
@@ -2059,6 +2072,12 @@ function API(name = "untitled", debug = false) {
 /*********************************** Mini Express *************************************/
 function express(port = 3000) {
     const {isNode} = ENV();
+    const DEFAULT_HEADERS = {
+        "Content-Type": "text/plain;charset=UTF-8",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept"
+    };
+
 
     // node support
     if (isNode) {
@@ -2068,6 +2087,10 @@ function express(port = 3000) {
         app.use(bodyParser.json({verify: rawBodySaver}));
         app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: true}));
         app.use(bodyParser.raw({verify: rawBodySaver, type: '*/*'}));
+        app.use((req, res, next) => {
+            res.set(DEFAULT_HEADERS);
+            next();
+        })
 
         // adapter
         app.start = () => {
@@ -2184,9 +2207,7 @@ function express(port = 3000) {
     function Response() {
         let statusCode = "200";
         const {isQX, isLoon, isSurge} = ENV();
-        const headers = {
-            "Content-Type": "text/plain;charset=UTF-8",
-        };
+        const headers = DEFAULT_HEADERS;
         return new (class {
             status(code) {
                 statusCode = code;

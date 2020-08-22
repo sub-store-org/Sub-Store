@@ -34,7 +34,7 @@
     >
       <v-app-bar-nav-icon @click.stop="toggleMenu"></v-app-bar-nav-icon>
 
-      <v-toolbar-title>SubStore</v-toolbar-title>
+      <v-toolbar-title>{{title}}</v-toolbar-title>
 
     </v-app-bar>
 
@@ -55,6 +55,12 @@ export default {
     },
     doNothing: function () {
 
+    }
+  },
+
+  computed: {
+    title: function () {
+      return this.$store.state.title;
     }
   }
 }

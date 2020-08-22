@@ -12,6 +12,11 @@
 import TopToolbar from "@/components/TopToolbar";
 import BottomNav from "@/components/BottomNav";
 
+function initStore(store) {
+  store.dispatch('FETCH_SUBSCRIPTIONS');
+  store.dispatch("FETCH_COLLECTIONS");
+}
+
 export default {
   components: {
     TopToolbar,
@@ -19,14 +24,15 @@ export default {
   },
 
   created() {
-    this.$vuetify.theme.dark = true;
-    this.$vuetify.theme.themes.dark.primary = '#d02f2f';
+    this.$vuetify.theme.dark = this.$store.state.isDarkMode;
+    this.$vuetify.theme.themes.dark.primary = '#ae51e3';
+    this.$vuetify.theme.themes.light.primary = '#d73964';
+
+    initStore(this.$store);
   },
 
   computed: {
-    isDarkMode() {
-      return true;
-    }
+
   }
 }
 </script>
