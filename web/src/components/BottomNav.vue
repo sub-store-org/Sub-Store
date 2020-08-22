@@ -9,17 +9,17 @@
   >
     <v-btn :to="{path:'/dashboard'}" value="dashboard">
       <span>首页</span>
-      <v-icon>dashboard</v-icon>
+      <v-icon>speed</v-icon>
     </v-btn>
 
     <v-btn :to="{path: '/'}" value="subscription">
       <span>订阅</span>
-      <v-icon>favorite</v-icon>
+      <v-icon>mdi-cloud</v-icon>
     </v-btn>
 
     <v-btn :to="{path: '/user'}" value="user">
       <span>我的</span>
-      <v-icon>settings</v-icon>
+      <v-icon>mdi-account</v-icon>
     </v-btn>
 
 
