@@ -1,5 +1,4 @@
 <template>
-
   <v-bottom-navigation
       app
       color="primary"

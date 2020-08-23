@@ -9,6 +9,9 @@ const store = new Vuex.Store({
         title: "Sub-Store",
         isDarkMode: false,
 
+        successMessage: "",
+        errorMessage: "",
+
         subscriptions: {},
         collections: {},
 
@@ -24,29 +27,55 @@ const store = new Vuex.Store({
             state.isDarkMode = isDarkMode
         },
 
-        // Data
-        SET_SUBSCRIPTIONS(state, subscriptions) {
-            state.subscriptions = subscriptions;
+        SET_SUCCESS_MESSAGE(state, msg) {
+            state.successMessage = msg;
         },
-        SET_COLLECTIONS(state, collections) {
-            state.collections = collections;
-        }
+
+        SET_ERROR_MESSAGE(state, msg) {
+            state.errorMessage = msg;
+        },
     },
 
     actions: {
         // fetch subscriptions
-        async FETCH_SUBSCRIPTIONS({commit}) {
+        async FETCH_SUBSCRIPTIONS({state}) {
             axios.get("/sub").then(resp => {
                 const {data} = resp.data;
-                commit("SET_SUBSCRIPTIONS", data);
+                state.subscriptions = data;
             });
         },
         // fetch collections
-        async FETCH_COLLECTIONS({commit}) {
+        async FETCH_COLLECTIONS({state}) {
             axios.get("/collection").then(resp => {
                 const {data} = resp.data;
-                commit("SET_COLLECTIONS", data);
+                state.collections = data;
             });
+        },
+        // update subscriptions
+        async UPDATE_SUBSCRIPTION({commit}, {name, sub}) {
+            axios.patch(`/sub/${name}`, sub).then(() => {
+                commit("FETCH_SUBSCRIPTIONS");
+            });
+        },
+        // new subscription
+        async NEW_SUBSCRIPTION() {
+
+        },
+        // delete subscription
+        async DELETE_SUBSCRIPTION() {
+
+        },
+        // update collection
+        async UPDATE_COLLECTION() {
+
+        },
+        // new collection
+        async NEW_COLLECTION() {
+
+        },
+        // delete collection
+        async DELETE_COLLECTION() {
+
         }
     },
 
