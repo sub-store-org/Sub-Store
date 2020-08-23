@@ -5,6 +5,8 @@ import store from "../store";
 import Subscription from "@/views/Subscription";
 import Dashboard from "@/views/Dashboard";
 import User from "@/views/User";
+import SubEditor from "@/views/SubEditor";
+import CollectionEditor from "@/views/CollectionEditor";
 
 Vue.use(Router);
 
@@ -29,6 +31,18 @@ const router = new Router({
             name: "user",
             component: User,
             meta: {title: "我的"}
+        },
+        {
+            path: "/sub-edit/:name",
+            name: "sub-editor",
+            component: SubEditor,
+            meta: {title: "订阅编辑"}
+        },
+        {
+            path: "/collection-edit/:name",
+            name: "collection-edit",
+            component: CollectionEditor,
+            meta: {title: "订阅编辑"}
         }
     ]
 });
