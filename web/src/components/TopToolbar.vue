@@ -1,6 +1,5 @@
 <template>
   <div>
-
     <v-navigation-drawer
         app
         fixed

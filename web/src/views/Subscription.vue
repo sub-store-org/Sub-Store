@@ -8,9 +8,8 @@
           :key="sub.name"
           @click="preview(sub)"
       >
-        <v-list-item-avatar>
-          <v-img
-              src="https://avatars2.githubusercontent.com/u/21050064?s=460&u=40a74913dd0a3d00670d05148c3a08c787470021&v=4"></v-img>
+        <v-list-item-avatar dark>
+          <v-icon>mdi-cloud</v-icon>
         </v-list-item-avatar>
         <v-list-item-content>
           <v-list-item-title v-text="sub.name" class="font-weight-medium"></v-list-item-title>
@@ -47,12 +46,11 @@
       <v-list-item
           v-for="collection in collections"
           :key="collection.name"
-          @click="preview(collection)"
+          @click="preview(collection, type='collection')"
           dense
       >
-        <v-list-item-avatar>
-          <v-img
-              src="https://avatars2.githubusercontent.com/u/21050064?s=460&u=40a74913dd0a3d00670d05148c3a08c787470021&v=4"></v-img>
+        <v-list-item-avatar dark>
+          <v-icon>mdi-cloud</v-icon>
         </v-list-item-avatar>
         <v-list-item-content>
           <v-list-item-title v-text="collection.name" class="font-weight-medium"></v-list-item-title>
@@ -97,6 +95,7 @@
     </v-list>
     <v-fab-transition>
       <v-speed-dial
+          v-if="!showProxyList"
           v-model="opened"
           direction="top"
           right
@@ -122,14 +121,37 @@
         </v-btn>
       </v-speed-dial>
     </v-fab-transition>
+    <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList">
+      <v-card>
+        <v-toolbar dark color="primary">
+          <v-icon>mdi-cloud</v-icon>
+          <v-spacer></v-spacer>
+          <v-toolbar-title>节点列表</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-toolbar-items>
+            <v-btn icon @click="showProxyList = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-toolbar-items>
+        </v-toolbar>
+        <proxy-list :proxies="proxies"></proxy-list>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script>
+import ProxyList from "@/views/ProxyList";
+import {BACKEND_BASE} from "@/config";
+import {axios} from "@/utils";
+
 export default {
+  components: {ProxyList},
   data: () => {
     return {
       opened: false,
+      showProxyList: false,
+      proxies: [],
       editMenu: [
         {
           title: "复制",
@@ -163,13 +185,14 @@ export default {
       console.log(`${action} --> ${sub.name}`);
       switch (action) {
         case 'COPY':
-          this.$clipboard(`http://127.0.0.1:3000/download/${sub.name}`);
+          this.$clipboard(`${BACKEND_BASE}/download/${sub.name}`);
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
           this.$router.push(`/sub-edit/${sub.name}`);
           break
         case 'DELETE':
+          this.$store.dispatch("DELETE_SUBSCRIPTION", sub.name);
           break
       }
     },
@@ -177,17 +200,30 @@ export default {
       console.log(`${action} --> ${collection.name}`);
       switch (action) {
         case 'COPY':
-          this.$clipboard(`http://127.0.0.1:3000/download/collection/${collection.name}`);
+          this.$clipboard(`${BACKEND_BASE}/download/collection/${collection.name}`);
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
           break
         case 'DELETE':
+          this.$store.dispatch("DELETE_COLLECTION", collection.name);
           break
       }
     },
-    preview(item) {
-      console.log(`PREVIEW: ${item.name}`);
+    preview(item, type = 'sub') {
+      let url;
+      if (type === 'sub') {
+        url = `${BACKEND_BASE}/download/${item.name}`
+      } else {
+        url = `${BACKEND_BASE}/download/collection/${item.name}`
+      }
+      axios.get(url).then(resp => {
+        const {data} = resp;
+        this.proxies = data.split("\n").map(p => JSON.parse(p));
+        this.showProxyList = true;
+      }).catch(err => {
+        this.$store.commit("SET_ERROR_MESSAGE", err);
+      })
     },
   }
 }
