@@ -14,6 +14,7 @@ Core functionalities:
 - [x] QX (SS, SSR, VMess, Trojan, HTTP)
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP)
 - [x] Surge (SS, VMess, Trojan, HTTP)
+- [x] Clash (SS, VMess, Trojan, HTTP)
 
 ### Supported Target Platforms
 - [x] QX
