@@ -1,7 +1,8 @@
 import Axios from 'axios';
+import {BACKEND_BASE} from "@/config";
+
 export const axios = Axios.create({
-    // baseURL: 'http://sub.store/api',
-    baseURL: 'http://127.0.0.1:3000/api',
+    baseURL: `${BACKEND_BASE}/api`,
     timeout: 1000
 });
 

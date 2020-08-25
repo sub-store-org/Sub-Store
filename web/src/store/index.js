@@ -52,9 +52,13 @@ const store = new Vuex.Store({
             });
         },
         // update subscriptions
-        async UPDATE_SUBSCRIPTION({commit}, {name, sub}) {
+        async UPDATE_SUBSCRIPTION({commit, dispatch}, {name, sub}) {
             axios.patch(`/sub/${name}`, sub).then(() => {
-                commit("FETCH_SUBSCRIPTIONS");
+                dispatch("FETCH_SUBSCRIPTIONS");
+                dispatch("FETCH_COLLECTIONS");
+                commit("SET_SUCCESS_MESSAGE", `成功更新订阅${sub.name || name}`);
+            }).catch(err => {
+                commit("SET_ERROR_MESSAGE", err);
             });
         },
         // new subscription
@@ -62,8 +66,14 @@ const store = new Vuex.Store({
 
         },
         // delete subscription
-        async DELETE_SUBSCRIPTION() {
-
+        async DELETE_SUBSCRIPTION({commit, dispatch}, name) {
+            axios.delete(`/sub/${name}`).then(() => {
+                dispatch("FETCH_SUBSCRIPTIONS");
+                dispatch("FETCH_COLLECTIONS");
+                commit("SET_SUCCESS_MESSAGE", `成功删除订阅${name}`);
+            }).catch(err => {
+                commit("SET_ERROR_MESSAGE", err);
+            })
         },
         // update collection
         async UPDATE_COLLECTION() {
