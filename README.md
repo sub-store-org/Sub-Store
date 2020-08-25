@@ -45,3 +45,6 @@ Core functionalities:
 
 ## LICENSE
 This project is under the GPL V3 LICENSE.
+
+## Acknowledgements
+Special thanks to @KOP-XIAO for his awesome resource-parser. Please give a [star](https://github.com/KOP-XIAO/QuantumultX) for his great work!
