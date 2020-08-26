@@ -141,7 +141,7 @@
 </template>
 
 <script>
-import ProxyList from "@/views/ProxyList";
+import ProxyList from "@/components/ProxyList";
 import {BACKEND_BASE} from "@/config";
 import {axios} from "@/utils";
 
