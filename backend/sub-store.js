@@ -4,22 +4,32 @@
  * @Description:
  * 适用于QX，Loon，Surge的订阅管理工具。
  * - 功能
- * 1. 订阅转换，支持SS, SSR, V2RayN, QX, Loon, Surge格式的互相转换。
+ * 1. 订阅转换，支持SS, SSR, V2RayN, QX, Loon, Surge, Clash格式的互相转换。
  * 2. 节点过滤，重命名，排序等。
  * 3. 订阅拆分，组合。
  */
-const $ = API("sub-store");
+const $ = API("sub-store", true);
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
+const RESOURCE_CACHE_KEY = "resources";
 
 // SOME INITIALIZATIONS
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
+if (!$.read(RESOURCE_CACHE_KEY)) $.write({}, RESOURCE_CACHE_KEY);
 
 // BACKEND API
 const $app = express();
 
+// download
+$app.get("/download/:name", downloadSub);
+$app.get("/download/collection/:name", downloadCollection);
+
+// refresh
+$app.post("/api/refresh", refreshResource);
+
+// subscriptions
 $app.route("/api/sub/:name")
     .get(getSub)
     .patch(updateSub)
@@ -30,11 +40,7 @@ $app.route("/api/sub")
     .post(newSub)
     .delete(deleteAllSubs);
 
-// subscriptions
-$app.get("/download/:name", downloadSub);
-
 // collections
-$app.get("/download/collection/:name", downloadCollection);
 $app.route("/api/collection/:name")
     .get(getCollection)
     .patch(updateCollection)
@@ -57,6 +63,7 @@ const DEFAULT_SUPPORTED_PLATFORMS = {
     Surge: true,
     Raw: true
 }
+
 const AVAILABLE_FILTERS = {
     "Keyword Filter": KeywordFilter,
     "Discard Keyword Filter": DiscardKeywordFilter,
@@ -81,6 +88,22 @@ const AVAILABLE_OPERATORS = {
 }
 
 /**************************** API -- Subscriptions ***************************************/
+// refresh resource
+async function refreshResource(req, res) {
+    const {url} = req.body;
+    const cachedResources = $.read(RESOURCE_CACHE_KEY);
+    cachedResources[url] = await $.http.get(url).then(resp => resp => resp.body).catch(err => {
+        res.status(500).json({
+            status: "failed",
+            message: `Cannot refresh remote resource: ${url}\n Reason: ${err}`
+        });
+    });
+    $.write(cachedResources, cachedResources);
+    res.json({
+        status: "success"
+    });
+}
+
 // download subscription, for APP only
 async function downloadSub(req, res) {
     const {name} = req.params;
@@ -92,7 +115,6 @@ async function downloadSub(req, res) {
             const output = await parseSub(sub, platform);
             res.send(output);
         } catch (err) {
-            $.notify('[Sub-Store]', '❌ 无法获取订阅！', `错误信息：${err}`)
             res.status(500).json({
                 status: "failed",
                 message: err
@@ -107,12 +129,23 @@ async function downloadSub(req, res) {
 }
 
 async function parseSub(sub, platform) {
-    // download from url
-    const raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
+    let raw;
+    const cachedResources = $.read(RESOURCE_CACHE_KEY);
+    if (platform === "Raw") {
+        // use cache if available
+        raw = cachedResources[sub.url];
+    }
+
+    // always download from url
+    raw = raw || await $.http.get(sub.url).then(resp => resp.body).catch(err => {
         throw new Error(err);
     });
-    console.log("=======================================================================");
-    console.log(`Processing subscription: ${sub.name}, target platform ==> ${platform}.`);
+    cachedResources[sub.url] = raw;
+
+    $.write(cachedResources, RESOURCE_CACHE_KEY);
+
+    $.log("=======================================================================");
+    $.log(`Processing subscription: ${sub.name}, target platform ==> ${platform}.`);
     const $parser = ProxyParser(platform);
     let proxies = $parser.parse(raw);
 
@@ -136,14 +169,14 @@ async function parseSub(sub, platform) {
             if (filter) {
                 $filter.addFilters(filter(...(item.args || [])));
                 proxies = $filter.process(proxies);
-                console.log(`Applying filter "${item.type}" with arguments:\n >>> ${item.args || "None"}`);
+                $.log(`Applying filter "${item.type}" with arguments:\n >>> ${item.args || "None"}`);
             }
         } else if (item.type.indexOf("Operator") !== -1) {
             const operator = AVAILABLE_OPERATORS[item.type];
             if (operator) {
                 $operator.addOperators(operator(...(item.args || [])));
                 proxies = $operator.process(proxies);
-                console.log(`Applying operator "${item.type}" with arguments: \n >>> ${item.args || "None"}`);
+                $.log(`Applying operator "${item.type}" with arguments: \n >>> ${item.args || "None"}`);
             }
         }
     }
@@ -470,17 +503,16 @@ function ProxyParser(targetPlatform) {
             // https://github.com/KOP-XIAO/QuantumultX
             if (raw.indexOf("{") !== -1) {
                 raw = raw.replace(/: {/g, ": {,     ")
-                    .replace(/, (host|path|tls|mux|skip)/g,",     $1")
-                    .replace(/{name: /g,"{name: \"")
-                    .replace(/, server:/g,"\", server:")
-                    .replace(/{|}/g,"")
-                    .replace(/,/g,"\n   ")
+                    .replace(/, (host|path|tls|mux|skip)/g, ",     $1")
+                    .replace(/{name: /g, "{name: \"")
+                    .replace(/, server:/g, "\", server:")
+                    .replace(/{|}/g, "")
+                    .replace(/,/g, "\n   ")
             }
-            raw = raw.replace(/  -\n.*name/g,"  - name");
+            raw = raw.replace(/  -\n.*name/g, "  - name");
             const proxies = YAML.eval(raw).proxies;
             output = proxies.map(p => JSON.stringify(p));
-        }
-        else {
+        } else {
             // check if content is based64 encoded
             const Base64 = new Base64Code();
             const keys = ["dm1lc3M", "c3NyOi8v", "dHJvamFu", "c3M6Ly", "c3NkOi8v"];
@@ -1283,7 +1315,6 @@ function QX_Producer() {
 }
 
 function Loon_Producer() {
-    $.notify("LOON")
     const targetPlatform = "Loon";
     const output = (proxy) => {
         let obfs_opts, tls_opts;
@@ -2083,22 +2114,6 @@ function API(name = "untitled", debug = false) {
         error(msg) {
             console.log("ERROR: " + msg);
         }
-
-        wait(millisec) {
-            return new Promise((resolve) => setTimeout(resolve, millisec));
-        }
-
-        done(value = {}) {
-            if (isQX || isLoon || isSurge) {
-                $done(value);
-            } else if (isNode && !isJSBox) {
-                if (typeof $context !== "undefined") {
-                    $context.headers = value.headers;
-                    $context.statusCode = value.statusCode;
-                    $context.body = value.body;
-                }
-            }
-        }
     })(name, debug);
 }
 
@@ -2129,7 +2144,7 @@ function express(port = 3000) {
         // adapter
         app.start = () => {
             app.listen(port, () => {
-                console.log(`Express started on port: ${port}`);
+                $.log(`Express started on port: ${port}`);
             })
         }
         return app;
