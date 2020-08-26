@@ -31,6 +31,7 @@
 import TopToolbar from "@/components/TopToolbar";
 import BottomNav from "@/components/BottomNav";
 
+
 function initStore(store) {
   store.dispatch('FETCH_SUBSCRIPTIONS');
   store.dispatch("FETCH_COLLECTIONS");
@@ -73,3 +74,7 @@ export default {
   }
 }
 </script>
+
+<style>
+
+</style>
