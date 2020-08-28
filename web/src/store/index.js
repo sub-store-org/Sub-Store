@@ -33,7 +33,7 @@ const store = new Vuex.Store({
 
         SET_ERROR_MESSAGE(state, msg) {
             state.errorMessage = msg;
-        },
+        }
     },
 
     actions: {
