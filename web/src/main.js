@@ -1,9 +1,9 @@
 import Vue from 'vue'
 import App from './App.vue'
-import Clipboard from 'v-clipboard';
 import vuetify from './plugins/vuetify';
 import router from './router';
 import store from './store';
+import Clipboard from 'v-clipboard';
 
 Vue.config.productionTip = false
 Vue.use(Clipboard);

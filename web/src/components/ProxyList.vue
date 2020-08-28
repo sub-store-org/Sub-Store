@@ -3,7 +3,24 @@
   <v-list-item v-for="proxy in proxies" :key="proxy.name">
     <v-list-item-content>
       <v-list-item-title v-text="proxy.name" class="wrap-text"></v-list-item-title>
-      <v-list-item-subtitle v-text="getType(proxy.type)"></v-list-item-subtitle>
+      <v-chip-group>
+        <v-chip x-small color="primary" outlined>
+          <v-icon left x-small>mdi-server</v-icon>
+          {{ proxy.type.toUpperCase() }}
+        </v-chip>
+        <v-chip x-small v-if="proxy.udp" color="blue" outlined>
+          <v-icon left x-small>mdi-fire</v-icon>
+          UDP
+        </v-chip>
+        <v-chip x-small v-if="proxy.tfo" color="success" outlined>
+          <v-icon left x-small>mdi-flash</v-icon>
+          TFO
+        </v-chip>
+        <v-chip x-small v-if="proxy.scert" color="error" outlined>
+          <v-icon left x-small>error</v-icon>
+          SCERT
+        </v-chip>
+      </v-chip-group>
     </v-list-item-content>
     <v-list-item-action>
       <v-btn icon>
@@ -19,16 +36,7 @@ export default {
   name: "ProxyList",
   props: ['proxies'],
   methods: {
-    getType(type) {
-      switch (type) {
-        case 'ss':
-          return 'shadowsocks'
-        case 'ssr':
-          return 'shadowsocksr'
-        default:
-          return type
-      }
-    }
+
   }
 }
 </script>

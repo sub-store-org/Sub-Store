@@ -116,25 +116,30 @@
         <v-btn
             fab
             color="primary"
+            @click="createSub"
         >
           <v-icon>mdi-plus</v-icon>
         </v-btn>
       </v-speed-dial>
     </v-fab-transition>
-    <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList">
+    <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList" scrollable>
       <v-card>
-        <v-toolbar dark color="primary">
-          <v-icon>mdi-cloud</v-icon>
-          <v-spacer></v-spacer>
-          <v-toolbar-title>节点列表</v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-toolbar-items>
-            <v-btn icon @click="showProxyList = false">
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
-          </v-toolbar-items>
-        </v-toolbar>
-        <proxy-list :proxies="proxies"></proxy-list>
+        <v-card-title class="pa-0">
+          <v-toolbar dark color="primary">
+            <v-icon>mdi-cloud</v-icon>
+            <v-spacer></v-spacer>
+            <v-toolbar-title>节点列表</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-toolbar-items>
+              <v-btn icon @click="showProxyList = false">
+                <v-icon>mdi-close</v-icon>
+              </v-btn>
+            </v-toolbar-items>
+          </v-toolbar>
+        </v-card-title>
+        <v-card-text class="pl-0 pr-0">
+          <proxy-list :proxies="proxies"></proxy-list>
+        </v-card-text>
       </v-card>
     </v-dialog>
   </v-container>
@@ -204,6 +209,7 @@ export default {
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
+          this.$router.push(`/sub-edit/${collection.name}`);
           break
         case 'DELETE':
           this.$store.dispatch("DELETE_COLLECTION", collection.name);
@@ -225,10 +231,20 @@ export default {
         this.$store.commit("SET_ERROR_MESSAGE", err);
       })
     },
+    createSub() {
+      this.$router.push("/sub-edit/UNTITLED");
+    },
+    createCol() {
+      this.$router.push("/collection-edit/UNTITLED")
+    }
   }
 }
 </script>
 
 <style scoped>
-
+.top-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
 </style>
