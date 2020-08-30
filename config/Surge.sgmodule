@@ -1,7 +1,7 @@
 #!name=Sub-Store
 #!desc=高级订阅管理工具 @Peng-YM
 [MITM]
-hostname=sub.com
+hostname=sub.store
 
 [Script]
-Sub-Store = type=http-request,pattern=^https?:\/\/sub\.com,script-path=sub-store.js,requires-body=true,timeout=120,debug=true
+Sub-Store = type=http-request,pattern=^https?:\/\/sub\.store,script-path=sub-store.js,requires-body=true,timeout=120
