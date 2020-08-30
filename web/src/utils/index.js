@@ -4,7 +4,7 @@ import {BACKEND_BASE} from "@/config";
 
 export const axios = Axios.create({
     baseURL: `${BACKEND_BASE}/api`,
-    timeout: 1000
+    timeout: 10000
 });
 
 export function isEmptyObj(obj) {
