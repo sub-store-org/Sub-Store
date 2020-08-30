@@ -1,6 +1,5 @@
 # Sub-Store
-> This project is still under active development. Current version: v0.1 (backend only).
-
+> This project is still under active development.
 Subscription manager for QX, Loon and Surge.
 Core functionalities:
 1. Conversion among various formats.
