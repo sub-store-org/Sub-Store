@@ -1,4 +1,5 @@
 import Axios from 'axios';
+import store from "@/store";
 import {BACKEND_BASE} from "@/config";
 
 export const axios = Axios.create({
@@ -8,4 +9,12 @@ export const axios = Axios.create({
 
 export function isEmptyObj(obj) {
     return Object.keys(obj).length === 0;
+}
+
+export function showInfo(msg) {
+    store.commit("SET_SUCCESS_MESSAGE", msg);
+}
+
+export function showError(err) {
+    store.commit("SET_ERROR_MESSAGE", err);
 }

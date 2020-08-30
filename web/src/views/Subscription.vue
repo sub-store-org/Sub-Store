@@ -120,6 +120,13 @@
         >
           <v-icon>mdi-plus</v-icon>
         </v-btn>
+        <v-btn
+            fab
+            color="primary"
+            @click="createCol"
+        >
+          <v-icon>create_new_folder</v-icon>
+        </v-btn>
       </v-speed-dial>
     </v-fab-transition>
     <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList" scrollable>
@@ -209,7 +216,7 @@ export default {
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
-          this.$router.push(`/sub-edit/${collection.name}`);
+          this.$router.push(`/collection-edit/${collection.name}`);
           break
         case 'DELETE':
           this.$store.dispatch("DELETE_COLLECTION", collection.name);

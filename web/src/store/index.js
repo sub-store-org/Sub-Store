@@ -39,53 +39,55 @@ const store = new Vuex.Store({
     actions: {
         // fetch subscriptions
         async FETCH_SUBSCRIPTIONS({state}) {
-            axios.get("/sub").then(resp => {
+            return axios.get("/sub").then(resp => {
                 const {data} = resp.data;
                 state.subscriptions = data;
             });
         },
         // fetch collections
         async FETCH_COLLECTIONS({state}) {
-            axios.get("/collection").then(resp => {
+            return axios.get("/collection").then(resp => {
                 const {data} = resp.data;
                 state.collections = data;
             });
         },
         // update subscriptions
-        async UPDATE_SUBSCRIPTION({commit, dispatch}, {name, sub}) {
-            axios.patch(`/sub/${name}`, sub).then(() => {
+        async UPDATE_SUBSCRIPTION({dispatch}, {name, sub}) {
+            return axios.patch(`/sub/${name}`, sub).then(() => {
                 dispatch("FETCH_SUBSCRIPTIONS");
                 dispatch("FETCH_COLLECTIONS");
-                commit("SET_SUCCESS_MESSAGE", `成功更新订阅${sub.name || name}`);
-            }).catch(err => {
-                commit("SET_ERROR_MESSAGE", err);
             });
         },
         // new subscription
-        async NEW_SUBSCRIPTION() {
-
+        async NEW_SUBSCRIPTION({dispatch}, sub) {
+            return axios.post(`/sub`, sub).then(() => {
+                dispatch("FETCH_SUBSCRIPTIONS");
+            });
         },
         // delete subscription
-        async DELETE_SUBSCRIPTION({commit, dispatch}, name) {
-            axios.delete(`/sub/${name}`).then(() => {
+        async DELETE_SUBSCRIPTION({dispatch}, name) {
+            return axios.delete(`/sub/${name}`).then(() => {
                 dispatch("FETCH_SUBSCRIPTIONS");
                 dispatch("FETCH_COLLECTIONS");
-                commit("SET_SUCCESS_MESSAGE", `成功删除订阅${name}`);
-            }).catch(err => {
-                commit("SET_ERROR_MESSAGE", err);
-            })
+            });
         },
         // update collection
-        async UPDATE_COLLECTION() {
-
+        async UPDATE_COLLECTION({dispatch}, {name, collection}) {
+            return axios.patch(`/collection/${name}`, collection).then(() => {
+                dispatch("FETCH_COLLECTIONS");
+            });
         },
         // new collection
-        async NEW_COLLECTION() {
-
+        async NEW_COLLECTION({dispatch}, collection) {
+            return axios.post(`/collection`, collection).then(() => {
+                dispatch("FETCH_COLLECTIONS");
+            })
         },
         // delete collection
-        async DELETE_COLLECTION() {
-
+        async DELETE_COLLECTION({dispatch}, name) {
+            return axios.delete(`/collection/${name}`).then(() => {
+                dispatch("FETCH_COLLECTIONS");
+            })
         }
     },
 

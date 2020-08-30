@@ -92,7 +92,7 @@ const AVAILABLE_OPERATORS = {
 async function refreshResource(req, res) {
     const {url} = req.body;
     const cachedResources = $.read(RESOURCE_CACHE_KEY);
-    cachedResources[url] = await $.http.get(url).then(resp => resp => resp.body).catch(err => {
+    cachedResources[url] = await $.http.get(url).then(resp => resp.body).catch(err => {
         res.status(500).json({
             status: "failed",
             message: `Cannot refresh remote resource: ${url}\n Reason: ${err}`
@@ -146,7 +146,22 @@ async function parseSub(sub, platform) {
 
     $.log("=======================================================================");
     $.log(`Processing subscription: ${sub.name}, target platform ==> ${platform}.`);
+    $.log(`Initializing parser...`);
     const $parser = ProxyParser(platform);
+    // Parsers
+    $parser.addParsers([
+        Clash_All,
+        // URI format parsers
+        URI_SS, URI_SSR, URI_VMess, URI_Trojan,
+        // Quantumult X platform
+        QX_SS, QX_SSR, QX_VMess, QX_Trojan, QX_Http,
+        // Loon platform
+        Loon_SS, Loon_SSR, Loon_VMess, Loon_Trojan, Loon_Http,
+        // Surge platform
+        Surge_SS, Surge_VMess, Surge_Trojan, Surge_Http
+    ]);
+
+    $.log(`Parser initialized.`);
     let proxies = $parser.parse(raw);
 
     // filters
@@ -180,6 +195,11 @@ async function parseSub(sub, platform) {
             }
         }
     }
+
+    // Producers
+    $parser.addProducers([
+        QX_Producer, Loon_Producer, Surge_Producer, Raw_Producer
+    ]);
     return $parser.produce(proxies);
 }
 
@@ -418,11 +438,12 @@ function ProxyParser(targetPlatform) {
     const parsers = [];
     const producers = [];
 
-    function addParsers(...args) {
+    function addParsers(args) {
         args.forEach(a => parsers.push(a()));
+        $.log(`${args.length} parser added.`);
     }
 
-    function addProducers(...args) {
+    function addProducers(args) {
         args.forEach(a => producers.push(a()))
     }
 
@@ -529,26 +550,8 @@ function ProxyParser(targetPlatform) {
         return output.join("\n");
     }
 
-    // Parsers
-    addParsers(
-        Clash_All,
-        // URI format parsers
-        URI_SS, URI_SSR, URI_VMess, URI_Trojan,
-        // Quantumult X platform
-        QX_SS, QX_SSR, QX_VMess, QX_Trojan, QX_Http,
-        // Loon platform
-        Loon_SS, Loon_SSR, Loon_VMess, Loon_Trojan, Loon_Http,
-        // Surge platform
-        Surge_SS, Surge_VMess, Surge_Trojan, Surge_Http
-    );
-
-    // Producers
-    addProducers(
-        QX_Producer, Loon_Producer, Surge_Producer, Raw_Producer
-    );
-
     return {
-        parse, produce
+        parse, produce, addParsers, addProducers
     };
 }
 
@@ -1418,26 +1421,21 @@ function SetPropertyOperator(key, val) {
 }
 
 // add or remove flag for proxies
-function FlagOperator(type = 1) {
+function FlagOperator(add = true) {
     return {
         name: "Flag Operator",
         func: proxies => {
             return proxies.map(proxy => {
-                switch (type) {
-                    case 0:
-                        // no flag
-                        proxy.name = removeFlag(proxy.name);
-                        break
-                    case 1:
-                        // get flag
-                        const newFlag = getFlag(proxy.name);
-                        // remove old flag
-                        proxy.name = removeFlag(proxy.name);
-                        proxy.name = newFlag + " " + proxy.name;
-                        proxy.name = proxy.name.replace(/🇹🇼/g, "🇨🇳");
-                        break;
-                    default:
-                        throw new Error("Unknown flag type: " + type);
+                if (!add)
+                    // no flag
+                    proxy.name = removeFlag(proxy.name);
+                else {
+                    // get flag
+                    const newFlag = getFlag(proxy.name);
+                    // remove old flag
+                    proxy.name = removeFlag(proxy.name);
+                    proxy.name = newFlag + " " + proxy.name;
+                    proxy.name = proxy.name.replace(/🇹🇼/g, "🇨🇳");
                 }
                 return proxy;
             })
@@ -2139,7 +2137,7 @@ function express(port = 3000) {
         app.use((req, res, next) => {
             res.set(DEFAULT_HEADERS);
             next();
-        })
+        });
 
         // adapter
         app.start = () => {
@@ -2187,7 +2185,6 @@ function express(port = 3000) {
             }
         }
         if (handler) {
-            $.notify(`DISPATCHING:`, `${method}, ${url}`, path);
             // dispatch to next handler
             const next = () => {
                 dispatch(method, url, i);
@@ -2851,7 +2848,7 @@ var YAML =
                         if (currentObj != null) res.push(currentObj);
                         currentObj = {};
                         isMap = true;
-                        continue;
+
                     } else if (m = line.match(/^-\s*(.*)/)) {
                         if (currentObj != null)
                             currentObj.push(processValue(m[1]));
@@ -2864,7 +2861,7 @@ var YAML =
                             }
                             res.push(processValue(m[1]));
                         }
-                        continue;
+
                     }
                 }
 
