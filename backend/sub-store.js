@@ -8,7 +8,7 @@
  * 2. 节点过滤，重命名，排序等。
  * 3. 订阅拆分，组合。
  */
-const $ = API("sub-store", true);
+const $ = API("sub-store");
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
@@ -2251,7 +2251,7 @@ function express(port = 3000) {
 
             send(body = "") {
                 const response = {
-                    status: statusCode,
+                    status: isQX ? `HTTP/1.1 ${statusCode}` : statusCode,
                     body,
                     headers,
                 };
