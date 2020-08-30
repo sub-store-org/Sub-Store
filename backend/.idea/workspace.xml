@@ -20,8 +20,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8b97a098-48b2-4e64-a9ef-522fe2d30b52" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sub-store.js" beforeDir="false" afterPath="$PROJECT_DIR$/sub-store.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../config/Loon.plugin" beforeDir="false" afterPath="$PROJECT_DIR$/../config/Loon.plugin" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -80,7 +79,7 @@
       <workItem from="1598442849645" duration="8914000" />
       <workItem from="1598778633049" duration="8638000" />
       <workItem from="1598795202964" duration="3825000" />
-      <workItem from="1598806004385" duration="565000" />
+      <workItem from="1598806004385" duration="785000" />
     </task>
     <servers />
   </component>
