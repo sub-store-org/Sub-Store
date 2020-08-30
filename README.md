@@ -1,6 +1,7 @@
 # Sub-Store
 > This project is still under active development.
 Subscription manager for QX, Loon and Surge.
+
 Core functionalities:
 1. Conversion among various formats.
 2. Subscription formatting.
