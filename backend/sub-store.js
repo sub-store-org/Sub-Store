@@ -1331,7 +1331,7 @@ function Loon_Producer() {
                 if (proxy.tls) {
                     obfs_opts += `,tls-name=${proxy.sni},skip-cert-verify:${proxy.scert}`;
                 }
-                return `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher === 'auto' ? 'none' : proxy.cipher},"${proxy.uuid}"over-tls:${proxy.tls}${obfs_opts}`;
+                return `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher === 'auto' ? 'none' : proxy.cipher},"${proxy.uuid}",over-tls:${proxy.tls}${obfs_opts}`;
             case "trojan":
                 return `${proxy.name}=trojan,${proxy.server},${proxy.port},${proxy.password},tls-name:${proxy.sni},skip-cert-verify:${proxy.scert}`;
             case "http":
