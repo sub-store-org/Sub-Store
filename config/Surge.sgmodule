@@ -4,8 +4,5 @@
 hostname=sub.store
 
 [Script]
-<<<<<<< HEAD
 Sub-Store = type=http-request,pattern=^https?:\/\/sub\.store,script-path=sub-store.js,requires-body=true,timeout=120
-=======
-Sub-Store = type=http-request,pattern=^https?:\/\/sub\.com,script-path=sub-store.js,requires-body=true,timeout=120
->>>>>>> master
+
