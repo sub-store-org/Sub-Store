@@ -12,19 +12,17 @@ const $ = API("sub-store", true);
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
-const RESOURCE_CACHE_KEY = "resources";
 
 // SOME INITIALIZATIONS
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
-if (!$.read(RESOURCE_CACHE_KEY)) $.write({}, RESOURCE_CACHE_KEY);
 
 // BACKEND API
 const $app = express();
 
 // download
-$app.get("/download/:name", downloadSub);
 $app.get("/download/collection/:name", downloadCollection);
+$app.get("/download/:name", downloadSub);
 
 // refresh
 $app.post("/api/refresh", refreshResource);
@@ -129,20 +127,12 @@ async function downloadSub(req, res) {
 }
 
 async function parseSub(sub, platform) {
-    let raw;
-    const cachedResources = $.read(RESOURCE_CACHE_KEY);
-    if (platform === "Raw") {
-        // use cache if available
-        raw = cachedResources[sub.url];
-    }
 
     // always download from url
-    raw = raw || await $.http.get(sub.url).then(resp => resp.body).catch(err => {
+    const raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
         throw new Error(err);
     });
-    cachedResources[sub.url] = raw;
 
-    $.write(cachedResources, RESOURCE_CACHE_KEY);
 
     $.log("=======================================================================");
     $.log(`Processing subscription: ${sub.name}, target platform ==> ${platform}.`);
