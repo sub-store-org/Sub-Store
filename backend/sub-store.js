@@ -8,7 +8,7 @@
  * 2. 节点过滤，重命名，排序等。
  * 3. 订阅拆分，组合。
  */
-const $ = API("sub-store");
+const $ = API("sub-store",true);
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
