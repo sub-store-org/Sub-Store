@@ -48,7 +48,7 @@ const router = new Router({
 
 router.beforeEach((to, from, next) => {
     const {meta} = to;
-    document.title = to.meta.title
+    // document.title = to.meta.title
     store.commit("SET_NAV_TITLE", meta.title);
     next();
 })
