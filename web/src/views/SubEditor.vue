@@ -137,6 +137,8 @@
 </template>
 
 <script>
+import {showError, showInfo} from "@/utils";
+
 export default {
   data: function () {
     return {
@@ -179,9 +181,17 @@ export default {
           this.$store.dispatch("UPDATE_SUBSCRIPTION", {
             name: this.$route.params.name,
             sub
+          }).then(() => {
+            showInfo(`成功保存订阅：${this.options.name}！`)
+          }).catch(() => {
+            showError(`发生错误，无法保存订阅！`)
           });
         } else {
-          this.$store.dispatch("NEW_SUBSCRIPTION", sub);
+          this.$store.dispatch("NEW_SUBSCRIPTION", sub).then(() => {
+            showInfo(`成功创建订阅：${this.options.name}！`)
+          }).catch(() => {
+            showError(`发生错误，无法创建订阅！`)
+          });
         }
       }
     },

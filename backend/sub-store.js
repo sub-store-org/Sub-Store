@@ -12,6 +12,7 @@ const $ = API("sub-store", true);
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
+const RESOURCE_CACHE_KEY = "resources";
 
 // SOME INITIALIZATIONS
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
@@ -96,7 +97,7 @@ async function refreshResource(req, res) {
             message: `Cannot refresh remote resource: ${url}\n Reason: ${err}`
         });
     });
-    $.write(cachedResources, cachedResources);
+    $.write(cachedResources, RESOURCE_CACHE_KEY);
     res.json({
         status: "success"
     });
@@ -105,7 +106,7 @@ async function refreshResource(req, res) {
 // download subscription, for APP only
 async function downloadSub(req, res) {
     const {name} = req.params;
-    const platform = getPlatformFromHeaders(req.headers);
+    const platform = req.query.target || getPlatformFromHeaders(req.headers);
     const allSubs = $.read(SUBS_KEY);
     if (allSubs[name]) {
         const sub = allSubs[name];
@@ -127,12 +128,10 @@ async function downloadSub(req, res) {
 }
 
 async function parseSub(sub, platform) {
-
     // always download from url
     const raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
         throw new Error(err);
     });
-
 
     $.log("=======================================================================");
     $.log(`Processing subscription: ${sub.name}, target platform ==> ${platform}.`);
@@ -1325,14 +1324,14 @@ function Loon_Producer() {
                 obfs_opts = "";
                 if (proxy.network === 'ws') {
                     const host = proxy['ws-headers'].Host;
-                    obfs_opts = `,transport:ws,host:${host},path:${proxy['ws-path']}`;
+                    obfs_opts = `,transport:ws,host:${host},path:${proxy['ws-path'] || "/"}`;
                 } else {
                     obfs_opts = `,transport:tcp`;
                 }
                 if (proxy.tls) {
                     obfs_opts += `,tls-name=${proxy.sni},skip-cert-verify:${proxy.scert}`;
                 }
-                return `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher},over-tls:${proxy.tls}${obfs_opts}`;
+                return `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher === 'auto' ? 'none' : proxy.cipher},"${proxy.uuid}"over-tls:${proxy.tls}${obfs_opts}`;
             case "trojan":
                 return `${proxy.name}=trojan,${proxy.server},${proxy.port},${proxy.password},tls-name:${proxy.sni},skip-cert-verify:${proxy.scert}`;
             case "http":
