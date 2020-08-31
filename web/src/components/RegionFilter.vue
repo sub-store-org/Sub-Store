@@ -59,7 +59,7 @@ const regions = [
   },
   {
     name: "🇺🇸 美国",
-    value: "USA"
+    value: "US"
   },
   {
     name: "🇬🇧 英国",
