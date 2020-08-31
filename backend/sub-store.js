@@ -2246,7 +2246,7 @@ function express(port = 3000) {
     }
 
     function Response() {
-        let statusCode = "200";
+        let statusCode = 200;
         const {isQX, isLoon, isSurge} = ENV();
         const headers = DEFAULT_HEADERS;
         const STATUS_CODE_MAP = {
