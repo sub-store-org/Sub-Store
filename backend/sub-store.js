@@ -1650,7 +1650,10 @@ function UselessFilter() {
     const KEYWORDS = ["网址", "流量", "时间", "应急", "过期", "Bandwidth", "expire"];
     return {
         name: "Useless Filter",
-        func: DiscardKeywordFilter(KEYWORDS).func
+        func: KeywordFilter({
+            keywords: KEYWORDS,
+            keep: false
+        }).func
     }
 }
 
