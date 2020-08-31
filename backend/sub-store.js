@@ -637,6 +637,7 @@ function URI_SS() {
                 if (key) params[key] = val || true; // some options like "tls" will not have value
             }
             switch (params.plugin) {
+                case 'obfs-local':
                 case 'simple-obfs':
                     proxy.plugin = 'obfs'
                     proxy['plugin-opts'] = {
