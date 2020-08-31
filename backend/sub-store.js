@@ -1,5 +1,5 @@
 /**
- * Sub-Store v0.1 (Backend only)
+ * Sub-Store v0.1 (Backend)
  * @Author: Peng-YM
  * @Description:
  * 适用于QX，Loon，Surge的订阅管理工具。
@@ -737,27 +737,70 @@ function URI_VMess() {
     const supported = clone(DEFAULT_SUPPORTED_PLATFORMS);
     const func = (line) => {
         line = line.split("vmess://")[1];
-        const params = JSON.parse(Base64.safeDecode(line));
-        const proxy = {
-            name: params.ps,
-            type: "vmess",
-            server: params.add,
-            port: params.port,
-            cipher: "auto", // V2rayN has no default cipher! use aes-128-gcm as default.
-            uuid: params.id,
-            alterId: params.aid || 0,
-            tls: JSON.parse(params.tls || "false"),
-            supported
-        }
-        // handle obfs
-        if (params.net === 'ws') {
-            proxy.network = 'ws';
-            proxy['ws-path'] = params.path;
-            proxy['ws-headers'] = {
-                Host: params.host || params.add
+        const content = Base64.safeDecode(line);
+        if (/=\s*vmess/.test(content)) {
+            const partitions = content.split(",").map(p => p.trim());
+            // Quantumult VMess URI format
+            // get keyword params
+            const params = {};
+            for (const part of partitions) {
+                if (part.indexOf("=") !== -1) {
+                    const [key, val] = part.split("=");
+                    params[key.trim()] = val.trim();
+                }
             }
+
+            const proxy = {
+                name: partitions[0].split("=")[0].trim(),
+                type: "vmess",
+                server: partitions[1],
+                port: partitions[2],
+                cipher: partitions[3],
+                uuid: partitions[4].match(/^"(.*)"$/)[1],
+                tls: params.obfs === 'over-tls' || params.obfs === 'wss',
+                udp: JSON.parse(params["udp-relay"] || "false"),
+                tfo: JSON.parse(params["fast-open"] || "false"),
+            };
+
+            if (proxy.tls) {
+                proxy.sni = params['obfs-host'] || proxy.server;
+                proxy.scert = !JSON.parse(params['tls-verification'] || 'true');
+            }
+            // handle ws headers
+            if (params.obfs === 'ws' || params.obfs === 'wss') {
+                proxy.network = 'ws';
+                proxy['ws-path'] = params['obfs-uri'];
+                proxy['ws-headers'] = {
+                    Host: params['obfs-host'] || proxy.server // if no host provided, use the same as server
+                }
+            }
+
+            return proxy;
+        } else {
+            // V2rayN URI format
+            const params = JSON.parse(content);
+            const proxy = {
+                name: params.ps,
+                type: "vmess",
+                server: params.add,
+                port: params.port,
+                cipher: "auto", // V2rayN has no default cipher! use aes-128-gcm as default.
+                uuid: params.id,
+                alterId: params.aid || 0,
+                tls: JSON.parse(params.tls || "false"),
+                supported
+            }
+            // handle obfs
+            if (params.net === 'ws') {
+                proxy.network = 'ws';
+                proxy['ws-path'] = params.path;
+                proxy['ws-headers'] = {
+                    Host: params.host || params.add
+                }
+            }
+            return proxy
         }
-        return proxy
+
     }
     return {patternTest, func};
 }
