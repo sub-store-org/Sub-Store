@@ -9,6 +9,11 @@
  * 3. 订阅拆分，组合。
  */
 const $ = API("sub-store", true);
+$.http = HTTP("", {
+    headers: {
+        "User-Agent": "Quantumult%20X"
+    }
+})
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
