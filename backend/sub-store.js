@@ -2199,7 +2199,7 @@ function express(port = 3000) {
         } else {
             // no route, return 404
             const res = Response();
-            res.status("404").json({
+            res.status(404).json({
                 status: "failed",
                 message: "ERROR: 404 not found"
             });
@@ -2250,10 +2250,10 @@ function express(port = 3000) {
         const {isQX, isLoon, isSurge} = ENV();
         const headers = DEFAULT_HEADERS;
         const STATUS_CODE_MAP = {
-            "200": "HTTP/1.1 200 OK",
-            "201": "HTTP/1.1 201 Created",
-            "404": "HTTP/1.1 404 Not Found",
-            "500": "HTTP/1.1 500 Internal Server Error"
+            200: "HTTP/1.1 200 OK",
+            201: "HTTP/1.1 201 Created",
+            404: "HTTP/1.1 404 Not Found",
+            500: "HTTP/1.1 500 Internal Server Error"
         }
         return new (class {
             status(code) {
