@@ -618,7 +618,7 @@ function URI_SS() {
         content = content.split("#")[0]; // strip proxy name
 
         // handle IPV4 and IPV6
-        const serverAndPort = content.match(/@([^\/]*)\//)[1];
+        const serverAndPort = content.match(/@([^\/]*)(\/|$)/)[1];
         const portIdx = serverAndPort.lastIndexOf(":");
         proxy.server = serverAndPort.substring(0, portIdx);
         proxy.port = serverAndPort.substring(portIdx + 1);
@@ -1317,10 +1317,15 @@ function Loon_Producer() {
         switch (proxy.type) {
             case "ss":
                 obfs_opts = ",,";
-                if (proxy.plugin === 'obfs') {
-                    const {mode, host} = proxy['plugin-opts'];
-                    obfs_opts = `,${mode},${host}`
+                if (proxy.plugin) {
+                    if (proxy.plugin === 'obfs') {
+                        const {mode, host} = proxy['plugin-opts'];
+                        obfs_opts = `,${mode},${host}`
+                    } else {
+                        throw new Error(`Platform ${targetPlatform} does not support obfs option: ${proxy.obfs}`);
+                    }
                 }
+
                 return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},${proxy.password}${obfs_opts}`;
             case "ssr":
                 return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},${proxy.password},${proxy.protocol},{${proxy['protocol-param']}},${proxy.obfs},{${proxy['obfs-param']}}`
@@ -1359,10 +1364,12 @@ function Surge_Producer() {
         switch (proxy.type) {
             case 'ss':
                 obfs_opts = "";
-                if (proxy.plugin === "obfs") {
-                    obfs_opts = `,obfs=${proxy['plugin-opts'].mode},obfs-host=${proxy['plugin-opts'].host}`
-                } else {
-                    throw new Error(`Platform ${targetPlatform} does not support obfs option: ${proxy.obfs}`);
+                if (proxy.plugin) {
+                    if (proxy.plugin === "obfs") {
+                        obfs_opts = `,obfs=${proxy['plugin-opts'].mode},obfs-host=${proxy['plugin-opts'].host}`
+                    } else {
+                        throw new Error(`Platform ${targetPlatform} does not support obfs option: ${proxy.obfs}`);
+                    }
                 }
                 return `${proxy.name}=ss,${proxy.server},${proxy.port},encrypt-method=${proxy.cipher},password=${proxy.password}${obfs_opts},tfo=${proxy.tfo || 'false'},udp-relay=${proxy.udp || 'false'}`;
             case 'vmess':
