@@ -104,7 +104,7 @@ export default {
   created() {
     if (this.args) {
       this.regexps = this.args.regex || [];
-      if (this.args.keep) this.mode = this.args.keep ? "IN" : "OUT";
+      if (typeof this.args.keep !== 'undefined') this.mode = this.args.keep ? "IN" : "OUT";
       else this.mode = "IN";
     }
   }

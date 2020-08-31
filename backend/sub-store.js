@@ -1341,7 +1341,7 @@ function QX_Producer() {
                         obfs_opts = `,obfs=over-tls,obfs-host=${proxy.sni},tls-verification=${proxy.scert ? "false" : "true"}`;
                     }
                 }
-                return `vmess=${proxy.server}:${proxy.port},method=${proxy.cipher},password=${proxy.uuid}${obfs_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name}`
+                return `vmess=${proxy.server}:${proxy.port},method=${proxy.cipher === 'auto' ? "none" : proxy.cipher},password=${proxy.uuid}${obfs_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name}`
             case 'trojan':
                 return `trojan=${proxy.server}:${proxy.port},password=${proxy.password},tls-host=${proxy.sni},tls-verification=${proxy.scert ? "false" : "true"}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name}`
             case 'http':
