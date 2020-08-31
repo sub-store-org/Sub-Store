@@ -11,7 +11,7 @@
 const $ = API("sub-store", true);
 $.http = HTTP("", {
     headers: {
-        "User-Agent": "Quantumult%20X"
+        "User-Agent": "Quantumult"
     }
 })
 // Constants
