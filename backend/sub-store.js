@@ -74,11 +74,9 @@ const DEFAULT_SUPPORTED_PLATFORMS = {
 
 const AVAILABLE_FILTERS = {
     "Keyword Filter": KeywordFilter,
-    "Discard Keyword Filter": DiscardKeywordFilter,
     "Useless Filter": UselessFilter,
     "Region Filter": RegionFilter,
     "Regex Filter": RegexFilter,
-    "Discard Regex Filter": DiscardRegexFilter,
     "Type Filter": TypeFilter,
     "Script Filter": ScriptFilter
 }
@@ -182,7 +180,7 @@ async function parseSub(sub, platform) {
             if (filter) {
                 $filter.addFilters(filter(item.args));
                 proxies = $filter.process(proxies);
-                $.log(`Applying filter "${item.type}" with arguments:\n >>> ${item.args || "None"}`);
+                $.log(`Applying filter "${item.type}" with arguments:\n >>> ${JSON.stringify(item.args) || "None"}`);
             }
         } else if (item.type.indexOf("Operator") !== -1) {
             const operator = AVAILABLE_OPERATORS[item.type];
@@ -1635,21 +1633,14 @@ function ScriptOperator(script) {
 
 /**************************** Filters ***************************************/
 // filter by keywords
-function KeywordFilter(keywords) {
+function KeywordFilter({keywords=[], keep = true}) {
     return {
         name: "Keyword Filter",
         func: (proxies) => {
-            return proxies.map(proxy => keywords.some(k => proxy.name.indexOf(k) !== -1));
-        }
-    }
-}
-
-function DiscardKeywordFilter(keywords) {
-    return {
-        name: "Discard Keyword Filter",
-        func: proxies => {
-            const filter = KeywordFilter(keywords).func;
-            return NOT(filter(proxies));
+            return proxies.map(proxy => {
+                const selected = keywords.some(k => proxy.name.indexOf(k) !== -1);
+                return keep ? selected : !selected;
+            });
         }
     }
 }
@@ -1686,21 +1677,17 @@ function RegionFilter(regions) {
 }
 
 // filter by regex
-function RegexFilter(regex) {
+function RegexFilter({regex=[], keep = true}) {
     return {
         name: "Regex Filter",
         func: (proxies) => {
-            return proxies.map(proxy => regex.some(r => r.test(proxy.name)));
-        }
-    }
-}
-
-function DiscardRegexFilter(regex) {
-    return {
-        name: "Discard Regex Filter",
-        func: proxies => {
-            const filter = RegexFilter(regex).func;
-            return NOT(filter(proxies));
+            return proxies.map(proxy => {
+                const selected = regex.some(r => {
+                    r = new RegExp(r);
+                    return r.test(proxy.name)
+                });
+                return keep ? selected : !selected;
+            });
         }
     }
 }

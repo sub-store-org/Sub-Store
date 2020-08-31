@@ -49,7 +49,7 @@ export default {
   },
 
   created() {
-    this.$vuetify.theme.dark = false;
+    this.$vuetify.theme.dark = true;
     this.$vuetify.theme.themes.dark.primary = '#0899ab';
     this.$vuetify.theme.themes.light.primary = '#d73964';
 
