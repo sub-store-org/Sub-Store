@@ -621,7 +621,6 @@ function URI_SS() {
             supported
         }
         content = content.split("#")[0]; // strip proxy name
-
         // handle IPV4 and IPV6
         const serverAndPort = content.match(/@([^\/]*)(\/|$)/)[1];
         const portIdx = serverAndPort.lastIndexOf(":");
@@ -635,7 +634,7 @@ function URI_SS() {
         // handle obfs
         const idx = content.indexOf("?plugin=");
         if (idx !== -1) {
-            const pluginInfo = ("plugin=" + decodeURIComponent(content.split("?plugin=")[1])).split(";");
+            const pluginInfo = ("plugin=" + decodeURIComponent(content.split("?plugin=")[1].split("&")[0])).split(";");
             const params = {};
             for (const item of pluginInfo) {
                 const [key, val] = item.split("=");
