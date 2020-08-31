@@ -8,7 +8,7 @@
  * 2. 节点过滤，重命名，排序等。
  * 3. 订阅拆分，组合。
  */
-const $ = API("sub-store");
+const $ = API("sub-store", true);
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
@@ -1455,7 +1455,7 @@ function SortOperator(order = 'asc') {
 }
 
 // sort by keywords
-function KeywordSortOperator(...keywords) {
+function KeywordSortOperator(keywords) {
     return {
         name: "Keyword Sort Operator",
         func: proxies => proxies.sort((a, b) => {
@@ -1482,7 +1482,7 @@ function getKeywordOrder(keywords, str) {
 
 // rename by keywords
 // keywords: [{old: "old", now: "now"}]
-function KeywordRenameOperator(...keywords) {
+function KeywordRenameOperator(keywords) {
     return {
         name: "Keyword Rename Operator",
         func: proxies => {
@@ -1498,7 +1498,7 @@ function KeywordRenameOperator(...keywords) {
 
 // rename by regex
 // keywords: [{expr: "string format regex", now: "now"}]
-function RegexRenameOperator(...regex) {
+function RegexRenameOperator(regex) {
     return {
         name: "Regex Rename Operator",
         func: proxies => {
@@ -1514,7 +1514,7 @@ function RegexRenameOperator(...regex) {
 
 // delete keywords operator
 // keywords: ['a', 'b', 'c']
-function KeywordDeleteOperator(...keywords) {
+function KeywordDeleteOperator(keywords) {
     const keywords_ = keywords.map(k => {
         return {
             old: k,
@@ -1529,7 +1529,7 @@ function KeywordDeleteOperator(...keywords) {
 
 // delete regex operator
 // regex: ['a', 'b', 'c']
-function RegexDeleteOperator(...regex) {
+function RegexDeleteOperator(regex) {
     const regex_ = regex.map(r => {
         return {
             expr: r,
@@ -1576,7 +1576,7 @@ function ScriptOperator(script) {
 
 /**************************** Filters ***************************************/
 // filter by keywords
-function KeywordFilter(...keywords) {
+function KeywordFilter(keywords) {
     return {
         name: "Keyword Filter",
         func: (proxies) => {
@@ -1585,7 +1585,7 @@ function KeywordFilter(...keywords) {
     }
 }
 
-function DiscardKeywordFilter(...keywords) {
+function DiscardKeywordFilter(keywords) {
     return {
         name: "Discard Keyword Filter",
         func: proxies => {
@@ -1597,7 +1597,7 @@ function DiscardKeywordFilter(...keywords) {
 
 // filter useless proxies
 function UselessFilter() {
-    const KEYWORDS = ["流量", "时间", "应急", "过期", "Bandwidth", "expire"];
+    const KEYWORDS = ["网址", "流量", "时间", "应急", "过期", "Bandwidth", "expire"];
     return {
         name: "Useless Filter",
         func: DiscardKeywordFilter(KEYWORDS).func
@@ -1605,7 +1605,7 @@ function UselessFilter() {
 }
 
 // filter by regions
-function RegionFilter(...regions) {
+function RegionFilter(regions) {
     const REGION_MAP = {
         "HK": "🇭🇰",
         "TW": "🇹🇼",
@@ -1628,7 +1628,7 @@ function RegionFilter(...regions) {
 }
 
 // filter by regex
-function RegexFilter(...regex) {
+function RegexFilter(regex) {
     return {
         name: "Regex Filter",
         func: (proxies) => {
@@ -1637,7 +1637,7 @@ function RegexFilter(...regex) {
     }
 }
 
-function DiscardRegexFilter(...regex) {
+function DiscardRegexFilter(regex) {
     return {
         name: "Discard Regex Filter",
         func: proxies => {
@@ -1648,7 +1648,7 @@ function DiscardRegexFilter(...regex) {
 }
 
 // filter by proxy types
-function TypeFilter(...types) {
+function TypeFilter(types) {
     return {
         name: "Type Filter",
         func: (proxies) => {
@@ -2110,7 +2110,7 @@ function express(port = 3000) {
     const DEFAULT_HEADERS = {
         "Content-Type": "text/plain;charset=UTF-8",
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "*",
+        'Access-Control-Allow-Methods': 'POST,GET,OPTIONS,PATCH,PUT,DELETE',
         "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept"
     };
 
