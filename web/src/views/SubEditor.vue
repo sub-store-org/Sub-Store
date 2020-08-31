@@ -23,8 +23,12 @@
       </v-form>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn icon @click="save"><v-icon>save_alt</v-icon></v-btn>
-        <v-btn icon @click="discard"><v-icon>settings_backup_restore</v-icon></v-btn>
+        <v-btn icon @click="save">
+          <v-icon>save_alt</v-icon>
+        </v-btn>
+        <v-btn icon @click="discard">
+          <v-icon>settings_backup_restore</v-icon>
+        </v-btn>
       </v-card-actions>
     </v-card>
     <v-card class="mb-4">
@@ -44,6 +48,7 @@
               <v-col>
                 <v-radio label="删除" value="REMOVE"/>
               </v-col>
+              <v-col></v-col>
             </v-row>
           </v-radio-group>
           <v-radio-group
@@ -123,25 +128,69 @@
         </v-item-group>
       </v-form>
     </v-card>
-    <v-card class="mb-4">
+    <v-card class="mb-4" id="processors">
       <v-subheader>
         节点操作
         <v-spacer></v-spacer>
-        <v-btn icon>
-          <v-icon color="primary">add_circle</v-icon>
-        </v-btn>
+        <v-dialog scrollable v-model="dialog">
+          <template #activator="{on}">
+            <v-btn icon v-on="on">
+              <v-icon color="primary">add_circle</v-icon>
+            </v-btn>
+          </template>
+          <v-card>
+            <v-card-title>选择节点操作</v-card-title>
+            <v-divider></v-divider>
+            <v-card-text>
+              <v-radio-group dense v-model="selectedProcess">
+                <v-radio v-for="(k, idx) in Object.keys(availableProcessors)" :label="availableProcessors[k].name"
+                         :key="idx" :value="k"></v-radio>
+              </v-radio-group>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="primary" text @click="addProcess(selectedProcess)">确认</v-btn>
+              <v-btn text @click="dialog = false">取消</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
       </v-subheader>
       <v-divider></v-divider>
+      <component v-for="(p, idx) in processors"
+                 :is="p.component"
+                 :key="idx"
+                 :args="p.args"
+                 @dataChanged="dataChanged"
+                 @deleteProcess="deleteProcess"
+      >
+      </component>
     </v-card>
   </v-container>
 </template>
 
 <script>
 import {showError, showInfo} from "@/utils";
+import TypeFilter from "@/components/TypeFilter";
+import RegionFilter from "@/components/RegionFilter";
+
+const AVAILABLE_PROCESSORS = {
+  "Type Filter": {
+    component: "TypeFilter",
+    name: "类型过滤器"
+  },
+  "Region Filter": {
+    component: "RegionFilter",
+    name: "区域过滤器"
+  }
+}
 
 export default {
+  components: {RegionFilter, TypeFilter},
   data: function () {
     return {
+      selectedProcess: null,
+      dialog: false,
       validations: {
         nameRules: [
           v => !!v || "订阅名称不能为空！",
@@ -173,6 +222,20 @@ export default {
     this.$store.commit("SET_NAV_TITLE", sub.name ? `订阅编辑 -- ${sub.name}` : "新建订阅");
     this.options = loadSubscription(this.options, sub);
   },
+  computed: {
+    availableProcessors() {
+      return AVAILABLE_PROCESSORS;
+    },
+
+    processors() {
+      return this.options.process.map(p => {
+        return {
+          component: AVAILABLE_PROCESSORS[p.type].component,
+          args: p.args
+        }
+      });
+    }
+  },
   methods: {
     save() {
       if (this.options.name && this.options.url) {
@@ -198,6 +261,19 @@ export default {
 
     discard() {
       this.$router.back();
+    },
+
+    dataChanged(content) {
+      this.options.process[content.idx].args = content.args;
+    },
+
+    addProcess(type) {
+      this.options.process.push({type});
+      this.dialog = false;
+    },
+
+    deleteProcess(key) {
+      this.options.process.splice(key, 1);
     }
   }
 }
@@ -206,7 +282,8 @@ function loadSubscription(options, sub) {
   options = {
     ...options,
     name: sub.name,
-    url: sub.url
+    url: sub.url,
+    process: []
   }
   // flag
   for (const p of (sub.process || [])) {
@@ -220,6 +297,8 @@ function loadSubscription(options, sub) {
       case 'Set Property Operator':
         options[p.args[0]] = p.args[1] ? "FORCE_OPEN" : "FORCE_CLOSE";
         break
+      default:
+        options.process.push(p);
     }
   }
   return options;
@@ -253,9 +332,9 @@ function buildSubscription(options) {
       });
     }
   }
-  // for (const p of options.process) {
-  //
-  // }
+  for (const p of options.process) {
+    sub.process.push(p);
+  }
   return sub;
 }
 </script>

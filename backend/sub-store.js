@@ -50,6 +50,7 @@ $app.route("/api/collection/:name")
     .get(getCollection)
     .patch(updateCollection)
     .delete(deleteCollection);
+
 $app.route("/api/collection")
     .get(getAllCollections)
     .post(newCollection)
@@ -179,7 +180,7 @@ async function parseSub(sub, platform) {
         if (item.type.indexOf("Filter") !== -1) {
             const filter = AVAILABLE_FILTERS[item.type];
             if (filter) {
-                $filter.addFilters(filter(...(item.args || [])));
+                $filter.addFilters(filter(item.args));
                 proxies = $filter.process(proxies);
                 $.log(`Applying filter "${item.type}" with arguments:\n >>> ${item.args || "None"}`);
             }
@@ -1671,7 +1672,6 @@ function RegionFilter(regions) {
         "SG": "🇸🇬",
         "JP": "🇯🇵",
         "UK": "🇬🇧",
-        "KR": "🇰🇷"
     };
     return {
         name: "Region Filter",

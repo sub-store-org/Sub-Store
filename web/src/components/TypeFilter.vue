@@ -1,8 +1,8 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">flag</v-icon>
-      区域过滤
+      <v-icon left color="primary">cloud_circle</v-icon>
+      节点类型过滤
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('deleteProcess', idx)">
         <v-icon color="error">mdi-delete</v-icon>
@@ -15,10 +15,10 @@
         </template>
         <v-card>
           <v-card-title class="headline">
-            区域过滤器
+            节点类型过滤器
           </v-card-title>
           <v-card-text>
-            根据区域过滤节点，至少需要保留一个区域！
+            根据节点类型过滤节点，至少需要保留一种类型！
           </v-card-text>
         </v-card>
       </v-dialog>
@@ -27,12 +27,12 @@
       <v-chip-group multiple active-class="primary accent-4" v-model="selection" column>
         <v-chip
             class="ma-2"
-            v-for="region in regions"
+            v-for="type in types"
             label
-            :key="region.name"
-            :value="region.value"
+            :key="type.name"
+            :value="type.value"
         >
-          {{ region.name }}
+          {{ type.name }}
         </v-chip>
       </v-chip-group>
     </v-card-text>
@@ -40,38 +40,34 @@
 </template>
 
 <script>
-const regions = [
+const types = [
   {
-    name: "🇭🇰 香港",
-    value: "HK"
+    name: "Shadowsocks",
+    value: "ss"
   },
   {
-    name: "🇨🇳 台湾",
-    value: "TW"
+    name: "Shadowsocks R",
+    value: "ssr"
   },
   {
-    name: "🇸🇬 新加坡",
-    value: "SG"
+    name: "V2Ray",
+    value: "vmess"
   },
   {
-    name: "🇯🇵 日本",
-    value: "JP"
+    name: "Trojan",
+    value: "trojan"
   },
   {
-    name: "🇺🇸 美国",
-    value: "USA"
-  },
-  {
-    name: "🇬🇧 英国",
-    value: "UK"
+    name: "HTTP",
+    value: "http"
   }
 ];
 export default {
-  props: ["args"],
+  props: ['args'],
   data: function () {
     return {
       idx: this.$vnode.key,
-      regions,
+      types,
       selection: []
     }
   },
@@ -82,7 +78,7 @@ export default {
     selection() {
       this.$emit("dataChanged", {
         idx: this.idx,
-        type: "Region Filter",
+        type: "Type Filter",
         args: this.selection
       })
     }
