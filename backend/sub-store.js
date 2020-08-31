@@ -50,7 +50,7 @@ $app.route("/api/collection")
     .post(newCollection)
     .delete(deleteAllCollections);
 
-$app.get("/", async (req, res) => {
+$app.all("/", async (req, res) => {
     res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.")
 });
 
