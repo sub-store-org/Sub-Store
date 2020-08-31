@@ -19,6 +19,7 @@ if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
 
 // BACKEND API
+$.log("Initializing Express...")
 const $app = express();
 
 // download
@@ -49,11 +50,13 @@ $app.route("/api/collection")
     .post(newCollection)
     .delete(deleteAllCollections);
 
-$app.all("/", (req, res) => {
+$app.get("/", async (req, res) => {
     res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.")
 });
 
-$app.start();
+$app.start()
+$.log("Express initialized")
+
 
 // SOME CONSTANTS
 const DEFAULT_SUPPORTED_PLATFORMS = {
@@ -2184,10 +2187,13 @@ function express(port = 3000) {
                 headers, body
             };
             const res = Response();
+            if (typeof handler.callback === 'undefined') {
+                $.notify("FUCK")
+            }
             handler.callback(req, res, next).catch(err => {
                 res.status(500).json({
                     status: "failed",
-                    message: "Internal Server Error"
+                    message: `Internal Server Error: ${err}`
                 });
             });
         } else {
@@ -2243,6 +2249,12 @@ function express(port = 3000) {
         let statusCode = "200";
         const {isQX, isLoon, isSurge} = ENV();
         const headers = DEFAULT_HEADERS;
+        const STATUS_CODE_MAP = {
+            "200": "HTTP/1.1 200 OK",
+            "201": "HTTP/1.1 201 Created",
+            "404": "HTTP/1.1 404 Not Found",
+            "500": "HTTP/1.1 500 Internal Server Error"
+        }
         return new (class {
             status(code) {
                 statusCode = code;
@@ -2251,12 +2263,12 @@ function express(port = 3000) {
 
             send(body = "") {
                 const response = {
-                    status: isQX ? `HTTP/1.1 ${statusCode}` : statusCode,
+                    status: isQX ? STATUS_CODE_MAP[statusCode] : statusCode,
                     body,
-                    headers,
+                    headers
                 };
                 if (isQX) {
-                    $done(...response);
+                    $done(response);
                 } else if (isLoon || isSurge) {
                     $done({
                         response,
