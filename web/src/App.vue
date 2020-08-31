@@ -30,11 +30,16 @@
 <script>
 import TopToolbar from "@/components/TopToolbar";
 import BottomNav from "@/components/BottomNav";
+import {showError} from "@/utils";
 
 
 function initStore(store) {
-  store.dispatch('FETCH_SUBSCRIPTIONS');
-  store.dispatch("FETCH_COLLECTIONS");
+  store.dispatch('FETCH_SUBSCRIPTIONS').catch(() => {
+    showError(`无法拉取订阅列表!`);
+  });
+  store.dispatch("FETCH_COLLECTIONS").catch(() => {
+    showError(`无法拉取组合订阅列表！`);
+  });
 }
 
 export default {
