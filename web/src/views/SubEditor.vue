@@ -173,6 +173,8 @@
 import {showError, showInfo} from "@/utils";
 import TypeFilter from "@/components/TypeFilter";
 import RegionFilter from "@/components/RegionFilter";
+import KeywordFilter from "@/components/KeywordFilter";
+import RegexFilter from "@/components/RegexFilter";
 
 const AVAILABLE_PROCESSORS = {
   "Type Filter": {
@@ -182,11 +184,19 @@ const AVAILABLE_PROCESSORS = {
   "Region Filter": {
     component: "RegionFilter",
     name: "区域过滤器"
+  },
+  "Keyword Filter": {
+    component: "KeywordFilter",
+    name: "关键词过滤器"
+  },
+  "Regex Filter": {
+    component: "RegexFilter",
+    name: "正则过滤器"
   }
 }
 
 export default {
-  components: {RegionFilter, TypeFilter},
+  components: {KeywordFilter, RegexFilter, RegionFilter, TypeFilter},
   data: function () {
     return {
       selectedProcess: null,

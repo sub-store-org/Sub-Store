@@ -4,7 +4,7 @@
       <v-icon left color="primary">filter_list</v-icon>
       关键词过滤
       <v-spacer></v-spacer>
-      <v-btn icon>
+      <v-btn icon @click="$emit('deleteProcess', idx)">
         <v-icon color="error">mdi-delete</v-icon>
       </v-btn>
       <v-dialog>
@@ -24,14 +24,14 @@
       </v-dialog>
     </v-card-title>
     <v-card-text>
-      模式
+      工作模式
       <v-radio-group v-model="mode">
         <v-row>
           <v-col>
-            <v-radio label="保留" value="IN"/>
+            <v-radio label="保留模式" value="IN"/>
           </v-col>
           <v-col>
-            <v-radio label="过滤" value="OUT"/>
+            <v-radio label="过滤模式" value="OUT"/>
           </v-col>
         </v-row>
       </v-radio-group>
@@ -61,8 +61,10 @@
 
 <script>
 export default {
+  props: ['args'],
   data: function () {
     return {
+      idx: this.$vnode.key,
       mode: "IN",
       form: {
         keyword: ""
@@ -81,6 +83,25 @@ export default {
     },
     remove(idx) {
       this.keywords.splice(idx, 1);
+    }
+  },
+  created() {
+    if (this.args) {
+      this.keywords = this.args.keywords || [];
+      if (this.args.keep) this.mode = this.args.keep ? "IN" : "OUT";
+      else this.mode = "IN";
+    }
+  },
+  watch: {
+    keywords() {
+      this.$emit("dataChanged", {
+        idx: this.idx,
+        type: "Keyword Filter",
+        args: {
+          keywords: this.keywords,
+          keep: this.mode === 'IN'
+        }
+      })
     }
   }
 }
