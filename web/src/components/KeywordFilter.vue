@@ -83,6 +83,15 @@ export default {
     },
     remove(idx) {
       this.keywords.splice(idx, 1);
+    },
+    save() {
+      this.$emit("dataChanged", {
+        idx: this.idx,
+        args: {
+          keywords: this.keywords,
+          keep: this.mode === 'IN'
+        }
+      });
     }
   },
   created() {
@@ -93,17 +102,13 @@ export default {
     }
   },
   watch: {
+    mode() {
+      this.save();
+    },
     keywords() {
-      this.$emit("dataChanged", {
-        idx: this.idx,
-        type: "Keyword Filter",
-        args: {
-          keywords: this.keywords,
-          keep: this.mode === 'IN'
-        }
-      })
+      this.save();
     }
-  }
+  },
 }
 </script>
 

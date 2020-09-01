@@ -87,18 +87,23 @@ export default {
     },
     remove(idx) {
       this.regexps.splice(idx, 1);
-    }
-  },
-  watch: {
-    regexps() {
+    },
+    save() {
       this.$emit("dataChanged", {
         idx: this.idx,
-        type: "Regex Filter",
         args: {
           regex: this.regexps,
           keep: this.mode === 'IN'
         }
-      })
+      });
+    }
+  },
+  watch: {
+    regexps() {
+      this.save();
+    },
+    mode() {
+      this.save();
     }
   },
   created() {
