@@ -379,7 +379,7 @@ function buildSubscription(options) {
   if (options.flag !== 'DEFAULT') {
     sub.process.push({
       type: "Flag Operator",
-      args: [options.flag === 'ADD']
+      args: options.flag === 'ADD'
     });
   }
   // udp, tfo, scert
@@ -387,7 +387,7 @@ function buildSubscription(options) {
     if (options[opt] !== 'DEFAULT') {
       sub.process.push({
         type: "Set Property Operator",
-        args: [opt, options[opt] === 'FORCE_OPEN']
+        args: {key: opt, value: options[opt] === 'FORCE_OPEN'}
       });
     }
   }
