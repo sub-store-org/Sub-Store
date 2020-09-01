@@ -192,7 +192,7 @@ async function parseSub(sub, platform) {
         } else if (item.type.indexOf("Operator") !== -1) {
             const operator = AVAILABLE_OPERATORS[item.type];
             if (operator) {
-                $operator.addOperators(operator(...(item.args || [])));
+                $operator.addOperators(operator(item.args));
                 proxies = $operator.process(proxies);
                 $.log(`Applying operator "${item.type}" with arguments: \n >>> ${item.args || "None"}`);
             }
@@ -1587,7 +1587,7 @@ function KeywordRenameOperator(keywords) {
         func: proxies => {
             return proxies.map(proxy => {
                 for (const {old, now} of keywords) {
-                    proxy.name = proxy.name.replace(old, now);
+                    proxy.name = proxy.name.replace(old, now).trim();
                 }
                 return proxy;
             })
@@ -1603,7 +1603,7 @@ function RegexRenameOperator(regex) {
         func: proxies => {
             return proxies.map(proxy => {
                 for (const {expr, now} of regex) {
-                    proxy.name = proxy.name.replace(new RegExp(expr, "g"), now);
+                    proxy.name = proxy.name.replace(new RegExp(expr, "g"), now).trim();
                 }
                 return proxy;
             })

@@ -1,10 +1,16 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">sort</v-icon>
-      关键词排序
+      <v-icon left color="primary">filter_list</v-icon>
+      关键词删除
       <v-spacer></v-spacer>
-      <v-btn icon>
+      <v-btn icon @click="$emit('up', idx)">
+        <v-icon>keyboard_arrow_up</v-icon>
+      </v-btn>
+      <v-btn icon @click="$emit('down', idx)">
+        <v-icon>keyboard_arrow_down</v-icon>
+      </v-btn>
+      <v-btn icon @click="$emit('deleteProcess', idx)">
         <v-icon color="error">mdi-delete</v-icon>
       </v-btn>
       <v-dialog>
@@ -15,27 +21,23 @@
         </template>
         <v-card>
           <v-card-title class="headline">
-            关键词排序
+            关键词删除
           </v-card-title>
           <v-card-text>
-            根据给出的关键词的顺序对节点进行排序。
+            删除节点名中的关键词
           </v-card-text>
         </v-card>
       </v-dialog>
     </v-card-title>
     <v-card-text>
       关键词
-      <v-chip-group column
-      >
+      <v-chip-group>
         <v-chip
-            draggable
             close
             close-icon="mdi-delete"
             v-for="(keyword, idx) in keywords"
             :key="idx"
             @click:close="remove(idx)"
-            @dragstart="dragStart"
-            @dragend="dragEnd"
         >
           {{ keyword }}
         </v-chip>
@@ -54,10 +56,11 @@
 
 <script>
 export default {
+  props: ['args'],
   data: function () {
     return {
-      selection: null,
-      currentTag: null,
+      idx: this.$vnode.key,
+      mode: "IN",
       form: {
         keyword: ""
       },
@@ -76,19 +79,21 @@ export default {
     remove(idx) {
       this.keywords.splice(idx, 1);
     },
-    dragStart() {
-      if (this.keywords[this.selection]) this.currentTag = this.tags[this.selection].name;
-      else this.currentTag = null;
-    },
-    dragEnd() {
-      const self = this;
-      if (this.currentTag) {
-        this.keywords.forEach((x, i) => {
-          if (x.name === self.currentTag) self.selection = i;
-        });
-      }
+    save() {
+      this.$emit("dataChanged", {
+        idx: this.idx,
+        args: this.keywords
+      });
     }
-  }
+  },
+  created() {
+    this.keywords = this.args || [];
+  },
+  watch: {
+    keywords() {
+      this.save();
+    }
+  },
 }
 </script>
 

@@ -2,7 +2,7 @@
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
       <v-icon left color="primary">filter_list</v-icon>
-      关键词过滤
+      关键词重命名
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">
         <v-icon>keyboard_arrow_up</v-icon>
@@ -21,46 +21,47 @@
         </template>
         <v-card>
           <v-card-title class="headline">
-            关键词过滤
+            关键词重命名
           </v-card-title>
           <v-card-text>
-            根据关键词过滤节点。如果设置为保留模式，则含有关键词的节点会被保留，否则会被过滤。
+            替换节点名中的关键词。
           </v-card-text>
         </v-card>
       </v-dialog>
     </v-card-title>
     <v-card-text>
-      工作模式
-      <v-radio-group v-model="mode">
-        <v-row>
-          <v-col>
-            <v-radio label="保留模式" value="IN"/>
-          </v-col>
-          <v-col>
-            <v-radio label="过滤模式" value="OUT"/>
-          </v-col>
-        </v-row>
-      </v-radio-group>
       关键词
       <v-chip-group>
         <v-chip
             close
             close-icon="mdi-delete"
-            v-for="(keyword, idx) in keywords"
+            v-for="(chip, idx) in chips"
             :key="idx"
             @click:close="remove(idx)"
         >
-          {{ keyword }}
+          {{ chip }}
         </v-chip>
       </v-chip-group>
-      <v-text-field
-          placeholder="添加新关键词"
-          solo
-          v-model="form.keyword"
-          append-icon="mdi-send"
-          @click:append="add(form.keyword)"
-          @keyup.enter="add(form.keyword)"
-      />
+      <v-row>
+        <v-col>
+          <v-text-field
+              placeholder="关键词"
+              solo
+              v-model="form.keyword"
+          />
+        </v-col>
+        <v-col>
+          <v-text-field
+              placeholder="替换为"
+              solo
+              v-model="form.replace"
+              append-icon="mdi-send"
+              @click:append="add"
+              @keyup.enter="add"
+          />
+        </v-col>
+      </v-row>
+
     </v-card-text>
   </v-card>
 </template>
@@ -73,16 +74,29 @@ export default {
       idx: this.$vnode.key,
       mode: "IN",
       form: {
-        keyword: ""
+        keyword: "",
+        replace: ""
       },
       keywords: []
     }
   },
+  computed: {
+    chips() {
+      return this.keywords.map(k => {
+        const {old, now} = k;
+        return `${old} ⇒ ${now}`;
+      });
+    }
+  },
   methods: {
-    add(keyword) {
-      if (keyword) {
-        this.keywords.push(keyword);
+    add() {
+      if (this.form.keyword && this.form.replace) {
+        this.keywords.push({
+          old: this.form.keyword,
+          now: this.form.replace
+        });
         this.form.keyword = "";
+        this.form.replace = "";
       } else {
         this.$store.commit("SET_ERROR_MESSAGE", "关键词不能为空！");
       }
@@ -93,24 +107,14 @@ export default {
     save() {
       this.$emit("dataChanged", {
         idx: this.idx,
-        args: {
-          keywords: this.keywords,
-          keep: this.mode === 'IN'
-        }
+        args: this.keywords
       });
     }
   },
   created() {
-    if (this.args) {
-      this.keywords = this.args.keywords || [];
-      if (typeof this.args.keep !== 'undefined') this.mode = this.args.keep ? "IN" : "OUT";
-      else this.mode = "IN";
-    }
+    this.keywords = this.args || [];
   },
   watch: {
-    mode() {
-      this.save();
-    },
     keywords() {
       this.save();
     }
