@@ -274,6 +274,7 @@ export default {
     },
 
     dataChanged(content) {
+      console.log(`${JSON.stringify(content)}`);
       this.options.process[content.idx].args = content.args;
     },
 

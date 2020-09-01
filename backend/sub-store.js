@@ -119,7 +119,9 @@ async function downloadSub(req, res) {
         const sub = allSubs[name];
         try {
             const output = await parseSub(sub, platform);
-            res.send(output);
+            const {key, value} = getFlowHeaders(output.headers, []);
+            res.set(key, value)
+            res.send(output.proxies);
         } catch (err) {
             res.status(500).json({
                 status: "failed",
@@ -136,7 +138,12 @@ async function downloadSub(req, res) {
 
 async function parseSub(sub, platform) {
     // always download from url
-    const raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
+    const {raw, headers} = await $.http.get(sub.url).then(resp => {
+        return {
+            raw: resp.body,
+            headers: resp.headers
+        }
+    }).catch(err => {
         throw new Error(err);
     });
 
@@ -196,7 +203,42 @@ async function parseSub(sub, platform) {
     $parser.addProducers([
         QX_Producer, Loon_Producer, Surge_Producer, Raw_Producer
     ]);
-    return $parser.produce(proxies);
+    return {
+        proxies: $parser.produce(proxies),
+        headers
+    };
+}
+
+function getFlowHeaders(headers, proxies) {
+    const subkey = Object.keys(headers).filter(k => /SUBSCRIPTION-USERINFO/i.test(k))[0];
+    if (subkey) {
+        // from headers
+        const userinfo = headers[subkey];
+        const upload = Number(userinfo.match(/upload=(\d+)/)[1]);
+        const download = Number(userinfo.match(/download=(\d+)/)[1]);
+        const total = Number(userinfo.match(/total=(\d+)/)[1]);
+        const expire = (userinfo.match(/expire=(\d+)/) || [])[1];
+        return {
+            key: "Subscription-Userinfo",
+            value: `${upload ? "upload=" + upload + ";" : ""}${download ? "download=" + download + ";" : ""}${total ? "total=" + total + ";" : ""}${expire ? "expire=" + expire + ";" : ""}`
+        }
+    } else {
+        let remains, expire;
+        // from fake nodes
+        for (const p of proxies) {
+            if (p.name.indexOf("剩余流量") !== -1) {
+                remains = p.name;
+            }
+            if (p.name.indexOf("过期时间") !== -1) {
+                expire = p.name;
+            }
+        }
+        return {
+            key: "Raw-Subscription-Userinfo",
+            value: `${remains ? "remains=" + remains + ";" : ""}${expire ? "expire=" + expire + ";" : ""}`
+        }
+    }
+
 }
 
 // Subscriptions
@@ -321,7 +363,7 @@ async function downloadCollection(req, res) {
         const output = await Promise.all(subs.map(async id => {
             const sub = $.read(SUBS_KEY)[id];
             try {
-                return parseSub(sub, platform);
+                return parseSub(sub, platform).then(res => res.proxies);
             } catch (err) {
                 console.log(`ERROR when process subscription: ${id}`);
                 return "";
@@ -1633,7 +1675,7 @@ function ScriptOperator(script) {
 
 /**************************** Filters ***************************************/
 // filter by keywords
-function KeywordFilter({keywords=[], keep = true}) {
+function KeywordFilter({keywords = [], keep = true}) {
     return {
         name: "Keyword Filter",
         func: (proxies) => {
@@ -1680,7 +1722,7 @@ function RegionFilter(regions) {
 }
 
 // filter by regex
-function RegexFilter({regex=[], keep = true}) {
+function RegexFilter({regex = [], keep = true}) {
     return {
         name: "Regex Filter",
         func: (proxies) => {
