@@ -4,6 +4,12 @@
       <v-icon left color="primary">flag</v-icon>
       区域过滤
       <v-spacer></v-spacer>
+      <v-btn icon @click="$emit('up', idx)">
+        <v-icon>keyboard_arrow_up</v-icon>
+      </v-btn>
+      <v-btn icon @click="$emit('down', idx)">
+        <v-icon>keyboard_arrow_down</v-icon>
+      </v-btn>
       <v-btn icon @click="$emit('deleteProcess', idx)">
         <v-icon color="error">mdi-delete</v-icon>
       </v-btn>
@@ -82,7 +88,6 @@ export default {
     selection() {
       this.$emit("dataChanged", {
         idx: this.idx,
-        type: "Region Filter",
         args: this.selection
       })
     }

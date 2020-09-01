@@ -4,6 +4,12 @@
       <v-icon left color="primary">sort_by_alpha</v-icon>
       节点排序
       <v-spacer></v-spacer>
+      <v-btn icon @click="$emit('up', idx)">
+        <v-icon>keyboard_arrow_up</v-icon>
+      </v-btn>
+      <v-btn icon @click="$emit('down', idx)">
+        <v-icon>keyboard_arrow_down</v-icon>
+      </v-btn>
       <v-btn icon>
         <v-icon color="error">mdi-delete</v-icon>
       </v-btn>
@@ -28,13 +34,13 @@
       <v-radio-group v-model="mode">
         <v-row>
           <v-col>
-            <v-radio label="正序" value="ASC"/>
+            <v-radio label="正序" value="asc"/>
           </v-col>
           <v-col>
-            <v-radio label="逆序" value="DESC"/>
+            <v-radio label="逆序" value="desc"/>
           </v-col>
           <v-col>
-            <v-radio label="随机" value="RANDOM"/>
+            <v-radio label="随机" value="random"/>
           </v-col>
         </v-row>
       </v-radio-group>
@@ -44,11 +50,25 @@
 
 <script>
 export default {
+  props: ["args"],
   data: function () {
     return {
-      mode: "ASC"
+      idx: this.$vnode.key,
+      mode: "asc"
+    }
+  },
+  created() {
+    this.mode = this.args;
+  },
+  watch: {
+    mode() {
+      this.$emit("dataChanged", {
+        idx: this.idx,
+        args: this.mode
+      })
     }
   }
+
 }
 </script>
 

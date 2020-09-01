@@ -163,6 +163,8 @@
                  :args="p.args"
                  @dataChanged="dataChanged"
                  @deleteProcess="deleteProcess"
+                 @up="moveUp"
+                 @down="moveDown"
       >
       </component>
     </v-card>
@@ -175,6 +177,11 @@ import TypeFilter from "@/components/TypeFilter";
 import RegionFilter from "@/components/RegionFilter";
 import KeywordFilter from "@/components/KeywordFilter";
 import RegexFilter from "@/components/RegexFilter";
+import SortOperator from "@/components/SortOperator";
+import KeywordRenameOperator from "@/components/KeywordRenameOperator";
+import RegexRenameOperator from "@/components/RegexRenameOperator";
+import KeywordDeleteOperator from "@/components/KeywordDeleteOperator";
+import RegexDeleteOperator from "@/components/RegexDeleteOperator";
 
 const AVAILABLE_PROCESSORS = {
   "Type Filter": {
@@ -192,11 +199,41 @@ const AVAILABLE_PROCESSORS = {
   "Regex Filter": {
     component: "RegexFilter",
     name: "正则过滤器"
-  }
+  },
+  "Sort Operator": {
+    component: "SortOperator",
+    name: "节点排序"
+  },
+  "Keyword Rename Operator": {
+    component: "KeywordRenameOperator",
+    name: "关键词重命名"
+  },
+  "Regex Rename Operator": {
+    component: "RegexRenameOperator",
+    name: "正则重命名"
+  },
+  "Keyword Delete Operator": {
+    component: "KeywordDeleteOperator",
+    name: "删除关键词"
+  },
+  "Regex Delete Operator": {
+    component: "RegexDeleteOperator",
+    name: "删除正则"
+  },
 }
 
 export default {
-  components: {KeywordFilter, RegexFilter, RegionFilter, TypeFilter},
+  components: {
+    KeywordFilter,
+    RegexFilter,
+    RegionFilter,
+    TypeFilter,
+    SortOperator,
+    KeywordRenameOperator,
+    RegexRenameOperator,
+    KeywordDeleteOperator,
+    RegexDeleteOperator
+  },
   data: function () {
     return {
       selectedProcess: null,
@@ -274,7 +311,6 @@ export default {
     },
 
     dataChanged(content) {
-      console.log(`${JSON.stringify(content)}`);
       this.options.process[content.idx].args = content.args;
     },
 
@@ -285,6 +321,18 @@ export default {
 
     deleteProcess(key) {
       this.options.process.splice(key, 1);
+    },
+
+    moveUp(index) {
+      if (index === 0) return;
+      // otherwise swap with previous one
+      this.options.process.splice(index - 1, 2, this.options.process[index], this.options.process[index - 1]);
+    },
+
+    moveDown(index) {
+      if (index === this.options.process.length) return;
+      // otherwise swap with latter one
+      this.options.process.splice(index, 2, this.options.process[index + 1], this.options.process[index]);
     }
   }
 }

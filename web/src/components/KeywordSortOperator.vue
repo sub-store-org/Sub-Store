@@ -1,16 +1,10 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">filter_list</v-icon>
-      关键词过滤
+      <v-icon left color="primary">sort</v-icon>
+      关键词排序
       <v-spacer></v-spacer>
-      <v-btn icon @click="$emit('up', idx)">
-        <v-icon>keyboard_arrow_up</v-icon>
-      </v-btn>
-      <v-btn icon @click="$emit('down', idx)">
-        <v-icon>keyboard_arrow_down</v-icon>
-      </v-btn>
-      <v-btn icon @click="$emit('deleteProcess', idx)">
+      <v-btn icon>
         <v-icon color="error">mdi-delete</v-icon>
       </v-btn>
       <v-dialog>
@@ -21,34 +15,27 @@
         </template>
         <v-card>
           <v-card-title class="headline">
-            关键词过滤
+            关键词排序
           </v-card-title>
           <v-card-text>
-            根据关键词过滤节点。如果设置为保留模式，则含有关键词的节点会被保留，否则会被过滤。
+            根据给出的关键词的顺序对节点进行排序，没有出现的关键词将会按照正序排列。
           </v-card-text>
         </v-card>
       </v-dialog>
     </v-card-title>
     <v-card-text>
-      工作模式
-      <v-radio-group v-model="mode">
-        <v-row>
-          <v-col>
-            <v-radio label="保留模式" value="IN"/>
-          </v-col>
-          <v-col>
-            <v-radio label="过滤模式" value="OUT"/>
-          </v-col>
-        </v-row>
-      </v-radio-group>
       关键词
-      <v-chip-group>
+      <v-chip-group column
+      >
         <v-chip
+            draggable
             close
             close-icon="mdi-delete"
             v-for="(keyword, idx) in keywords"
             :key="idx"
             @click:close="remove(idx)"
+            @dragstart="dragStart"
+            @dragend="dragEnd"
         >
           {{ keyword }}
         </v-chip>
@@ -67,11 +54,10 @@
 
 <script>
 export default {
-  props: ['args'],
   data: function () {
     return {
-      idx: this.$vnode.key,
-      mode: "IN",
+      selection: null,
+      currentTag: null,
       form: {
         keyword: ""
       },
@@ -90,31 +76,19 @@ export default {
     remove(idx) {
       this.keywords.splice(idx, 1);
     },
-    save() {
-      this.$emit("dataChanged", {
-        idx: this.idx,
-        args: {
-          keywords: this.keywords,
-          keep: this.mode === 'IN'
-        }
-      });
-    }
-  },
-  created() {
-    if (this.args) {
-      this.keywords = this.args.keywords || [];
-      if (typeof this.args.keep !== 'undefined') this.mode = this.args.keep ? "IN" : "OUT";
-      else this.mode = "IN";
-    }
-  },
-  watch: {
-    mode() {
-      this.save();
+    dragStart() {
+      if (this.keywords[this.selection]) this.currentTag = this.tags[this.selection].name;
+      else this.currentTag = null;
     },
-    keywords() {
-      this.save();
+    dragEnd() {
+      const self = this;
+      if (this.currentTag) {
+        this.keywords.forEach((x, i) => {
+          if (x.name === self.currentTag) self.selection = i;
+        });
+      }
     }
-  },
+  }
 }
 </script>
 

@@ -2,7 +2,7 @@
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
       <v-icon left color="primary">code</v-icon>
-      正则过滤
+      正则删除
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">
         <v-icon>keyboard_arrow_up</v-icon>
@@ -21,11 +21,10 @@
         </template>
         <v-card>
           <v-card-title class="headline">
-            正则过滤
+            正则删除
           </v-card-title>
           <v-card-text>
-            根据正则表达式过滤节点。如果设置为保留模式，则匹配<b>任何一个</b>正则表达式的节点会被保留，否则会被过滤。
-            正则表达式需要注意转义。
+            根据正则表达式删除节点名中的字段，注意正则表达式需要注意转义。
             <br/>这里是一个合法的正则表达式:
             <br/>
             <b>IEPL|IPLC</b>
@@ -34,17 +33,6 @@
       </v-dialog>
     </v-card-title>
     <v-card-text>
-      工作模式
-      <v-radio-group v-model="mode">
-        <v-row>
-          <v-col>
-            <v-radio label="保留模式" value="IN"/>
-          </v-col>
-          <v-col>
-            <v-radio label="过滤模式" value="OUT"/>
-          </v-col>
-        </v-row>
-      </v-radio-group>
       正则表达式
       <v-chip-group>
         <v-chip
@@ -97,27 +85,17 @@ export default {
     save() {
       this.$emit("dataChanged", {
         idx: this.idx,
-        args: {
-          regex: this.regexps,
-          keep: this.mode === 'IN'
-        }
+        args: this.regexps
       });
     }
   },
   watch: {
     regexps() {
       this.save();
-    },
-    mode() {
-      this.save();
     }
   },
   created() {
-    if (this.args) {
-      this.regexps = this.args.regex || [];
-      if (typeof this.args.keep !== 'undefined') this.mode = this.args.keep ? "IN" : "OUT";
-      else this.mode = "IN";
-    }
+    this.regexps = this.args || [];
   }
 }
 </script>
