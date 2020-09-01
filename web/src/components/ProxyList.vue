@@ -36,7 +36,7 @@ import {axios} from "@/utils";
 
 export default {
   name: "ProxyList",
-  props: ['url'],
+  props: ['url', 'sub'],
   data: function (){
     return {
       proxies: []
@@ -44,7 +44,7 @@ export default {
   },
   methods: {
     refresh() {
-      axios.post(`/refresh`, {url: this.url}).then(() => {
+      axios.post(`/refresh`, {url: this.sub}).then(() => {
         this.fetch();
       })
     },

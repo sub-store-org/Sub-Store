@@ -148,7 +148,7 @@
           </v-toolbar>
         </v-card-title>
         <v-card-text class="pl-0 pr-0">
-          <proxy-list :url="url" ref="proxyList" :key="url"></proxy-list>
+          <proxy-list :url="url" :sub="sub" ref="proxyList" :key="url"></proxy-list>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -166,6 +166,7 @@ export default {
       opened: false,
       showProxyList: false,
       url: "",
+      sub: [],
       editMenu: [
         {
           title: "复制",
@@ -227,7 +228,8 @@ export default {
     },
     preview(item, type = 'sub') {
       if (type === 'sub') {
-        this.url = `${BACKEND_BASE}/download/${item.name}`
+        this.url = `${BACKEND_BASE}/download/${item.name}`;
+        this.sub = [item.url];
       } else {
         this.url = `${BACKEND_BASE}/download/collection/${item.name}`
       }

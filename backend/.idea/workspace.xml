@@ -22,8 +22,9 @@
     <list default="true" id="8b97a098-48b2-4e64-a9ef-522fe2d30b52" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sub-store.js" beforeDir="false" afterPath="$PROJECT_DIR$/sub-store.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/components/SortOperator.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/SortOperator.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/src/components/ProxyList.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/ProxyList.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../web/src/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web/src/views/Subscription.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/views/Subscription.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,6 +94,7 @@
       <workItem from="1598900239005" duration="4742000" />
       <workItem from="1598931009084" duration="2069000" />
       <workItem from="1598946261983" duration="463000" />
+      <workItem from="1598948545209" duration="3969000" />
     </task>
     <servers />
   </component>
