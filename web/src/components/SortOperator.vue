@@ -10,7 +10,7 @@
       <v-btn icon @click="$emit('down', idx)">
         <v-icon>keyboard_arrow_down</v-icon>
       </v-btn>
-      <v-btn icon>
+      <v-btn icon @click="$emit('deleteProcess', idx)">
         <v-icon color="error">mdi-delete</v-icon>
       </v-btn>
       <v-dialog>
