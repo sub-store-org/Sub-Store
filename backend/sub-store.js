@@ -17,7 +17,6 @@ $.http = HTTP("", {
 // Constants
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
-const RESOURCE_CACHE_KEY = "resources";
 
 // SOME INITIALIZATIONS
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
@@ -97,14 +96,13 @@ const AVAILABLE_OPERATORS = {
 // refresh resource
 async function refreshResource(req, res) {
     const {url} = req.body;
-    const cachedResources = $.read(RESOURCE_CACHE_KEY);
-    cachedResources[url] = await $.http.get(url).then(resp => resp.body).catch(err => {
+    const raw = await $.http.get(url).then(resp => resp.body).catch(err => {
         res.status(500).json({
             status: "failed",
             message: `Cannot refresh remote resource: ${url}\n Reason: ${err}`
         });
     });
-    $.write(cachedResources, RESOURCE_CACHE_KEY);
+    $.write(raw, `#${url}`);
     res.json({
         status: "success"
     });
@@ -119,9 +117,7 @@ async function downloadSub(req, res) {
         const sub = allSubs[name];
         try {
             const output = await parseSub(sub, platform);
-            const {key, value} = getFlowHeaders(output.headers, []);
-            res.set(key, value)
-            res.send(output.proxies);
+            res.send(output);
         } catch (err) {
             res.status(500).json({
                 status: "failed",
@@ -137,15 +133,24 @@ async function downloadSub(req, res) {
 }
 
 async function parseSub(sub, platform) {
-    // always download from url
-    const {raw, headers} = await $.http.get(sub.url).then(resp => {
-        return {
-            raw: resp.body,
-            headers: resp.headers
+    let raw;
+    if (platform === 'Raw') {
+        const cache = $.read(`#${sub.url}`);
+        if (!cache) {
+            raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
+                throw new Error(err);
+            });
+            $.write(raw, `#${sub.url}`);
+        } else {
+            raw = cache;
         }
-    }).catch(err => {
-        throw new Error(err);
-    });
+    } else {
+        // always download from url
+        raw = await $.http.get(sub.url).then(resp => resp.body).catch(err => {
+            throw new Error(err);
+        });
+        $.write(raw, `#${sub.url}`);
+    }
 
     $.log("=======================================================================");
     $.log(`Processing subscription: ${sub.name}, target platform ==> ${platform}.`);
@@ -203,10 +208,7 @@ async function parseSub(sub, platform) {
     $parser.addProducers([
         QX_Producer, Loon_Producer, Surge_Producer, Raw_Producer
     ]);
-    return {
-        proxies: $parser.produce(proxies),
-        headers
-    };
+    return $parser.produce(proxies);
 }
 
 function getFlowHeaders(headers, proxies) {
@@ -363,7 +365,7 @@ async function downloadCollection(req, res) {
         const output = await Promise.all(subs.map(async id => {
             const sub = $.read(SUBS_KEY)[id];
             try {
-                return parseSub(sub, platform).then(res => res.proxies);
+                return parseSub(sub, platform);
             } catch (err) {
                 console.log(`ERROR when process subscription: ${id}`);
                 return "";
@@ -827,7 +829,7 @@ function URI_VMess() {
                 cipher: "auto", // V2rayN has no default cipher! use aes-128-gcm as default.
                 uuid: params.id,
                 alterId: params.aid || 0,
-                tls: JSON.parse(params.tls || "false"),
+                tls: params.tls === 'tls' || params.tls === true,
                 supported
             }
             // handle obfs

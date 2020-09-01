@@ -32,11 +32,34 @@
 </template>
 
 <script>
+import {axios} from "@/utils";
+
 export default {
   name: "ProxyList",
-  props: ['proxies'],
+  props: ['url'],
+  data: function (){
+    return {
+      proxies: []
+    }
+  },
   methods: {
+    refresh() {
+      axios.post(`/refresh`, {url: this.url}).then(() => {
+        this.fetch();
+      })
+    },
 
+    fetch() {
+      axios.get(this.url).then(resp => {
+        const {data} = resp;
+        this.proxies = data.split("\n").map(p => JSON.parse(p));
+      }).catch(err => {
+        this.$store.commit("SET_ERROR_MESSAGE", err);
+      });
+    }
+  },
+  created() {
+    this.fetch();
   }
 }
 </script>

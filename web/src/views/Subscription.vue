@@ -138,6 +138,9 @@
             <v-toolbar-title>节点列表</v-toolbar-title>
             <v-spacer></v-spacer>
             <v-toolbar-items>
+              <v-btn icon @click="refreshProxyList">
+                <v-icon>refresh</v-icon>
+              </v-btn>
               <v-btn icon @click="showProxyList = false">
                 <v-icon>mdi-close</v-icon>
               </v-btn>
@@ -145,7 +148,7 @@
           </v-toolbar>
         </v-card-title>
         <v-card-text class="pl-0 pr-0">
-          <proxy-list :proxies="proxies"></proxy-list>
+          <proxy-list :url="url" ref="proxyList" :key="url"></proxy-list>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -155,7 +158,6 @@
 <script>
 import ProxyList from "@/components/ProxyList";
 import {BACKEND_BASE} from "@/config";
-import {axios} from "@/utils";
 
 export default {
   components: {ProxyList},
@@ -163,7 +165,7 @@ export default {
     return {
       opened: false,
       showProxyList: false,
-      proxies: [],
+      url: "",
       editMenu: [
         {
           title: "复制",
@@ -224,25 +226,21 @@ export default {
       }
     },
     preview(item, type = 'sub') {
-      let url;
       if (type === 'sub') {
-        url = `${BACKEND_BASE}/download/${item.name}`
+        this.url = `${BACKEND_BASE}/download/${item.name}`
       } else {
-        url = `${BACKEND_BASE}/download/collection/${item.name}`
+        this.url = `${BACKEND_BASE}/download/collection/${item.name}`
       }
-      axios.get(url).then(resp => {
-        const {data} = resp;
-        this.proxies = data.split("\n").map(p => JSON.parse(p));
-        this.showProxyList = true;
-      }).catch(err => {
-        this.$store.commit("SET_ERROR_MESSAGE", err);
-      })
+      this.showProxyList = true;
     },
     createSub() {
       this.$router.push("/sub-edit/UNTITLED");
     },
     createCol() {
       this.$router.push("/collection-edit/UNTITLED")
+    },
+    refreshProxyList() {
+      this.$refs.proxyList.refresh();
     }
   }
 }
