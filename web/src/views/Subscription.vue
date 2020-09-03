@@ -138,7 +138,7 @@
             <v-toolbar-title>节点列表</v-toolbar-title>
             <v-spacer></v-spacer>
             <v-toolbar-items>
-              <v-btn icon @click="refreshProxyList">
+              <v-btn icon @click="refreshProxyList" v-if="sub">
                 <v-icon>refresh</v-icon>
               </v-btn>
               <v-btn icon @click="showProxyList = false">
@@ -229,7 +229,7 @@ export default {
     preview(item, type = 'sub') {
       if (type === 'sub') {
         this.url = `${BACKEND_BASE}/download/${item.name}`;
-        this.sub = [item.url];
+        this.sub = item.url;
       } else {
         this.url = `${BACKEND_BASE}/download/collection/${item.name}`
       }

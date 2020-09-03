@@ -139,7 +139,6 @@ async function parseSub(sub, platform) {
             $.write(raw, `#${key}`);
         } else {
             raw = cache;
-            console.log(`Cache hit`);
         }
     } else {
         // always download from url
@@ -198,16 +197,19 @@ async function parseSub(sub, platform) {
     for (const item of sub.process || []) {
         // process script
         if (item.type.indexOf("Script") !== -1) {
-            if (item.args && item.args[0].indexOf("http") !== -1) {
-                // if this is remote script
-                item.args[0] = await $.http
-                    .get(item.args[0])
+            const {mode, content} = item.args;
+            if (mode === "link") {
+                // if this is remote script, download it
+                item.args = await $.http
+                    .get(content)
                     .then((resp) => resp.body)
                     .catch((err) => {
                         throw new Error(
-                            `Error when downloading remote script: ${item.args[0]}.\n Reason: ${err}`
+                            `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`
                         );
                     });
+            } else {
+                item.args = content;
             }
         }
         if (item.type.indexOf("Filter") !== -1) {
@@ -1854,6 +1856,7 @@ function ScriptOperator(script) {
     return {
         name: "Script Operator",
         func: (proxies) => {
+            let output = proxies;
             (function () {
                 // interface to get internal operators
                 const $get = (name, args) => {
@@ -1865,8 +1868,9 @@ function ScriptOperator(script) {
                     }
                 };
                 eval(script);
-                return func(proxies);
+                output = operator(proxies);
             })();
+            return output;
         },
     };
 }
@@ -1968,6 +1972,7 @@ function ScriptFilter(script) {
     return {
         name: "Script Filter",
         func: (proxies) => {
+            let output = FULL(proxies.length, true);
             !(function () {
                 // interface to get internal filters
                 const $get = (name, args) => {
@@ -1979,8 +1984,9 @@ function ScriptFilter(script) {
                     }
                 };
                 eval(script);
-                return func(proxies);
+                output = filter(proxies);
             })();
+            return output;
         },
     };
 }
