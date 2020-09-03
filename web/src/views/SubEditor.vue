@@ -165,6 +165,8 @@ import RegexRenameOperator from "@/components/RegexRenameOperator";
 import KeywordDeleteOperator from "@/components/KeywordDeleteOperator";
 import RegexDeleteOperator from "@/components/RegexDeleteOperator";
 import FlagOperator from "@/components/FlagOperator";
+import ScriptFilter from "@/components/ScriptFilter";
+import ScriptOperator from "@/components/ScriptOperator";
 
 const AVAILABLE_PROCESSORS = {
   "Flag Operator": {
@@ -207,6 +209,14 @@ const AVAILABLE_PROCESSORS = {
     component: "RegexDeleteOperator",
     name: "删除正则"
   },
+  "Script Filter": {
+    component: "ScriptFilter",
+    name: "脚本过滤器"
+  },
+  "Script Operator": {
+    component: "ScriptOperator",
+    name: "脚本操作"
+  }
 }
 
 export default {
@@ -220,7 +230,9 @@ export default {
     KeywordRenameOperator,
     RegexRenameOperator,
     KeywordDeleteOperator,
-    RegexDeleteOperator
+    RegexDeleteOperator,
+    ScriptFilter,
+    ScriptOperator
   },
   data: function () {
     return {
@@ -298,7 +310,9 @@ export default {
     },
 
     dataChanged(content) {
-      this.options.process[content.idx].args = content.args;
+      const process = this.options.process[content.idx];
+      process.args = content.args;
+      this.options.process.splice(content.idx, 1, process);
     },
 
     addProcess(type) {
