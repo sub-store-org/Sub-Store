@@ -51,24 +51,6 @@
               <v-col></v-col>
             </v-row>
           </v-radio-group>
-          <v-radio-group
-              v-model="options.flag"
-              dense
-              class="mt-0 mb-0"
-          >
-            国旗
-            <v-row>
-              <v-col>
-                <v-radio label="默认" value="DEFAULT"/>
-              </v-col>
-              <v-col>
-                <v-radio label="添加国旗" value="ADD"/>
-              </v-col>
-              <v-col>
-                <v-radio label="删除国旗" value="REMOVE"/>
-              </v-col>
-            </v-row>
-          </v-radio-group>
 
           <v-radio-group
               v-model="options.udp"
@@ -182,8 +164,13 @@ import KeywordRenameOperator from "@/components/KeywordRenameOperator";
 import RegexRenameOperator from "@/components/RegexRenameOperator";
 import KeywordDeleteOperator from "@/components/KeywordDeleteOperator";
 import RegexDeleteOperator from "@/components/RegexDeleteOperator";
+import FlagOperator from "@/components/FlagOperator";
 
 const AVAILABLE_PROCESSORS = {
+  "Flag Operator": {
+    component: "FlagOperator",
+    name: "国旗"
+  },
   "Type Filter": {
     component: "TypeFilter",
     name: "类型过滤器"
@@ -224,6 +211,7 @@ const AVAILABLE_PROCESSORS = {
 
 export default {
   components: {
+    FlagOperator,
     KeywordFilter,
     RegexFilter,
     RegionFilter,
@@ -256,7 +244,6 @@ export default {
         url: "",
         useless: "KEEP",
         udp: "DEFAULT",
-        flag: "DEFAULT",
         scert: "DEFAULT",
         tfo: "DEFAULT",
         process: [],
@@ -350,11 +337,8 @@ function loadSubscription(options, sub) {
       case 'Useless Filter':
         options.useless = "REMOVE";
         break
-      case 'Flag Operator':
-        options.flag = p.args[0] ? "ADD" : "REMOVE";
-        break
       case 'Set Property Operator':
-        options[p.args[0]] = p.args[1] ? "FORCE_OPEN" : "FORCE_CLOSE";
+        options[p.args.key] = p.args.value ? "FORCE_OPEN" : "FORCE_CLOSE";
         break
       default:
         options.process.push(p);
@@ -373,13 +357,6 @@ function buildSubscription(options) {
   if (options.useless === 'REMOVE') {
     sub.process.push({
       type: "Useless Filter"
-    });
-  }
-  // flag
-  if (options.flag !== 'DEFAULT') {
-    sub.process.push({
-      type: "Flag Operator",
-      args: options.flag === 'ADD'
     });
   }
   // udp, tfo, scert
