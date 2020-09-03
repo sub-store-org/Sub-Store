@@ -1,7 +1,7 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">code</v-icon>
+      <v-icon left color="primary">filter_list</v-icon>
       正则过滤
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">

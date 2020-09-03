@@ -13,7 +13,7 @@ const $app = express();
 
 $.http = HTTP({
     headers: {
-        "User-Agent": "Quantumult",
+        "User-Agent": "Quantumult%20X",
     },
 });
 // Constants
