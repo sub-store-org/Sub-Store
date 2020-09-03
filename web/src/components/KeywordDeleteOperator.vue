@@ -38,6 +38,7 @@
             v-for="(keyword, idx) in keywords"
             :key="idx"
             @click:close="remove(idx)"
+            @click="edit(idx)"
         >
           {{ keyword }}
         </v-chip>
@@ -75,6 +76,10 @@ export default {
       } else {
         this.$store.commit("SET_ERROR_MESSAGE", "关键词不能为空！");
       }
+    },
+    edit(idx) {
+      this.form.keyword = this.keywords[idx];
+      this.remove(idx);
     },
     remove(idx) {
       this.keywords.splice(idx, 1);

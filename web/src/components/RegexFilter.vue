@@ -53,6 +53,7 @@
             v-for="(regex, idx) in regexps"
             :key="idx"
             @click:close="remove(idx)"
+            @click="edit(idx)"
         >
           {{ regex }}
         </v-chip>
@@ -90,6 +91,10 @@ export default {
       } else {
         this.$store.commit("SET_ERROR_MESSAGE", "正则表达式不能为空！");
       }
+    },
+    edit(idx) {
+      this.form.regex = this.regexps[idx];
+      this.remove(idx);
     },
     remove(idx) {
       this.regexps.splice(idx, 1);

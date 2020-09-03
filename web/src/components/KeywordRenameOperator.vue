@@ -38,6 +38,7 @@
             v-for="(chip, idx) in chips"
             :key="idx"
             @click:close="remove(idx)"
+            @click="edit(idx)"
         >
           {{ chip }}
         </v-chip>
@@ -84,22 +85,27 @@ export default {
     chips() {
       return this.keywords.map(k => {
         const {old, now} = k;
-        return `${old} ⇒ ${now}`;
+        return `${old} ⇒ ${now.length === 0 ? "∅" : now}`;
       });
     }
   },
   methods: {
     add() {
-      if (this.form.keyword && this.form.replace) {
+      if (this.form.keyword) {
         this.keywords.push({
           old: this.form.keyword,
-          now: this.form.replace
+          now: this.form.replace || ""
         });
         this.form.keyword = "";
         this.form.replace = "";
       } else {
         this.$store.commit("SET_ERROR_MESSAGE", "关键词不能为空！");
       }
+    },
+    edit(idx) {
+      this.form.keyword = this.keywords[idx].old;
+      this.form.replace = this.keywords[idx].now;
+      this.remove(idx);
     },
     remove(idx) {
       this.keywords.splice(idx, 1);

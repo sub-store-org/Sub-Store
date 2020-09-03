@@ -38,6 +38,7 @@
             v-for="(chip, idx) in chips"
             :key="idx"
             @click:close="remove(idx)"
+            @click="edit(idx)"
         >
           {{ chip }}
         </v-chip>
@@ -45,7 +46,7 @@
       <v-row>
         <v-col>
           <v-text-field
-              placeholder="关键词"
+              placeholder="正则表达式"
               solo
               v-model="form.regex"
           />
@@ -84,22 +85,27 @@ export default {
     chips() {
       return this.regexps.map(k => {
         const {expr, now} = k;
-        return `${expr} ⇒ ${now}`;
+        return `${expr} ⇒ ${now.length === 0 ? "∅" : now}`;
       });
     }
   },
   methods: {
     add() {
-      if (this.form.regex && this.form.replace) {
+      if (this.form.regex) {
         this.regexps.push({
           expr: this.form.regex,
-          now: this.form.replace
+          now: this.form.replace || ""
         });
         this.form.regex = "";
         this.form.replace = "";
       } else {
-        this.$store.commit("SET_ERROR_MESSAGE", "关键词不能为空！");
+        this.$store.commit("SET_ERROR_MESSAGE", "正则表达式不能为空！");
       }
+    },
+    edit(idx) {
+      this.form.regex = this.regexps[idx].expr;
+      this.form.replace = this.regexps[idx].now;
+      this.remove(idx);
     },
     remove(idx) {
       this.regexps.splice(idx, 1);
