@@ -20,17 +20,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8b97a098-48b2-4e64-a9ef-522fe2d30b52" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../web/src/components/FlagOperator.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/components/KeywordDeleteOperator.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/KeywordDeleteOperator.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/components/KeywordFilter.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/KeywordFilter.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/components/KeywordRenameOperator.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/KeywordRenameOperator.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/components/RegexDeleteOperator.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/RegexDeleteOperator.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/components/RegexFilter.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/RegexFilter.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/components/RegexRenameOperator.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/components/RegexRenameOperator.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../web/src/views/SubEditor.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../web/src/views/SubEditor.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sub-store.js" beforeDir="false" afterPath="$PROJECT_DIR$/sub-store.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -106,7 +96,7 @@
       <workItem from="1599095419072" duration="112000" />
       <workItem from="1599095538624" duration="1682000" />
       <workItem from="1599098635956" duration="82000" />
-      <workItem from="1599099268523" duration="350000" />
+      <workItem from="1599099268523" duration="672000" />
     </task>
     <servers />
   </component>
