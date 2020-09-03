@@ -1785,7 +1785,7 @@ function KeywordRenameOperator(keywords) {
         func: (proxies) => {
             return proxies.map((proxy) => {
                 for (const {old, now} of keywords) {
-                    proxy.name = proxy.name.replace(old, now).trim();
+                    proxy.name = proxy.name.replaceAll(old, now).trim();
                 }
                 return proxy;
             });
