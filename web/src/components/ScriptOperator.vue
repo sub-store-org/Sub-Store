@@ -2,7 +2,7 @@
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
       <v-icon left color="primary">code</v-icon>
-      脚本过滤器
+      脚本操作
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">
         <v-icon>keyboard_arrow_up</v-icon>

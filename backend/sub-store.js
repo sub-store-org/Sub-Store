@@ -8,7 +8,7 @@
  * 2. 节点过滤，重命名，排序等。
  * 3. 订阅拆分，组合。
  */
-const $ = API("sub-store", true);
+const $ = API("sub-store");
 const $app = express();
 
 $.http = HTTP({
@@ -45,7 +45,7 @@ if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
 
 // BACKEND API
-$.log("Initializing Express...");
+$.info("Initializing Express...");
 
 // download
 $app.get("/download/collection/:name", downloadCollection);
@@ -76,7 +76,7 @@ $app.all("/", async (req, res) => {
     res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.");
 });
 
-$.log("Express initialized");
+$.info("Express initialized");
 $app.start();
 
 /**************************** API -- Subscriptions ***************************************/
@@ -151,13 +151,13 @@ async function parseSub(sub, platform) {
         $.write(raw, `#${sub.url}`);
     }
 
-    $.log(
+    $.info(
         "======================================================================="
     );
-    $.log(
+    $.info(
         `Processing subscription: ${sub.name}, target platform ==> ${platform}.`
     );
-    $.log(`Initializing parsers...`);
+    $.info(`Initializing parsers...`);
     const $parser = ProxyParser(platform);
     // Parsers
     $parser.addParsers([
@@ -186,7 +186,7 @@ async function parseSub(sub, platform) {
         Surge_Http,
     ]);
 
-    $.log(`Parsers initialized.`);
+    $.info(`Parsers initialized.`);
     let proxies = $parser.parse(raw);
 
     // filters
@@ -195,12 +195,13 @@ async function parseSub(sub, platform) {
     const $operator = ProxyOperator();
 
     for (const item of sub.process || []) {
+        let script;
         // process script
         if (item.type.indexOf("Script") !== -1) {
             const {mode, content} = item.args;
             if (mode === "link") {
                 // if this is remote script, download it
-                item.args = await $.http
+                script = await $.http
                     .get(content)
                     .then((resp) => resp.body)
                     .catch((err) => {
@@ -209,30 +210,49 @@ async function parseSub(sub, platform) {
                         );
                     });
             } else {
-                item.args = content;
+                script = content;
             }
         }
         if (item.type.indexOf("Filter") !== -1) {
             const filter = AVAILABLE_FILTERS[item.type];
             if (filter) {
-                $filter.setFilter(filter(item.args));
-                proxies = $filter.process(proxies);
-                $.log(
+                $.info(
                     `Applying filter "${item.type}" with arguments:\n >>> ${
                         JSON.stringify(item.args) || "None"
                     }`
                 );
+                if (item.type.indexOf("Script") !== -1) {
+                    $filter.setFilter(filter(script));
+                } else {
+                    $filter.setFilter(filter(item.args));
+                }
+                try {
+
+                    proxies = $filter.process(proxies);
+                } catch (err) {
+                    $.error(
+                        `Failed to apply filter "${item.type}"!\n REASON: ${err}`
+                    );
+                }
             }
         } else if (item.type.indexOf("Operator") !== -1) {
             const operator = AVAILABLE_OPERATORS[item.type];
             if (operator) {
-                $operator.setOperator(operator(item.args));
-                proxies = $operator.process(proxies);
-                $.log(
+                $.info(
                     `Applying operator "${item.type}" with arguments: \n >>> ${
-                        item.args || "None"
+                        JSON.stringify(item.args) || "None"
                     }`
                 );
+                if (item.type.indexOf("Script") !== -1) {
+                    $operator.setOperator(operator(script));
+                } else {
+                    $operator.setOperator(operator(item.args));
+                }
+                try {
+                    proxies = $operator.process(proxies);
+                } catch (err) {
+                    `Failed to apply operator "${item.type}"!\n REASON: ${err}`
+                }
             }
         }
     }
@@ -330,7 +350,7 @@ async function newSub(req, res) {
 
 async function updateSub(req, res) {
     const {name} = req.params;
-    $.log(`Updating subscription: ${name}`);
+    $.info(`Updating subscription: ${name}`);
     let sub = req.body;
     const allSubs = $.read(SUBS_KEY);
     if (allSubs[name]) {
@@ -528,7 +548,7 @@ function ProxyParser(targetPlatform) {
 
     function addParsers(args) {
         args.forEach((a) => parsers.push(a()));
-        $.log(`${args.length} parser added.`);
+        $.info(`${args.length} parser added.`);
     }
 
     function addProducers(args) {
@@ -2557,7 +2577,7 @@ function express(port = 3000) {
         // adapter
         app.start = () => {
             app.listen(port, () => {
-                $.log(`Express started on port: ${port}`);
+                $.info(`Express started on port: ${port}`);
             });
         };
         return app;
@@ -2581,8 +2601,6 @@ function express(port = 3000) {
     // dispatch url to route
     const dispatch = (request, start = 0) => {
         let {method, url, headers, body} = request;
-
-        console.log("DISPATCHING: " + method + ": " + url);
         if (/json/i.test(headers["Content-Type"])) {
             body = JSON.parse(body);
         }
@@ -2657,7 +2675,6 @@ function express(port = 3000) {
 
     // start service
     app.start = () => {
-        console.log(`STARTING TO ROUTE: ${JSON.stringify($request)}`);
         dispatch($request);
     };
 
