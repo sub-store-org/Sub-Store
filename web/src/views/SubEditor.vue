@@ -314,8 +314,8 @@ export default {
 
     dataChanged(content) {
       let index = 0;
-      for (; index < this.process[index].length; index++) {
-        if (this.process.id === content.idx) {
+      for (; index < this.process.length; index++) {
+        if (this.process[index].id === content.idx) {
           break;
         }
       }
@@ -329,8 +329,8 @@ export default {
 
     deleteProcess(id) {
       let index = 0;
-      for (; index < this.process[index].length; index++) {
-        if (this.process.id === id) {
+      for (; index < this.process.length; index++) {
+        if (this.process[index].id === id) {
           break;
         }
       }
