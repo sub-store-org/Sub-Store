@@ -37,9 +37,11 @@
         </v-card-title>
 
         <v-card-text>
-          {{info.title}}
+          {{info.isp}}
           <br/>
-          {{info.subtitle}}
+          {{info.region}}
+          <br/>
+          {{info.ip}}
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -60,8 +62,9 @@ export default {
       dialog: false,
       info: {
         name: "",
-        title: "",
-        subtitle: "",
+        isp: "",
+        region: "",
+        ip: ""
       }
     }
   },
@@ -83,10 +86,11 @@ export default {
 
     async showInfo(idx) {
       const {server, name} = this.proxies[idx];
-      const res = await axios.get(`http://ip-api.com/json/${server}?lang=zh-CN`).then(resp => resp.data);
+      const res = await axios.get(`/IP_API/${encodeURIComponent(server)}`).then(resp => resp.data);
       this.info.name = name;
-      this.info.title = `地区：${flags.get(res.countryCode)} ${res.regionName} ${res.city}`;
-      this.info.subtitle = `IP：${res.query}`
+      this.info.isp = `ISP：${res.org}`;
+      this.info.region = `地区：${flags.get(res.countryCode)} ${res.regionName} ${res.city}`;
+      this.info.ip = `IP：${res.query}`
       this.dialog = true
     },
   },
