@@ -139,9 +139,9 @@
 
       </v-subheader>
       <v-divider></v-divider>
-      <component v-for="(p, idx) in processors"
+      <component v-for="p in processors"
                  :is="p.component"
-                 :key="idx"
+                 :key="p.id"
                  :args="p.args"
                  @dataChanged="dataChanged"
                  @deleteProcess="deleteProcess"
@@ -258,15 +258,17 @@ export default {
         udp: "DEFAULT",
         scert: "DEFAULT",
         tfo: "DEFAULT",
-        process: [],
-      }
+      },
+      process: [],
     }
   },
   created() {
     const name = this.$route.params.name;
     const sub = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.subscriptions[name];
     this.$store.commit("SET_NAV_TITLE", sub.name ? `订阅编辑 -- ${sub.name}` : "新建订阅");
-    this.options = loadSubscription(this.options, sub);
+    const {options, process} = loadSubscription(this.options, sub);
+    this.options = options;
+    this.process = process;
   },
   computed: {
     availableProcessors() {
@@ -274,10 +276,11 @@ export default {
     },
 
     processors() {
-      return this.options.process.map(p => {
+      return this.process.map(p => {
         return {
           component: AVAILABLE_PROCESSORS[p.type].component,
-          args: p.args
+          args: p.args,
+          id: p.id
         }
       });
     }
@@ -285,21 +288,21 @@ export default {
   methods: {
     save() {
       if (this.options.name && this.options.url) {
-        const sub = buildSubscription(this.options);
+        const sub = buildSubscription(this.options, this.process);
         if (this.$route.params.name !== "UNTITLED") {
           this.$store.dispatch("UPDATE_SUBSCRIPTION", {
             name: this.$route.params.name,
             sub
           }).then(() => {
-            showInfo(`成功保存订阅：${this.options.name}！`)
+            showInfo(`成功保存订阅：${this.options.name}！`);
           }).catch(() => {
-            showError(`发生错误，无法保存订阅！`)
+            showError(`发生错误，无法保存订阅！`);
           });
         } else {
           this.$store.dispatch("NEW_SUBSCRIPTION", sub).then(() => {
-            showInfo(`成功创建订阅：${this.options.name}！`)
+            showInfo(`成功创建订阅：${this.options.name}！`);
           }).catch(() => {
-            showError(`发生错误，无法创建订阅！`)
+            showError(`发生错误，无法创建订阅！`);
           });
         }
       }
@@ -310,30 +313,55 @@ export default {
     },
 
     dataChanged(content) {
-      const process = this.options.process[content.idx];
-      process.args = content.args;
-      this.options.process.splice(content.idx, 1, process);
+      let index = 0;
+      for (; index < this.process[index].length; index++) {
+        if (this.process.id === content.idx) {
+          break;
+        }
+      }
+      this.process[index].args = content.args;
     },
 
     addProcess(type) {
-      this.options.process.push({type});
+      this.process.push({type, id: uuidv4()});
       this.dialog = false;
     },
 
-    deleteProcess(key) {
-      this.options.process.splice(key, 1);
+    deleteProcess(id) {
+      let index = 0;
+      for (; index < this.process[index].length; index++) {
+        if (this.process.id === id) {
+          break;
+        }
+      }
+      this.process.splice(index, 1);
     },
 
-    moveUp(index) {
+    moveUp(id) {
+      let index = 0;
+      for (; index < this.process.length; index++) {
+        if (this.process[index].id === id) {
+          break;
+        }
+      }
       if (index === 0) return;
       // otherwise swap with previous one
-      this.options.process.splice(index - 1, 2, this.options.process[index], this.options.process[index - 1]);
+      const prev = this.process[index - 1];
+      const cur = this.process[index];
+      this.process.splice(index - 1, 2, cur, prev);
     },
 
-    moveDown(index) {
-      if (index === this.options.process.length) return;
+    moveDown(id) {
+      let index = 0;
+      for (; index < this.process.length; index++) {
+        if (this.process[index].id === id) {
+          break;
+        }
+      }
       // otherwise swap with latter one
-      this.options.process.splice(index, 2, this.options.process[index + 1], this.options.process[index]);
+      const cur = this.process[index];
+      const next = this.process[index + 1]
+      this.process.splice(index, 2, next, cur);
     }
   }
 }
@@ -343,8 +371,9 @@ function loadSubscription(options, sub) {
     ...options,
     name: sub.name,
     url: sub.url,
-    process: []
   }
+  let process = []
+
   // flag
   for (const p of (sub.process || [])) {
     switch (p.type) {
@@ -355,13 +384,14 @@ function loadSubscription(options, sub) {
         options[p.args.key] = p.args.value ? "FORCE_OPEN" : "FORCE_CLOSE";
         break
       default:
-        options.process.push(p);
+        p.id = uuidv4();
+        process.push(p);
     }
   }
-  return options;
+  return {options, process};
 }
 
-function buildSubscription(options) {
+function buildSubscription(options, process) {
   const sub = {
     name: options.name,
     url: options.url,
@@ -382,10 +412,17 @@ function buildSubscription(options) {
       });
     }
   }
-  for (const p of options.process) {
+  for (const p of process) {
     sub.process.push(p);
   }
   return sub;
+}
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 </script>
 
