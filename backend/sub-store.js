@@ -51,10 +51,14 @@ $.info("Initializing Express...");
 $app.get("/download/collection/:name", downloadCollection);
 $app.get("/download/:name", downloadSub);
 
+// IP_API
+$app.get("/api/IP_API/:server", IP_API);
+
 // subscriptions
 $app.route("/api/sub/:name").get(getSub).patch(updateSub).delete(deleteSub);
 
 $app.route("/api/sub").get(getAllSubs).post(newSub).delete(deleteAllSubs);
+
 
 // refresh
 $app.post("/api/refresh", refreshResource);
@@ -78,6 +82,12 @@ $app.all("/", async (req, res) => {
 
 $.info("Express initialized");
 $app.start();
+
+async function IP_API(req, res) {
+    const server = decodeURIComponent(req.params.server);
+    const result = await $.http.get(`http://ip-api.com/json/${server}?lang=zh-CN`).then(resp => JSON.parse(resp.body));
+    res.json(result);
+}
 
 /**************************** API -- Subscriptions ***************************************/
 // refresh resource
