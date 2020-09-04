@@ -30,6 +30,7 @@
         color="primary"
         dark
         fixed
+        :mini-variant="false" :clipped="true"
     >
       <v-app-bar-nav-icon @click.stop="toggleMenu"></v-app-bar-nav-icon>
 
