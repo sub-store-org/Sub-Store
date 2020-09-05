@@ -1,3 +1,4 @@
+.DS_Store
 # json config
 backend/sub-store.json
 backend/root.json
@@ -118,3 +119,12 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
