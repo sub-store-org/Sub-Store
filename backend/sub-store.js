@@ -1616,9 +1616,9 @@ function Loon_Producer() {
                     }
                 }
 
-                return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},${proxy.password}${obfs_opts}`;
+                return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}`;
             case "ssr":
-                return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},${proxy.password},${proxy.protocol},{${proxy["protocol-param"]}},${proxy.obfs},{${proxy["obfs-param"]}}`;
+                return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}",${proxy.protocol},{${proxy["protocol-param"]}},${proxy.obfs},{${proxy["obfs-param"]}}`;
             case "vmess":
                 obfs_opts = "";
                 if (proxy.network === "ws") {
@@ -1636,7 +1636,7 @@ function Loon_Producer() {
                     proxy.cipher === "auto" ? "none" : proxy.cipher
                 },"${proxy.uuid}",over-tls:${proxy.tls}${obfs_opts}`;
             case "trojan":
-                return `${proxy.name}=trojan,${proxy.server},${proxy.port},${proxy.password},tls-name:${proxy.sni},skip-cert-verify:${proxy.scert}`;
+                return `${proxy.name}=trojan,${proxy.server},${proxy.port},"${proxy.password}",tls-name:${proxy.sni},skip-cert-verify:${proxy.scert}`;
             case "http":
                 tls_opts = "";
                 const base = `${proxy.name}=${proxy.tls ? "http" : "https"},${
