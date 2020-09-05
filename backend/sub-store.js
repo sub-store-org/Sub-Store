@@ -670,11 +670,11 @@ function ProxyParser(targetPlatform) {
             const Base64 = new Base64Code();
             let ssdinfo = JSON.parse(Base64.safeDecode(raw.split("ssd://")[1]));
             // options (traffic_used, traffic_total, expiry, url)
-            let traffic_used = ssdinfo.traffic_used; // GB
-            let traffic_total = ssdinfo.traffic_total; // GB, -1 means unlimited
-            let expiry = ssdinfo.expiry; // YYYY-MM-DD HH:mm:ss
+            var traffic_used = ssdinfo.traffic_used; // GB
+            var traffic_total = ssdinfo.traffic_total; // GB, -1 means unlimited
+            var expiry = ssdinfo.expiry; // YYYY-MM-DD HH:mm:ss
             // default setting
-            let name = ssdinfo.airport; // name of the airport
+            var name = ssdinfo.airport; // name of the airport
             let port = ssdinfo.port;
             let method = ssdinfo.encryption;
             let password = ssdinfo.password;
@@ -688,7 +688,7 @@ function ProxyParser(targetPlatform) {
                 let hostname = server.server;
                 port = server.port ? server.port : port;
                 let tag = server.remarks ? server.remarks : i;
-                let plugin = server.plugin_options ? "/?" + encodeURIComponent(server.plugin + ";" + server.plugin_options) : ""
+                let plugin = server.plugin_options ? "/?plugin=" + encodeURIComponent(server.plugin + ";" + server.plugin_options) : ""
                 output[i] = "ss://" + userinfo + "@" + hostname + ":" + port + plugin + "#" + tag
             }
         } else {
