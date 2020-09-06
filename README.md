@@ -45,6 +45,23 @@ Core functionalities:
 - [x] **Regex delete operator**: delete by regex in proxy names.
 - [x] **Script operator**: modify proxy by script.
 
+### Development
+Go to `backend` and `web` directories, install node dependencies:
+```
+npm install
+```
+
+1. In `backend`, run the backend server on http://localhost:3000
+
+```
+node sub-store.js
+```
+
+2. In`web`, start the vue-cli server
+```
+npm start
+```
+
 ## LICENSE
 This project is under the GPL V3 LICENSE.
 
