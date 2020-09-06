@@ -666,16 +666,17 @@ function ProxyParser(targetPlatform) {
             raw = raw.replace(/  -\n.*name/g, "  - name").replace(/\$|\`/g, "").split("proxy-providers:")[0].split("proxy-groups:")[0].replace(/\"(name|type|server|port|cipher|password|)\"/g, "$1")
             const proxies = YAML.eval(raw).proxies;
             output = proxies.map((p) => JSON.stringify(p));
-        } else if (raw.indexOf("ssd://") == 0) {
+        } else if (raw.indexOf("ssd://") === 0) {
+            // preprocessing for SSD subscription format
             output = [];
             const Base64 = new Base64Code();
             let ssdinfo = JSON.parse(Base64.safeDecode(raw.split("ssd://")[1]));
             // options (traffic_used, traffic_total, expiry, url)
-            var traffic_used = ssdinfo.traffic_used; // GB
-            var traffic_total = ssdinfo.traffic_total; // GB, -1 means unlimited
-            var expiry = ssdinfo.expiry; // YYYY-MM-DD HH:mm:ss
+            const traffic_used = ssdinfo.traffic_used; // GB
+            const traffic_total = ssdinfo.traffic_total; // GB, -1 means unlimited
+            const expiry = ssdinfo.expiry; // YYYY-MM-DD HH:mm:ss
             // default setting
-            var name = ssdinfo.airport; // name of the airport
+            let name = ssdinfo.airport; // name of the airport
             let port = ssdinfo.port;
             let method = ssdinfo.encryption;
             let password = ssdinfo.password;
