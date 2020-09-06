@@ -137,7 +137,7 @@ async function parseSub(sub, platform) {
     let raw;
     const key = new Base64Code().safeEncode(sub.url);
 
-    if (platform === "Raw") {
+    if (platform === "Raw" || platform === 'URI') {
         const cache = $.read(`#${key}`);
         if (!cache) {
             raw = await $.http
@@ -273,6 +273,7 @@ async function parseSub(sub, platform) {
         Loon_Producer,
         Surge_Producer,
         Raw_Producer,
+        URI_Producer
     ]);
     return $parser.produce(proxies);
 }
@@ -598,13 +599,9 @@ function ProxyParser(targetPlatform) {
                         }
                         // skip unsupported proxies
                         // if proxy.supported is undefined, assume that all platforms are supported.
-                        if (
-                            typeof proxy.supported === "undefined" ||
-                            proxy.supported[targetPlatform]
-                        ) {
-                            result.push(proxy);
-                            break;
-                        }
+                        if (proxy.supported && proxy.supported[targetPlatform] === false) continue;
+                        result.push(proxy);
+                        break;
                     } catch (err) {
                         console.log(
                             `ERROR: Failed to parse line: \n ${line}\n Reason: ${err}`
@@ -635,6 +632,7 @@ function ProxyParser(targetPlatform) {
                             return "";
                         }
                     })
+                    .filter(v => v.length > 0) // discard empty lines
                     .join("\n");
             }
         }
@@ -805,6 +803,7 @@ function URI_SS() {
                         mode: "websocket",
                         host: params["obfs-host"],
                         path: params.path || "",
+                        tls: params.tls
                     };
                     break;
                 default:
@@ -880,6 +879,8 @@ function URI_SSR() {
 
 // V2rayN URI VMess format
 // reference: https://github.com/2dust/v2rayN/wiki/%E5%88%86%E4%BA%AB%E9%93%BE%E6%8E%A5%E6%A0%BC%E5%BC%8F%E8%AF%B4%E6%98%8E(ver-2)
+
+// Quantumult VMess format
 function URI_VMess() {
     const patternTest = (line) => {
         return /^vmess:\/\//.test(line);
@@ -978,9 +979,10 @@ function URI_Trojan() {
         }
         line = line.split("trojan://")[1];
         const server = line.split("@")[1].split(":443")[0];
+        const name = line.split("#")[1].trim();
 
         return {
-            name: `[Trojan] ${server}`, // trojan uri has no server tag!
+            name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
             type: "trojan",
             server,
             port: 443,
@@ -1718,6 +1720,66 @@ function Raw_Producer() {
     const targetPlatform = "Raw";
     const output = (proxy) => {
         return JSON.stringify(proxy);
+    };
+    return {targetPlatform, output};
+}
+
+function URI_Producer() {
+    const targetPlatform = "URI";
+    const Base64 = new Base64Code();
+    const output = (proxy) => {
+        let result = "";
+        switch (proxy.type) {
+            case "ss":
+                const userinfo = `${proxy.cipher}:${proxy.password}`;
+                result = `ss://${Base64.safeEncode(userinfo)}@${proxy.server}:${proxy.port}/`;
+                if (proxy.plugin) {
+                    result += "?plugin=";
+                    const opts = proxy['plugin-opts'];
+                    switch (proxy.plugin) {
+                        case "obfs":
+                            result += encodeURIComponent(`simple-obfs;obfs=${opts.mode}${opts.host ? ";obfs-host=" + opts.host : ""}`);
+                            break
+                        case "v2ray-plugin":
+                            result += encodeURIComponent(`v2ray-plugin;obfs=${opts.mode}${opts.host ? ";obfs-host" + opts.host : ""}${opts.tls ? ";tls" : ""}`);
+                            break
+                        default:
+                            throw new Error(`Unsupported plugin option: ${proxy.plugin}`);
+                    }
+                }
+                result += `#${encodeURIComponent(proxy.name)}`;
+                break
+            case "ssr":
+                result = `${proxy.server}:${proxy.port}:${proxy.protocol}:${proxy.cipher}:${proxy.obfs}:${Base64.safeEncode(proxy.password)}/`;
+                result += `?remarks=${proxy.name}${proxy['obfs-param'] ? "&obfsparam=" + Base64.safeEncode(proxy['obfs-param']) : ""}${proxy['protocol-param'] ? "&protocolparam=" + Base64.safeEncode(proxy['protocol-param']) : ""}`;
+                result = "vmess://" + Base64.safeEncode(result);
+                break
+            case "vmess":
+                // V2RayN URI format
+                result = {
+                    ps: proxy.name,
+                    add: proxy.server,
+                    port: proxy.port,
+                    id: proxy.uuid,
+                    type: "",
+                    aid: 0,
+                    net: proxy.network || "tcp",
+                    tls: proxy.tls ? "tls" : ""
+                }
+                // obfs
+                if (proxy.network === 'ws') {
+                    result.path = proxy['ws-path'] || "/";
+                    result.host = proxy['ws-headers'].Host || proxy.server;
+                }
+                result = Base64.safeEncode(JSON.stringify(result));
+                break
+            case "trojan":
+                result = `trojan://${proxy.password}@${proxy.server}:${proxy.port}#${proxy.name}`;
+                break
+            default:
+                throw new Error(`Cannot handle proxy type: ${proxy.type}`);
+        }
+        return result;
     };
     return {targetPlatform, output};
 }
