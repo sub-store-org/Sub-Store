@@ -11,7 +11,7 @@ Core functionalities:
 ### Supported Input Formats
 - [x] SS URI
 - [x] SSR URI
-- [ ] SSD URI
+- [x] SSD URI
 - [x] V2RayN URI
 - [x] QX (SS, SSR, VMess, Trojan, HTTP)
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP)
