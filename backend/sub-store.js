@@ -653,14 +653,17 @@ function ProxyParser(targetPlatform) {
             // https://github.com/KOP-XIAO/QuantumultX
             if (raw.indexOf("{") !== -1) {
                 raw = raw
+                    .replace(/    - /g, "  - ")
+                    .replace(/:(?!\s)/g, ": ")
+                    .replace(/\,\"/g, ", \"")
                     .replace(/: {/g, ": {,     ")
                     .replace(/, (host|path|tls|mux|skip)/g, ",     $1")
-                    .replace(/{name: /g, '{name: "')
-                    .replace(/, server:/g, '", server:')
+                    .replace(/{name: /g, "{name: \"")
+                    .replace(/, server:/g, "\", server:")
                     .replace(/{|}/g, "")
-                    .replace(/,/g, "\n   ");
+                    .replace(/,/g, "\n   ")
             }
-            raw = raw.replace(/  -\n.*name/g, "  - name");
+            raw = raw.replace(/  -\n.*name/g, "  - name").replace(/\$|\`/g, "").split("proxy-providers:")[0].split("proxy-groups:")[0].replace(/\"(name|type|server|port|cipher|password|)\"/g, "$1")
             const proxies = YAML.eval(raw).proxies;
             output = proxies.map((p) => JSON.stringify(p));
         } else {
