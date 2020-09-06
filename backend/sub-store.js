@@ -666,6 +666,32 @@ function ProxyParser(targetPlatform) {
             raw = raw.replace(/  -\n.*name/g, "  - name").replace(/\$|\`/g, "").split("proxy-providers:")[0].split("proxy-groups:")[0].replace(/\"(name|type|server|port|cipher|password|)\"/g, "$1")
             const proxies = YAML.eval(raw).proxies;
             output = proxies.map((p) => JSON.stringify(p));
+        } else if (raw.indexOf("ssd://") == 0) {
+            output = [];
+            const Base64 = new Base64Code();
+            let ssdinfo = JSON.parse(Base64.safeDecode(raw.split("ssd://")[1]));
+            // options (traffic_used, traffic_total, expiry, url)
+            var traffic_used = ssdinfo.traffic_used; // GB
+            var traffic_total = ssdinfo.traffic_total; // GB, -1 means unlimited
+            var expiry = ssdinfo.expiry; // YYYY-MM-DD HH:mm:ss
+            // default setting
+            var name = ssdinfo.airport; // name of the airport
+            let port = ssdinfo.port;
+            let method = ssdinfo.encryption;
+            let password = ssdinfo.password;
+            // servers config
+            let servers = ssdinfo.servers;
+            for (let i = 0; i < servers.length; i++) {
+                let server = servers[i];
+                method = server.encryption ? server.encryption : method;
+                password = server.password ? server.password : password;
+                let userinfo = Base64.safeEncode(method + ":" + password);
+                let hostname = server.server;
+                port = server.port ? server.port : port;
+                let tag = server.remarks ? server.remarks : i;
+                let plugin = server.plugin_options ? "/?plugin=" + encodeURIComponent(server.plugin + ";" + server.plugin_options) : ""
+                output[i] = "ss://" + userinfo + "@" + hostname + ":" + port + plugin + "#" + tag
+            }
         } else {
             // check if content is based64 encoded
             const Base64 = new Base64Code();
