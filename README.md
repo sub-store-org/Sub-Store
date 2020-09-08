@@ -1,7 +1,12 @@
 # Sub-Store
 > This project is still under active development.
 
+![Icon](https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F9c8f07d1-7290-4caf-8e63-941d7e2edc58%2Ffavicon.png?table=block&id=62595869-94d3-4c11-a4ce-d5c406264b46&width=250&userId=187ae477-568a-42e3-85f0-ad2f29911433&cache=v2)
+
 Subscription manager for QX, Loon and Surge.
+
+[Doc](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46) [文档](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46)
+
 
 Core functionalities:
 1. Conversion among various formats.
