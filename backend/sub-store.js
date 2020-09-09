@@ -89,12 +89,8 @@ async function IP_API(req, res) {
     res.json(result);
 }
 
-/**************************** API -- Subscriptions ***************************************/
-// refresh resource
-async function refreshResource(req, res) {
-    const Base64 = new Base64Code();
-    const {url} = req.body;
-    const raw = await $.http
+async function downloadResource(url) {
+    let raw = await $.http
         .get(url)
         .then((resp) => resp.body)
         .catch((err) => {
@@ -103,6 +99,21 @@ async function refreshResource(req, res) {
                 message: `Cannot refresh remote resource: ${url}\n Reason: ${err}`,
             });
         });
+    // trim Clash config to save memory
+    const start = raw.indexOf("proxies:");
+    if (start !== -1) {
+        const end = raw.lastIndexOf("}") + 1;
+        raw = raw.substring(start, end);
+    }
+    return raw;
+}
+
+/**************************** API -- Subscriptions ***************************************/
+// refresh resource
+async function refreshResource(req, res) {
+    const Base64 = new Base64Code();
+    const {url} = req.body;
+    const raw = await downloadResource(url);
     $.write(raw, `#${Base64.safeEncode(url)}`);
     res.json({
         status: "success",
@@ -136,22 +147,10 @@ async function downloadSub(req, res) {
 async function parseSub(sub, platform) {
     let raw;
     const key = new Base64Code().safeEncode(sub.url);
-
     if (platform === "Raw" || platform === 'URI') {
         const cache = $.read(`#${key}`);
         if (!cache) {
-            raw = await $.http
-                .get(sub.url)
-                .then((resp) => resp.body)
-                .catch((err) => {
-                    throw new Error(err);
-                });
-            // trim Clash config to save memory
-            const start = raw.indexOf("proxies:");
-            if (start !== -1) {
-                const end = raw.lastIndexOf("}") + 1;
-                raw = raw.substring(start, end);
-            }
+            raw = await downloadResource(sub.url);
             $.write(raw, `#${key}`);
         } else {
             // 我也不知道这里为什么要等10ms，不加Surge报错。
@@ -160,18 +159,7 @@ async function parseSub(sub, platform) {
         }
     } else {
         // always download from url
-        raw = await $.http
-            .get(sub.url)
-            .then((resp) => resp.body)
-            .catch((err) => {
-                throw new Error(err);
-            });
-        // trim Clash config to save memory
-        const start = raw.indexOf("proxies:");
-        if (start !== -1) {
-            const end = raw.lastIndexOf("}") + 1;
-            raw = raw.substring(start, end);
-        }
+        raw = await downloadResource(sub.url);
         $.write(raw, `#${sub.url}`);
     }
 
@@ -679,7 +667,6 @@ function ProxyParser(targetPlatform) {
                     .replace(/,/g, "\n   ")
             }
             raw = raw.replace(/  -\n.*name/g, "  - name").replace(/\$|\`/g, "").split("proxy-providers:")[0].split("proxy-groups:")[0].replace(/\"(name|type|server|port|cipher|password|)\"/g, "$1")
-            console.log(raw);
             const proxies = YAML.eval(raw).proxies;
             output = proxies.map((p) => JSON.stringify(p));
         } else if (raw.indexOf("ssd://") === 0) {
