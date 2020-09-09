@@ -146,8 +146,16 @@ async function parseSub(sub, platform) {
                 .catch((err) => {
                     throw new Error(err);
                 });
+            // trim Clash config to save memory
+            const start = raw.indexOf("proxies:");
+            if (start !== -1) {
+                const end = raw.lastIndexOf("}") + 1;
+                raw = raw.substring(start, end);
+            }
             $.write(raw, `#${key}`);
         } else {
+            // 我也不知道这里为什么要等10ms，不加Surge报错。
+            await $.wait(10);
             raw = cache;
         }
     } else {
@@ -158,6 +166,12 @@ async function parseSub(sub, platform) {
             .catch((err) => {
                 throw new Error(err);
             });
+        // trim Clash config to save memory
+        const start = raw.indexOf("proxies:");
+        if (start !== -1) {
+            const end = raw.lastIndexOf("}") + 1;
+            raw = raw.substring(start, end);
+        }
         $.write(raw, `#${sub.url}`);
     }
 
@@ -648,6 +662,7 @@ function ProxyParser(targetPlatform) {
             // HTML format, maybe a wrong URL!
             throw new Error("Invalid format HTML!");
         } else if (raw.indexOf("proxies") !== -1) {
+            console.log(`Preprocessing Clash config...`);
             // Clash YAML format
             // codes are modified from @KOP-XIAO
             // https://github.com/KOP-XIAO/QuantumultX
@@ -664,6 +679,7 @@ function ProxyParser(targetPlatform) {
                     .replace(/,/g, "\n   ")
             }
             raw = raw.replace(/  -\n.*name/g, "  - name").replace(/\$|\`/g, "").split("proxy-providers:")[0].split("proxy-groups:")[0].replace(/\"(name|type|server|port|cipher|password|)\"/g, "$1")
+            console.log(raw);
             const proxies = YAML.eval(raw).proxies;
             output = proxies.map((p) => JSON.stringify(p));
         } else if (raw.indexOf("ssd://") === 0) {
@@ -1774,6 +1790,7 @@ function URI_Producer() {
                             result += encodeURIComponent(`v2ray-plugin;obfs=${opts.mode}${opts.host ? ";obfs-host" + opts.host : ""}${opts.tls ? ";tls" : ""}`);
                             break
                         default:
+                            console.log(`FUCK`);
                             throw new Error(`Unsupported plugin option: ${proxy.plugin}`);
                     }
                 }
@@ -2461,7 +2478,7 @@ function HTTP(defaultOptions = {}) {
 }
 
 function API(name = "untitled", debug = false) {
-    const {isQX, isLoon, isSurge, isNode, isJSBox} = ENV();
+    const {isQX, isLoon, isSurge, isNode, isJSBox, isScriptable} = ENV();
     return new (class {
         constructor(name, debug) {
             this.name = name;
@@ -2495,8 +2512,7 @@ function API(name = "untitled", debug = false) {
             };
         }
 
-        // persistance
-
+        // persistent
         // initialize cache
         initCache() {
             if (isQX) this.cache = JSON.parse($prefs.valueForKey(this.name) || "{}");
@@ -2559,7 +2575,7 @@ function API(name = "untitled", debug = false) {
             this.log(`SET ${key}`);
             if (key.indexOf("#") !== -1) {
                 key = key.substr(1);
-                if (isSurge || isLoon) {
+                if (isSurge & isLoon) {
                     $persistentStore.write(data, key);
                 }
                 if (isQX) {
@@ -2578,7 +2594,7 @@ function API(name = "untitled", debug = false) {
             this.log(`READ ${key}`);
             if (key.indexOf("#") !== -1) {
                 key = key.substr(1);
-                if (isSurge || isLoon) {
+                if (isSurge & isLoon) {
                     return $persistentStore.read(key);
                 }
                 if (isQX) {
@@ -2623,8 +2639,17 @@ function API(name = "untitled", debug = false) {
 
             if (isQX) $notify(title, subtitle, content, options);
             if (isSurge) $notification.post(title, subtitle, content_);
-            if (isLoon) $notification.post(title, subtitle, content, openURL);
-            if (isNode) {
+            if (isLoon) {
+                let opts = {};
+                if (openURL) opts["openUrl"] = openURL;
+                if (mediaURL) opts["mediaUrl"] = mediaURL;
+                if (JSON.stringify(opts) === '{}') {
+                    $notification.post(title, subtitle, content);
+                } else {
+                    $notification.post(title, subtitle, content, opts);
+                }
+            }
+            if (isNode || isScriptable) {
                 if (isJSBox) {
                     const push = require("push");
                     push.schedule({
@@ -2648,6 +2673,22 @@ function API(name = "untitled", debug = false) {
 
         error(msg) {
             console.log("ERROR: " + msg);
+        }
+
+        wait(millisec) {
+            return new Promise((resolve) => setTimeout(resolve, millisec));
+        }
+
+        done(value = {}) {
+            if (isQX || isLoon || isSurge) {
+                $done(value);
+            } else if (isNode && !isJSBox) {
+                if (typeof $context !== "undefined") {
+                    $context.headers = value.headers;
+                    $context.statusCode = value.statusCode;
+                    $context.body = value.body;
+                }
+            }
         }
     })(name, debug);
 }
