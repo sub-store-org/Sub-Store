@@ -69,7 +69,9 @@
         <v-card-title>
           {{ info.name }}
         </v-card-title>
-        <v-card-text>
+        <v-card-text
+          align="center"
+        >
           <vue-q-r-code-component
               :text="qr"
           />
