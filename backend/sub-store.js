@@ -2374,7 +2374,7 @@ function getPlatformFromHeaders(headers) {
         return "QX";
     } else if (UA.indexOf("Surge") !== -1) {
         return "Surge";
-    } else if (UA.indexOf("Decar") !== -1) {
+    } else if (UA.indexOf("Decar") !== -1 || UA.indexOf("Loon") !== -1) {
         return "Loon";
     } else {
         // browser
