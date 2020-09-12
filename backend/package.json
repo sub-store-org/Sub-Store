@@ -5,6 +5,7 @@
   "main": "sub-store.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "node sub-store.js",
     "build": "curl -X POST -s --data-urlencode 'input@sub-store.js' https://javascript-minifier.com/raw > sub-store.min.js"
   },
   "author": "",
