@@ -1012,7 +1012,7 @@ function URI_Trojan() {
         }
         line = line.split("trojan://")[1];
         const server = line.split("@")[1].split(":443")[0];
-        const name = line.split("#")[1].trim();
+        const name = decodeURIComponent(line.split("#")[1].trim());
 
         return {
             name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
