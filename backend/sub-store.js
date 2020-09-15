@@ -202,11 +202,6 @@ async function parseSub(sub, platform) {
   $.info(`Parsers initialized.`);
   let proxies = $parser.parse(raw);
 
-  // filters
-  const $filter = ProxyFilter();
-  // operators
-  const $operator = ProxyOperator();
-
   for (const item of sub.process || []) {
     let script;
     // process script
@@ -234,13 +229,14 @@ async function parseSub(sub, platform) {
             JSON.stringify(item.args) || "None"
           }`
         );
-        if (item.type.indexOf("Script") !== -1) {
-          $filter.setFilter(filter(script));
-        } else {
-          $filter.setFilter(filter(item.args));
-        }
+
         try {
-          proxies = $filter.process(proxies);
+          if (item.type.indexOf("Script") !== -1) {
+            proxies = processFilter(filter(script), proxies);
+          } else {
+            proxies = processFilter(filter(item.args), proxies);
+          }
+
         } catch (err) {
           $.error(`Failed to apply filter "${item.type}"!\n REASON: ${err}`);
         }
@@ -253,13 +249,12 @@ async function parseSub(sub, platform) {
             JSON.stringify(item.args) || "None"
           }`
         );
-        if (item.type.indexOf("Script") !== -1) {
-          $operator.setOperator(operator(script));
-        } else {
-          $operator.setOperator(operator(item.args));
-        }
         try {
-          proxies = $operator.process(proxies);
+          if (item.type.indexOf("Script") !== -1) {
+            proxies = processOperator(operator(script), proxies);
+          } else {
+            proxies = processOperator(operator(item.args), proxies);
+          }
         } catch (err) {
           `Failed to apply operator "${item.type}"!\n REASON: ${err}`;
         }
@@ -729,53 +724,28 @@ function ProxyParser(targetPlatform) {
   };
 }
 
-function ProxyFilter() {
-  let filter;
-
-  function setFilter(arg) {
-    filter = arg;
-  }
-
+function processFilter(filter, proxies) {
   // select proxies
-  function process(proxies) {
-    let selected = FULL(proxies.length, true);
-    try {
-      selected = AND(selected, filter.func(proxies));
-    } catch (err) {
-      console.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
-    }
-
-    return proxies.filter((_, i) => selected[i]);
+  let selected = FULL(proxies.length, true);
+  try {
+    selected = AND(selected, filter.func(proxies));
+  } catch (err) {
+    console.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
   }
-
-  return {
-    process,
-    setFilter,
-  };
+  return proxies.filter((_, i) => selected[i]);
 }
 
-function ProxyOperator() {
-  let operator;
-
-  function setOperator(arg) {
-    operator = arg;
+function processOperator(operator, proxies) {
+  let output = objClone(proxies);
+  try {
+    const output_ = operator.func(output);
+    if (output_) output = output_;
+  } catch (err) {
+    // print log and skip this operator
+    console.log(`ERROR: cannot apply operator ${op.name}! Reason: ${err}`);
   }
 
-  // run all operators
-  function process(proxies) {
-    let output = objClone(proxies);
-    try {
-      const output_ = operator.func(output);
-      if (output_) output = output_;
-    } catch (err) {
-      // print log and skip this operator
-      console.log(`ERROR: cannot apply operator ${op.name}! Reason: ${err}`);
-    }
-
-    return output;
-  }
-
-  return { setOperator, process };
+  return output;
 }
 
 /**************************** URI Format ***************************************/
@@ -1799,7 +1769,6 @@ function URI_Producer() {
               );
               break;
             default:
-              console.log(`FUCK`);
               throw new Error(`Unsupported plugin option: ${proxy.plugin}`);
           }
         }
@@ -2018,13 +1987,16 @@ function ScriptOperator(script) {
       (function () {
         // interface to get internal operators
         const $get = (name, args) => {
-          const operator = AVAILABLE_OPERATORS[name];
-          if (operator) {
-            return operator(args).func;
-          } else {
-            throw new Error(`No operator named ${name} is found!`);
-          }
+          const item = AVAILABLE_OPERATORS[name] || AVAILABLE_FILTERS[name];
+          return item(args);
         };
+        const $process = (item, proxies) => {
+          if (item.name.indexOf("Filter") !== -1) {
+            return processOperator(item, proxies);
+          } else if (item.name.indexOf("Operator") !== -1) {
+            return processFilter(item, proxies);
+          }
+        }
         eval(script);
         output = operator(proxies);
       })();
@@ -2132,15 +2104,6 @@ function ScriptFilter(script) {
     func: (proxies) => {
       let output = FULL(proxies.length, true);
       !(function () {
-        // interface to get internal filters
-        const $get = (name, args) => {
-          const filter = AVAILABLE_FILTERS[name];
-          if (filter) {
-            return filter(args).func;
-          } else {
-            throw new Error(`No filter named ${name} is found!`);
-          }
-        };
         eval(script);
         output = filter(proxies);
       })();
