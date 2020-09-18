@@ -8,6 +8,7 @@ const store = new Vuex.Store({
     state: {
         title: "Sub-Store",
         isDarkMode: false,
+        clipboard: "",
 
         successMessage: "",
         errorMessage: "",
@@ -19,6 +20,9 @@ const store = new Vuex.Store({
     },
 
     mutations: {
+        COPY(state, text) {
+          state.clipboard = text;
+        },
         // UI
         SET_NAV_TITLE(state, title) {
             state.title = title;
@@ -33,7 +37,8 @@ const store = new Vuex.Store({
 
         SET_ERROR_MESSAGE(state, msg) {
             state.errorMessage = msg;
-        }
+        },
+
     },
 
     actions: {
