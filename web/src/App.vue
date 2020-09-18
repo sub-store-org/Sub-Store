@@ -62,7 +62,7 @@ export default {
     },
     errorMessage() {
       return this.$store.state.errorMessage;
-    }
+    },
   },
 
   watch: {
@@ -75,7 +75,7 @@ export default {
       setTimeout(() => {
         this.$store.commit("SET_ERROR_MESSAGE", "");
       }, 1000);
-    }
+    },
   }
 }
 </script>

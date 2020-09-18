@@ -10,6 +10,8 @@
             required
             label="订阅名称"
             placeholder="填入订阅名称，名称需唯一"
+            clearable
+            clear-icon="clear"
         />
         <v-textarea
             v-model="options.url"
@@ -19,6 +21,8 @@
             required
             label="订阅链接"
             placeholder="填入机场原始订阅链接"
+            clearable
+            clear-icon="clear"
         />
       </v-form>
       <v-card-actions>
@@ -26,9 +30,38 @@
         <v-btn icon @click="save">
           <v-icon>save_alt</v-icon>
         </v-btn>
-        <v-btn icon @click="discard">
-          <v-icon>settings_backup_restore</v-icon>
-        </v-btn>
+        <v-dialog max-width="400px" v-model="showShareDialog">
+          <template #activator="{on}">
+            <v-btn icon v-on="on">
+              <v-icon>cloud_circle</v-icon>
+            </v-btn>
+          </template>
+          <v-card class="pl-4 pr-4 pb-4 pt-4">
+            <v-card-title>
+              <v-icon left>cloud_circle</v-icon>
+              配置同步
+              <v-spacer/>
+              <v-btn icon @click="share">
+                <v-icon small>share</v-icon>
+              </v-btn>
+            </v-card-title>
+            <v-textarea
+                v-model="importedSub"
+                solo
+                label="粘贴配置以导入"
+                rows="5"
+                clearable
+                clear-icon="clear"
+                :rules="validations.importRules"
+            />
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn text color="primary" @click="importSub">确认</v-btn>
+              <v-btn text @click="showShareDialog = false">取消</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
       </v-card-actions>
     </v-card>
     <v-card class="mb-4">
@@ -238,11 +271,13 @@ export default {
     KeywordDeleteOperator,
     RegexDeleteOperator,
     ScriptFilter,
-    ScriptOperator
+    ScriptOperator,
   },
   data: function () {
     return {
       selectedProcess: null,
+      showShareDialog: false,
+      importedSub: "",
       dialog: false,
       validations: {
         nameRules: [
@@ -252,6 +287,9 @@ export default {
         urlRules: [
           v => !!v || "订阅链接不能为空！",
           v => /^https?:\/\//.test(v) || "订阅链接不合法！"
+        ],
+        importRules: [
+          v => !!v || "不能导入空配置！"
         ]
       },
       formState: {
@@ -314,8 +352,31 @@ export default {
       }
     },
 
-    discard() {
-      this.$router.back();
+    share() {
+      let sub = buildSubscription(this.options, this.process);
+      sub.name = "「订阅名称」";
+      sub.url = "「订阅链接」";
+      sub = JSON.stringify(sub);
+      this.$clipboard(sub);
+      this.$store.commit("SET_SUCCESS_MESSAGE", "导出成功，订阅已复制到剪贴板！");
+      this.showShareDialog = false;
+    },
+
+    importSub() {
+      if (this.importedSub) {
+        const sub = JSON.parse(this.importedSub);
+        const {options, process} = loadSubscription(this.options, sub);
+        delete options.name;
+        delete options.url;
+
+        Object.assign(this.options, options);
+        this.process = process;
+
+        this.$store.commit("SET_SUCCESS_MESSAGE", "成功导入订阅！");
+        this.showShareDialog = false;
+      } else {
+        this.$store.commit("SET_ERROR_MESSAGE", "不能导入空配置！");
+      }
     },
 
     dataChanged(content) {
@@ -368,7 +429,7 @@ export default {
       const cur = this.process[index];
       const next = this.process[index + 1]
       this.process.splice(index, 2, next, cur);
-    }
+    },
   }
 }
 

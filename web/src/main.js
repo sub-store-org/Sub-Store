@@ -11,5 +11,6 @@ new Vue({
     vuetify,
     router,
     store,
+    Clipboard,
     render: h => h(App)
 }).$mount('#app')
