@@ -4,7 +4,13 @@
       <v-icon left color="primary">sort</v-icon>
       关键词排序
       <v-spacer></v-spacer>
-      <v-btn icon>
+      <v-btn icon @click="$emit('up', idx)">
+        <v-icon>keyboard_arrow_up</v-icon>
+      </v-btn>
+      <v-btn icon @click="$emit('down', idx)">
+        <v-icon>keyboard_arrow_down</v-icon>
+      </v-btn>
+      <v-btn icon @click="$emit('deleteProcess', idx)">
         <v-icon color="error">mdi-delete</v-icon>
       </v-btn>
       <v-dialog>
@@ -28,14 +34,12 @@
       <v-chip-group column
       >
         <v-chip
-            draggable
             close
             close-icon="mdi-delete"
             v-for="(keyword, idx) in keywords"
             :key="idx"
+            @click="edit(idx)"
             @click:close="remove(idx)"
-            @dragstart="dragStart"
-            @dragend="dragEnd"
         >
           {{ keyword }}
         </v-chip>
@@ -54,8 +58,10 @@
 
 <script>
 export default {
+  props: ['args'],
   data: function () {
     return {
+      idx: this.$vnode.key,
       selection: null,
       currentTag: null,
       form: {
@@ -63,6 +69,16 @@ export default {
       },
       keywords: []
     }
+  },
+  created() {
+    if (this.args) {
+      this.keywords = this.args || [];
+    }
+  },
+  watch: {
+    keywords() {
+      this.save();
+    },
   },
   methods: {
     add(keyword) {
@@ -73,21 +89,19 @@ export default {
         this.$store.commit("SET_ERROR_MESSAGE", "关键词不能为空！");
       }
     },
+    edit(idx) {
+      this.form.keyword = this.keywords[idx];
+      this.remove(idx);
+    },
     remove(idx) {
       this.keywords.splice(idx, 1);
     },
-    dragStart() {
-      if (this.keywords[this.selection]) this.currentTag = this.tags[this.selection].name;
-      else this.currentTag = null;
+    save() {
+      this.$emit("dataChanged", {
+        idx: this.idx,
+        args: this.keywords
+      });
     },
-    dragEnd() {
-      const self = this;
-      if (this.currentTag) {
-        this.keywords.forEach((x, i) => {
-          if (x.name === self.currentTag) self.selection = i;
-        });
-      }
-    }
   }
 }
 </script>
