@@ -51,7 +51,7 @@ export default {
   data: function () {
     return {
       idx: this.$vnode.key,
-      mode: "DEFAULT"
+      mode: "ADD"
     }
   },
   created() {

@@ -167,6 +167,7 @@ import RegexDeleteOperator from "@/components/RegexDeleteOperator";
 import FlagOperator from "@/components/FlagOperator";
 import ScriptFilter from "@/components/ScriptFilter";
 import ScriptOperator from "@/components/ScriptOperator";
+import KeywordSortOperator from "@/components/KeywordSortOperator";
 
 const AVAILABLE_PROCESSORS = {
   "Flag Operator": {
@@ -192,6 +193,10 @@ const AVAILABLE_PROCESSORS = {
   "Sort Operator": {
     component: "SortOperator",
     name: "节点排序"
+  },
+  "Keyword Sort Operator": {
+    component: "KeywordSortOperator",
+    name: "关键词排序"
   },
   "Keyword Rename Operator": {
     component: "KeywordRenameOperator",
@@ -228,6 +233,7 @@ export default {
     TypeFilter,
     SortOperator,
     KeywordRenameOperator,
+    KeywordSortOperator,
     RegexRenameOperator,
     KeywordDeleteOperator,
     RegexDeleteOperator,
