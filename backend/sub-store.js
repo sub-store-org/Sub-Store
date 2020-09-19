@@ -1712,7 +1712,7 @@ function Surge_Producer() {
       case "trojan":
         return `${proxy.name}=trojan,${proxy.server},${proxy.port},password=${
           proxy.password
-        }${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"}`;
+        }${typeof proxy.scert !== "undefined" ? ",skip-cert-verify=" + proxy.scert : ""}${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"}`;
       case "http":
         tls_opts = ",tls=false";
         if (proxy.tls) {
