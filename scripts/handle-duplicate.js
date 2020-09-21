@@ -1,10 +1,17 @@
 function operator(proxies) {
-    const counter = {};
-    return proxies.map(p => {
-      if (!counter[p.name]) counter[p.name] = 0;
-      ++counter[p.name];
-      const num = "00000" + counter[p.name];
-      p.name = p.name + " " + num.substr(num.length-2);
-      return p;
-    });
+  const counter = {};
+  const increment = {};
+  proxies.forEach((p) => {
+    if (typeof counter[p.name] === 'undefined') counter[p.name] = 1;
+    else counter[p.name]++;
+  });
+  console.log(counter);
+  return proxies.map((p) => {
+    if (counter[p.name] > 1) {
+      if (typeof increment[p.name] === "undefined") increment[p.name] = 1;
+      const num = "00000" + increment[p.name]++;
+      p.name = p.name + " " + num.substr(num.length - 2);
+    } 
+    return p;
+  });
 }
