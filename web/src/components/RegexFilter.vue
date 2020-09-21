@@ -60,6 +60,8 @@
       </v-chip-group>
       <v-text-field
           placeholder="添加新正则表达式"
+          clearable
+          clear-icon="clear"
           solo
           v-model="form.regex"
           append-icon="mdi-send"

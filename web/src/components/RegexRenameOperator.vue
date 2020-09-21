@@ -47,6 +47,8 @@
         <v-col>
           <v-text-field
               placeholder="正则表达式"
+              clearable
+              clear-icon="clear"
               solo
               v-model="form.regex"
           />
@@ -55,6 +57,8 @@
           <v-text-field
               placeholder="替换为"
               solo
+              clearable
+              clear-icon="clear"
               v-model="form.replace"
               append-icon="mdi-send"
               @click:append="add"

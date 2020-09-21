@@ -46,6 +46,8 @@
       <v-row>
         <v-col>
           <v-text-field
+              clearable
+              clear-icon="clear"
               placeholder="关键词"
               solo
               v-model="form.keyword"
@@ -53,6 +55,8 @@
         </v-col>
         <v-col>
           <v-text-field
+              clearable
+              clear-icon="clear"
               placeholder="替换为"
               solo
               v-model="form.replace"
