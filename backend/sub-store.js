@@ -236,7 +236,6 @@ async function parseSub(sub, platform) {
           } else {
             proxies = processFilter(filter(item.args), proxies);
           }
-
         } catch (err) {
           $.error(`Failed to apply filter "${item.type}"!\n REASON: ${err}`);
         }
@@ -940,7 +939,7 @@ function URI_VMess() {
       }
 
       // handle scert
-      if (proxy.tls && params['"tls-verification"'] === 'false') {
+      if (proxy.tls && params['"tls-verification"'] === "false") {
         proxy.scert = true;
       }
 
@@ -1719,14 +1718,22 @@ function Surge_Producer() {
           }`;
         }
         if (proxy.tls) {
-          config += `${typeof proxy.scert !== 'undefined' ? ",skip-cert-verify=" + proxy.scert : ""}`
+          config += `${
+            typeof proxy.scert !== "undefined"
+              ? ",skip-cert-verify=" + proxy.scert
+              : ""
+          }`;
           config += proxy.sni ? `,sni=${proxy.sni}` : "";
         }
         return config;
       case "trojan":
         return `${proxy.name}=trojan,${proxy.server},${proxy.port},password=${
           proxy.password
-        }${typeof proxy.scert !== "undefined" ? ",skip-cert-verify=" + proxy.scert : ""}${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"}`;
+        }${
+          typeof proxy.scert !== "undefined"
+            ? ",skip-cert-verify=" + proxy.scert
+            : ""
+        }${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"}`;
       case "http":
         tls_opts = ",tls=false";
         if (proxy.tls) {
@@ -2010,7 +2017,7 @@ function ScriptOperator(script) {
           } else if (item.name.indexOf("Operator") !== -1) {
             return processFilter(item, proxies);
           }
-        }
+        };
         eval(script);
         output = operator(proxies);
       })();
