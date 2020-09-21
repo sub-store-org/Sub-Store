@@ -930,10 +930,6 @@ function URI_VMess() {
         tfo: JSON.parse(params["fast-open"] || "false"),
       };
 
-      if (proxy.tls) {
-        proxy.sni = params["obfs-host"] || proxy.server;
-        proxy.scert = !JSON.parse(params["tls-verification"] || "true");
-      }
       // handle ws headers
       if (params.obfs === "ws" || params.obfs === "wss") {
         proxy.network = "ws";
@@ -941,6 +937,16 @@ function URI_VMess() {
         proxy["ws-headers"] = {
           Host: params["obfs-host"] || proxy.server, // if no host provided, use the same as server
         };
+      }
+
+      // handle scert
+      if (proxy.tls && params['"tls-verification"'] === 'false') {
+        proxy.scert = true;
+      }
+
+      // handle sni
+      if (proxy.tls && params["obfs-host"]) {
+        proxy.sni = params["obfs-host"];
       }
 
       return proxy;
@@ -965,6 +971,13 @@ function URI_VMess() {
         proxy["ws-headers"] = {
           Host: params.host || params.add,
         };
+        if (proxy.tls && params.host) {
+          proxy.sni = params.host;
+        }
+      }
+      // handle scert
+      if (params.verify_cert === false) {
+        proxy.scert = true;
       }
       return proxy;
     }
@@ -1706,7 +1719,8 @@ function Surge_Producer() {
           }`;
         }
         if (proxy.tls) {
-          config += `,skip-cert-verify=${proxy.scert},sni=${proxy.sni}`;
+          config += `${typeof proxy.scert !== 'undefined' ? ",skip-cert-verify=" + proxy.scert : ""}`
+          config += proxy.sni ? `,sni=${proxy.sni}` : "";
         }
         return config;
       case "trojan":

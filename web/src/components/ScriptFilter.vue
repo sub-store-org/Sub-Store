@@ -44,6 +44,8 @@
     </v-card-text>
     <v-textarea
         solo
+        clearable
+        clear-icon="clear"
         :label="hint"
         v-model="content"
     />

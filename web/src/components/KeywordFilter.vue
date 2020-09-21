@@ -56,6 +56,8 @@
       </v-chip-group>
       <v-text-field
           placeholder="添加新关键词"
+          clearable
+          clear-icon="clear"
           solo
           v-model="form.keyword"
           append-icon="mdi-send"

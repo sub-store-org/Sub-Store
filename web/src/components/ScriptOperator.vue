@@ -43,6 +43,8 @@
       </v-radio-group>
     </v-card-text>
     <v-textarea
+        clearable
+        clear-icon="clear"
         solo
         :label="hint"
         v-model="content"
