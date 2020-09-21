@@ -1212,7 +1212,9 @@ function getQXParams(line) {
   const params = {};
   const protocols = ["shadowsocks", "vmess", "http", "trojan"];
   groups.forEach((g) => {
-    const [key, value] = g.split("=");
+    let [key, value] = g.split("=");
+    key = key.trim();
+    value = value.trim();
     if (protocols.indexOf(key) !== -1) {
       params.type = key;
       const conf = value.split(":");
