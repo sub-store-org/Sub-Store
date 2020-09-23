@@ -68,6 +68,14 @@
       >
         <v-card-title>
           {{ info.name }}
+          <v-spacer></v-spacer>
+          <v-btn
+              icon
+              color="white"
+              @click="copyLink()"
+          >
+            <v-icon>content_copy</v-icon>
+          </v-btn>
         </v-card-title>
         <v-card-text
           align="center"
@@ -103,7 +111,8 @@ export default {
         region: "",
         ip: ""
       },
-      qr: ""
+      qr: "",
+      link: ""
     }
   },
   methods: {
@@ -115,8 +124,8 @@ export default {
 
     async fetch() {
       await axios.get(this.url).then(resp => {
-        const {data} = resp;
-        if (data.indexOf("\n") !== -1)
+        let {data} = resp;
+        if (data instanceof String && data.indexOf("\n") !== -1)
           this.proxies = data.split("\n").map(p => JSON.parse(p));
         else
           this.proxies = [data];
@@ -126,7 +135,7 @@ export default {
 
       await axios.get(`${this.url}?target=URI`).then(resp => {
         const {data} = resp;
-        if (data.indexOf("\n") !== -1)
+        if (data instanceof String && data.indexOf("\n") !== -1)
           this.uris = data.split("\n");
         else
           this.uris = [data];
@@ -150,8 +159,14 @@ export default {
       this.dialog = true
     },
 
-    async showQRCode(idx) {
+    copyLink() {
+      this.$clipboard(this.link);
+      this.$store.commit("SET_SUCCESS_MESSAGE", `节点链接已复制到剪贴板！`);
+    },
+
+    showQRCode(idx) {
       this.qr = this.uris[idx];
+      this.link = this.uris[idx];
       this.info.name = this.proxies[idx].name;
       this.showQR = true;
     }

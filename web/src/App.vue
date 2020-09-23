@@ -45,7 +45,7 @@ function initStore(store) {
 export default {
   components: {
     TopToolbar,
-    BottomNav
+    BottomNav,
   },
 
   created() {

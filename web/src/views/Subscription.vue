@@ -98,11 +98,10 @@
           v-if="!showProxyList"
           v-model="opened"
           direction="top"
-          right
+          left
           fab
           absolute
           bottom
-          small
           transition="slide-y-reverse-transition"
       >
         <template #activator>
