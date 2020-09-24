@@ -129,20 +129,24 @@ async function gistBackup(req, res) {
         case "upload":
           content = $.read("#sub-store");
           await gist.upload(JSON.stringify(content));
+          $.info(`上传备份中...`);
           break;
         case "download":
           content = await gist.download();
           // restore settings
           $.write(content,"#sub-store");
+          $.info(`还原备份中...`);
           break;
       }
       res.json({
         status: "success",
       });
     } catch (err) {
+      const msg = `${action === "upload" ? "上传" : "下载"}备份失败！${err}`;
+      $.error(msg);
       res.status(500).json({
         status: "failed",
-        message: `${action === "upload" ? "上传" : "下载"}备份失败！${err}`
+        message: msg
       });
     }
 
