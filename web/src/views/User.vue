@@ -26,7 +26,7 @@
 </template>
 
 <script>
-import {axios} from "@/utils";
+import {axios, showError} from "@/utils";
 
 export default {
   data() {
@@ -53,12 +53,23 @@ export default {
       }
       this.save();
       axios.get(`/backup?action=${action}`).then(resp => {
-        if (resp.data.status === 'success')
+        if (resp.data.status === 'success') {
           this.$store.commit("SET_SUCCESS_MESSAGE", `${action === 'upload' ? "备份" : "还原"}成功！`);
+          this.updateStore(this.$store);
+        }
         else
           this.$store.commit("SET_ERROR_MESSAGE", `备份失败！${resp.data.message}`);
       });
     },
+
+    updateStore(store) {
+      store.dispatch('FETCH_SUBSCRIPTIONS').catch(() => {
+        showError(`无法拉取订阅列表!`);
+      });
+      store.dispatch("FETCH_COLLECTIONS").catch(() => {
+        showError(`无法拉取组合订阅列表！`);
+      });
+    }
   }
 }
 </script>
