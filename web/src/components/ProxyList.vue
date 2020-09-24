@@ -125,10 +125,12 @@ export default {
     async fetch() {
       await axios.get(this.url).then(resp => {
         let {data} = resp;
-        if (data instanceof String && data.indexOf("\n") !== -1)
+        if ((typeof data === 'string' || data instanceof String) && data.indexOf("\n") !== -1){
           this.proxies = data.split("\n").map(p => JSON.parse(p));
-        else
+        }
+        else {
           this.proxies = [data];
+        }
       }).catch(err => {
         this.$store.commit("SET_ERROR_MESSAGE", err);
       });

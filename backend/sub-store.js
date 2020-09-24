@@ -17,6 +17,7 @@ $.http = HTTP({
   },
 });
 // Constants
+const SETTINGS_KEY = "settings";
 const SUBS_KEY = "subs";
 const COLLECTIONS_KEY = "collections";
 const AVAILABLE_FILTERS = {
@@ -43,6 +44,7 @@ const AVAILABLE_OPERATORS = {
 // SOME INITIALIZATIONS
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
+if (!$.read(SETTINGS_KEY)) $.write({}, SETTINGS_KEY);
 
 // BACKEND API
 $.info("Initializing Express...");
@@ -56,7 +58,6 @@ $app.get("/api/IP_API/:server", IP_API);
 
 // subscriptions
 $app.route("/api/sub/:name").get(getSub).patch(updateSub).delete(deleteSub);
-
 $app.route("/api/sub").get(getAllSubs).post(newSub).delete(deleteAllSubs);
 
 // refresh
@@ -74,6 +75,14 @@ $app
   .get(getAllCollections)
   .post(newCollection)
   .delete(deleteAllCollections);
+
+// settings
+$app.route("/api/settings")
+  .get(getSettings)
+  .patch(updateSettings);
+
+// backup
+$app.get("/api/backup", gistBackup);
 
 $app.all("/", async (req, res) => {
   res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.");
@@ -93,13 +102,7 @@ async function IP_API(req, res) {
 async function downloadResource(url) {
   let raw = await $.http
     .get(url)
-    .then((resp) => resp.body)
-    .catch((err) => {
-      res.status(500).json({
-        status: "failed",
-        message: `Cannot refresh remote resource: ${url}\n Reason: ${err}`,
-      });
-    });
+    .then((resp) => resp.body);
   // trim Clash config to save memory
   const start = raw.indexOf("proxies:");
   if (start !== -1) {
@@ -107,6 +110,61 @@ async function downloadResource(url) {
     raw = raw.substring(start, end);
   }
   return raw;
+}
+
+async function gistBackup(req, res) {
+  const {action} = req.query;
+  // read token
+  const { gistToken } = $.read(SETTINGS_KEY);
+  if (!gistToken) {
+    res.status(500).json({
+      status: "failed",
+      message: "未找到Gist备份Token!"
+    });
+  } else {
+    const gist = new Gist("Auto Generated Sub-Store Backup", gistToken);
+    try{
+      let content;
+      switch (action) {
+        case "upload":
+          content = $.read("#sub-store");
+          await gist.upload(JSON.stringify(content));
+          break;
+        case "download":
+          content = await gist.download();
+          // restore settings
+          $.write(content,"#sub-store");
+          break;
+      }
+      res.json({
+        status: "success",
+      });
+    } catch (err) {
+      res.status(500).json({
+        status: "failed",
+        message: `${action === "upload" ? "上传" : "下载"}备份失败！${err}`
+      });
+    }
+
+  }
+}
+
+// settings
+async function getSettings(req, res) {
+  const settings = $.read(SETTINGS_KEY);
+  res.json(settings);
+}
+
+async function updateSettings(req, res) {
+  const data = req.body;
+  const settings = $.read(SETTINGS_KEY);
+  $.write({
+    ...settings,
+    ...data
+  }, SETTINGS_KEY);
+  res.json({
+    status: "success"
+  });
 }
 
 /**************************** API -- Subscriptions ***************************************/
@@ -2580,7 +2638,10 @@ function API(name = "untitled", debug = false) {
       this.log(`SET ${key}`);
       if (key.indexOf("#") !== -1) {
         key = key.substr(1);
-        if (isSurge & isLoon) {
+        if (key === name) {
+          this.cache = JSON.parse(data);
+        }
+        if (isSurge || isLoon) {
           $persistentStore.write(data, key);
         }
         if (isQX) {
@@ -2599,7 +2660,8 @@ function API(name = "untitled", debug = false) {
       this.log(`READ ${key}`);
       if (key.indexOf("#") !== -1) {
         key = key.substr(1);
-        if (isSurge & isLoon) {
+        if (key === name) return this.cache;
+        if (isSurge || isLoon) {
           return $persistentStore.read(key);
         }
         if (isQX) {
@@ -2617,7 +2679,7 @@ function API(name = "untitled", debug = false) {
       this.log(`DELETE ${key}`);
       if (key.indexOf("#") !== -1) {
         key = key.substr(1);
-        if (isSurge & isLoon) {
+        if (isSurge || isLoon) {
           $persistentStore.write(null, key);
         }
         if (isQX) {
@@ -2962,6 +3024,80 @@ function express(port = 3000) {
   }
 }
 
+function Gist(backupKey, token) {
+  const FILE_NAME = "Sub-Store";
+  const http = HTTP({
+    baseURL: "https://api.github.com",
+    headers: {
+      Authorization: `token ${token}`,
+      "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36",
+    },
+    events: {
+      onResponse: (resp) => {
+        if (String(resp.statusCode).startsWith("4")) {
+          return Promise.reject(`ERROR: ${JSON.parse(resp.body).message}`);
+        } else {
+          return resp;
+        }
+      },
+    },
+  });
+
+  async function locate() {
+    return http.get("/gists").then((response) => {
+      const gists = JSON.parse(response.body);
+      for (let g of gists) {
+        if (g.description === backupKey) {
+          return g.id;
+        }
+      }
+      return -1;
+    });
+  }
+
+  this.upload = async function(content) {
+    const id = await locate();
+    const files = {
+      [FILE_NAME]: { content }
+    };
+
+    if (id === -1) {
+      // create a new gist for backup
+      return http.post({
+        url: "/gists",
+        body: JSON.stringify({
+          description: backupKey,
+          public: false,
+          files
+        })
+      });
+    } else {
+      // update an existing gist
+      return http.patch({
+        url: `/gists/${id}`,
+        body: JSON.stringify({ files })
+      });
+    }
+  };
+
+  this.download = async function() {
+    const id = await locate();
+    if (id === -1) {
+      return Promise.reject("未找到Gist备份！");
+    } else {
+      try {
+        const { files } = await http
+            .get(`/gists/${id}`)
+            .then(resp => JSON.parse(resp.body));
+        const url = files[FILE_NAME].raw_url;
+        return await HTTP().get(url).then(resp => resp.body);
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    }
+  };
+}
 /******************************** Base 64 *********************************************/
 // Base64 Coding Library
 // https://github.com/dankogai/js-base64#readme
@@ -3121,7 +3257,6 @@ Author: Diogo Costa
 
 This program is released under the MIT License
 */
-
 var YAML = (function () {
   var errors = [],
     reference_blocks = [],
