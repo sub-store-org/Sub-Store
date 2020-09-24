@@ -3,15 +3,15 @@
       class="mb-4 ml-4 mr-4 mt-4"
   >
     <v-card-title>
-      设置
+      云同步
       <v-spacer></v-spacer>
-      <v-icon small>settings</v-icon>
+      <v-icon small>cloud</v-icon>
     </v-card-title>
     <v-card-text>
       <v-text-field
           label="GitHub Token"
           hint="填入GitHub Token"
-          :value="settings.gistToken"
+          v-model="settings.gistToken"
           clearable clear-icon="clear"
       />
     </v-card-text>
@@ -38,7 +38,7 @@ export default {
   },
   created() {
     axios.get(`/settings`).then(resp => {
-      this.settings = resp.data;
+      this.settings.gistToken = resp.data.gistToken;
     });
   },
   methods: {
@@ -52,10 +52,11 @@ export default {
         return;
       }
       this.save();
-      axios.get(`/backup?action=${action}`).then(() => {
-        this.$store.commit("SET_SUCCESS_MESSAGE", `${action === 'upload' ? "备份" : "还原"}成功！`);
-      }).catch(err => {
-        this.$store.commit("SET_ERROR_MESSAGE", `备份失败！${err}`);
+      axios.get(`/backup?action=${action}`).then(resp => {
+        if (resp.data.status === 'success')
+          this.$store.commit("SET_SUCCESS_MESSAGE", `${action === 'upload' ? "备份" : "还原"}成功！`);
+        else
+          this.$store.commit("SET_ERROR_MESSAGE", `备份失败！${resp.data.message}`);
       });
     },
   }
