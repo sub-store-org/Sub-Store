@@ -2233,7 +2233,6 @@ function ScriptFilter(script) {
 function getFlag(name) {
     // flags from @KOP-XIAO: https://github.com/KOP-XIAO/QuantumultX/blob/master/Scripts/resource-parser.js
     const flags = {
-        "🏳️‍🌈": ["流量", "时间", "应急", "过期", "Bandwidth", "expire"],
         "🇦🇨": ["AC"],
         "🇦🇹": ["奥地利", "维也纳"],
         "🇦🇺": ["AU", "Australia", "Sydney", "澳大利亚", "澳洲", "墨尔本", "悉尼"],
@@ -2398,6 +2397,7 @@ function getFlag(name) {
             "镇江",
             "back",
         ],
+        "🏳️‍🌈": ["流量", "时间", "应急", "过期", "Bandwidth", "expire"],
     };
     for (let k of Object.keys(flags)) {
         if (flags[k].some((item) => name.indexOf(item) !== -1)) {
@@ -2481,6 +2481,7 @@ function getPlatformFromHeaders(headers) {
             break;
         }
     }
+    console.log("User Agent: \n" + UA);
     if (UA.indexOf("Quantumult%20X") !== -1) {
         return "QX";
     } else if (UA.indexOf("Surge") !== -1) {
