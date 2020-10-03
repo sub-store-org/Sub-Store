@@ -1,0 +1,101 @@
+{
+    "name": "「订阅名称」",
+    "url": "「订阅链接」",
+    "process": [
+        {
+            "type": "Useless Filter"
+        },
+        {
+            "type": "Set Property Operator",
+            "args": {
+                "key": "udp",
+                "value": true
+            }
+        },
+        {
+            "type": "Set Property Operator",
+            "args": {
+                "key": "tfo",
+                "value": true
+            }
+        },
+        {
+            "type": "Set Property Operator",
+            "args": {
+                "key": "scert",
+                "value": false
+            }
+        },
+        {
+            "type": "Region Filter",
+            "id": "69b54157-45c3-4c19-98a2-beb2b64522a6",
+            "args": [
+                "HK",
+                "TW",
+                "SG",
+                "JP",
+                "US"
+            ]
+        },
+        {
+            "type": "Flag Operator",
+            "id": "ef58335a-735a-4f1c-80f3-7b7a45c67687",
+            "args": true
+        },
+        {
+            "type": "Keyword Filter",
+            "id": "1aa375e7-2b1a-47d5-9f6b-ea3d5f77ab95",
+            "args": {
+                "keywords": [
+                    "Premium"
+                ],
+                "keep": false
+            }
+        },
+        {
+            "type": "Keyword Rename Operator",
+            "id": "d7397642-e0b1-48bd-9c10-fc8066e6e356",
+            "args": [
+                {
+                    "old": "Hong Kong",
+                    "now": "𝙷𝙺"
+                },
+                {
+                    "old": "Japan",
+                    "now": "𝙹𝙿"
+                },
+                {
+                    "old": "USA",
+                    "now": "𝚄𝚂"
+                },
+                {
+                    "old": "Singapore",
+                    "now": "𝚂𝙶"
+                },
+                {
+                    "old": "Taiwan",
+                    "now": "𝚃𝚆"
+                }
+            ]
+        },
+        {
+            "type": "Script Operator",
+            "id": "a784f5a1-5b7a-43e8-8175-c94c76b1fb61",
+            "args": {
+                "mode": "script",
+                "content": "function operator(proxies) {\n  const numbers = [\"𝟘\", \"𝟙\", \"𝟚\", \"𝟛\", \"𝟜\", \"𝟝\", \"𝟞\", \"𝟟\", \"𝟠\", \"𝟡\"];\n  return proxies.map((p) => {\n    for (let i = 0; i < numbers.length; i++) {\n      p.name = p.name.replace(`${i}`, numbers[i]);\n    }\n    return p;\n  });\n}"
+            }
+        },
+        {
+            "type": "Keyword Sort Operator",
+            "id": "ec329559-1b1b-42e4-bf3d-8cc0324ad3da",
+            "args": [
+                "🇭🇰",
+                "🇨🇳",
+                "🇸🇬",
+                "🇯🇵",
+                "🇺🇸"
+            ]
+        }
+    ]
+}
