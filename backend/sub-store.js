@@ -90,7 +90,9 @@ $app.route("/api/settings")
 $app.get("/api/backup", gistBackup);
 
 // data
-$app.get("/api/export", exportData);
+$app.route("/api/storage")
+    .get(exportData)
+    .post(importData);
 
 $app.all("/", async (req, res) => {
     res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.");
@@ -181,6 +183,12 @@ async function updateSettings(req, res) {
 // export data
 async function exportData(req, res) {
     res.json($.read("#sub-store"));
+}
+
+async function importData(req, res) {
+    const data = req.body;
+    $.write(JSON.stringify(data), "#sub-store");
+    res.end();
 }
 
 /**************************** API -- Subscriptions ***************************************/
