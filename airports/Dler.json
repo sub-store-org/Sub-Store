@@ -1,0 +1,102 @@
+{
+    "name": "「订阅名称」",
+    "url": "「订阅链接」",
+    "process": [
+        {
+            "type": "Useless Filter"
+        },
+        {
+            "type": "Flag Operator",
+            "id": "979db291-1a29-4f35-a31a-89b2556c325b"
+        },
+        {
+            "type": "Regex Filter",
+            "id": "5ca62660-4ed4-4629-97b2-2c14486a1e43",
+            "args": {
+                "regex": [
+                    "🇭🇰|🇲🇴|🇸🇬|🇺🇸|🇨🇳|🇯🇵"
+                ],
+                "keep": true
+            }
+        },
+        {
+            "type": "Regex Rename Operator",
+            "id": "e8efa574-8982-475c-ae23-c4af4fd13149",
+            "args": [
+                {
+                    "expr": "^(🇭🇰|🇲🇴|🇸🇬|🇺🇸|🇨🇳|🇯🇵).*(IPLC\\+|IPLC|IEPL\\+|IEPL|BGP|AGA|CTM|PCCW).*$",
+                    "now": "$1 $2"
+                },
+                {
+                    "expr": "IPLC",
+                    "now": "𝐈𝐏𝐋𝐂"
+                },
+                {
+                    "expr": "IEPL",
+                    "now": "𝐈𝐄𝐏𝐋"
+                },
+                {
+                    "expr": "AGA",
+                    "now": "𝐀𝐆𝐀"
+                },
+                {
+                    "expr": "CTM",
+                    "now": "𝐂𝐓𝐌"
+                },
+                {
+                    "expr": "BGP",
+                    "now": "𝐁𝐆𝐏"
+                },
+                {
+                    "expr": "PCCW",
+                    "now": "𝐏𝐂𝐂𝐖"
+                }
+            ]
+        },
+        {
+            "type": "Script Operator",
+            "id": "35db4009-781a-4fbb-b8a8-ff66aca175ec",
+            "args": {
+                "mode": "script",
+                "content": "function operator(proxies) {\n  const counter = {};\n  const increment = {};\n  proxies.forEach((p) => {\n    if (typeof counter[p.name] === 'undefined') counter[p.name] = 1;\n    else counter[p.name]++;\n  });\n  console.log(counter);\n  return proxies.map((p) => {\n    if (counter[p.name] > 1) {\n      if (typeof increment[p.name] === \"undefined\") increment[p.name] = 1;\n      const num = \"00000\" + increment[p.name]++;\n      p.name = p.name + \" \" + num.substr(num.length - 2);\n    } \n    return p;\n  });\n}"
+            }
+        },
+        {
+            "type": "Regex Rename Operator",
+            "id": "c508346a-f4e2-4e71-adef-704654aa3330",
+            "args": [
+                {
+                    "expr": "^(.*)\\+(.*)$",
+                    "now": "$1 $2 ✪"
+                }
+            ]
+        },
+        {
+            "type": "Keyword Sort Operator",
+            "id": "852cf593-eae3-4cbe-bfdf-ea1e7ac0d2a5",
+            "args": [
+                "✪"
+            ]
+        },
+        {
+            "type": "Keyword Sort Operator",
+            "id": "c0d1f516-888d-4c74-8a8f-ef083ce79cc9",
+            "args": [
+                "🇭🇰",
+                "🇲🇴",
+                "🇸🇬",
+                "🇨🇳",
+                "🇯🇵",
+                "🇺🇸"
+            ]
+        },
+        {
+            "type": "Script Operator",
+            "id": "e45ff513-22bd-4361-b7c3-f81de5254b67",
+            "args": {
+                "mode": "script",
+                "content": "function operator(proxies) {\n  const numbers = [\"𝟘\", \"𝟙\", \"𝟚\", \"𝟛\", \"𝟜\", \"𝟝\", \"𝟞\", \"𝟟\", \"𝟠\", \"𝟡\"];\n  return proxies.map((p) => {\n    for (let i = 0; i < numbers.length; i++) {\n      p.name = p.name.replace(`${i}`, numbers[i]);\n    }\n    return p;\n  });\n}"
+            }
+        }
+    ]
+}
