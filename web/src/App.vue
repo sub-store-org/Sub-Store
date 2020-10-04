@@ -40,6 +40,9 @@ function initStore(store) {
   store.dispatch("FETCH_COLLECTIONS").catch(() => {
     showError(`无法拉取组合订阅列表！`);
   });
+  store.dispatch("FETCH_ENV").catch(() => {
+    showError(`无法获取当前运行环境！`);
+  });
 }
 
 export default {

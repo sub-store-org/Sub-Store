@@ -94,6 +94,18 @@ $app.route("/api/storage")
     .get(exportData)
     .post(importData);
 
+$app.get("/api/env", async (req, res) => {
+    const {isNode, isQX, isLoon, isSurge} = ENV();
+    let backend = "Node";
+    if (isNode) backend = "Node";
+    if (isQX) backend = "QX";
+    if (isLoon) backend = "Loon";
+    if (isSurge) backend = "Surge";
+    res.json({
+        backend
+    });
+});
+
 $app.all("/", async (req, res) => {
     res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.");
 });

@@ -15,13 +15,14 @@ const store = new Vuex.Store({
 
         subscriptions: {},
         collections: {},
+        env: {},
 
         settings: {}
     },
 
     mutations: {
         COPY(state, text) {
-          state.clipboard = text;
+            state.clipboard = text;
         },
         // UI
         SET_NAV_TITLE(state, title) {
@@ -55,6 +56,12 @@ const store = new Vuex.Store({
                 const {data} = resp.data;
                 state.collections = data;
             });
+        },
+        // fetch env
+        async FETCH_ENV({state}) {
+            return axios.get("/env").then(resp => {
+                state.env = resp.data;
+            })
         },
         // update subscriptions
         async UPDATE_SUBSCRIPTION({dispatch}, {name, sub}) {

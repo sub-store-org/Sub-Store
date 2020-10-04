@@ -184,11 +184,23 @@ export default {
   },
 
   computed: {
-    subscriptions: function () {
+    subscriptionBaseURL() {
+      const backend = this.$store.state.env.backend;
+      switch (backend) {
+        case "QX":
+          return "http://127.0.0.1:9999";
+        case "Node":
+        case "Surge":
+        case "Loon":
+        default:
+          return BACKEND_BASE;
+      }
+    },
+    subscriptions() {
       const subs = this.$store.state.subscriptions;
       return Object.keys(subs).map(k => subs[k]);
     },
-    collections: function () {
+    collections() {
       const cols = this.$store.state.collections;
       return Object.keys(cols).map(k => cols[k]);
     }
@@ -199,7 +211,7 @@ export default {
       console.log(`${action} --> ${sub.name}`);
       switch (action) {
         case 'COPY':
-          this.$clipboard(`${BACKEND_BASE}/download/${sub.name}`);
+          this.$clipboard(`${this.subscriptionBaseURL}/download/${sub.name}`);
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
@@ -214,7 +226,7 @@ export default {
       console.log(`${action} --> ${collection.name}`);
       switch (action) {
         case 'COPY':
-          this.$clipboard(`${BACKEND_BASE}/download/collection/${collection.name}`);
+          this.$clipboard(`${this.subscriptionBaseURL}/download/collection/${collection.name}`);
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
