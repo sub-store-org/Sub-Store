@@ -137,10 +137,7 @@ export default {
 
       await axios.get(`${this.url}?target=URI`).then(resp => {
         const {data} = resp;
-        if (data instanceof String && data.indexOf("\n") !== -1)
-          this.uris = data.split("\n");
-        else
-          this.uris = [data];
+        this.uris = data.split("\n");
       });
 
       // fix http offset

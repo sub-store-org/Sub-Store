@@ -1891,10 +1891,10 @@ function URI_Producer() {
                 result += `#${encodeURIComponent(proxy.name)}`;
                 break;
             case "ssr":
-                result = `ssr://${proxy.server}:${proxy.port}:${proxy.protocol}:${
+                result = `${proxy.server}:${proxy.port}:${proxy.protocol}:${
                     proxy.cipher
                 }:${proxy.obfs}:${Base64.safeEncode(proxy.password)}/`;
-                result += `?remarks=${proxy.name}${
+                result += `?remarks=${Base64.safeEncode(proxy.name)}${
                     proxy["obfs-param"]
                         ? "&obfsparam=" + Base64.safeEncode(proxy["obfs-param"])
                         : ""
@@ -1903,6 +1903,7 @@ function URI_Producer() {
                         ? "&protocolparam=" + Base64.safeEncode(proxy["protocol-param"])
                         : ""
                 }`;
+                result = "ssr://" + Base64.safeEncode(result);
                 break;
             case "vmess":
                 // V2RayN URI format
@@ -1924,7 +1925,7 @@ function URI_Producer() {
                 result = "vmess://" + Base64.safeEncode(JSON.stringify(result));
                 break;
             case "trojan":
-                result = `trojan://${proxy.password}@${proxy.server}:${proxy.port}#${proxy.name}`;
+                result = `trojan://${proxy.password}@${proxy.server}:${proxy.port}#${encodeURIComponent(proxy.name)}`;
                 break;
             default:
                 throw new Error(`Cannot handle proxy type: ${proxy.type}`);
