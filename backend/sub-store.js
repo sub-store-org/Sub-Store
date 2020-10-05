@@ -2978,6 +2978,9 @@ function express(port = 3000) {
         const STATUS_CODE_MAP = {
             200: "HTTP/1.1 200 OK",
             201: "HTTP/1.1 201 Created",
+            302: "HTTP/1.1 302 Found",
+            307: "HTTP/1.1 307 Temporary Redirect",
+            308: "HTTP/1.1 308 Permanent Redirect",
             404: "HTTP/1.1 404 Not Found",
             500: "HTTP/1.1 500 Internal Server Error",
         };
