@@ -185,16 +185,7 @@ export default {
 
   computed: {
     subscriptionBaseURL() {
-      const backend = this.$store.state.env.backend;
-      switch (backend) {
-        case "QX":
-          return "http://127.0.0.1:9999";
-        case "Node":
-        case "Surge":
-        case "Loon":
-        default:
-          return BACKEND_BASE;
-      }
+      return BACKEND_BASE;
     },
     subscriptions() {
       const subs = this.$store.state.subscriptions;
