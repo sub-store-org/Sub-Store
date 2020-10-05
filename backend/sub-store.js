@@ -106,9 +106,14 @@ $app.get("/api/env", async (req, res) => {
     });
 });
 
-$app.all("/", async (req, res) => {
-    res.send("Hello from Sub-Store! Made with ❤️ by Peng-YM.");
-});
+$app.route("/")
+    .get(async (req, res) => {
+        // 302 redirect
+        res.set("location", "https://sub-store.vercel.app/").status(302).end();
+    })
+    .options(async (req, res) => {
+        res.status(200).end();
+    });
 
 $app.start();
 
