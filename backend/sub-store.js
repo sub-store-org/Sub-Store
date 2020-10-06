@@ -106,17 +106,21 @@ $app.get("/api/env", async (req, res) => {
     });
 });
 
-$app.route("/")
-    .get(async (req, res) => {
-        // 302 redirect
-        res.set("location", "https://sub-store.vercel.app/").status(302).end();
-    })
-    .options(async (req, res) => {
+$app.get("/", async (req, res) => {
+    // 302 redirect
+    res.set("location", "https://sub-store.vercel.app/").status(302).end();
+});
+
+// handle preflight request for QX
+if (ENV().isQX) {
+    $app.options("/", async (req, res) => {
         res.status(200).end();
     })
-    .all(async (req, res) => {
-        res.send("Hello from sub-store, made with ❤️ by Peng-YM");
-    });
+};
+
+$app.all("/", async (req, res) => {
+    res.send("Hello from sub-store, made with ❤️ by Peng-YM");
+});
 
 $app.start();
 
