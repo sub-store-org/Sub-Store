@@ -113,6 +113,9 @@ $app.route("/")
     })
     .options(async (req, res) => {
         res.status(200).end();
+    })
+    .all(async (req, res) => {
+        res.send("Hello from sub-store, made with ❤️ by Peng-YM");
     });
 
 $app.start();
