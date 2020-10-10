@@ -115,7 +115,7 @@ $app.get("/", async (req, res) => {
 if (ENV().isQX) {
     $app.options("/", async (req, res) => {
         res.status(200).end();
-    })
+    });
 };
 
 $app.all("/", async (req, res) => {
@@ -530,7 +530,7 @@ async function deleteAllSubs(req, res) {
 async function downloadCollection(req, res) {
     const {name} = req.params;
     const collection = $.read(COLLECTIONS_KEY)[name];
-    const platform = getPlatformFromHeaders(req.headers);
+    const platform = req.query.target || getPlatformFromHeaders(req.headers);
     if (collection) {
         const subs = collection.subscriptions || [];
         const output = await Promise.all(
