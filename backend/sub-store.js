@@ -1653,7 +1653,7 @@ function QX_Producer() {
                         path ? ",obfs-uri=" + path : ""
                     }`;
                 }
-                return `shadowsocks = ${proxy.server}:${proxy.port}, method=${
+                return `shadowsocks=${proxy.server}:${proxy.port}, method=${
                     proxy.cipher
                 }, password=${proxy.password}${obfs_opts}${
                     proxy.tfo ? ", fast-open=true" : ", fast-open=false"
@@ -1705,7 +1705,7 @@ function QX_Producer() {
             case "trojan":
                 return `trojan=${proxy.server}:${proxy.port},password=${
                     proxy.password
-                }${proxy.sni ? ",tls-host=" + proxy.sni : ""},tls-verification=${
+                }${proxy.sni ? ",tls-host=" + proxy.sni : ""},over-tls=true,tls-verification=${
                     proxy.scert ? "false" : "true"
                 }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${
                     proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
