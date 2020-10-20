@@ -759,7 +759,7 @@ function ProxyParser(targetPlatform) {
                     .replace(/:(?!\s)/g, ": ")
                     .replace(/\,\"/g, ', "')
                     .replace(/: {/g, ": {,     ")
-                    .replace(/, (host|path|tls|mux|skip)/g, ",     $1")
+                    .replace(/, (\"?host|path|tls|mux|skip\"?)/g, ",     $1")
                     .replace(/{name: /g, '{name: "')
                     .replace(/, server:/g, '", server:')
                     .replace(/{|}/g, "")
