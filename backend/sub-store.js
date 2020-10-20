@@ -116,7 +116,8 @@ if (ENV().isQX) {
     $app.options("/", async (req, res) => {
         res.status(200).end();
     });
-};
+}
+;
 
 $app.all("/", async (req, res) => {
     res.send("Hello from sub-store, made with ❤️ by Peng-YM");
@@ -764,12 +765,12 @@ function ProxyParser(targetPlatform) {
                     .replace(/{|}/g, "")
                     .replace(/,/g, "\n   ");
             }
-            raw = raw
-                .replace(/  -\n.*name/g, "  - name")
+            raw = raw.replace(/  -\n.*name/g, "  - name")
                 .replace(/\$|\`/g, "")
                 .split("proxy-providers:")[0]
                 .split("proxy-groups:")[0]
-                .replace(/\"(name|type|server|port|cipher|password|)\"/g, "$1");
+                .replace(/\"([\w-]+)\"\s*:/g, "$1:")
+            raw = raw.indexOf("proxies:") === -1 ? "proxies:\n" + raw : "proxies:" + raw.split("proxies:")[1]
             const proxies = YAML.eval(raw).proxies;
             output = proxies.map((p) => JSON.stringify(p));
         } else if (raw.indexOf("ssd://") === 0) {
