@@ -117,7 +117,7 @@ if (ENV().isQX) {
         res.status(200).end();
     });
 }
-;
+
 
 $app.all("/", async (req, res) => {
     res.send("Hello from sub-store, made with ❤️ by Peng-YM");
@@ -661,52 +661,59 @@ function ProxyParser(targetPlatform) {
         args.forEach((a) => producers.push(a()));
     }
 
+    function safeMatch(p, line) {
+        let patternMatched;
+        try {
+            patternMatched = p.patternTest(line);
+        } catch (err) {
+            patternMatched = false;
+        }
+        return patternMatched;
+    }
+
     function parse(raw) {
         raw = preprocessing(raw);
         const lines = raw.split("\n");
         const result = [];
+        let lastParser;
+
         // convert to json format
         for (let line of lines) {
+            // console.log(`Parsing line: ${line}...`);
             line = line.trim();
             if (line.length === 0) continue; // skip empty line
             if (line.startsWith("#")) continue; // skip comments
-            let matched = false;
-            for (const p of parsers) {
-                const {patternTest, func} = p;
-
-                // some lines with weird format may produce errors!
-                let patternMatched;
-                try {
-                    patternMatched = patternTest(line);
-                } catch (err) {
-                    patternMatched = false;
-                }
-
-                if (patternMatched) {
-                    matched = true;
-                    // run parser safely.
-                    try {
-                        const proxy = func(line);
-                        if (!proxy) {
-                            // failed to parse this line
-                            console.log(`ERROR: parser return nothing for \n${line}\n`);
-                            break;
-                        }
-                        // skip unsupported proxies
-                        // if proxy.supported is undefined, assume that all platforms are supported.
-                        if (proxy.supported && proxy.supported[targetPlatform] === false)
-                            continue;
-                        result.push(proxy);
+            let matched = lastParser && safeMatch(lastParser, line);
+            if (!matched) {
+                for (const p of parsers) {
+                    if (safeMatch(p, line)) {
+                        lastParser = p;
+                        matched = true;
                         break;
-                    } catch (err) {
-                        console.log(
-                            `ERROR: Failed to parse line: \n ${line}\n Reason: ${err}`
-                        );
                     }
                 }
             }
             if (!matched) {
                 console.log(`ERROR: Failed to find a rule to parse line: \n${line}\n`);
+            } else {
+                const {func} = lastParser;
+                // run parser safely.
+                try {
+                    const proxy = func(line);
+                    if (!proxy) {
+                        // failed to parse this line
+                        console.log(`ERROR: parser return nothing for \n${line}\n`);
+                    }
+                    // skip unsupported proxies
+                    // if proxy.supported is undefined, assume that all platforms are supported.
+                    if (proxy.supported && proxy.supported[targetPlatform] === false)
+                        continue;
+                    result.push(proxy);
+                } catch (err) {
+                    console.log(
+                        `ERROR: Failed to parse line: \n ${line}\n Reason: ${err}`
+                    );
+                }
             }
         }
         return result;
@@ -1647,36 +1654,36 @@ function QX_Producer() {
                 obfs_opts = "";
                 if (proxy.plugin === "obfs") {
                     const {host, mode} = proxy['plugin-opts'];
-                    obfs_opts = `, obfs=${mode}${
-                        host ? ", obfs-host=" + host : ""
+                    obfs_opts = `,obfs=${mode}${
+                        host ? ",obfs-host=" + host : ""
                     }`;
                 }
                 if (proxy.plugin === "v2ray-plugin") {
                     const {tls, host, path} = proxy["plugin-opts"];
-                    obfs_opts = `, obfs=${tls ? "wss" : "ws"}${
-                        host ? ", obfs-host=" + host : ""
+                    obfs_opts = `,obfs=${tls ? "wss" : "ws"}${
+                        host ? ",obfs-host=" + host : ""
                     }${
-                        path ? ", obfs-uri=" + path : ""
+                        path ? ",obfs-uri=" + path : ""
                     }`;
                 }
-                return `shadowsocks=${proxy.server}:${proxy.port}, method=${
+                return `shadowsocks=${proxy.server}:${proxy.port},method=${
                     proxy.cipher
-                }, password=${proxy.password}${obfs_opts}${
-                    proxy.tfo ? ", fast-open=true" : ", fast-open=false"
-                }${proxy.udp ? ", udp-relay=true" : ", udp-relay=false"}, tag=${
+                },password=${proxy.password}${obfs_opts}${
+                    proxy.tfo ? ",fast-open=true" : ",fast-open=false"
+                }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"}, tag=${
                     proxy.name
                 }`;
             case "ssr":
                 return `shadowsocks=${proxy.server}:${proxy.port},method=${
                     proxy.cipher
-                }, password=${proxy.password}, ssr-protocol=${proxy.protocol}${
+                },password=${proxy.password},ssr-protocol=${proxy.protocol}${
                     proxy["protocol-param"]
-                        ? ", ssr-protocol-param=" + proxy["protocol-param"]
+                        ? ",ssr-protocol-param=" + proxy["protocol-param"]
                         : ""
                 }${proxy.obfs ? ",obfs=" + proxy.obfs : ""}${
                     proxy["obfs-param"] ? ",obfs-host=" + proxy["obfs-param"] : ""
-                }${proxy.tfo ? ", fast-open=true" : ", fast-open=false"}${
-                    proxy.udp ? ", udp-relay=true" : ", udp-relay=false"
+                }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${
+                    proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
                 },tag=${proxy.name}`;
             case "vmess":
                 obfs_opts = "";
@@ -1684,56 +1691,56 @@ function QX_Producer() {
                     // websocket
                     if (proxy.tls) {
                         // ws-tls
-                        obfs_opts = `, obfs=wss${
-                            proxy.sni ? ", obfs-host=" + proxy.sni : ""
+                        obfs_opts = `,obfs=wss${
+                            proxy.sni ? ",obfs-host=" + proxy.sni : ""
                         }${
-                            proxy["ws-path"] ? ", obfs-uri=" + proxy["ws-path"] : ""
-                        }, tls-verification=${proxy.scert ? "false" : "true"}`;
+                            proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""
+                        },tls-verification=${proxy.scert ? "false" : "true"}`;
                     } else {
                         // ws
                         obfs_opts = `,obfs=ws,${
-                            proxy["ws-headers"].Host ? ", obfs-host=" + proxy["ws-headers"].Host : ""
+                            proxy["ws-headers"].Host ? ",obfs-host=" + proxy["ws-headers"].Host : ""
                         }${
-                            proxy["ws-path"] ? ", obfs-uri=" + proxy["ws-path"] : ""
+                            proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""
                         }`;
                     }
                 } else {
                     // tcp
                     if (proxy.tls) {
-                        obfs_opts = `, obfs=over-tls${
-                            proxy.sni ? ", obfs-host=" + proxy.sni : ""
-                        }, tls-verification=${proxy.scert ? "false" : "true"}`;
+                        obfs_opts = `,obfs=over-tls${
+                            proxy.sni ? ",obfs-host=" + proxy.sni : ""
+                        },tls-verification=${proxy.scert ? "false" : "true"}`;
                     }
                 }
                 return `vmess=${proxy.server}:${proxy.port},method=${
                     proxy.cipher === "auto" ? "none" : proxy.cipher
                 },password=${proxy.uuid}${obfs_opts}${
-                    proxy.tfo ? ", fast-open=true" : ", fast-open=false"
-                }${proxy.udp ? ", udp-relay=true" : ", udp-relay=false"},tag=${
+                    proxy.tfo ? ",fast-open=true" : ",fast-open=false"
+                }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${
                     proxy.name
                 }`;
             case "trojan":
                 return `trojan=${proxy.server}:${proxy.port},password=${
                     proxy.password
-                }${proxy.sni ? ", tls-host=" + proxy.sni : ""}, over-tls=true, tls-verification=${
+                }${proxy.sni ? ",tls-host=" + proxy.sni : ""},over-tls=true,tls-verification=${
                     proxy.scert ? "false" : "true"
-                }${proxy.tfo ? ", fast-open=true" : ", fast-open=false"}${
-                    proxy.udp ? ", udp-relay=true" : ", udp-relay=false"
+                }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${
+                    proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
                 },tag=${proxy.name}`;
             case "http":
                 tls_opts = "";
                 if (proxy.tls) {
-                    tls_opts = `, over-tls=true, tls-verification=${
+                    tls_opts = `,over-tls=true,tls-verification=${
                         proxy.scert ? "false" : "true"
                     }${
-                        proxy.sni ? ", tls-host=" + proxy.sni : ""
+                        proxy.sni ? ",tls-host=" + proxy.sni : ""
                     }`;
                 }
-                return `http=${proxy.server}:${proxy.port}, username=${
+                return `http=${proxy.server}:${proxy.port},username=${
                     proxy.username
-                }, password=${proxy.password}${tls_opts}${
-                    proxy.tfo ? ", fast-open=true" : ", fast-open=false"
-                }, tag=${proxy.name}`;
+                },password=${proxy.password}${tls_opts}${
+                    proxy.tfo ? ",fast-open=true" : ",fast-open=false"
+                },tag=${proxy.name}`;
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`
@@ -1760,45 +1767,45 @@ function Loon_Producer() {
                     }
                 }
 
-                return `${proxy.name}=shadowsocks, ${proxy.server}, ${proxy.port}, ${proxy.cipher}, "${proxy.password}"${obfs_opts}`;
+                return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}`;
             case "ssr":
-                return `${proxy.name}=shadowsocksr, ${proxy.server}, ${proxy.port}, ${proxy.cipher}, "${proxy.password}", ${proxy.protocol}, {${proxy["protocol-param"] || ""}}, ${proxy.obfs}, {${proxy["obfs-param"] || ""}}`;
+                return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}",${proxy.protocol},{${proxy["protocol-param"] || ""}},${proxy.obfs},{${proxy["obfs-param"] || ""}}`;
             case "vmess":
                 obfs_opts = "";
                 if (proxy.network === "ws") {
                     const host = proxy["ws-headers"].Host || proxy.server;
-                    obfs_opts = `, transport:ws, host:${host}, path:${
+                    obfs_opts = `,transport:ws,host:${host},path:${
                         proxy["ws-path"] || "/"
                     }`;
                 } else {
-                    obfs_opts = `, transport:tcp`;
+                    obfs_opts = `,transport:tcp`;
                 }
                 if (proxy.tls) {
                     obfs_opts += `${
-                        proxy.sni ? ", tls-name:" + proxy.sni : ""
+                        proxy.sni ? ",tls-name:" + proxy.sni : ""
                     },skip-cert-verify:${proxy.scert || "false"}`;
                 }
-                return `${proxy.name}=vmess, ${proxy.server}, ${proxy.port}, ${
+                return `${proxy.name}=vmess,${proxy.server},${proxy.port},${
                     proxy.cipher === "auto" ? "none" : proxy.cipher
-                }, "${proxy.uuid}", over-tls:${proxy.tls || "false"}${obfs_opts}`;
+                },"${proxy.uuid}",over-tls:${proxy.tls || "false"}${obfs_opts}`;
             case "trojan":
-                return `${proxy.name}=trojan, ${proxy.server}, ${proxy.port}, "${
+                return `${proxy.name}=trojan,${proxy.server},${proxy.port},"${
                     proxy.password
                 }"${
-                    proxy.sni ? ", tls-name:" + proxy.sni : ""
-                }, skip-cert-verify:${
+                    proxy.sni ? ",tls-name:" + proxy.sni : ""
+                },skip-cert-verify:${
                     proxy.scert || "false"
                 }`;
             case "http":
                 tls_opts = "";
-                const base = `${proxy.name}=${proxy.tls ? "http" : "https"}, ${
+                const base = `${proxy.name}=${proxy.tls ? "http" : "https"},${
                     proxy.server
-                }, ${proxy.port}, ${proxy.username || ""}, ${proxy.password || ""}`;
+                },${proxy.port},${proxy.username || ""},${proxy.password || ""}`;
                 if (proxy.tls) {
                     // https
                     tls_opts = `${
-                        proxy.sni ? ", tls-name:" + proxy.sni : ""
-                    }, skip-cert-verify:${proxy.scert}`;
+                        proxy.sni ? ",tls-name:" + proxy.sni : ""
+                    },skip-cert-verify:${proxy.scert}`;
                     return base + tls_opts;
                 } else return base;
         }
@@ -1819,8 +1826,8 @@ function Surge_Producer() {
                 if (proxy.plugin) {
                     const {host, mode} = proxy['plugin-opts'];
                     if (proxy.plugin === "obfs") {
-                        obfs_opts = `, obfs=${mode}${
-                            host ? ", obfs-host=" + host : ""
+                        obfs_opts = `,obfs=${mode}${
+                            host ? ",obfs-host=" + host : ""
                         }`;
                     } else {
                         throw new Error(
@@ -1828,50 +1835,50 @@ function Surge_Producer() {
                         );
                     }
                 }
-                return `${proxy.name}=ss, ${proxy.server}, ${proxy.port}, encrypt-method=${
+                return `${proxy.name}=ss,${proxy.server}, ${proxy.port},encrypt-method=${
                     proxy.cipher
-                }, password=${proxy.password}${obfs_opts}, tfo=${
+                },password=${proxy.password}${obfs_opts},tfo=${
                     proxy.tfo || "false"
-                }, udp-relay=${proxy.udp || "false"}`;
+                },udp-relay=${proxy.udp || "false"}`;
             case "vmess":
                 tls_opts = "";
-                let config = `${proxy.name}=vmess, ${proxy.server},${
+                let config = `${proxy.name}=vmess,${proxy.server},${
                     proxy.port
-                }, username=${proxy.uuid}, tls=${proxy.tls || "false"}, tfo=${proxy.tfo || "false"}`;
+                },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"}`;
                 if (proxy.network === "ws") {
                     const path = proxy["ws-path"] || "/";
                     const host = proxy["ws-headers"].Host;
-                    config += `, ws=true${path ? ", ws-path=" + path : ""}${
-                        host ? ", ws-headers=HOST:" + host : ""
+                    config += `,ws=true${path ? ",ws-path=" + path : ""}${
+                        host ? ",ws-headers=HOST:" + host : ""
                     }`;
                 }
                 if (proxy.tls) {
                     config += `${
                         typeof proxy.scert !== "undefined"
-                            ? ", skip-cert-verify=" + proxy.scert
+                            ? ",skip-cert-verify=" + proxy.scert
                             : ""
                     }`;
-                    config += proxy.sni ? `, sni=${proxy.sni}` : "";
+                    config += proxy.sni ? `,sni=${proxy.sni}` : "";
                 }
                 return config;
             case "trojan":
-                return `${proxy.name}=trojan, ${proxy.server},${proxy.port}, password=${
+                return `${proxy.name}=trojan,${proxy.server},${proxy.port},password=${
                     proxy.password
                 }${
                     typeof proxy.scert !== "undefined"
-                        ? ", skip-cert-verify=" + proxy.scert
+                        ? ",skip-cert-verify=" + proxy.scert
                         : ""
-                }${proxy.sni ? ", sni=" + proxy.sni : ""}, tfo=${proxy.tfo || "false"}`;
+                }${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"}`;
             case "http":
                 tls_opts = ", tls=false";
                 if (proxy.tls) {
-                    tls_opts = `, tls=true, skip-cert-verify=${proxy.scert}, sni=${proxy.sni}`;
+                    tls_opts = `,tls=true,skip-cert-verify=${proxy.scert},sni=${proxy.sni}`;
                 }
                 return `${proxy.name}=http, ${proxy.server}, ${proxy.port}${
-                    proxy.username ? ", username=" + proxy.username : ""
+                    proxy.username ? ",username=" + proxy.username : ""
                 }${
-                    proxy.password ? ", password=" + proxy.password : ""
-                }${tls_opts}, tfo=${proxy.tfo || "false"}`;
+                    proxy.password ? ",password=" + proxy.password : ""
+                }${tls_opts},tfo=${proxy.tfo || "false"}`;
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`
