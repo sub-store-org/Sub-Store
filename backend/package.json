@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "serve": "node sub-store.js",
-    "build": "curl -X POST -s --data-urlencode 'input@sub-store.js' https://javascript-minifier.com/raw > sub-store.min.js"
+    "build": " curl -X POST -s --data-urlencode 'input@sub-store.js' https://javascript-minifier.com/raw > sub-store.min.js && printf \"// UPDATED AT: $(date) \\n\" | cat - sub-store.min.js > temp && mv temp sub-store.min.js"
   },
   "author": "",
   "license": "GPL",
