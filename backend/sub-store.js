@@ -1670,7 +1670,7 @@ function QX_Producer() {
                     proxy.cipher
                 },password=${proxy.password}${obfs_opts}${
                     proxy.tfo ? ",fast-open=true" : ",fast-open=false"
-                }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"}, tag=${
+                }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${
                     proxy.name
                 }`;
             case "ssr":
