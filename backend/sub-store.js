@@ -1698,7 +1698,7 @@ function QX_Producer() {
                         },tls-verification=${proxy.scert ? "false" : "true"}`;
                     } else {
                         // ws
-                        obfs_opts = `,obfs=ws,${
+                        obfs_opts = `,obfs=ws${
                             proxy["ws-headers"].Host ? ",obfs-host=" + proxy["ws-headers"].Host : ""
                         }${
                             proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""
