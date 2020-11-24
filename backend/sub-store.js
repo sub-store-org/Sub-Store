@@ -64,10 +64,6 @@ function service() {
     // gist backup
     $app.get("/api/backup");
 
-    $app.all("/", (req, res) => {
-        res.status(405).end();
-    });
-
     // Storage management
     $app.route("/api/storage")
         .get((req, res) => {
@@ -96,12 +92,10 @@ function service() {
         res.set("location", "https://sub-store.vercel.app/").status(302).end();
     });
 
-    // handle preflight request for QX
-    if (ENV().isQX) {
-        $app.options("/", async (req, res) => {
-            res.status(200).end();
-        });
-    }
+    // handle preflight request
+    $app.options("/", async (req, res) => {
+        res.status(200).end();
+    });
 
     $app.all("/", (req, res) => {
         res.send("Hello from sub-store, made with ❤️ by Peng-YM");
@@ -2951,7 +2945,7 @@ function Gist(backupKey, token) {
  * Mini Express Framework
  * https://github.com/Peng-YM/QuanX/blob/master/Tools/OpenAPI/Express.js
  */
-function express(port = 3000) {
+function express({port} = {port: 3000}) {
     const {isNode} = ENV();
     const DEFAULT_HEADERS = {
         "Content-Type": "text/plain;charset=UTF-8",
@@ -3008,7 +3002,7 @@ function express(port = 3000) {
         method = method.toUpperCase();
         const {path, query} = extractURL(url);
 
-        // path matching
+        // pattern match
         let handler = null;
         let i;
         let longestMatchedPattern = 0;
