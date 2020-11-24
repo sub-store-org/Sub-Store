@@ -16,7 +16,7 @@
             <v-icon left x-small>mdi-flash</v-icon>
             TFO
           </v-chip>
-          <v-chip x-small v-if="proxy.scert" color="error" outlined>
+          <v-chip x-small v-if="proxy['skip-cert-verify']" color="error" outlined>
             <v-icon left x-small>error</v-icon>
             SCERT
           </v-chip>
@@ -78,7 +78,7 @@
           </v-btn>
         </v-card-title>
         <v-card-text
-          align="center"
+            align="center"
         >
           <vue-q-r-code-component
               :text="qr"
@@ -117,20 +117,18 @@ export default {
   },
   methods: {
     refresh() {
-      axios.post(`/refresh`, {url: this.sub}).then(() => {
+      axios.post(`/utils/refresh`, {url: this.sub}).then(() => {
         this.fetch();
+      }).catch(err => {
+        this.$store.commit("SET_ERROR_MESSAGE", err.response.data.message);
       })
     },
 
     async fetch() {
       await axios.get(this.url).then(resp => {
         let {data} = resp;
-        if ((typeof data === 'string' || data instanceof String) && data.indexOf("\n") !== -1){
-          this.proxies = data.split("\n").map(p => JSON.parse(p));
-        }
-        else {
-          this.proxies = [data];
-        }
+        // eslint-disable-next-line no-debugger
+        this.proxies = data;
       }).catch(err => {
         this.$store.commit("SET_ERROR_MESSAGE", err);
       });
@@ -150,7 +148,7 @@ export default {
 
     async showInfo(idx) {
       const {server, name} = this.proxies[idx];
-      const res = await axios.get(`/IP_API/${encodeURIComponent(server)}`).then(resp => resp.data);
+      const res = await axios.get(`/utils/IP_API/${encodeURIComponent(server)}`).then(resp => resp.data);
       this.info.name = name;
       this.info.isp = `ISP：${res.isp}`;
       this.info.region = `地区：${flags.get(res.countryCode)} ${res.regionName} ${res.city}`;

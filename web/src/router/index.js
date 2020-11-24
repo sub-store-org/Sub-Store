@@ -6,7 +6,6 @@ import Subscription from "@/views/Subscription";
 import Dashboard from "@/views/Dashboard";
 import User from "@/views/User";
 import SubEditor from "@/views/SubEditor";
-import CollectionEditor from "@/views/CollectionEditor";
 
 Vue.use(Router);
 
@@ -40,7 +39,8 @@ const router = new Router({
         {
             path: "/collection-edit/:name",
             name: "collection-edit",
-            component: CollectionEditor,
+            component: SubEditor,
+            props: {isCollection: true},
             meta: {title: "订阅编辑"}
         }
     ]

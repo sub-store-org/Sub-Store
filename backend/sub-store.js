@@ -25,7 +25,7 @@ function startService() {
  ___/ // /_/ // /_/ //_____/___/ // /_ / /_/ // /   /  __/
 /____/ \__,_//_.___/       /____/ \__/ \____//_/    \___/
 */
-});
+    });
     console.log(welcome);
     const $app = express();
     // Constants
@@ -90,22 +90,36 @@ function startService() {
     $app.get("/api/utils/env", getEnv); // get runtime environment
     $app.get("/api/utils/backup", gistBackup); // gist backup actions
 
+    // Redirect sub.store to vercel webpage
+    $app.get("/", async (req, res) => {
+        // 302 redirect
+        res.set("location", "https://sub-store.vercel.app/").status(302).end();
+    });
+
+    // handle preflight request for QX
+    if (ENV().isQX) {
+        $app.options("/", async (req, res) => {
+            res.status(200).end();
+        });
+    }
+
     $app.start();
 
     // subscriptions API
     async function downloadSubscription(req, res) {
         const {name} = req.params;
-        const {cache} = req.query || false;
+        const {cache} = req.query;
         const platform = req.query.target || getPlatformFromHeaders(req.headers);
         const allSubs = $.read(SUBS_KEY);
         const sub = allSubs[name];
         if (sub) {
             try {
-                const raw = await getResource(sub.url, cache);
+                const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
+                const raw = await getResource(sub.url, useCache);
                 // parse proxies
                 let proxies = ProxyUtils.parse(raw);
                 // apply processors
-                proxies = await ProxyUtils.process(proxies, sub.process);
+                proxies = await ProxyUtils.process(proxies, sub.process || []);
                 // produce
                 const output = ProxyUtils.produce(proxies, platform);
                 if (platform === 'JSON') {
@@ -138,6 +152,7 @@ function startService() {
     function createSubscription(req, res) {
         const sub = req.body;
         const allSubs = $.read(SUBS_KEY);
+        $.info(`正在创建订阅： ${sub.name}`);
         if (allSubs[sub.name]) {
             res.status(500).json({
                 status: "failed",
@@ -185,6 +200,7 @@ function startService() {
                 ...allSubs[name],
                 ...sub,
             };
+            $.info(`正在更新订阅： ${name}`);
             // allow users to update the subscription name
             if (name !== sub.name) {
                 // we need to find out all collections refer to this name
@@ -216,6 +232,7 @@ function startService() {
 
     function deleteSubscription(req, res) {
         const {name} = req.params;
+        $.info(`删除订阅：${name}...`);
         // delete from subscriptions
         let allSubs = $.read(SUBS_KEY);
         delete allSubs[name];
@@ -260,9 +277,12 @@ function startService() {
                 const sub = allSubs[subs[i]];
                 $.info(`正在处理子订阅：${sub.name}，进度--${100 * (i + 1 / subs.length).toFixed(1)}% `);
                 try {
-                    const raw = await getResource(sub.url, cache);
+                    const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
+                    const raw = await getResource(sub.url, useCache);
                     // parse proxies
                     proxies = proxies.concat(ProxyUtils.parse(raw));
+                    // apply processors
+                    proxies = await ProxyUtils.process(proxies, sub.process || []);
                 } catch (err) {
                     $.error(`处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}! 该订阅已被跳过。`);
                 }
@@ -312,6 +332,7 @@ function startService() {
 
     function createCollection(req, res) {
         const collection = req.body;
+        $.info(`正在创建组合订阅：${collection.name}`);
         const allCol = $.read(COLLECTIONS_KEY);
         if (allCol[collection.name]) {
             res.status(500).json({
@@ -360,6 +381,7 @@ function startService() {
                 ...allCol[name],
                 ...collection,
             };
+            $.info(`正在更新组合订阅：${name}...`);
             // allow users to update collection name
             delete allCol[name];
             allCol[collection.name || name] = newCol;
@@ -378,6 +400,7 @@ function startService() {
 
     function deleteCollection(req, res) {
         const {name} = req.params;
+        $.info(`正在删除组合订阅：${name}`);
         let allCol = $.read(COLLECTIONS_KEY);
         delete allCol[name];
         $.write(allCol, COLLECTIONS_KEY);
@@ -423,6 +446,7 @@ function startService() {
 
     async function refreshCache(req, res) {
         const {url} = req.body;
+        $.info(`Refreshing cache for URL: ${url}`);
         try {
             const raw = await getResource(url, false);
             $.write(raw, `#${Base64.safeEncode(url)}`);
@@ -531,6 +555,9 @@ function startService() {
             return resource;
         }
         const {body} = await $http.get(url);
+        if (body.replace(/\s/g, "").length === 0) {
+            throw new Error("订阅内容为空！");
+        }
         $.write(body, key);
         $.write(new Date().getTime(), timeKey);
         return body;
@@ -666,7 +693,7 @@ var ProxyUtils = (function () {
                         return producer.produce(proxy);
                     } catch (err) {
                         $.error(
-                            `ERROR: cannot produce proxy: ${JSON.stringify(
+                            `Cannot produce proxy: ${JSON.stringify(
                                 proxy, null, 2
                             )}\nReason: ${err}`
                         );
@@ -1385,7 +1412,7 @@ var PROXY_PARSERS = (function () {
             if (params.length > 4) {
                 const [key, val] = params[4].split(":");
                 if (key === "tls-name") proxy.sni = val;
-                else throw new Error(`ERROR: unknown option ${key} for line: \n${line}`);
+                else throw new Error(`Unknown option ${key} for line: \n${line}`);
             }
             return proxy;
         };
@@ -2122,7 +2149,7 @@ var PROXY_PROCESSORS = (function () {
             if (output_) output = output_;
         } catch (err) {
             // print log and skip this operator
-            console.log(`ERROR: cannot apply operator ${op.name}! Reason: ${err}`);
+            console.log(`Cannot apply operator ${op.name}! Reason: ${err}`);
         }
         return output;
     }
@@ -2413,9 +2440,8 @@ var PROXY_PRODUCERS = (function () {
     }
 
     function URI_Producer() {
-        const targetPlatform = "URI";
-        const Base64 = new Base64Code();
-        const output = (proxy) => {
+        const type = "SINGLE";
+        const produce = (proxy) => {
             let result = "";
             switch (proxy.type) {
                 case "ss":
@@ -2489,6 +2515,7 @@ var PROXY_PRODUCERS = (function () {
             }
             return result;
         }
+        return {type, produce};
     }
 
     function JSON_Producer() {

@@ -52,7 +52,7 @@ export default {
         return;
       }
       this.save();
-      axios.get(`/backup?action=${action}`).then(resp => {
+      axios.get(`/utils/backup?action=${action}`).then(resp => {
         if (resp.data.status === 'success') {
           this.$store.commit("SET_SUCCESS_MESSAGE", `${action === 'upload' ? "备份" : "还原"}成功！`);
           this.updateStore(this.$store);
