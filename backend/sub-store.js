@@ -13,11 +13,11 @@
 const $ = API("sub-store");
 const Base64 = new Base64Code();
 
-startService();
+service();
 
 /****************************************** Service **********************************************************/
 
-function startService() {
+function service() {
     const welcome = heredoc(function () {/*
    _____         __           _____  __
   / ___/ __  __ / /_         / ___/ / /_ ____   _____ ___
@@ -27,7 +27,7 @@ function startService() {
 */
     });
     console.log(welcome);
-    const $app = express();
+    const $app = express({debug: true});
     // Constants
     const SETTINGS_KEY = "settings";
     const SUBS_KEY = "subs";
@@ -38,8 +38,8 @@ function startService() {
     if (!$.read(SETTINGS_KEY)) $.write({}, SETTINGS_KEY);
 
     // download
-    $app.get("/download/:name", downloadSubscription);
     $app.get("/download/collection/:name", downloadCollection);
+    $app.get("/download/:name", downloadSubscription);
 
     // subscription API
     $app.route("/api/sub/:name")
@@ -62,7 +62,7 @@ function startService() {
         .post(createCollection);
 
     // gist backup
-    $app.get("/api/backup")
+    $app.get("/api/backup");
 
     $app.all("/", (req, res) => {
         res.status(405).end();
@@ -102,6 +102,10 @@ function startService() {
             res.status(200).end();
         });
     }
+
+    $app.all("/", (req, res) => {
+        res.send("Hello from sub-store, made with ❤️ by Peng-YM");
+    });
 
     $app.start();
 
@@ -2947,8 +2951,8 @@ function Gist(backupKey, token) {
  * Mini Express Framework
  * https://github.com/Peng-YM/QuanX/blob/master/Tools/OpenAPI/Express.js
  */
-function express({port, debug} = {port: 3000, debug: false}) {
-    const {isNode} = debug ? false : ENV();
+function express(port = 3000) {
+    const {isNode} = ENV();
     const DEFAULT_HEADERS = {
         "Content-Type": "text/plain;charset=UTF-8",
         "Access-Control-Allow-Origin": "*",
@@ -2997,36 +3001,25 @@ function express({port, debug} = {port: 3000, debug: false}) {
     // dispatch url to route
     const dispatch = (request, start = 0) => {
         let {method, url, headers, body} = request;
-        if (debug) {
-            console.log("=================== Dispatching Request ===============================");
-            console.log(JSON.stringify(request, null, 2));
-        }
         if (/json/i.test(headers["Content-Type"])) {
             body = JSON.parse(body);
         }
 
         method = method.toUpperCase();
         const {path, query} = extractURL(url);
+        let handler = null;
         let i;
 
-        // path matching
-        let handler = null;
-        let longestMatchedPattern = 0;
         for (i = start; i < handlers.length; i++) {
             if (handlers[i].method === "ALL" || method === handlers[i].method) {
                 const {pattern} = handlers[i];
                 if (patternMatched(pattern, path)) {
-                    if (pattern.split("/").length > longestMatchedPattern) {
-                        handler = handlers[i];
-                        longestMatchedPattern = pattern.split("/").length;
-                    }
+                    handler = handlers[i];
+                    break;
                 }
             }
         }
         if (handler) {
-            if (debug) {
-                console.log(`Pattern: ${handler.pattern} matched`);
-            }
             // dispatch to next handler
             const next = () => {
                 dispatch(method, url, i);
@@ -3041,22 +3034,12 @@ function express({port, debug} = {port: 3000, debug: false}) {
                 body,
             };
             const res = Response();
-            const cb = handler.callback;
-            const onError = (err) => {
+            handler.callback(req, res, next).catch((err) => {
                 res.status(500).json({
                     status: "failed",
                     message: `Internal Server Error: ${err}`,
                 });
-            };
-            if (cb.constructor.name === "AsyncFunction") {
-                handler.callback(req, res, next).catch(onError);
-            } else {
-                try {
-                    handler.callback(req, res, next);
-                } catch (err) {
-                    onError(err);
-                }
-            }
+            });
         } else {
             // no route, return 404
             const res = Response();
@@ -3117,7 +3100,6 @@ function express({port, debug} = {port: 3000, debug: false}) {
             307: "HTTP/1.1 307 Temporary Redirect",
             308: "HTTP/1.1 308 Permanent Redirect",
             404: "HTTP/1.1 404 Not Found",
-            405: "HTTP/1.1 405 Method Not Allowed",
             500: "HTTP/1.1 500 Internal Server Error",
         };
         return new (class {
@@ -3152,7 +3134,7 @@ function express({port, debug} = {port: 3000, debug: false}) {
 
             json(data) {
                 this.set("Content-Type", "application/json;charset=UTF-8");
-                this.send(JSON.stringify(data, null, 2));
+                this.send(JSON.stringify(data));
             }
 
             set(key, val) {
@@ -3234,7 +3216,6 @@ function express({port, debug} = {port: 3000, debug: false}) {
         }
     }
 }
-
 /****************************************** Third Party Libraries **********************************************************/
 function heredoc(fn) {
     return fn.toString().split('\n').slice(1, -2).join('\n') + '\n';
