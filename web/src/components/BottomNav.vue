@@ -6,10 +6,10 @@
       grow
       v-model="activeItem"
   >
-    <v-btn :to="{path:'/dashboard'}" value="dashboard">
-      <span>首页</span>
-      <v-icon>speed</v-icon>
-    </v-btn>
+<!--    <v-btn :to="{path:'/dashboard'}" value="dashboard">-->
+<!--      <span>首页</span>-->
+<!--      <v-icon>speed</v-icon>-->
+<!--    </v-btn>-->
 
     <v-btn :to="{path: '/'}" value="subscription">
       <span>订阅</span>
