@@ -27,7 +27,7 @@ function service() {
 */
     });
     console.log(welcome);
-    const $app = express({debug: true});
+    const $app = express();
     // Constants
     const SETTINGS_KEY = "settings";
     const SUBS_KEY = "subs";
@@ -3007,15 +3007,19 @@ function express(port = 3000) {
 
         method = method.toUpperCase();
         const {path, query} = extractURL(url);
+
+        // path matching
         let handler = null;
         let i;
-
+        let longestMatchedPattern = 0;
         for (i = start; i < handlers.length; i++) {
             if (handlers[i].method === "ALL" || method === handlers[i].method) {
                 const {pattern} = handlers[i];
                 if (patternMatched(pattern, path)) {
-                    handler = handlers[i];
-                    break;
+                    if (pattern.split("/").length > longestMatchedPattern) {
+                        handler = handlers[i];
+                        longestMatchedPattern = pattern.split("/").length;
+                    }
                 }
             }
         }
@@ -3034,12 +3038,24 @@ function express(port = 3000) {
                 body,
             };
             const res = Response();
-            handler.callback(req, res, next).catch((err) => {
+            const cb = handler.callback;
+
+            const errFunc = err => {
                 res.status(500).json({
                     status: "failed",
                     message: `Internal Server Error: ${err}`,
                 });
-            });
+            }
+
+            if (cb.constructor.name === 'AsyncFunction') {
+                cb(req, res, next).catch(errFunc);
+            } else {
+                try {
+                    cb(req, res, next);
+                } catch (err) {
+                    errFunc(err);
+                }
+            }
         } else {
             // no route, return 404
             const res = Response();
@@ -3216,6 +3232,7 @@ function express(port = 3000) {
         }
     }
 }
+
 /****************************************** Third Party Libraries **********************************************************/
 function heredoc(fn) {
     return fn.toString().split('\n').slice(1, -2).join('\n') + '\n';
