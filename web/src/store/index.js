@@ -45,21 +45,21 @@ const store = new Vuex.Store({
     actions: {
         // fetch subscriptions
         async FETCH_SUBSCRIPTIONS({state}) {
-            return axios.get("/sub").then(resp => {
+            return axios.get("/subs").then(resp => {
                 const {data} = resp.data;
                 state.subscriptions = data;
             });
         },
         // fetch collections
         async FETCH_COLLECTIONS({state}) {
-            return axios.get("/collection").then(resp => {
+            return axios.get("/collections").then(resp => {
                 const {data} = resp.data;
                 state.collections = data;
             });
         },
         // fetch env
         async FETCH_ENV({state}) {
-            return axios.get("/env").then(resp => {
+            return axios.get("/utils/env").then(resp => {
                 state.env = resp.data;
             })
         },
@@ -72,7 +72,7 @@ const store = new Vuex.Store({
         },
         // new subscription
         async NEW_SUBSCRIPTION({dispatch}, sub) {
-            return axios.post(`/sub`, sub).then(() => {
+            return axios.post(`/subs`, sub).then(() => {
                 dispatch("FETCH_SUBSCRIPTIONS");
             });
         },
@@ -91,7 +91,7 @@ const store = new Vuex.Store({
         },
         // new collection
         async NEW_COLLECTION({dispatch}, collection) {
-            return axios.post(`/collection`, collection).then(() => {
+            return axios.post(`/collections`, collection).then(() => {
                 dispatch("FETCH_COLLECTIONS");
             })
         },

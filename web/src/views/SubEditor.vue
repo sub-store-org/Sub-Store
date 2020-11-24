@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <v-card class="mb-4">
-      <v-subheader>基本信息</v-subheader>
+      <v-subheader>订阅配置</v-subheader>
       <v-form class="pl-4 pr-4 pb-0" v-model="formState.basicValid">
         <v-text-field
             v-model="options.name"
@@ -13,7 +13,9 @@
             clearable
             clear-icon="clear"
         />
+        <!--For Subscription-->
         <v-textarea
+            v-if="!isCollection"
             v-model="options.url"
             class="mt-2"
             rows="2"
@@ -24,6 +26,27 @@
             clearable
             clear-icon="clear"
         />
+        <!--For Collection-->
+        <v-list
+            v-if="isCollection"
+            dense
+        >
+          <v-subheader class="pl-0">包含的订阅</v-subheader>
+          <v-list-item v-for="sub in availableSubs" :key="sub.name">
+            <v-list-item-avatar dark>
+              <v-icon>mdi-cloud</v-icon>
+            </v-list-item-avatar>
+            <v-list-item-content>
+              {{ sub.name }}
+            </v-list-item-content>
+            <v-spacer></v-spacer>
+            <v-checkbox
+                :value="sub.name"
+                v-model="selected"
+                class="pr-1"
+            />
+          </v-list-item>
+        </v-list>
       </v-form>
       <v-card-actions>
         <v-spacer></v-spacer>
@@ -46,7 +69,7 @@
               </v-btn>
             </v-card-title>
             <v-textarea
-                v-model="importedSub"
+                v-model="imported"
                 solo
                 label="粘贴配置以导入"
                 rows="5"
@@ -56,7 +79,7 @@
             />
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn text color="primary" @click="importSub">确认</v-btn>
+              <v-btn text color="primary" @click="importConf">确认</v-btn>
               <v-btn text @click="showShareDialog = false">取消</v-btn>
             </v-card-actions>
           </v-card>
@@ -105,7 +128,7 @@
           </v-radio-group>
 
           <v-radio-group
-              v-model="options.scert"
+              v-model="options['skip-cert-verify']"
               dense
               class="mt-0 mb-0"
           >
@@ -258,6 +281,14 @@ const AVAILABLE_PROCESSORS = {
 }
 
 export default {
+  props: {
+    isCollection: {
+      type: Boolean,
+      default() {
+        return false;
+      }
+    }
+  },
   components: {
     FlagOperator,
     KeywordFilter,
@@ -277,7 +308,7 @@ export default {
     return {
       selectedProcess: null,
       showShareDialog: false,
-      importedSub: "",
+      imported: "",
       dialog: false,
       validations: {
         nameRules: [
@@ -300,21 +331,37 @@ export default {
         url: "",
         useless: "KEEP",
         udp: "DEFAULT",
-        scert: "DEFAULT",
+        "skip-cert-verify": "DEFAULT",
         tfo: "DEFAULT",
       },
       process: [],
+      selected: []
     }
   },
+
   created() {
     const name = this.$route.params.name;
-    const sub = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.subscriptions[name];
-    this.$store.commit("SET_NAV_TITLE", sub.name ? `订阅编辑 -- ${sub.name}` : "新建订阅");
-    const {options, process} = loadSubscription(this.options, sub);
+    let source;
+    if (this.isCollection) {
+      source = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.collections[name];
+      this.$store.commit("SET_NAV_TITLE", source.name ? `组合订阅编辑 -- ${source.name}` : "新建组合订阅");
+      this.selected = source.subscriptions || [];
+
+    } else {
+      source = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.subscriptions[name];
+      this.$store.commit("SET_NAV_TITLE", source.name ? `订阅编辑 -- ${source.name}` : "新建订阅");
+    }
+    this.name = source.name;
+    const {options, process} = loadProcess(this.options, source);
     this.options = options;
     this.process = process;
   },
+
   computed: {
+    availableSubs() {
+      return this.$store.state.subscriptions;
+    },
+
     availableProcessors() {
       return AVAILABLE_PROCESSORS;
     },
@@ -327,45 +374,101 @@ export default {
           id: p.id
         }
       });
+    },
+
+    config() {
+      const output = {
+        name: this.options.name,
+        process: []
+      };
+      if (this.isCollection) {
+        output.subscriptions = this.selected;
+      } else {
+        output.url = this.options.url;
+      }
+      // useless filter
+      if (this.options.useless === 'REMOVE') {
+        output.process.push({
+          type: "Useless Filter"
+        });
+      }
+      // udp, tfo, scert
+      for (const opt of ['udp', 'tfo', 'skip-cert-verify']) {
+        if (this.options[opt] !== 'DEFAULT') {
+          output.process.push({
+            type: "Set Property Operator",
+            args: {key: opt, value: this.options[opt] === 'FORCE_OPEN'}
+          });
+        }
+      }
+      for (const p of this.process) {
+        output.process.push(p);
+      }
+      return output;
     }
   },
   methods: {
     save() {
-      if (this.options.name && this.options.url) {
-        const sub = buildSubscription(this.options, this.process);
-        if (this.$route.params.name !== "UNTITLED") {
-          this.$store.dispatch("UPDATE_SUBSCRIPTION", {
-            name: this.$route.params.name,
-            sub
-          }).then(() => {
-            showInfo(`成功保存订阅：${this.options.name}！`);
-          }).catch(() => {
-            showError(`发生错误，无法保存订阅！`);
-          });
-        } else {
-          this.$store.dispatch("NEW_SUBSCRIPTION", sub).then(() => {
-            showInfo(`成功创建订阅：${this.options.name}！`);
-          }).catch(() => {
-            showError(`发生错误，无法创建订阅！`);
-          });
+      if (this.isCollection) {
+        if (this.options.name && this.selected) {
+          if (this.$route.params.name === 'UNTITLED') {
+            this.$store.dispatch("NEW_COLLECTION", this.config).then(() => {
+              showInfo(`成功创建组合订阅：${this.name}！`)
+            }).catch(() => {
+              showError(`发生错误，无法创建组合订阅！`)
+            });
+          } else {
+            this.$store.dispatch("UPDATE_COLLECTION", {
+              name: this.$route.params.name,
+              collection: this.config
+            }).then(() => {
+              showInfo(`成功保存组合订阅：${this.name}！`)
+            }).catch(() => {
+              showError(`发生错误，无法保存组合订阅！`)
+            });
+          }
+        }
+      } else {
+        console.log("Saving subscription...");
+        if (this.options.name && this.options.url) {
+          if (this.$route.params.name !== "UNTITLED") {
+            this.$store.dispatch("UPDATE_SUBSCRIPTION", {
+              name: this.$route.params.name,
+              sub: this.config
+            }).then(() => {
+              showInfo(`成功保存订阅：${this.options.name}！`);
+            }).catch(() => {
+              showError(`发生错误，无法保存订阅！`);
+            });
+          } else {
+            this.$store.dispatch("NEW_SUBSCRIPTION", this.config).then(() => {
+              showInfo(`成功创建订阅：${this.options.name}！`);
+            }).catch(() => {
+              showError(`发生错误，无法创建订阅！`);
+            });
+          }
         }
       }
     },
 
     share() {
-      let sub = buildSubscription(this.options, this.process);
-      sub.name = "「订阅名称」";
-      sub.url = "「订阅链接」";
-      sub = JSON.stringify(sub);
-      this.$clipboard(sub);
+      let config = this.config;
+      config.name = "「订阅名称」";
+      if (this.isCollection) {
+        config.subscriptions = [];
+      } else {
+        config.url = "「订阅链接」";
+      }
+      config = JSON.stringify(config);
+      this.$clipboard(config);
       this.$store.commit("SET_SUCCESS_MESSAGE", "导出成功，订阅已复制到剪贴板！");
       this.showShareDialog = false;
     },
 
-    importSub() {
-      if (this.importedSub) {
-        const sub = JSON.parse(this.importedSub);
-        const {options, process} = loadSubscription(this.options, sub);
+    importConf() {
+      if (this.imported) {
+        const sub = JSON.parse(this.imported);
+        const {options, process} = loadProcess(this.options, sub);
         delete options.name;
         delete options.url;
 
@@ -433,16 +536,20 @@ export default {
   }
 }
 
-function loadSubscription(options, sub) {
+function loadProcess(options, source, isCollection = false) {
   options = {
     ...options,
-    name: sub.name,
-    url: sub.url,
+    name: source.name,
+  };
+  if (isCollection) {
+    options.subscriptions = source.subscriptions;
+  } else {
+    options.url = source.url;
   }
   let process = []
 
   // flag
-  for (const p of (sub.process || [])) {
+  for (const p of (source.process || [])) {
     switch (p.type) {
       case 'Useless Filter':
         options.useless = "REMOVE";
@@ -456,33 +563,6 @@ function loadSubscription(options, sub) {
     }
   }
   return {options, process};
-}
-
-function buildSubscription(options, process) {
-  const sub = {
-    name: options.name,
-    url: options.url,
-    process: []
-  };
-  // useless filter
-  if (options.useless === 'REMOVE') {
-    sub.process.push({
-      type: "Useless Filter"
-    });
-  }
-  // udp, tfo, scert
-  for (const opt of ['udp', 'tfo', 'scert']) {
-    if (options[opt] !== 'DEFAULT') {
-      sub.process.push({
-        type: "Set Property Operator",
-        args: {key: opt, value: options[opt] === 'FORCE_OPEN'}
-      });
-    }
-  }
-  for (const p of process) {
-    sub.process.push(p);
-  }
-  return sub;
 }
 
 function uuidv4() {
