@@ -273,14 +273,16 @@ function service() {
             let proxies = [];
             for (let i = 0; i < subs.length; i++) {
                 const sub = allSubs[subs[i]];
-                $.info(`正在处理子订阅：${sub.name}，进度--${100 * (i + 1 / subs.length).toFixed(1)}% `);
+                $.info(`正在处理子订阅：${sub.name}，进度--${100 * ((i + 1) / subs.length).toFixed(1)}% `);
                 try {
                     const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
                     const raw = await getResource(sub.url, useCache);
                     // parse proxies
-                    proxies = proxies.concat(ProxyUtils.parse(raw));
+                    let currentProxies = ProxyUtils.parse(raw)
                     // apply processors
-                    proxies = await ProxyUtils.process(proxies, sub.process || []);
+                    currentProxies = await ProxyUtils.process(currentProxies, sub.process || []);
+                    // merge
+                    proxies = proxies.concat(currentProxies);
                 } catch (err) {
                     $.error(`处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}! 该订阅已被跳过。`);
                 }
