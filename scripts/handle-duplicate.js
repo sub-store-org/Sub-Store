@@ -5,7 +5,6 @@ function operator(proxies) {
     if (typeof counter[p.name] === 'undefined') counter[p.name] = 1;
     else counter[p.name]++;
   });
-  console.log(counter);
   return proxies.map((p) => {
     if (counter[p.name] > 1) {
       if (typeof increment[p.name] === "undefined") increment[p.name] = 1;
