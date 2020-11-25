@@ -18,15 +18,7 @@ service();
 /****************************************** Service **********************************************************/
 
 function service() {
-    const welcome = heredoc(function () {/*
-   _____         __           _____  __
-  / ___/ __  __ / /_         / ___/ / /_ ____   _____ ___
-  \__ \ / / / // __ \ ______ \__ \ / __// __ \ / ___// _ \
- ___/ // /_/ // /_/ //_____/___/ // /_ / /_/ // /   /  __/
-/____/ \__,_//_.___/       /____/ \__/ \____//_/    \___/
-*/
-    });
-    console.log(welcome);
+    console.log("========== Sub-Store ===========")
     const $app = express();
     // Constants
     const SETTINGS_KEY = "settings";
@@ -489,14 +481,14 @@ function service() {
                 switch (action) {
                     case "upload":
                         content = $.read("#sub-store");
-                        await gist.upload(JSON.stringify(content));
                         $.info(`上传备份中...`);
+                        await gist.upload(content);
                         break;
                     case "download":
+                        $.info(`还原备份中...`);
                         content = await gist.download();
                         // restore settings
                         $.write(content, "#sub-store");
-                        $.info(`还原备份中...`);
                         break;
                 }
                 res.json({
@@ -722,7 +714,6 @@ var PROXY_PREPROCESSORS = (function () {
             return keys.some(k => raw.indexOf(k) !== -1);
         }
         const parse = function (raw) {
-            const Base64 = new Base64Code();
             raw = Base64.safeDecode(raw);
             return raw;
         }
@@ -770,7 +761,6 @@ var PROXY_PREPROCESSORS = (function () {
         const parse = function (raw) {
             // preprocessing for SSD subscription format
             const output = [];
-            const Base64 = new Base64Code();
             let ssdinfo = JSON.parse(Base64.safeDecode(raw.split("ssd://")[1]));
             // options (traffic_used, traffic_total, expiry, url)
             const traffic_used = ssdinfo.traffic_used; // GB
@@ -816,7 +806,6 @@ var PROXY_PARSERS = (function () {
         const test = (line) => {
             return /^ss:\/\//.test(line);
         };
-        const Base64 = new Base64Code();
         const parse = (line) => {
             const supported = {};
             // parse url
@@ -888,7 +877,6 @@ var PROXY_PARSERS = (function () {
         const test = (line) => {
             return /^ssr:\/\//.test(line);
         };
-        const Base64 = new Base64Code();
         const supported = {
             Surge: false,
         };
@@ -951,7 +939,6 @@ var PROXY_PARSERS = (function () {
         const test = (line) => {
             return /^vmess:\/\//.test(line);
         };
-        const Base64 = new Base64Code();
         const parse = (line) => {
             const supported = {};
             line = line.split("vmess://")[1];
@@ -1505,7 +1492,7 @@ var PROXY_PARSERS = (function () {
             };
             if (proxy.tls) {
                 if (typeof params["skip-cert-verify"] !== "undefined") {
-                    proxy['skip-cert-verify'] = params["skip-cert-verify"] == true || params["skip-cert-verify"] === "1";
+                    proxy['skip-cert-verify'] = params["skip-cert-verify"] === true || params["skip-cert-verify"] === "1";
                 }
                 proxy.sni = params["sni"] || params.server;
             }
@@ -1541,7 +1528,7 @@ var PROXY_PARSERS = (function () {
                 tfo: JSON.parse(params.tfo || "false"),
             };
             if (typeof params["skip-cert-verify"] !== "undefined") {
-                proxy['skip-cert-verify'] = params["skip-cert-verify"] == true || params["skip-cert-verify"] === "1";
+                proxy['skip-cert-verify'] = params["skip-cert-verify"] === true || params["skip-cert-verify"] === "1";
             }
             return proxy;
         };
@@ -1568,7 +1555,7 @@ var PROXY_PARSERS = (function () {
             };
             if (proxy.tls) {
                 if (typeof params["skip-cert-verify"] !== "undefined") {
-                    proxy['skip-cert-verify'] = params["skip-cert-verify"] == true || params["skip-cert-verify"] === "1";
+                    proxy['skip-cert-verify'] = params["skip-cert-verify"] === true || params["skip-cert-verify"] === "1";
                 }
                 proxy.sni = params.sni || params.server;
             }
@@ -2879,7 +2866,7 @@ function Gist(backupKey, token) {
         },
         events: {
             onResponse: (resp) => {
-                if (String(resp.statusCode).startsWith("4")) {
+                if (/^[45]/.test(String(resp.statusCode))) {
                     return Promise.reject(`ERROR: ${JSON.parse(resp.body).message}`);
                 } else {
                     return resp;
@@ -2935,7 +2922,7 @@ function Gist(backupKey, token) {
                     .get(`/gists/${id}`)
                     .then(resp => JSON.parse(resp.body));
                 const url = files[FILE_NAME].raw_url;
-                return await HTTP().get(url).then(resp => resp.body);
+                return await http.get(url).then(resp => resp.body);
             } catch (err) {
                 return Promise.reject(err);
             }
@@ -3230,9 +3217,6 @@ function express({port} = {port: 3000}) {
 }
 
 /****************************************** Third Party Libraries **********************************************************/
-function heredoc(fn) {
-    return fn.toString().split('\n').slice(1, -2).join('\n') + '\n';
-}
 
 /**
  * Base64 Coding Library
