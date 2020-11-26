@@ -110,7 +110,10 @@ function service() {
     async function downloadSubscription(req, res) {
         const {name} = req.params;
         const {cache} = req.query;
-        const platform = req.query.target || getPlatformFromHeaders(req.headers);
+        const platform = req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
+
+        $.info(`正在下载订阅：${name}`);
+
         const allSubs = $.read(SUBS_KEY);
         const sub = allSubs[name];
         if (sub) {
@@ -263,7 +266,7 @@ function service() {
     async function downloadCollection(req, res) {
         const {name} = req.params;
         const {cache} = req.query || "false";
-        const platform = req.query.target || getPlatformFromHeaders(req.headers);
+        const platform = req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
 
         const allCollections = $.read(COLLECTIONS_KEY);
         const allSubs = $.read(SUBS_KEY);
@@ -424,7 +427,7 @@ function service() {
     async function downloadRule(req, res) {
         const {name} = req.params;
         const {builtin} = req.query;
-        const platform = req.query.target || getPlatformFromHeaders(req.headers);
+        const platform = req.query.target || getPlatformFromHeaders(req.headers) || "Surge";
 
         $.info(`正在下载${builtin ? "内置" : ""}分流订阅：${name}...`);
 
@@ -446,9 +449,10 @@ function service() {
                 }
             }
             // remove duplicates
-            rules = await RuleUtils.process(rules, [{type: "Remove Duplicate"}]);
+            rules = await RuleUtils.process(rules, [{type: "Remove Duplicate Filter"}]);
             // produce output
             const output = RuleUtils.produce(rules, platform);
+            $.info(`分流订阅${name}下载成功，共包含${rules.length}条分流规则。`);
             res.send(output);
         } else {
             // rule not found
@@ -575,8 +579,7 @@ function service() {
         } else if (UA.indexOf("Decar") !== -1 || UA.indexOf("Loon") !== -1) {
             return "Loon";
         } else {
-            // browser
-            return "JSON";
+            return null;
         }
     }
 
@@ -1616,7 +1619,7 @@ var ProxyUtils = (function () {
         }
 
         // rename by regex
-// keywords: [{expr: "string format regex", now: "now"}]
+        // keywords: [{expr: "string format regex", now: "now"}]
         function RegexRenameOperator(regex) {
             return {
                 name: "Regex Rename Operator",
@@ -1632,7 +1635,7 @@ var ProxyUtils = (function () {
         }
 
         // delete keywords operator
-// keywords: ['a', 'b', 'c']
+        // keywords: ['a', 'b', 'c']
         function KeywordDeleteOperator(keywords) {
             const keywords_ = keywords.map((k) => {
                 return {
@@ -1647,7 +1650,7 @@ var ProxyUtils = (function () {
         }
 
         // delete regex operator
-// regex: ['a', 'b', 'c']
+        // regex: ['a', 'b', 'c']
         function RegexDeleteOperator(regex) {
             const regex_ = regex.map((r) => {
                 return {
@@ -1664,9 +1667,9 @@ var ProxyUtils = (function () {
         // use base64 encoded script to rename
         /** Example script
          function operator(proxies) {
-    // do something
-    return proxies;
- }
+            // do something
+            return proxies;
+         }
 
          WARNING:
          1. This function name should be `operator`!
@@ -1781,12 +1784,13 @@ var ProxyUtils = (function () {
         }
 
         // use base64 encoded script to filter proxies
-        /** Script Example
+        /**
+         Script Example
          function func(proxies) {
-    const selected = FULL(proxies.length, true);
-    // do something
-    return selected;
- }
+            const selected = FULL(proxies.length, true);
+            // do something
+            return selected;
+         }
          WARNING:
          1. This function name should be `func`!
          2. Always declare variables before using them!
@@ -2016,60 +2020,6 @@ var ProxyUtils = (function () {
             return array;
         }
 
-        // some logical functions for proxy filters
-        function AND(...args) {
-            return args.reduce((a, b) => a.map((c, i) => b[i] && c));
-        }
-
-        function OR(...args) {
-            return args.reduce((a, b) => a.map((c, i) => b[i] || c));
-        }
-
-        function NOT(array) {
-            return array.map((c) => !c);
-        }
-
-        function FULL(length, bool) {
-            return [...Array(length).keys()].map(() => bool);
-        }
-
-        function clone(object) {
-            return JSON.parse(JSON.stringify(object));
-        }
-
-        // apply filter to proxies
-        function ApplyFilter(filter, proxies) {
-            // select proxies
-            let selected = FULL(proxies.length, true);
-            try {
-                selected = AND(selected, filter.func(proxies));
-            } catch (err) {
-                console.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
-            }
-            return proxies.filter((_, i) => selected[i]);
-        }
-
-        // apply operator to proxies
-        function ApplyOperator(operator, proxies) {
-            let output = clone(proxies);
-            try {
-                const output_ = operator.func(output);
-                if (output_) output = output_;
-            } catch (err) {
-                // print log and skip this operator
-                console.log(`Cannot apply operator ${op.name}! Reason: ${err}`);
-            }
-            return output;
-        }
-
-        function Apply(process, proxies) {
-            if (process.name.indexOf("Filter") !== -1) {
-                return ApplyFilter(process, proxies);
-            } else if (process.name.indexOf("Operator") !== -1) {
-                return ApplyOperator(process, proxies);
-            }
-        }
-
         return {
             "Keyword Filter": KeywordFilter,
             "Useless Filter": UselessFilter,
@@ -2087,8 +2037,6 @@ var ProxyUtils = (function () {
             "Regex Rename Operator": RegexRenameOperator,
             "Regex Delete Operator": RegexDeleteOperator,
             "Script Operator": ScriptOperator,
-
-            "Apply": Apply,
         };
     })();
     const PROXY_PRODUCERS = (function () {
@@ -2528,26 +2476,23 @@ var ProxyUtils = (function () {
                 }
             }
 
-            const op = PROXY_PROCESSORS[item.type];
-            if (!op) {
+            if (!PROXY_PROCESSORS[item.type]) {
                 $.error(`Unknown operator: "${item.type}"`);
                 continue;
             }
 
-            try {
-                $.log(
-                    `Applying "${item.type}" with arguments:\n >>> ${
-                        JSON.stringify(item.args, null, 2) || "None"
-                    }`
-                );
-                if (item.type.indexOf('Script') !== -1) {
-                    proxies = PROXY_PROCESSORS.Apply(op(script), proxies);
-                } else {
-                    proxies = PROXY_PROCESSORS.Apply(op(item.args), proxies);
-                }
-            } catch (err) {
-                $.error(`Failed to apply "${item.type}"!\n REASON: ${err}`);
+            $.log(
+                `Applying "${item.type}" with arguments:\n >>> ${
+                    JSON.stringify(item.args, null, 2) || "None"
+                }`
+            );
+            let processor;
+            if (item.type.indexOf('Script') !== -1) {
+                processor = PROXY_PROCESSORS[item.type](script);
+            } else {
+                processor = PROXY_PROCESSORS[item.type](item.args);
             }
+            proxies = ApplyProcessor(processor, proxies);
         }
         return proxies;
     }
@@ -2664,10 +2609,17 @@ var RuleUtils = (function () {
                     const conf = YAML.eval(raw);
                     const payload = conf["payload"]
                         .map(
-                            rule => rule.replace("DST-PORT", "DEST-PORT")
-                                .replace("SRC-IP-CIDR", "SRC-IP")
-                                .replace("SRC-PORT", "IN-PORT")
+                            rule => {
+                                if (typeof rule === "string") {
+                                    return rule.replace(/DST-PORT/i, "DEST-PORT")
+                                        .replace(/SRC-IP-CIDR/i, "SRC-IP")
+                                        .replace(/SRC-PORT/i, "IN-PORT")
+                                } else {
+                                    return "";
+                                }
+                            }
                         )
+                        .filter(line => line.length > 0)
                         .join("\n");
                     return SurgeRuleSet().parse(payload);
                 } catch (e) {
@@ -2707,8 +2659,33 @@ var RuleUtils = (function () {
         return [SurgeRuleSet(), QX(), ClashRuleProvider()];
     })();
     const RULE_PROCESSORS = (function () {
-        function RemoveDuplicate() {
+        function RegexFilter({regex = [], keep = true}) {
             return {
+                name: "Regex Filter",
+                func: (rules) => {
+                    return rules.map((rule) => {
+                        const selected = regex.some((r) => {
+                            r = new RegExp(r);
+                            return r.test(rule);
+                        });
+                        return keep ? selected : !selected;
+                    });
+                },
+            };
+        }
+
+        function TypeFilter(types) {
+            return {
+                name: "Type Filter",
+                func: (rules) => {
+                    return rules.map((rule) => types.some((t) => rule.type === t));
+                },
+            };
+        }
+
+        function RemoveDuplicateFilter() {
+            return {
+                name: "Remove Duplicate Filter",
                 func: rules => {
                     const seen = new Set();
                     const result = [];
@@ -2726,8 +2703,27 @@ var RuleUtils = (function () {
             }
         }
 
+        // regex: [{expr: "string format regex", now: "now"}]
+        function RegexReplaceOperator(regex) {
+            return {
+                name: "Regex Rename Operator",
+                func: (rules) => {
+                    return rules.map((rule) => {
+                        for (const {expr, now} of regex) {
+                            rule.content = rule.content.replace(new RegExp(expr, "g"), now).trim();
+                        }
+                        return rule;
+                    });
+                },
+            };
+        }
+
         return {
-            "Remove Duplicate": RemoveDuplicate
+            "Regex Filter": RegexFilter,
+            "Remove Duplicate Filter": RemoveDuplicateFilter,
+            "Type Filter": TypeFilter,
+
+            "Regex Replace Operator": RegexReplaceOperator
         };
     })();
     const RULE_PRODUCERS = (function () {
@@ -2833,17 +2829,13 @@ var RuleUtils = (function () {
                 console.error(`Unknown operator: ${item.type}!`);
                 continue;
             }
-            const op = RULE_PROCESSORS[item.type](item.args);
-            try {
-                console.log(
-                    `Applying operator "${item.type}" with arguments: \n >>> ${
-                        JSON.stringify(item.args) || "None"
-                    }`
-                );
-                rules = op.func(rules);
-            } catch (err) {
-                console.error(`Failed to apply operator "${item.type}"!\n REASON: ${err}`);
-            }
+            const processor = RULE_PROCESSORS[item.type](item.args);
+            console.log(
+                `Applying "${item.type}" with arguments: \n >>> ${
+                    JSON.stringify(item.args) || "None"
+                }`
+            );
+            rules = ApplyProcessor(processor, rules);
         }
         return rules;
     }
@@ -2886,11 +2878,84 @@ function getBuiltInRules() {
                 "https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/anti-ad-surge.txt",
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanAD.yaml"
             ]
+        },
+        "Global": {
+            "name": "Global",
+            "description": "",
+            "urls": [
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ProxyGFWlist.yaml",
+                "https://raw.githubusercontent.com/DivineEngine/Profiles/master/Quantumult/Filter/Global.list"
+            ]
+        },
+        "CN": {
+            "name": "CN",
+            "description": "",
+            "urls": [
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ChinaDomain.yaml",
+                "https://raw.githubusercontent.com/DivineEngine/Profiles/master/Quantumult/Filter/China.list"
+            ]
         }
     };
 }
 
 /****************************************** Supporting Functions **********************************************************/
+function ApplyProcessor(process, objs) {
+    function ApplyFilter(filter, objs) {
+        // select proxies
+        let selected = FULL(objs.length, true);
+        try {
+            selected = AND(selected, filter.func(objs));
+        } catch (err) {
+            // print log and skip this filter
+            console.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
+        }
+        return objs.filter((_, i) => selected[i]);
+    }
+
+    function ApplyOperator(operator, objs) {
+        let output = clone(objs);
+        try {
+            const output_ = operator.func(output);
+            if (output_) output = output_;
+        } catch (err) {
+            // print log and skip this operator
+            console.log(`Cannot apply operator ${operator.name}! Reason: ${err}`);
+        }
+        return output;
+    }
+
+    if (process.name.indexOf("Filter") !== -1) {
+        return ApplyFilter(process, objs);
+    } else if (process.name.indexOf("Operator") !== -1) {
+        return ApplyOperator(process, objs);
+    }
+
+}
+
+// some logical functions
+function AND(...args) {
+    return args.reduce((a, b) => a.map((c, i) => b[i] && c));
+}
+
+function OR(...args) {
+    return args.reduce((a, b) => a.map((c, i) => b[i] || c));
+}
+
+function NOT(array) {
+    return array.map((c) => !c);
+}
+
+function FULL(length, bool) {
+    return [...Array(length).keys()].map(() => bool);
+}
+
+function clone(object) {
+    return JSON.parse(JSON.stringify(object));
+}
+
+/****************************************** Own Libraries **********************************************************/
+
+
 /**
  * OpenAPI
  * https://github.com/Peng-YM/QuanX/blob/master/Tools/OpenAPI/README.md
