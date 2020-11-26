@@ -295,7 +295,7 @@ function service() {
             if (proxies.length === 0) {
                 $.notify(
                     `🌍 [Sub-Store] 下载组合订阅失败`,
-                    `❌ 未找到组合订阅：${name}！`,
+                    `❌ 组合订阅：${name}中不含有效节点！`,
                 );
                 res.status(500).json({
                     status: "failed",
