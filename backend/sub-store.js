@@ -602,7 +602,7 @@ function service() {
 
         let body = "";
         try {
-            body = await $http.get(url);
+            body = await $http.get(url).body;
         } catch (err) {
             throw new Error(err);
         } finally {
