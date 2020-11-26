@@ -2743,12 +2743,8 @@ var RuleUtils = (function () {
                     "IP-CIDR6": "IP6-CIDR"
                 };
 
-                let output = `${TRANSFORM[rule.type] || rule.type},${rule.content}`;
-                if (rule.type === "IP-CIDR" || rule.type === "IP-CIDR6") {
-                    output += rule.options ? `,${rule.options[0]}` : "";
-                }
-                output += ",SUB-STORE"
-                return output;
+                // QX does not support the no-resolve option
+                return `${TRANSFORM[rule.type] || rule.type},${rule.content},SUB-STORE`;
             }
             return {type, func};
         }
