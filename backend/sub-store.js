@@ -127,7 +127,7 @@ function service() {
                 // produce
                 const output = ProxyUtils.produce(proxies, platform);
                 if (platform === 'JSON') {
-                    res.set("Content-Type", "application/json").send(output);
+                    res.set("Content-Type", "application/json;charset=utf-8").send(output);
                 } else {
                     res.send(output);
                 }
@@ -309,7 +309,7 @@ function service() {
             try {
                 const output = ProxyUtils.produce(proxies, platform);
                 if (platform === 'JSON') {
-                    res.set("Content-Type", "application/json").send(output);
+                    res.set("Content-Type", "application/json;charset=utf-8").send(output);
                 } else {
                     res.send(output);
                 }
@@ -2394,7 +2394,7 @@ var ProxyUtils = (function () {
         for (const processor of PROXY_PREPROCESSORS) {
             try {
                 if (processor.test(raw)) {
-                    $.log(`Pre-processor [${processor.name}] activated`);
+                    $.info(`Pre-processor [${processor.name}] activated`);
                     return processor.parse(raw);
                 }
             } catch (e) {
@@ -2430,7 +2430,7 @@ var ProxyUtils = (function () {
                     if (safeMatch(parser, line)) {
                         lastParser = parser;
                         matched = true;
-                        $.log(`Proxy parser: ${parser.name} is activated`);
+                        $.info(`Proxy parser: ${parser.name} is activated`);
                         break;
                     }
                 }
@@ -2481,7 +2481,7 @@ var ProxyUtils = (function () {
                 continue;
             }
 
-            $.log(
+            $.info(
                 `Applying "${item.type}" with arguments:\n >>> ${
                     JSON.stringify(item.args, null, 2) || "None"
                 }`
@@ -2506,7 +2506,7 @@ var ProxyUtils = (function () {
         // filter unsupported proxies
         proxies = proxies.filter(proxy => !(proxy.supported && proxy.supported[targetPlatform] === false));
 
-        $.log(`Producing proxies for target: ${targetPlatform}`);
+        $.info(`Producing proxies for target: ${targetPlatform}`);
         if (typeof producer.type === "undefined" || producer.type === 'SINGLE') {
             return proxies
                 .map(proxy => {
@@ -2535,130 +2535,84 @@ var ProxyUtils = (function () {
 
 /****************************************** Rule Utils **********************************************************/
 var RuleUtils = (function () {
+    const RULE_TYPES_MAPPING = [
+        [/^(DOMAIN|host|HOST)$/, "DOMAIN"],
+        [/^(DOMAIN-KEYWORD|host-keyword|HOST-KEYWORD)$/, "DOMAIN-KEYWORD"],
+        [/^(DOMAIN-SUFFIX|host-suffix|HOST-SUFFIX)$/, "DOMAIN-SUFFIX"],
+        [/^USER-AGENT$/i, "USER-AGENT"],
+        [/^PROCESS-NAME$/, "PROCESS-NAME"],
+        [/^(DEST-PORT|DST-PORT)$/, "DST-PORT"],
+        [/^SRC-IP(-CIDR)?$/, "SRC-IP"],
+        [/^(IN|SRC)-PORT$/, "IN-PORT"],
+        [/^PROTOCOL$/, "PROTOCOL"],
+        [/^IP-CIDR$/i, "IP-CIDR"],
+        [/^(IP-CIDR6|ip6-cidr|IP6-CIDR)$/]
+    ];
+
+    const RULE_PREPROCESSORS = (function () {
+        function HTML() {
+            const name = "HTML";
+            const test = raw => /^<!DOCTYPE html>/.test(raw);
+            // simply discard HTML
+            const parse = _ => "";
+            return {name, test, parse};
+        }
+
+        function ClashProvider() {
+            const name = "Clash Provider";
+            const test = raw => raw.indexOf("payload:") === 0
+            const parse = raw => {
+                return raw
+                    .replace("payload:", "")
+                    .replace(/^\s*-\s*/gm, "");
+            }
+            return {name, test, parse}
+        }
+
+        return [HTML(), ClashProvider()];
+    })();
     const RULE_PARSERS = (function () {
-        // Rule set format for Surge
-        function SurgeRuleSet() {
-            const name = "Surge Rule Set Parser"
-
-            const SURGE_RULE_TYPES = [
-                // Domain-based rules
-                "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD",
-                // IP based rules
-                "IP-CIDR", "IP-CIDR6",
-                // HTTP rules
-                "USER-AGENT", "URL-REGEX",
-                // Misc rules
-                "DEST-PORT", "SRC-IP", "IN-PORT", "PROTOCOL"
-            ];
-
-            const test = (raw) => (
-                raw.indexOf("payload:") !== 0 &&
-                SURGE_RULE_TYPES.some(k => raw.indexOf(k) !== -1)
-            );
-
+        function AllRuleParser() {
+            const name = "Universal Rule Parser";
+            const test = () => true;
             const parse = (raw) => {
                 const lines = raw.split("\n");
                 const result = [];
                 for (let line of lines) {
                     line = line.trim();
+                    // skip empty line
+                    if (line.length === 0) continue;
                     // skip comments
                     if (/\s*#/.test(line)) continue;
-                    if (!SURGE_RULE_TYPES.some(k => line.indexOf(k) === 0)) continue;
                     try {
                         const params = line.split(",").map(w => w.trim());
-                        const rule = {
-                            type: params[0],
-                            content: params[1],
-                        };
-                        if (rule.type === "IP-CIDR" || rule.type === "IP-CIDR6") {
-                            rule.options = params.slice(2)
+                        let rawType = params[0];
+                        let matched = false;
+                        for (const item of RULE_TYPES_MAPPING) {
+                            const regex = item[0];
+                            if (regex.test(rawType)) {
+                                matched = true;
+                                const rule = {
+                                    type: item[1],
+                                    content: params[1],
+                                };
+                                if (rule.type === "IP-CIDR" || rule.type === "IP-CIDR6") {
+                                    rule.options = params.slice(2)
+                                }
+                                result.push(rule);
+                            }
                         }
-                        result.push(rule);
+                        if (!matched) throw new Error("Invalid rule type: " + rawType);
                     } catch (e) {
                         console.error(`Failed to parse line: ${line}\n Reason: ${e}`);
                     }
                 }
                 return result;
-            };
-
+            }
             return {name, test, parse};
         }
 
-        function ClashRuleProvider() {
-            const name = "Clash Rule Provider";
-            const CLASH_RULE_TYPES = [
-                // Domain-based rules
-                "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD",
-                // IP based rules
-                "IP-CIDR", "IP-CIDR6",
-                // HTTP rules
-                "USER-AGENT", "URL-REGEX",
-                // Process rules
-                "PROCESS-NAME",
-                // Misc rules
-                "DST-PORT", "SRC-IP-CIDR", "SRC-PORT"
-            ];
-
-            const test = (raw) => (
-                raw.indexOf("payload:") === 0 &&
-                CLASH_RULE_TYPES.some(k => raw.indexOf(k) !== -1)
-            );
-            const parse = (raw) => {
-                const result = [];
-                try {
-                    const conf = YAML.eval(raw);
-                    const payload = conf["payload"]
-                        .map(
-                            rule => {
-                                if (typeof rule === "string") {
-                                    return rule.replace(/DST-PORT/i, "DEST-PORT")
-                                        .replace(/SRC-IP-CIDR/i, "SRC-IP")
-                                        .replace(/SRC-PORT/i, "IN-PORT")
-                                } else {
-                                    return "";
-                                }
-                            }
-                        )
-                        .filter(line => line.length > 0)
-                        .join("\n");
-                    return SurgeRuleSet().parse(payload);
-                } catch (e) {
-                    console.error(`Cannot parse rules: ${e}`);
-                }
-                return result;
-            };
-            return {name, test, parse};
-        }
-
-        function QX() {
-            const name = "QX Filter";
-            const QX_RULE_TYPES = [
-                "host", "host-suffix", "host-keyword",
-                "ip-cidr", "ip6-cidr",
-                "user-agent"
-            ];
-            const test = (raw) => (
-                QX_RULE_TYPES.some(k => raw.indexOf(k.toLowerCase()) === 0)
-            )
-            const parse = (raw) => {
-                const lines = raw.split("\n");
-                for (let i = 0; i < lines.length; i++) {
-                    let type = lines[i].split(",")[0];
-                    type = type
-                        .replace(/host/i, "DOMAIN")
-                        .replace(/-suffix/, "-SUFFIX")
-                        .replace(/-keyword/, "-KEYWORD")
-                        .replace("ip-cidr", "IP-CIDR")
-                        .replace(/ip6-cidr/i, "IP-CIDR6")
-                        .replace("user-agent", "USER-AGENT");
-                    lines[i] = type + "," + lines[i].split(",")[1];
-                }
-                return SurgeRuleSet().parse(lines.join("\n"));
-            };
-            return {name, test, parse};
-        }
-
-        return [SurgeRuleSet(), QX(), ClashRuleProvider()];
+        return [AllRuleParser()];
     })();
     const RULE_PROCESSORS = (function () {
         function RegexFilter({regex = [], keep = true}) {
@@ -2806,7 +2760,22 @@ var RuleUtils = (function () {
         };
     })();
 
+    function preprocess(raw) {
+        for (const processor of RULE_PREPROCESSORS) {
+            try {
+                if (processor.test(raw)) {
+                    $.info(`Pre-processor [${processor.name}] activated`);
+                    return processor.parse(raw);
+                }
+            } catch (e) {
+                $.error(`Parser [${processor.name}] failed\n Reason: ${e}`);
+            }
+        }
+        return raw;
+    }
+
     function parse(raw) {
+        raw = preprocess(raw);
         for (const parser of RULE_PARSERS) {
             let matched;
             try {
@@ -2815,7 +2784,7 @@ var RuleUtils = (function () {
                 matched = false;
             }
             if (matched) {
-                console.log(`Rule parser [${parser.name}] is activated!`);
+                $.info(`Rule parser [${parser.name}] is activated!`);
                 return parser.parse(raw);
             }
         }
@@ -2828,7 +2797,7 @@ var RuleUtils = (function () {
                 continue;
             }
             const processor = RULE_PROCESSORS[item.type](item.args);
-            console.log(
+            $.info(
                 `Applying "${item.type}" with arguments: \n >>> ${
                     JSON.stringify(item.args) || "None"
                 }`
@@ -2874,7 +2843,7 @@ function getBuiltInRules() {
             "description": "",
             "urls": [
                 "https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/anti-ad-surge.txt",
-                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanAD.yaml"
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanAD.yaml",
             ]
         },
         "Global": {
