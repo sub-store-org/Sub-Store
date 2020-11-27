@@ -2054,13 +2054,15 @@ var RuleUtils = (function () {
             const parse = (raw) => {
                 const lines = raw.split("\n");
                 for (let i = 0; i < lines.length; i++) {
-                    lines[i] = lines[i]
-                        .replace(/host-suffix/i, "DOMAIN-SUFFIX")
-                        .replace(/host-keyword/i, "DOMAIN-KEYWORD")
+                    let type = lines[i].split(",")[0];
+                    type = type
                         .replace(/host/i, "DOMAIN")
+                        .replace(/-suffix/, "-SUFFIX")
+                        .replace(/-keyword/, "-KEYWORD")
                         .replace("ip-cidr", "IP-CIDR")
                         .replace(/ip6-cidr/i, "IP-CIDR6")
                         .replace("user-agent", "USER-AGENT");
+                    lines[i] = type + "," + lines[i].split(",")[1];
                 }
                 return SurgeRuleSet().parse(lines.join("\n"));
             };
