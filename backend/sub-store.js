@@ -833,21 +833,21 @@ var ProxyUtils = (function () {
                     supported,
                 };
                 // get other params
-                params = {};
+                const other_params = {};
                 line = line.split("/?")[1].split("&");
                 if (line.length > 1) {
                     for (const item of line) {
                         const [key, val] = item.split("=");
-                        params[key] = val;
+                        other_params[key] = val.trim();
                     }
                 }
                 proxy = {
                     ...proxy,
-                    name: Base64.safeDecode(params.remarks),
+                    name: other_params.remarks ? Base64.safeDecode(other_params.remarks) : proxy.server,
                     "protocol-param":
-                        Base64.safeDecode(params.protoparam).replace(/\s/g, "") || "",
+                        Base64.safeDecode(other_params.protoparam || "").replace(/\s/g, ""),
                     "obfs-param":
-                        Base64.safeDecode(params.obfsparam).replace(/\s/g, "") || "",
+                        Base64.safeDecode(other_params.obfsparam || "").replace(/\s/g, ""),
                 };
                 return proxy;
             };
@@ -869,8 +869,8 @@ var ProxyUtils = (function () {
                 line = line.split("vmess://")[1];
                 const content = Base64.safeDecode(line);
                 if (/=\s*vmess/.test(content)) {
-                    const partitions = content.split(",").map((p) => p.trim());
                     // Quantumult VMess URI format
+                    const partitions = content.split(",").map((p) => p.trim());
                     // get keyword params
                     const params = {};
                     for (const part of partitions) {
@@ -888,16 +888,21 @@ var ProxyUtils = (function () {
                         cipher: partitions[3],
                         uuid: partitions[4].match(/^"(.*)"$/)[1],
                         tls: params.obfs === "over-tls" || params.obfs === "wss",
-                        udp: JSON.parse(params["udp-relay"] || "false"),
-                        tfo: JSON.parse(params["fast-open"] || "false"),
                     };
+
+                    if (typeof params['udp-relay'] !== "undefined") proxy.udp = JSON.parse(params["udp-relay"]);
+                    if (typeof params['fast-open'] !== "undefined") proxy.udp = JSON.parse(params["fast-open"]);
 
                     // handle ws headers
                     if (params.obfs === "ws" || params.obfs === "wss") {
                         proxy.network = "ws";
-                        proxy["ws-path"] = params["obfs-uri"];
+                        proxy["ws-path"] = (params["obfs-path"] || '"/"').match(/^"(.*)"$/)[1];
+                        let obfs_host = params["obfs-header"];
+                        if (obfs_host && obfs_host.indexOf("Host") !== -1) {
+                            obfs_host = obfs_host.match(/Host:\s*([a-zA-Z0-9-.]*)/)[1];
+                        }
                         proxy["ws-headers"] = {
-                            Host: params["obfs-host"] || proxy.server, // if no host provided, use the same as server
+                            Host: obfs_host || proxy.server, // if no host provided, use the same as server
                         };
                     }
 
