@@ -20,10 +20,10 @@ service();
 function service() {
     console.log(
 `
-┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
-              𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 © 𝑷𝒆𝒏𝒈-𝒀𝑴
-┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
-`)
+┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
+            𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 © 𝑷𝒆𝒏𝒈-𝒀𝑴
+┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
+`);
     const $app = express();
     // Constants
     const SETTINGS_KEY = "settings";
@@ -138,7 +138,7 @@ function service() {
                 }
             } catch (err) {
                 $.notify(
-                    `🌍 [Sub-Store] 下载订阅失败`,
+                    `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`,
                     `❌ 无法下载订阅：${name}！`,
                     `🤔 原因：${err}`
                 );
@@ -149,7 +149,7 @@ function service() {
             }
         } else {
             $.notify(
-                `🌍 [Sub-Store] 下载订阅失败`,
+                `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`,
                 `❌ 未找到订阅：${name}！`,
             );
             res.status(404).json({
@@ -302,7 +302,7 @@ function service() {
             proxies = await ProxyUtils.process(proxies, collection.process || []);
             if (proxies.length === 0) {
                 $.notify(
-                    `🌍 [Sub-Store] 下载组合订阅失败`,
+                    `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
                     `❌ 组合订阅：${name}中不含有效节点！`,
                 );
                 res.status(500).json({
@@ -320,7 +320,7 @@ function service() {
                 }
             } catch (err) {
                 $.notify(
-                    `🌍 [Sub-Store] 下载组合订阅失败`,
+                    `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
                     `❌ 无法下载组合订阅：${name}！`,
                     `🤔 原因：${err}`
                 );
@@ -332,7 +332,7 @@ function service() {
 
         } else {
             $.notify(
-                `🌍 [Sub-Store] 下载组合订阅失败`,
+                `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
                 `❌ 未找到组合订阅：${name}！`,
             );
             res.status(404).json({
@@ -462,7 +462,7 @@ function service() {
         } else {
             // rule not found
             $.notify(
-                `🌍 [Sub-Store] 下载分流订阅失败`,
+                `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载分流订阅失败`,
                 `❌ 未找到分流订阅：${name}！`,
             );
             res.status(404).json({
