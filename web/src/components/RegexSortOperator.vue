@@ -1,8 +1,8 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">filter_list</v-icon>
-      关键词删除
+      <v-icon left color="primary">sort</v-icon>
+      正则排序
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">
         <v-icon>keyboard_arrow_up</v-icon>
@@ -21,37 +21,39 @@
         </template>
         <v-card>
           <v-card-title class="headline">
-            关键词删除
+            正则排序
           </v-card-title>
           <v-card-text>
-            删除节点名中的关键词
+            根据给出的正则表达式的顺序对节点进行排序，无法匹配的节点将会按照正序排列。
           </v-card-text>
         </v-card>
       </v-dialog>
     </v-card-title>
     <v-card-text>
-      关键词
-      <v-chip-group>
+      正则表达式
+      <v-chip-group
+          column
+      >
         <v-chip
             close
             close-icon="mdi-delete"
-            v-for="(keyword, idx) in keywords"
+            v-for="(item, idx) in items"
             :key="idx"
-            @click:close="remove(idx)"
             @click="edit(idx)"
+            @click:close="remove(idx)"
         >
-          {{ keyword }}
+          {{ item }}
         </v-chip>
       </v-chip-group>
       <v-text-field
-          placeholder="添加新关键词"
+          placeholder="添加新正则表达式"
           clearable
           clear-icon="clear"
           solo
-          v-model="form.keyword"
+          v-model="form.item"
           append-icon="mdi-send"
-          @click:append="add(form.keyword)"
-          @keyup.enter="add(form.keyword)"
+          @click:append="add(form.item)"
+          @keyup.enter="add(form.item)"
       />
     </v-card-text>
   </v-card>
@@ -63,44 +65,47 @@ export default {
   data: function () {
     return {
       idx: this.$vnode.key,
-      mode: "IN",
+      selection: null,
+      currentTag: null,
       form: {
-        keyword: ""
+        item: ""
       },
-      keywords: []
+      items: []
     }
   },
+  created() {
+    if (this.args) {
+      this.items = this.args || [];
+    }
+  },
+  watch: {
+    items() {
+      this.save();
+    },
+  },
   methods: {
-    add(keyword) {
-      if (keyword) {
-        this.keywords.push(keyword);
-        this.form.keyword = "";
+    add(item) {
+      if (item) {
+        this.items.push(item);
+        this.form.item = "";
       } else {
-        this.$store.commit("SET_ERROR_MESSAGE", "关键词不能为空！");
+        this.$store.commit("SET_ERROR_MESSAGE", "正则表达式不能为空！");
       }
     },
     edit(idx) {
-      this.form.keyword = this.keywords[idx];
+      this.form.item = this.items[idx];
       this.remove(idx);
     },
     remove(idx) {
-      this.keywords.splice(idx, 1);
+      this.items.splice(idx, 1);
     },
     save() {
       this.$emit("dataChanged", {
         idx: this.idx,
-        args: this.keywords
+        args: this.items
       });
-    }
-  },
-  created() {
-    this.keywords = this.args || [];
-  },
-  watch: {
-    keywords() {
-      this.save();
-    }
-  },
+    },
+  }
 }
 </script>
 

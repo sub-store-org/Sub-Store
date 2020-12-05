@@ -46,7 +46,9 @@
         </v-row>
       </v-radio-group>
       正则表达式
-      <v-chip-group>
+      <v-chip-group
+          column
+      >
         <v-chip
             close
             close-icon="mdi-delete"
