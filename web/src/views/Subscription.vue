@@ -109,7 +109,7 @@
               fab
           >
             <v-icon v-if="opened">mdi-close</v-icon>
-            <v-icon v-else>apps</v-icon>
+            <v-icon v-else>mdi-apps</v-icon>
           </v-btn>
         </template>
         <v-btn
@@ -131,10 +131,10 @@
     <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList" scrollable>
       <v-card>
         <v-card-title class="pa-0">
-          <v-toolbar dark color="primary">
+          <v-toolbar>
             <v-icon>mdi-cloud</v-icon>
             <v-spacer></v-spacer>
-            <v-toolbar-title>节点列表</v-toolbar-title>
+            <v-toolbar-title><h4>节点列表</h4></v-toolbar-title>
             <v-spacer></v-spacer>
             <v-toolbar-items>
               <v-btn icon @click="refreshProxyList" v-if="sub">

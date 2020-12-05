@@ -1,41 +1,11 @@
 <template>
-<!--  <v-card-->
-<!--      class="ml-4 mt-4 mb-4 mr-4"-->
-<!--  >-->
-<!--    <v-card-title>Nexitally</v-card-title>-->
-<!--    <v-carousel-->
-<!--        cycle-->
-<!--        height="250"-->
-<!--        :show-arrows="false"-->
-<!--    >-->
-<!--      <v-carousel-item>-->
-<!--        <v-chart-->
-<!--            :options="pie"-->
-<!--            class="remains !important"-->
-<!--            autoresize-->
-<!--        />-->
-<!--      </v-carousel-item>-->
-<!--      <v-carousel-item>-->
-<!--        <v-chart-->
-<!--            :options="pie"-->
-<!--            class="remains !important"-->
-<!--            autoresize-->
-<!--        />-->
-<!--      </v-carousel-item>-->
-<!--    </v-carousel>-->
-<!--  </v-card>-->
   <v-container></v-container>
 </template>
 
 <script>
-import ECharts from 'vue-echarts';
-import 'echarts/lib/chart/pie';
-
 export default {
   name: "Dashboard",
   components: {
-    // eslint-disable-next-line vue/no-unused-components
-    "v-chart": ECharts
   },
   computed: {
     pie() {

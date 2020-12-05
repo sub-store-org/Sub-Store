@@ -1,9 +1,9 @@
 <template>
   <v-app>
     <TopToolbar></TopToolbar>
-    <v-content>
+    <v-main>
       <router-view></router-view>
-    </v-content>
+    </v-main>
     <BottomNav></BottomNav>
     <v-snackbar
         :value="successMessage"
@@ -28,6 +28,7 @@
 </template>
 
 <script>
+
 import TopToolbar from "@/components/TopToolbar";
 import BottomNav from "@/components/BottomNav";
 import {showError} from "@/utils";
@@ -52,10 +53,6 @@ export default {
   },
 
   created() {
-    this.$vuetify.theme.dark = true;
-    this.$vuetify.theme.themes.dark.primary = '#0899ab';
-    this.$vuetify.theme.themes.light.primary = '#d73964';
-
     initStore(this.$store);
   },
 
@@ -82,6 +79,7 @@ export default {
   }
 }
 </script>
-<style>
-@import "css/app.css";
+
+<style lang="scss">
+@import "./assets/css/app";
 </style>

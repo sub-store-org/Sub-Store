@@ -44,9 +44,7 @@
     <v-dialog
         v-model="dialog"
     >
-      <v-card
-          color="primary darken-1"
-      >
+      <v-card>
         <v-card-title>
           {{ info.name }}
         </v-card-title>
@@ -63,15 +61,11 @@
     <v-dialog
         v-model="showQR"
     >
-      <v-card
-          color="primary darken-1"
-      >
+      <v-card>
         <v-card-title>
           {{ info.name }}
-          <v-spacer></v-spacer>
           <v-btn
               icon
-              color="white"
               @click="copyLink()"
           >
             <v-icon>content_copy</v-icon>
