@@ -24,6 +24,7 @@
             label="订阅链接"
             placeholder="填入机场原始订阅链接"
             clearable
+            auto-grow
             clear-icon="clear"
         />
         <!--For Collection-->
@@ -213,17 +214,14 @@
 import {showError, showInfo} from "@/utils";
 import TypeFilter from "@/components/TypeFilter";
 import RegionFilter from "@/components/RegionFilter";
-import KeywordFilter from "@/components/KeywordFilter";
 import RegexFilter from "@/components/RegexFilter";
 import SortOperator from "@/components/SortOperator";
-import KeywordRenameOperator from "@/components/KeywordRenameOperator";
 import RegexRenameOperator from "@/components/RegexRenameOperator";
-import KeywordDeleteOperator from "@/components/KeywordDeleteOperator";
 import RegexDeleteOperator from "@/components/RegexDeleteOperator";
 import FlagOperator from "@/components/FlagOperator";
 import ScriptFilter from "@/components/ScriptFilter";
 import ScriptOperator from "@/components/ScriptOperator";
-import KeywordSortOperator from "@/components/KeywordSortOperator";
+import RegexSortOperator from "@/components/RegexSortOperator";
 
 const AVAILABLE_PROCESSORS = {
   "Flag Operator": {
@@ -238,10 +236,6 @@ const AVAILABLE_PROCESSORS = {
     component: "RegionFilter",
     name: "区域过滤器"
   },
-  "Keyword Filter": {
-    component: "KeywordFilter",
-    name: "关键词过滤器"
-  },
   "Regex Filter": {
     component: "RegexFilter",
     name: "正则过滤器"
@@ -250,21 +244,13 @@ const AVAILABLE_PROCESSORS = {
     component: "SortOperator",
     name: "节点排序"
   },
-  "Keyword Sort Operator": {
-    component: "KeywordSortOperator",
-    name: "关键词排序"
-  },
-  "Keyword Rename Operator": {
-    component: "KeywordRenameOperator",
-    name: "关键词重命名"
+  "Regex Sort Operator": {
+    component: "RegexSortOperator",
+    name: "正则排序"
   },
   "Regex Rename Operator": {
     component: "RegexRenameOperator",
     name: "正则重命名"
-  },
-  "Keyword Delete Operator": {
-    component: "KeywordDeleteOperator",
-    name: "删除关键词"
   },
   "Regex Delete Operator": {
     component: "RegexDeleteOperator",
@@ -291,15 +277,12 @@ export default {
   },
   components: {
     FlagOperator,
-    KeywordFilter,
     RegexFilter,
     RegionFilter,
     TypeFilter,
     SortOperator,
-    KeywordRenameOperator,
-    KeywordSortOperator,
+    RegexSortOperator,
     RegexRenameOperator,
-    KeywordDeleteOperator,
     RegexDeleteOperator,
     ScriptFilter,
     ScriptOperator,
@@ -367,7 +350,7 @@ export default {
     },
 
     processors() {
-      return this.process.map(p => {
+      return this.process.filter(p => AVAILABLE_PROCESSORS[p.type]).map(p => {
         return {
           component: AVAILABLE_PROCESSORS[p.type].component,
           args: p.args,

@@ -31,7 +31,9 @@
     </v-card-title>
     <v-card-text>
       正则表达式
-      <v-chip-group>
+      <v-chip-group
+        column
+      >
         <v-chip
             close
             close-icon="mdi-delete"

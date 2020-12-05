@@ -41,14 +41,15 @@
           </v-col>
         </v-row>
       </v-radio-group>
+      <v-textarea
+          solo
+          clearable
+          auto-grow
+          clear-icon="clear"
+          :label="hint"
+          v-model="content"
+      />
     </v-card-text>
-    <v-textarea
-        solo
-        clearable
-        clear-icon="clear"
-        :label="hint"
-        v-model="content"
-    />
   </v-card>
 </template>
 
