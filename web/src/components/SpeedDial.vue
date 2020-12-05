@@ -15,7 +15,7 @@
             fab
         >
           <v-icon v-if="opened">mdi-close</v-icon>
-          <v-icon v-else>apps</v-icon>
+          <v-icon v-else>mdi-plus</v-icon>
         </v-btn>
       </template>
       <v-btn

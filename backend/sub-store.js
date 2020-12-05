@@ -54,6 +54,8 @@ function service() {
         .get(getAllSubscriptions)
         .post(createSubscription);
 
+    $app.get("/api/sub/statistics/:name");
+
     // collection API
     $app.route("/api/collection/:name")
         .get(getCollection)
@@ -1584,14 +1586,15 @@ var ProxyUtils = (function () {
             };
         }
 
-        // sort by keywords
-        function KeywordSortOperator(keywords) {
+        // sort by regex
+        function RegexSortOperator(expressions) {
+            expressions = expressions.map(expr => new RegExp(expr));
             return {
-                name: "Keyword Sort Operator",
+                name: "Regex Sort Operator",
                 func: (proxies) =>
                     proxies.sort((a, b) => {
-                        const oA = getKeywordOrder(keywords, a.name);
-                        const oB = getKeywordOrder(keywords, b.name);
+                        const oA = getRegexOrder(expressions, a.name);
+                        const oB = getRegexOrder(expressions, b.name);
                         if (oA && !oB) return -1;
                         if (oB && !oA) return 1;
                         if (oA && oB) return oA < oB ? -1 : 1;
@@ -1601,31 +1604,15 @@ var ProxyUtils = (function () {
             };
         }
 
-        function getKeywordOrder(keywords, str) {
+        function getRegexOrder(expressions, str) {
             let order = null;
-            for (let i = 0; i < keywords.length; i++) {
-                if (str.indexOf(keywords[i]) !== -1) {
+            for (let i = 0; i < expressions.length; i++) {
+                if (expressions[i].test(str)) {
                     order = i + 1; // plus 1 is important! 0 will be treated as false!!!
                     break;
                 }
             }
             return order;
-        }
-
-        // rename by keywords
-        // keywords: [{old: "old", now: "now"}]
-        function KeywordRenameOperator(keywords) {
-            return {
-                name: "Keyword Rename Operator",
-                func: (proxies) => {
-                    return proxies.map((proxy) => {
-                        for (const {old, now} of keywords) {
-                            proxy.name = proxy.name.replaceAll(old, now).trim();
-                        }
-                        return proxy;
-                    });
-                },
-            };
         }
 
         // rename by regex
@@ -1641,21 +1628,6 @@ var ProxyUtils = (function () {
                         return proxy;
                     });
                 },
-            };
-        }
-
-        // delete keywords operator
-        // keywords: ['a', 'b', 'c']
-        function KeywordDeleteOperator(keywords) {
-            const keywords_ = keywords.map((k) => {
-                return {
-                    old: k,
-                    now: "",
-                };
-            });
-            return {
-                name: "Keyword Delete Operator",
-                func: KeywordRenameOperator(keywords_).func,
             };
         }
 
@@ -1693,16 +1665,10 @@ var ProxyUtils = (function () {
                     (function () {
                         // interface to get internal operators
                         const $get = (name, args) => {
-                            const item = AVAILABLE_OPERATORS[name];
+                            const item = PROXY_PROCESSORS[name];
                             return item(args);
                         };
-                        const $process = (item, proxies) => {
-                            if (item.name.indexOf("Filter") !== -1) {
-                                return ApplyOperator(item, proxies);
-                            } else if (item.name.indexOf("Operator") !== -1) {
-                                return ApplyFilter(item, proxies);
-                            }
-                        };
+                        const $process = ApplyProcessor;
                         eval(script);
                         output = operator(proxies);
                     })();
@@ -1712,19 +1678,6 @@ var ProxyUtils = (function () {
         }
 
         /**************************** Filters ***************************************/
-        // filter by keywords
-        function KeywordFilter({keywords = [], keep = true}) {
-            return {
-                name: "Keyword Filter",
-                func: (proxies) => {
-                    return proxies.map((proxy) => {
-                        const selected = keywords.some((k) => proxy.name.indexOf(k) !== -1);
-                        return keep ? selected : !selected;
-                    });
-                },
-            };
-        }
-
         // filter useless proxies
         function UselessFilter() {
             const KEYWORDS = [
@@ -1738,8 +1691,8 @@ var ProxyUtils = (function () {
             ];
             return {
                 name: "Useless Filter",
-                func: KeywordFilter({
-                    keywords: KEYWORDS,
+                func: RegexFilter({
+                    regex: KEYWORDS,
                     keep: false,
                 }).func,
             };
@@ -2031,7 +1984,6 @@ var ProxyUtils = (function () {
         }
 
         return {
-            "Keyword Filter": KeywordFilter,
             "Useless Filter": UselessFilter,
             "Region Filter": RegionFilter,
             "Regex Filter": RegexFilter,
@@ -2041,9 +1993,7 @@ var ProxyUtils = (function () {
             "Set Property Operator": SetPropertyOperator,
             "Flag Operator": FlagOperator,
             "Sort Operator": SortOperator,
-            "Keyword Sort Operator": KeywordSortOperator,
-            "Keyword Rename Operator": KeywordRenameOperator,
-            "Keyword Delete Operator": KeywordDeleteOperator,
+            "Regex Sort Operator": RegexSortOperator,
             "Regex Rename Operator": RegexRenameOperator,
             "Regex Delete Operator": RegexDeleteOperator,
             "Script Operator": ScriptOperator,

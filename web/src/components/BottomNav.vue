@@ -1,16 +1,11 @@
 <template>
   <v-bottom-navigation
       app
-      color="primary"
       fixed
       grow
+      color="primary"
       v-model="activeItem"
   >
-<!--    <v-btn :to="{path:'/dashboard'}" value="dashboard">-->
-<!--      <span>首页</span>-->
-<!--      <v-icon>speed</v-icon>-->
-<!--    </v-btn>-->
-
     <v-btn :to="{path: '/'}" value="subscription">
       <span>订阅</span>
       <v-icon>mdi-cloud</v-icon>
@@ -20,8 +15,6 @@
       <span>我的</span>
       <v-icon>mdi-account</v-icon>
     </v-btn>
-
-
   </v-bottom-navigation>
 
 </template>
