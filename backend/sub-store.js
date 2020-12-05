@@ -1588,11 +1588,11 @@ var ProxyUtils = (function () {
 
         // sort by regex
         function RegexSortOperator(expressions) {
-            expressions = expressions.map(expr => new RegExp(expr));
             return {
                 name: "Regex Sort Operator",
                 func: (proxies) =>
                     proxies.sort((a, b) => {
+                        expressions = expressions.map(expr => new RegExp(expr));
                         const oA = getRegexOrder(expressions, a.name);
                         const oB = getRegexOrder(expressions, b.name);
                         if (oA && !oB) return -1;
