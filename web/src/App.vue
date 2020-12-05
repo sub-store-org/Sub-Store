@@ -82,4 +82,5 @@ export default {
 
 <style lang="scss">
 @import "./assets/css/app";
+@import "./assets/css/general.css";
 </style>
