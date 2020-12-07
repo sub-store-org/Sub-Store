@@ -19,7 +19,7 @@ service();
 
 function service() {
     console.log(
-`
+        `
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
             𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 © 𝑷𝒆𝒏𝒈-𝒀𝑴
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
@@ -31,11 +31,19 @@ function service() {
     const COLLECTIONS_KEY = "collections";
     const RULES_KEY = "rules";
     const BUILT_IN_KEY = "builtin";
+    const ARTIFACTS_KEY = "artifacts";
+
+    const GIST_BACKUP_KEY = "Auto Generated Sub-Store Backup";
+    const GIST_BACKUP_FILE_NAME = "Sub-Store";
+    const ARTIFACT_REPOSITORY_KEY = "Sub-Store Artifacts Repository";
+
     // Initialization
     if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
     if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
     if (!$.read(SETTINGS_KEY)) $.write({}, SETTINGS_KEY);
     if (!$.read(RULES_KEY)) $.write({}, RULES_KEY);
+    if (!$.read(ARTIFACTS_KEY)) $.write({}, ARTIFACTS_KEY);
+
     $.write({
         rules: getBuiltInRules(),
     }, BUILT_IN_KEY);
@@ -88,6 +96,16 @@ function service() {
         .get(getSettings)
         .patch(updateSettings);
 
+    // Artifacts
+    $app.route("/api/artifacts")
+        .get(getAllArtifacts)
+        .post(createArtifact);
+
+    $app.route("/api/artifact/:name")
+        .get(getArtifact)
+        .patch(updateArtifact)
+        .delete(deleteArtifact);
+
     // utils
     $app.get("/api/utils/IP_API/:server", IP_API); // IP-API reverse proxy
     $app.post("/api/utils/refresh", refreshCache); // force refresh resource
@@ -118,6 +136,7 @@ function service() {
         const {name} = req.params;
         const {cache} = req.query;
         const platform = req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
+        const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
 
         $.info(`正在下载订阅：${name}`);
 
@@ -125,14 +144,7 @@ function service() {
         const sub = allSubs[name];
         if (sub) {
             try {
-                const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
-                const raw = await getResource(sub.url, useCache);
-                // parse proxies
-                let proxies = ProxyUtils.parse(raw);
-                // apply processors
-                proxies = await ProxyUtils.process(proxies, sub.process || []);
-                // produce
-                const output = ProxyUtils.produce(proxies, platform);
+                const output = await produceArtifact({type: 'subscription', item: sub, platform, useCache});
                 if (platform === 'JSON') {
                     res.set("Content-Type", "application/json;charset=utf-8").send(output);
                 } else {
@@ -274,47 +286,16 @@ function service() {
         const {name} = req.params;
         const {cache} = req.query || "false";
         const platform = req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
+        const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
 
         const allCollections = $.read(COLLECTIONS_KEY);
-        const allSubs = $.read(SUBS_KEY);
         const collection = allCollections[name];
 
         $.info(`正在下载组合订阅：${name}`);
 
         if (collection) {
-            const subs = collection['subscriptions'];
-            let proxies = [];
-            for (let i = 0; i < subs.length; i++) {
-                const sub = allSubs[subs[i]];
-                $.info(`正在处理子订阅：${sub.name}，进度--${100 * ((i + 1) / subs.length).toFixed(1)}% `);
-                try {
-                    const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
-                    const raw = await getResource(sub.url, useCache);
-                    // parse proxies
-                    let currentProxies = ProxyUtils.parse(raw)
-                    // apply processors
-                    currentProxies = await ProxyUtils.process(currentProxies, sub.process || []);
-                    // merge
-                    proxies = proxies.concat(currentProxies);
-                } catch (err) {
-                    $.error(`处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}! 该订阅已被跳过。`);
-                }
-            }
-            // apply processors
-            proxies = await ProxyUtils.process(proxies, collection.process || []);
-            if (proxies.length === 0) {
-                $.notify(
-                    `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
-                    `❌ 组合订阅：${name}中不含有效节点！`,
-                );
-                res.status(500).json({
-                    status: "failed",
-                    message: `❌ 组合订阅${name}中不含有${platform}可用的节点！`
-                });
-            }
-            // produce output
             try {
-                const output = ProxyUtils.produce(proxies, platform);
+                const output = await produceArtifact({type: "collection", item: collection, platform, useCache});
                 if (platform === 'JSON') {
                     res.set("Content-Type", "application/json;charset=utf-8").send(output);
                 } else {
@@ -323,7 +304,7 @@ function service() {
             } catch (err) {
                 $.notify(
                     `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
-                    `❌ 无法下载组合订阅：${name}！`,
+                    `❌ 下载组合订阅错误：${name}！`,
                     `🤔 原因：${err}`
                 );
                 res.status(500).json({
@@ -430,7 +411,7 @@ function service() {
         });
     }
 
-    // rule API
+    // rules API
     async function downloadRule(req, res) {
         const {name} = req.params;
         const {builtin} = req.query;
@@ -443,23 +424,7 @@ function service() {
             rule = $.read(BUILT_IN_KEY)['rules'][name];
         }
         if (rule) {
-            let rules = [];
-            for (let i = 0; i < rule.urls.length; i++) {
-                const url = rule.urls[i];
-                $.info(`正在处理URL：${url}，进度--${100 * ((i + 1) / rule.urls.length).toFixed(1)}% `);
-                try {
-                    const {body} = await $.http.get(url);
-                    const currentRules = RuleUtils.parse(body);
-                    rules = rules.concat(currentRules);
-                } catch (err) {
-                    $.error(`处理分流订阅中的URL: ${url}时出现错误：${err}! 该订阅已被跳过。`);
-                }
-            }
-            // remove duplicates
-            rules = await RuleUtils.process(rules, [{type: "Remove Duplicate Filter"}]);
-            // produce output
-            const output = RuleUtils.produce(rules, platform);
-            $.info(`分流订阅${name}下载成功，共包含${rules.length}条分流规则。`);
+            const output = await produceArtifact({type: "rule", item: rule, platform})
             res.send(output);
         } else {
             // rule not found
@@ -489,6 +454,173 @@ function service() {
         res.json({
             status: "success"
         });
+    }
+
+    // artifact API
+    async function getArtifact(req, res) {
+        const name = req.params.name;
+        const action = req.query.action;
+        const allArtifacts = $.read(ARTIFACTS_KEY);
+        const artifact = allArtifacts[name];
+
+        if (artifact) {
+            if (action) {
+                let item;
+                switch (artifact.type) {
+                    case 'subscription':
+                        item = $.read(SUBS_KEY)[artifact.source];
+                        break;
+                    case 'collection':
+                        item = $.read(COLLECTIONS_KEY)[artifact.source];
+                        break;
+                    case 'rule':
+                        item = $.read(RULES_KEY)[artifact.source];
+                        break;
+                }
+                const output = await produceArtifact({
+                    type: artifact.type,
+                    item,
+                    platform: artifact.platform
+                })
+                if (action === 'preview') {
+                    res.send(output);
+                } else if (action === 'sync') {
+                    $.info(`正在上传配置：${artifact.name}\n>>>`);
+                    console.log(JSON.stringify(artifact, null, 2));
+                    try {
+                        const resp = await syncArtifact({
+                            filename: artifact.name,
+                            content: output
+                        });
+                        artifact.updated = new Date().getTime();
+                        const body = JSON.parse(resp.body);
+                        artifact.url = body.files[artifact.name].raw_url.replace(/\/raw\/[^\/]*\/(.*)/, "/raw/$1");
+                        $.write(allArtifacts, ARTIFACTS_KEY);
+                        res.json({
+                            status: "success"
+                        });
+                    } catch (err) {
+                        res.status(500).json({
+                            status: "failed",
+                            message: err
+                        });
+                    }
+                }
+            } else {
+                res.json({
+                    status: "success",
+                    data: artifact
+                });
+            }
+        } else {
+            res.status(404).json({
+                status: "failed",
+                message: "未找到对应的配置！",
+            });
+        }
+    }
+
+    function createArtifact(req, res) {
+        const artifact = req.body;
+        $.info(`正在创建远程配置：${artifact.name}`);
+        const allArtifacts = $.read(ARTIFACTS_KEY);
+        if (allArtifacts[artifact.name]) {
+            res.status(500).json({
+                status: "failed",
+                message: `远程配置${artifact.name}已存在！`,
+            });
+        } else {
+            if (/^[\w-_.]*$/.test(artifact.name)) {
+                allArtifacts[artifact.name] = artifact;
+                $.write(allArtifacts, ARTIFACTS_KEY);
+                res.status(201).json({
+                    status: "success",
+                    data: artifact
+                });
+            } else {
+                res.status(500).json({
+                    status: "failed",
+                    message: `远程配置名称 ${artifact.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`,
+                });
+            }
+        }
+    }
+
+    function updateArtifact(req, res) {
+        const allArtifacts = $.read(SETTINGS_KEY);
+        const oldName = req.params.name;
+        const artifact = allArtifacts[oldName];
+        if (artifact) {
+            $.info(`正在更新远程配置：${artifact.name}`);
+            const newArtifact = req.body;
+            if (typeof newArtifact.name !== 'undefined' && !/^[\w-_.]*$/.test(newArtifact.name)) {
+                res.status(500).json({
+                    status: "failed",
+                    message: `远程配置名称 ${newArtifact.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`,
+                });
+            } else {
+                const merged = {
+                    ...artifact,
+                    ...newArtifact
+                };
+                allArtifacts[merged.name] = merged;
+                if (merged.name !== oldName) delete allArtifacts[oldName];
+                $.write(allArtifacts, ARTIFACTS_KEY);
+                res.json({
+                    status: "success",
+                    data: merged
+                });
+            }
+        } else {
+            res.status(404).json({
+                status: "failed",
+                message: "未找到对应的远程配置！",
+            });
+        }
+    }
+
+    async function deleteArtifact(req, res) {
+        const name = req.params.name;
+        try {
+            const allArtifacts = $.read(ARTIFACTS_KEY);
+            if (!allArtifacts[name]) throw new Error(`远程配置：${name}不存在！`);
+            // delete gist
+            await syncArtifact({
+                filename: name,
+                content: ""
+            });
+            // delete local cache
+            delete allArtifacts[name];
+            $.write(allArtifacts, ARTIFACTS_KEY);
+            res.json({
+                status: "success"
+            });
+        } catch (err) {
+            res.status(500).json({
+                status: "failed",
+                message: `无法删除远程配置：${name}, 原因：${err}`
+            });
+        }
+    }
+
+    function getAllArtifacts(req, res) {
+        const allArtifacts = $.read(ARTIFACTS_KEY);
+        res.json({
+            status: "success",
+            data: allArtifacts
+        });
+    }
+
+    async function syncArtifact({filename, content}) {
+        const {gistToken} = $.read(SETTINGS_KEY);
+        if (!gistToken) {
+            return Promise.reject("未设置Gist Token！");
+        }
+        const manager = new Gist({
+            token: gistToken,
+            key: ARTIFACT_REPOSITORY_KEY
+        });
+        return manager.upload({filename, content});
     }
 
     // util API
@@ -539,18 +671,21 @@ function service() {
                 message: "未找到Gist备份Token!"
             });
         } else {
-            const gist = new Gist("Auto Generated Sub-Store Backup", gistToken);
+            const gist = new Gist({
+                token: gistToken,
+                key: GIST_BACKUP_KEY
+            });
             try {
                 let content;
                 switch (action) {
                     case "upload":
                         content = $.read("#sub-store");
                         $.info(`上传备份中...`);
-                        await gist.upload(content);
+                        await gist.upload({filename: GIST_BACKUP_FILE_NAME, content});
                         break;
                     case "download":
                         $.info(`还原备份中...`);
-                        content = await gist.download();
+                        content = await gist.download(GIST_BACKUP_FILE_NAME);
                         // restore settings
                         $.write(content, "#sub-store");
                         break;
@@ -602,11 +737,11 @@ function service() {
         const resource = $.read(key);
 
         const timeKey = `#TIME-${Base64.safeEncode(url)}`;
-        const ONE_DAY = 24 * 60 * 60 * 1000;
-        const outdated = new Date().getTime() - $.read(timeKey) > ONE_DAY;
+        const ONE_HOUR = 60 * 60 * 1000;
+        const outdated = new Date().getTime() - $.read(timeKey) > ONE_HOUR;
 
         if (useCache && resource && !outdated) {
-            $.log(`Use cached for url: ${url}`);
+            $.log(`Use cached for resource: ${url}`);
             return resource;
         }
 
@@ -624,6 +759,63 @@ function service() {
             throw new Error("订阅内容为空！");
         }
         return body;
+    }
+
+    async function produceArtifact({type, item, platform, useCache} = {platform: "JSON", useCache: false}) {
+        if (type === 'subscription') {
+            const sub = item;
+            const raw = await getResource(sub.url, useCache);
+            // parse proxies
+            let proxies = ProxyUtils.parse(raw);
+            // apply processors
+            proxies = await ProxyUtils.process(proxies, sub.process || []);
+            // produce
+            return ProxyUtils.produce(proxies, platform);
+        } else if (type === 'collection') {
+            const allSubs = $.read(SUBS_KEY);
+            const collection = item;
+            const subs = collection['subscriptions'];
+            let proxies = [];
+            for (let i = 0; i < subs.length; i++) {
+                const sub = allSubs[subs[i]];
+                $.info(`正在处理子订阅：${sub.name}，进度--${100 * ((i + 1) / subs.length).toFixed(1)}% `);
+                try {
+                    const raw = await getResource(sub.url, useCache);
+                    // parse proxies
+                    let currentProxies = ProxyUtils.parse(raw)
+                    // apply processors
+                    currentProxies = await ProxyUtils.process(currentProxies, sub.process || []);
+                    // merge
+                    proxies = proxies.concat(currentProxies);
+                } catch (err) {
+                    $.error(`处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}! 该订阅已被跳过。`);
+                }
+            }
+            // apply own processors
+            proxies = await ProxyUtils.process(proxies, collection.process || []);
+            if (proxies.length === 0) {
+                throw new Error(`组合订阅中不含有效节点！`);
+            }
+            return ProxyUtils.produce(proxies, platform);
+        } else if (type === 'rule') {
+            const rule = item;
+            let rules = [];
+            for (let i = 0; i < rule.urls.length; i++) {
+                const url = rule.urls[i];
+                $.info(`正在处理URL：${url}，进度--${100 * ((i + 1) / rule.urls.length).toFixed(1)}% `);
+                try {
+                    const {body} = await $.http.get(url);
+                    const currentRules = RuleUtils.parse(body);
+                    rules = rules.concat(currentRules);
+                } catch (err) {
+                    $.error(`处理分流订阅中的URL: ${url}时出现错误：${err}! 该订阅已被跳过。`);
+                }
+            }
+            // remove duplicates
+            rules = await RuleUtils.process(rules, [{type: "Remove Duplicate Filter"}]);
+            // produce output
+            return RuleUtils.produce(rules, platform);
+        }
     }
 }
 
@@ -2876,6 +3068,7 @@ function FULL(length, bool) {
     return [...Array(length).keys()].map(() => bool);
 }
 
+// utils functions
 function clone(object) {
     return JSON.parse(JSON.stringify(object));
 }
@@ -3215,8 +3408,7 @@ function API(name = "untitled", debug = false) {
 /**
  * Gist backup
  */
-function Gist(backupKey, token) {
-    const FILE_NAME = "Sub-Store";
+function Gist({token, key}) {
     const http = HTTP({
         baseURL: "https://api.github.com",
         headers: {
@@ -3239,7 +3431,7 @@ function Gist(backupKey, token) {
         return http.get("/gists").then((response) => {
             const gists = JSON.parse(response.body);
             for (let g of gists) {
-                if (g.description === backupKey) {
+                if (g.description === key) {
                     return g.id;
                 }
             }
@@ -3247,10 +3439,10 @@ function Gist(backupKey, token) {
         });
     }
 
-    this.upload = async function (content) {
+    this.upload = async function ({filename, content}) {
         const id = await locate();
         const files = {
-            [FILE_NAME]: {content}
+            [filename]: {content}
         };
 
         if (id === -1) {
@@ -3258,7 +3450,7 @@ function Gist(backupKey, token) {
             return http.post({
                 url: "/gists",
                 body: JSON.stringify({
-                    description: backupKey,
+                    description: key,
                     public: false,
                     files
                 })
@@ -3272,7 +3464,7 @@ function Gist(backupKey, token) {
         }
     };
 
-    this.download = async function () {
+    this.download = async function (filename) {
         const id = await locate();
         if (id === -1) {
             return Promise.reject("未找到Gist备份！");
@@ -3281,7 +3473,7 @@ function Gist(backupKey, token) {
                 const {files} = await http
                     .get(`/gists/${id}`)
                     .then(resp => JSON.parse(resp.body));
-                const url = files[FILE_NAME].raw_url;
+                const url = files[filename].raw_url;
                 return await http.get(url).then(resp => resp.body);
             } catch (err) {
                 return Promise.reject(err);
