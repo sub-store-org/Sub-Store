@@ -14,6 +14,7 @@
     "chartist": "^0.11.4",
     "core-js": "^3.6.5",
     "material-design-icons-iconfont": "^5.0.1",
+    "timeago.js": "^4.0.2",
     "v-clipboard": "^2.2.3",
     "vee-validate": "^3.4.5",
     "vue": "^2.6.12",

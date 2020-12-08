@@ -15,6 +15,7 @@ const store = new Vuex.Store({
 
         subscriptions: {},
         collections: {},
+        artifacts: {},
         env: {},
 
         settings: {}
@@ -55,6 +56,12 @@ const store = new Vuex.Store({
             return axios.get("/collections").then(resp => {
                 const {data} = resp.data;
                 state.collections = data;
+            });
+        },
+        async FETCH_ARTIFACTS({state}) {
+            return axios.get("/artifacts").then(resp => {
+                const {data} = resp.data;
+                state.artifacts = data;
             });
         },
         // fetch env
