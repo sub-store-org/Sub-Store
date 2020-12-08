@@ -6,6 +6,7 @@ import Subscription from "@/views/Subscription";
 import Dashboard from "@/views/Dashboard";
 import User from "@/views/User";
 import SubEditor from "@/views/SubEditor";
+import Cloud from "@/views/Cloud";
 
 Vue.use(Router);
 
@@ -23,6 +24,12 @@ const router = new Router({
             name: "dashboard",
             component: Dashboard,
             meta: {title: "首页"}
+        },
+        {
+            path: "/cloud",
+            name: "artifact",
+            component: Cloud,
+            meta: {title: "同步"}
         },
         {
             path: "/user",

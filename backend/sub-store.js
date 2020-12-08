@@ -581,14 +581,18 @@ function service() {
 
     async function deleteArtifact(req, res) {
         const name = req.params.name;
+        $.info(`正在删除Artifact：${name}`);
         try {
             const allArtifacts = $.read(ARTIFACTS_KEY);
-            if (!allArtifacts[name]) throw new Error(`远程配置：${name}不存在！`);
-            // delete gist
-            await syncArtifact({
-                filename: name,
-                content: ""
-            });
+            const artifact = allArtifacts[name];
+            if (!artifact) throw new Error(`远程配置：${name}不存在！`);
+            if (artifact.updated) {
+                // delete gist
+                await syncArtifact({
+                    filename: name,
+                    content: ""
+                });
+            }
             // delete local cache
             delete allArtifacts[name];
             $.write(allArtifacts, ARTIFACTS_KEY);
