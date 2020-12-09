@@ -1,133 +1,117 @@
 <template>
-  <v-container fluid>
-    <v-spacer></v-spacer>
-    <v-list dense>
-      <v-subheader>单个订阅</v-subheader>
-      <v-list-item
-          v-for="sub in subscriptions"
-          :key="sub.name"
-          @click="preview(sub)"
-      >
-        <v-list-item-avatar dark>
-          <v-icon>mdi-cloud</v-icon>
-        </v-list-item-avatar>
-        <v-list-item-content>
-          <v-list-item-title v-text="sub.name" class="font-weight-medium"></v-list-item-title>
-          <v-list-item-title v-text="sub.url"></v-list-item-title>
-        </v-list-item-content>
-        <v-list-item-action>
-          <v-menu bottom left>
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                  icon
-                  v-bind="attrs"
-                  v-on="on"
-              >
-                <v-icon>mdi-dots-vertical</v-icon>
-              </v-btn>
-            </template>
-
-            <v-list>
-              <v-list-item
-                  v-for="(menuItem, i) in editMenu"
-                  :key="i"
-                  @click="subscriptionMenu(menuItem.action, sub)"
-              >
-                <v-list-item-content>{{ menuItem.title }}</v-list-item-content>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-        </v-list-item-action>
-      </v-list-item>
-    </v-list>
-    <v-divider></v-divider>
-    <v-list dense>
-      <v-subheader>组合订阅</v-subheader>
-      <v-list-item
-          v-for="collection in collections"
-          :key="collection.name"
-          @click="preview(collection, type='collection')"
-          dense
-      >
-        <v-list-item-avatar dark>
-          <v-icon>mdi-cloud</v-icon>
-        </v-list-item-avatar>
-        <v-list-item-content>
-          <v-list-item-title v-text="collection.name" class="font-weight-medium"></v-list-item-title>
-          <v-chip-group
-              column
-          >
-            <v-chip
-                v-for="subs in collection.subscriptions"
-                :key="subs"
-                small
-                class="ma-2 ml-0 mr-1 pa-2"
-                label
-            >
-              {{ subs }}
-            </v-chip>
-          </v-chip-group>
-        </v-list-item-content>
-        <v-list-item-action>
-          <v-menu bottom left>
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                  icon
-                  v-bind="attrs"
-                  v-on="on"
-              >
-                <v-icon>mdi-dots-vertical</v-icon>
-              </v-btn>
-            </template>
-
-            <v-list>
-              <v-list-item
-                  v-for="(menuItem, i) in editMenu"
-                  :key="i"
-                  @click="collectionMenu(menuItem.action, collection)"
-              >
-                <v-list-item-content>{{ menuItem.title }}</v-list-item-content>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-        </v-list-item-action>
-      </v-list-item>
-    </v-list>
-    <v-fab-transition>
-      <v-speed-dial
-          v-if="!showProxyList"
-          v-model="opened"
-          direction="top"
-          left
-          fab
-          absolute
-          bottom
-          transition="slide-y-reverse-transition"
-      >
-        <template #activator>
-          <v-btn
-              fab
-          >
-            <v-icon v-if="opened">mdi-close</v-icon>
-            <v-icon v-else>mdi-apps</v-icon>
-          </v-btn>
-        </template>
-        <v-btn
-            fab
-            color="primary"
-            @click="createSub"
-        >
-          <v-icon>mdi-plus</v-icon>
+  <v-container>
+    <v-card>
+      <v-card-title>
+        订阅
+        <v-spacer></v-spacer>
+        <v-btn icon @click="createSub">
+          <v-icon color="primary">mdi-plus-circle</v-icon>
         </v-btn>
-        <v-btn
-            fab
-            color="primary"
-            @click="createCol"
-        >
-          <v-icon>create_new_folder</v-icon>
+      </v-card-title>
+      <v-card-text>
+        <v-list dense>
+          <v-list-item
+              v-for="sub in subscriptions"
+              :key="sub.name"
+              @click="preview(sub)"
+          >
+            <v-list-item-avatar dark>
+              <v-icon>mdi-cloud</v-icon>
+            </v-list-item-avatar>
+            <v-list-item-content>
+              <v-list-item-title v-text="sub.name" class="font-weight-medium"></v-list-item-title>
+              <v-list-item-title v-text="sub.url"></v-list-item-title>
+            </v-list-item-content>
+            <v-list-item-action>
+              <v-menu bottom left>
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn
+                      icon
+                      v-bind="attrs"
+                      v-on="on"
+                  >
+                    <v-icon>mdi-dots-vertical</v-icon>
+                  </v-btn>
+                </template>
+
+                <v-list>
+                  <v-list-item
+                      v-for="(menuItem, i) in editMenu"
+                      :key="i"
+                      @click="subscriptionMenu(menuItem.action, sub)"
+                  >
+                    <v-list-item-content>{{ menuItem.title }}</v-list-item-content>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </v-list-item-action>
+          </v-list-item>
+        </v-list>
+      </v-card-text>
+    </v-card>
+
+    <v-card>
+      <v-card-title>
+        组合订阅
+        <v-spacer></v-spacer>
+        <v-btn icon @click="createCol">
+          <v-icon color="primary">mdi-plus-circle</v-icon>
         </v-btn>
-      </v-speed-dial>
-    </v-fab-transition>
+      </v-card-title>
+      <v-card-text>
+        <v-list dense>
+          <v-list-item
+              v-for="collection in collections"
+              :key="collection.name"
+              @click="preview(collection, type='collection')"
+              dense
+          >
+            <v-list-item-avatar dark>
+              <v-icon>mdi-cloud</v-icon>
+            </v-list-item-avatar>
+            <v-list-item-content>
+              <v-list-item-title v-text="collection.name" class="font-weight-medium"></v-list-item-title>
+              <v-chip-group
+                  column
+              >
+                <v-chip
+                    v-for="subs in collection.subscriptions"
+                    :key="subs"
+                    small
+                    class="ma-2 ml-0 mr-1 pa-2"
+                    label
+                >
+                  {{ subs }}
+                </v-chip>
+              </v-chip-group>
+            </v-list-item-content>
+            <v-list-item-action>
+              <v-menu bottom left>
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn
+                      icon
+                      v-bind="attrs"
+                      v-on="on"
+                  >
+                    <v-icon>mdi-dots-vertical</v-icon>
+                  </v-btn>
+                </template>
+
+                <v-list>
+                  <v-list-item
+                      v-for="(menuItem, i) in editMenu"
+                      :key="i"
+                      @click="collectionMenu(menuItem.action, collection)"
+                  >
+                    <v-list-item-content>{{ menuItem.title }}</v-list-item-content>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </v-list-item-action>
+          </v-list-item>
+        </v-list>
+      </v-card-text>
+    </v-card>
     <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList" scrollable>
       <v-card>
         <v-card-title class="pa-0">
