@@ -3123,7 +3123,10 @@ function HTTP(defaultOptions = {baseURL: ""}) {
 
         let worker;
         if (isQX) {
-            worker = $task.fetch({method, ...options});
+            if (options.headers) {
+                options.headers = JSON.stringify(options.headers);
+            }
+            worker = $task.fetch({method, url: options.url, headers: options.headers, body: options.body});
         } else if (isLoon || isSurge || isNode) {
             worker = new Promise((resolve, reject) => {
                 const request = isNode ? require("request") : $httpClient;

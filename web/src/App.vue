@@ -60,6 +60,7 @@ export default {
 
   created() {
     initStore(this.$store);
+    // this.$vuetify.theme.dark = !this.$vuetify.theme.dark;
   },
 
   computed: {

@@ -34,8 +34,9 @@
         >
           <v-subheader class="pl-0">包含的订阅</v-subheader>
           <v-list-item v-for="sub in availableSubs" :key="sub.name">
-            <v-list-item-avatar dark>
-              <v-icon>mdi-cloud</v-icon>
+            <v-list-item-avatar>
+              <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
+              <v-img :src="sub.icon" v-else color="blue"/>
             </v-list-item-avatar>
             <v-list-item-content>
               {{ sub.name }}
@@ -48,6 +49,16 @@
             />
           </v-list-item>
         </v-list>
+        <v-textarea
+            v-model="options.icon"
+            class="mt-2"
+            rows="2"
+            label="图标链接"
+            placeholder="填入想要展示的图标链接，可选。"
+            clearable
+            auto-grow
+            clear-icon="clear"
+        />
       </v-form>
       <v-card-actions>
         <v-spacer></v-spacer>
@@ -63,7 +74,7 @@
           <v-card class="pl-4 pr-4 pb-4 pt-4">
             <v-card-title>
               <v-icon left>cloud_circle</v-icon>
-              配置同步
+              配置导入
               <v-spacer/>
               <v-btn icon @click="share">
                 <v-icon small>share</v-icon>
@@ -312,6 +323,7 @@ export default {
       options: {
         name: "",
         url: "",
+        icon: "",
         useless: "KEEP",
         udp: "DEFAULT",
         "skip-cert-verify": "DEFAULT",
@@ -362,6 +374,7 @@ export default {
     config() {
       const output = {
         name: this.options.name,
+        icon: this.options.icon,
         process: []
       };
       if (this.isCollection) {
@@ -523,6 +536,7 @@ function loadProcess(options, source, isCollection = false) {
   options = {
     ...options,
     name: source.name,
+    icon: source.icon,
   };
   if (isCollection) {
     options.subscriptions = source.subscriptions;
