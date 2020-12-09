@@ -2,7 +2,7 @@
   <v-container>
     <v-card>
       <v-card-title>
-        配置
+        同步配置
         <v-spacer></v-spacer>
         <!--      <v-btn icon>-->
         <!--        <v-icon>mdi-cloud-circle</v-icon>-->
@@ -279,7 +279,7 @@ export default {
     },
 
     setArtifactType(type) {
-      this.newArtifactType = type;
+      this.newArtifact.type = type;
       this.newArtifact.source = "";
     },
 
