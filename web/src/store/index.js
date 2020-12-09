@@ -17,7 +17,6 @@ const store = new Vuex.Store({
         collections: {},
         artifacts: {},
         env: {},
-
         settings: {}
     },
 
@@ -69,6 +68,11 @@ const store = new Vuex.Store({
             return axios.get("/utils/env").then(resp => {
                 state.env = resp.data;
             })
+        },
+        async FETCH_SETTINGS({state}) {
+            return axios.get("/settings").then(resp => {
+                state.settings = resp.data;
+            });
         },
         // update subscriptions
         async UPDATE_SUBSCRIPTION({dispatch}, {name, sub}) {

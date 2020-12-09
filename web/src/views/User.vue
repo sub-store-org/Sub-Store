@@ -37,7 +37,7 @@
         <v-icon small>mdi-cloud</v-icon>
       </v-card-title>
       <v-card-text>
-        最近同步于：{{getSyncTime()}}
+        最近同步于：{{syncTime}}
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
@@ -66,7 +66,17 @@ export default {
     axios.get(`/settings`).then(resp => {
       this.settings.gistToken = resp.data.gistToken;
       this.settings.githubUser = resp.data.githubUser;
+      this.settings.syncTime = resp.data.syncTime;
     });
+  },
+  computed: {
+    syncTime(){
+      if (this.settings.syncTime) {
+        return format(this.settings.syncTime, "zh_CN");
+      } else {
+        return "从未同步";
+      }
+    }
   },
   methods: {
     save() {
@@ -74,6 +84,7 @@ export default {
       this.$store.commit("SET_SUCCESS_MESSAGE", `保存成功！`);
     },
 
+    // eslint-disable-next-line no-unused-vars
     sync(action) {
       if (!this.settings.gistToken) {
         this.$store.commit("SET_ERROR_MESSAGE", "未设置GitHub Token！");
@@ -97,14 +108,9 @@ export default {
       store.dispatch("FETCH_COLLECTIONS").catch(() => {
         showError(`无法拉取组合订阅列表！`);
       });
-    },
-
-    getSyncTime() {
-      if (this.settings.syncTime) {
-        return format(this.settings.syncTime, "zh_CN");
-      } else {
-        return "从未同步";
-      }
+      store.dispatch("FETCH_ARTIFACTS").catch(() => {
+        showError(`无法拉取同步配置！`);
+      });
     }
   }
 }
