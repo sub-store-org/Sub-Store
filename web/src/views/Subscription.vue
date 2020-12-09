@@ -2,7 +2,7 @@
   <v-container fluid>
     <v-card>
       <v-card-title>
-        订阅
+        单个订阅
         <v-spacer></v-spacer>
         <v-btn icon @click="createSub">
           <v-icon color="primary">mdi-plus-circle</v-icon>
@@ -15,9 +15,11 @@
               :key="sub.name"
               @click="preview(sub)"
           >
-            <v-list-item-avatar dark>
-              <v-icon>mdi-cloud</v-icon>
+            <v-list-item-avatar>
+              <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
+              <v-img :src="sub.icon" v-else color="blue"/>
             </v-list-item-avatar>
+
             <v-list-item-content>
               <v-list-item-title v-text="sub.name" class="font-weight-medium"></v-list-item-title>
               <v-list-item-title v-text="sub.url"></v-list-item-title>
@@ -66,8 +68,9 @@
               @click="preview(collection, type='collection')"
               dense
           >
-            <v-list-item-avatar dark>
-              <v-icon>mdi-cloud</v-icon>
+            <v-list-item-avatar>
+              <v-icon v-if="!collection.icon" color="teal darken-1">mdi-cloud</v-icon>
+              <v-img :src="collection.icon" v-else color="blue"/>
             </v-list-item-avatar>
             <v-list-item-content>
               <v-list-item-title v-text="collection.name" class="font-weight-medium"></v-list-item-title>

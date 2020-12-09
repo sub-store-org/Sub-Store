@@ -142,7 +142,7 @@
                 </v-btn>
               </template>
               <v-list dense>
-                <v-list-item @click="copy(artifact.url)">
+                <v-list-item @click="copy(artifact.url)" v-if="artifact.url">
                   <v-list-item-title>复制</v-list-item-title>
                 </v-list-item>
                 <v-list-item @click="preview(artifact.name)">
