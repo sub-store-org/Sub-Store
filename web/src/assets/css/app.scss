@@ -231,12 +231,12 @@ html, body {
   }
 }
 
-.v-avatar {
-  .v-icon, .v-image, .v-responsive__content, img, svg {
-    -webkit-box-shadow: 0 16px 38px -12px rgba(0, 0, 0, 0.56), 0 4px 25px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(0, 0, 0, 0.2);
-    box-shadow: 0 16px 38px -12px rgba(0, 0, 0, 0.56), 0 4px 25px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(0, 0, 0, 0.2);
-  }
-}
+//.v-avatar {
+//  .v-icon, .v-image, .v-responsive__content, img, svg {
+//    -webkit-box-shadow: 0 16px 38px -12px rgba(0, 0, 0, 0.56), 0 4px 25px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(0, 0, 0, 0.2);
+//    box-shadow: 0 16px 38px -12px rgba(0, 0, 0, 0.56), 0 4px 25px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(0, 0, 0, 0.2);
+//  }
+//}
 
 .v-list-item__icon {
   margin: 12px 0;
@@ -350,12 +350,6 @@ html, body {
   background-color: #fff;
   margin-right: 17px;
   margin-bottom: 2px;
-
-  &:hover {
-    background-color: #fff;
-    -webkit-box-shadow: 0 14px 26px -12px hsla(0, 0%, 60%, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px hsla(0, 0%, 60%, 0.2);
-    box-shadow: 0 14px 26px -12px hsla(0, 0%, 60%, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px hsla(0, 0%, 60%, 0.2);
-  }
 }
 
 .v-toolbar__content {
@@ -441,12 +435,6 @@ html, body {
 
 .theme--light.v-btn:not(.v-btn--flat):not(.v-btn--text):not(.v-btn--outlined) {
   background-color: #999;
-  //color: #fff;
-
-  &:hover {
-    background-color: #999;
-    color: #fff;
-  }
 }
 
 .v-btn--contained {
