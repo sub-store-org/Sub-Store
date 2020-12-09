@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container fluid>
     <v-card>
       <v-card-title>
         同步配置
@@ -190,12 +190,6 @@ export default {
         ]
       }
     }
-  },
-  created() {
-    axios.get("/artifacts").then(resp => {
-      const {data} = resp.data;
-      this.artifacts = Object.keys(data).map(k => data[k]);
-    })
   },
   computed: {
     artifacts() {

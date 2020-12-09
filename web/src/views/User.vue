@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container fluid>
     <v-card>
       <v-card-title>
         GitHub 配置
@@ -53,23 +53,10 @@ import {axios, showError} from "@/utils";
 import {format} from "timeago.js";
 
 export default {
-  data() {
-    return {
-      settings: {
-        gistToken: "",
-        githubUser: "",
-        syncTime: ""
-      }
-    }
-  },
-  created() {
-    axios.get(`/settings`).then(resp => {
-      this.settings.gistToken = resp.data.gistToken;
-      this.settings.githubUser = resp.data.githubUser;
-      this.settings.syncTime = resp.data.syncTime;
-    });
-  },
   computed: {
+    settings() {
+      return this.$store.state.settings;
+    },
     syncTime(){
       if (this.settings.syncTime) {
         return format(this.settings.syncTime, "zh_CN");
@@ -81,6 +68,7 @@ export default {
   methods: {
     save() {
       axios.patch(`/settings`, this.settings);
+      this.$store.dispatch("FETCH_SETTINGS");
       this.$store.commit("SET_SUCCESS_MESSAGE", `保存成功！`);
     },
 
