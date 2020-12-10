@@ -3076,10 +3076,10 @@ function clone(object) {
 function buildRegex(str, ...options) {
     options = options.join("");
     if (str.startsWith("(?i)")) {
-        str = str.substring(4);
+        str = str.substr(4);
         return new RegExp(str, 'i' + options);
     } else {
-        return new RegExp(str + options);
+        return new RegExp(str, options);
     }
 }
 
