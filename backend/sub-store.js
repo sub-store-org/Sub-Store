@@ -77,9 +77,6 @@ function service() {
     // rules API
     $app.get("/download/rule/:name", downloadRule);
 
-    // gist backup
-    $app.get("/api/backup");
-
     // Storage management
     $app.route("/api/storage")
         .get((req, res) => {
@@ -1788,7 +1785,7 @@ var ProxyUtils = (function () {
                 name: "Regex Sort Operator",
                 func: (proxies) =>
                     proxies.sort((a, b) => {
-                        expressions = expressions.map(expr => new RegExp(expr));
+                        expressions = expressions.map(expr => buildRegex(expr));
                         const oA = getRegexOrder(expressions, a.name);
                         const oB = getRegexOrder(expressions, b.name);
                         if (oA && !oB) return -1;
@@ -1819,7 +1816,7 @@ var ProxyUtils = (function () {
                 func: (proxies) => {
                     return proxies.map((proxy) => {
                         for (const {expr, now} of regex) {
-                            proxy.name = proxy.name.replace(new RegExp(expr, "g"), now).trim();
+                            proxy.name = proxy.name.replace(buildRegex(expr, "g"), now).trim();
                         }
                         return proxy;
                     });
@@ -1923,8 +1920,7 @@ var ProxyUtils = (function () {
                 func: (proxies) => {
                     return proxies.map((proxy) => {
                         const selected = regex.some((r) => {
-                            r = new RegExp(r);
-                            return r.test(proxy.name);
+                            return buildRegex(r).test(proxy.name);
                         });
                         return keep ? selected : !selected;
                     });
@@ -3075,6 +3071,16 @@ function FULL(length, bool) {
 // utils functions
 function clone(object) {
     return JSON.parse(JSON.stringify(object));
+}
+
+function buildRegex(str, ...options) {
+    options = options.join("");
+    if (str.startsWith("(?i)")) {
+        str = str.substring(4);
+        return new RegExp(str, 'i' + options);
+    } else {
+        return new RegExp(str + options);
+    }
 }
 
 /****************************************** Own Libraries *******************************************************/
