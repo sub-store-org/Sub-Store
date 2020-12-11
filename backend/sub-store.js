@@ -1783,9 +1783,9 @@ var ProxyUtils = (function () {
         function RegexSortOperator(expressions) {
             return {
                 name: "Regex Sort Operator",
-                func: (proxies) =>
-                    proxies.sort((a, b) => {
-                        expressions = expressions.map(expr => buildRegex(expr));
+                func: (proxies) => {
+                    expressions = expressions.map(expr => buildRegex(expr));
+                    return proxies.sort((a, b) => {
                         const oA = getRegexOrder(expressions, a.name);
                         const oB = getRegexOrder(expressions, b.name);
                         if (oA && !oB) return -1;
@@ -1793,7 +1793,9 @@ var ProxyUtils = (function () {
                         if (oA && oB) return oA < oB ? -1 : 1;
                         if ((!oA && !oB) || (oA && oB && oA === oB))
                             return a.name < b.name ? -1 : 1; // fallback to normal sort
-                    }),
+                    })
+                }
+
             };
         }
 
@@ -3074,6 +3076,7 @@ function clone(object) {
 }
 
 function buildRegex(str, ...options) {
+    console.log("OOOOOOO: " + str);
     options = options.join("");
     if (str.startsWith("(?i)")) {
         str = str.substr(4);
