@@ -7,17 +7,21 @@ Vue.use(Vuex);
 const store = new Vuex.Store({
     state: {
         title: "Sub-Store",
-        isDarkMode: false,
         clipboard: "",
 
         successMessage: "",
         errorMessage: "",
+        snackbarTimer: "",
 
         subscriptions: {},
         collections: {},
         artifacts: {},
         env: {},
-        settings: {}
+        settings: {
+            theme: {
+                darkMode: false
+            }
+        }
     },
 
     mutations: {
@@ -28,8 +32,9 @@ const store = new Vuex.Store({
         SET_NAV_TITLE(state, title) {
             state.title = title;
         },
-        SET_DARK_MODE(state, isDarkMode) {
-            state.isDarkMode = isDarkMode
+
+        SET_SNACK_BAR_TIMER(state, timer) {
+            state.snackbarTimer = timer;
         },
 
         SET_SUCCESS_MESSAGE(state, msg) {
@@ -40,6 +45,9 @@ const store = new Vuex.Store({
             state.errorMessage = msg;
         },
 
+        SET_DARK_MODE(state, on) {
+            state.settings.theme.darkMode = on;
+        }
     },
 
     actions: {
@@ -71,7 +79,12 @@ const store = new Vuex.Store({
         },
         async FETCH_SETTINGS({state}) {
             return axios.get("/settings").then(resp => {
-                state.settings = resp.data;
+                state.settings = {
+                    theme: {
+                        darkMode: false
+                    },
+                    ...resp.data
+                }
             });
         },
         // update subscriptions

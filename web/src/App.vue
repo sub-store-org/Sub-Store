@@ -34,20 +34,20 @@ import BottomNav from "@/components/BottomNav";
 import {showError} from "@/utils";
 
 
-function initStore(store) {
-  store.dispatch('FETCH_SUBSCRIPTIONS').catch(() => {
+async function initStore(store) {
+  await store.dispatch('FETCH_SUBSCRIPTIONS').catch(() => {
     showError(`无法拉取订阅列表!`);
   });
-  store.dispatch("FETCH_COLLECTIONS").catch(() => {
+  await store.dispatch("FETCH_COLLECTIONS").catch(() => {
     showError(`无法拉取组合订阅列表！`);
   });
-  store.dispatch("FETCH_ARTIFACTS").catch(() => {
+  await store.dispatch("FETCH_ARTIFACTS").catch(() => {
     showError(`无法拉取配置列表！`);
   });
-  store.dispatch("FETCH_SETTINGS").catch(() => {
+  await store.dispatch("FETCH_SETTINGS").catch(() => {
     showError(`无法拉取配置列表！`);
   });
-  store.dispatch("FETCH_ENV").catch(() => {
+  await store.dispatch("FETCH_ENV").catch(() => {
     showError(`无法获取当前运行环境！`);
   });
 }
@@ -60,7 +60,12 @@ export default {
 
   created() {
     initStore(this.$store);
-    // this.$vuetify.theme.dark = !this.$vuetify.theme.dark;
+    this.$store.watch(
+        (state => state.settings.theme.darkMode),
+        (value => {
+          this.$vuetify.theme.dark = value
+        })
+    )
   },
 
   computed: {
@@ -74,15 +79,23 @@ export default {
 
   watch: {
     successMessage() {
-      setTimeout(() => {
+      if (this.$store.state.snackbarTimer) {
+        clearTimeout(this.$store.state.snackbarTimer);
+      }
+      const timer = setTimeout(() => {
         this.$store.commit("SET_SUCCESS_MESSAGE", "");
-      }, 1000);
+      }, 3000);
+      this.$store.commit("SET_SNACK_BAR_TIMER", timer);
     },
     errorMessage() {
-      setTimeout(() => {
+      if (this.$store.state.snackbarTimer) {
+        clearTimeout(this.$store.state.snackbarTimer);
+      }
+      const timer = setTimeout(() => {
         this.$store.commit("SET_ERROR_MESSAGE", "");
-      }, 1000);
-    },
+      }, 3000);
+      this.$store.commit("SET_SNACK_BAR_TIMER", timer);
+    }
   }
 }
 </script>

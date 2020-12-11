@@ -76,6 +76,13 @@ function service() {
 
     // rules API
     $app.get("/download/rule/:name", downloadRule);
+    $app.route("/api/rules")
+        .post(createRule)
+        .get(getAllRules);
+    $app.route("/api/rule/:name")
+        .patch(updateRule)
+        .delete(deleteRule)
+        .get(getRule);
 
     // Storage management
     $app.route("/api/storage")
@@ -433,6 +440,22 @@ function service() {
                 status: "failed",
             });
         }
+    }
+
+    function createRule(req, res) {
+
+    }
+    function deleteRule(req, res) {
+
+    }
+    function updateRule(req, res) {
+
+    }
+    function getAllRules(req, res) {
+
+    }
+    function getRule(req, res) {
+
     }
 
     // settings API

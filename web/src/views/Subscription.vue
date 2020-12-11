@@ -2,6 +2,7 @@
   <v-container fluid>
     <v-card>
       <v-card-title>
+        <v-icon left>local_airport</v-icon>
         单个订阅
         <v-spacer></v-spacer>
         <v-btn icon @click="createSub">
@@ -17,7 +18,7 @@
           >
             <v-list-item-avatar>
               <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="sub.icon" v-else color="blue"/>
+              <v-img :src="sub.icon" v-else :class="sub.icon.indexOf('#invert') !== -1 ? 'invert' : ''"/>
             </v-list-item-avatar>
 
             <v-list-item-content>
@@ -54,6 +55,7 @@
 
     <v-card>
       <v-card-title>
+        <v-icon left>work_outline</v-icon>
         组合订阅
         <v-spacer></v-spacer>
         <v-btn icon @click="createCol">
@@ -70,7 +72,7 @@
           >
             <v-list-item-avatar>
               <v-icon v-if="!collection.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="collection.icon" v-else color="blue"/>
+              <v-img :src="collection.icon" v-else :class="collection.icon.indexOf('#invert') !== -1 ? 'invert' : ''"/>
             </v-list-item-avatar>
             <v-list-item-content>
               <v-list-item-title v-text="collection.name" class="font-weight-medium"></v-list-item-title>
@@ -166,6 +168,14 @@ export default {
           title: "删除",
           action: "DELETE"
         },
+        // {
+        //   title: "上移",
+        //   action: "MOVE_UP"
+        // },
+        // {
+        //   title: "下移",
+        //   action: "MOVE_DOWN"
+        // }
       ]
     }
   },
@@ -174,9 +184,14 @@ export default {
     subscriptionBaseURL() {
       return BACKEND_BASE;
     },
-    subscriptions() {
-      const subs = this.$store.state.subscriptions;
-      return Object.keys(subs).map(k => subs[k]);
+    subscriptions: {
+      get(){
+        const subs = this.$store.state.subscriptions;
+        return Object.keys(subs).map(k => subs[k]);
+      },
+      set(){
+
+      }
     },
     collections() {
       const cols = this.$store.state.collections;
@@ -197,6 +212,12 @@ export default {
           break
         case 'DELETE':
           this.$store.dispatch("DELETE_SUBSCRIPTION", sub.name);
+          break
+        case 'MOVE_UP':
+          this.moveUpSubscription(sub.name);
+          break
+        case 'MOVE_DOWN':
+
           break
       }
     },
@@ -232,15 +253,29 @@ export default {
     },
     refreshProxyList() {
       this.$refs.proxyList.refresh();
-    }
+    },
+    moveUpSubscription(name) {
+      let index = 0;
+      for (; index < this.subscriptions.length; index++) {
+        if (this.subscriptions[index].name === name) {
+          break;
+        }
+      }
+      if (index === 0) return;
+      // otherwise swap with previous one
+      const prev = this.subscriptions[index - 1];
+      const cur = this.subscriptions[index];
+      this.subscriptions.splice(index - 1, 2, cur, prev);
+    },
+    // moveDownSubscription(name) {
+    //
+    // }
   }
 }
 </script>
 
 <style scoped>
-.top-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 999;
+.invert {
+  filter: invert(100%);
 }
 </style>
