@@ -2,14 +2,12 @@
   <v-container fluid>
     <v-card>
       <v-card-title>
+        <v-icon left>mdi-cloud</v-icon>
         同步配置
         <v-spacer></v-spacer>
-        <!--      <v-btn icon>-->
-        <!--        <v-icon>mdi-cloud-circle</v-icon>-->
-        <!--      </v-btn>-->
-        <!--      <v-btn icon>-->
-        <!--        <v-icon>mdi-refresh-circle</v-icon>-->
-        <!--      </v-btn>-->
+        <v-btn icon @click="openGist()">
+          <v-icon>visibility</v-icon>
+        </v-btn>
         <v-dialog max-width="400px" v-model="addArtifactDialog">
           <template #activator="{on}">
             <v-btn icon v-on="on">
@@ -195,6 +193,9 @@ export default {
     artifacts() {
       const items = this.$store.state.artifacts;
       return Object.keys(items).map(k => items[k]);
+    },
+    settings() {
+      return this.$store.state.settings;
     }
   },
   methods: {
@@ -287,6 +288,10 @@ export default {
           data = this.$store.state.collections;
       }
       return Object.keys(data);
+    },
+
+    openGist() {
+      window.open(`https://gist.github.com${ '/' + this.settings.githubUser || ''}`)
     }
   }
 }

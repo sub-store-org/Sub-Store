@@ -36,7 +36,7 @@
           <v-list-item v-for="sub in availableSubs" :key="sub.name">
             <v-list-item-avatar>
               <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="sub.icon" v-else color="blue"/>
+              <v-img :src="sub.icon" v-else :class="sub.icon.indexOf('#invert') !== -1 ? 'invert' : ''"/>
             </v-list-item-avatar>
             <v-list-item-content>
               {{ sub.name }}
@@ -571,7 +571,7 @@ function uuidv4() {
 </script>
 
 <style>
-.v-label {
-  font-size: small;
+.invert {
+  filter: invert(100%);
 }
 </style>
