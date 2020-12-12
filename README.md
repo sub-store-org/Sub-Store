@@ -15,6 +15,8 @@ Core functionalities:
 2. Subscription formatting.
 3. Collect multiple subscriptions in one URL.
 ## 1. Subscription Conversion
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store?ref=badge_shield)
+
 ### Supported Input Formats
 - [x] SS URI
 - [x] SSR URI
@@ -71,6 +73,9 @@ npm start
 
 ## LICENSE
 This project is under the GPL V3 LICENSE.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store?ref=badge_large)
 
 ## Acknowledgements
 Special thanks to @KOP-XIAO for his awesome resource-parser. Please give a [star](https://github.com/KOP-XIAO/QuantumultX) for his great work!
