@@ -7,15 +7,16 @@
 
 > This project is still under active development.
 
-[Doc](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46) [文档](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46)
-
+[![Docs](https://readthedocs.org/projects/yt2mp3/badge/?version=latest)](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46)
+[![Issues](https://img.shields.io/github/issues-raw/Peng-YM/Sub-Store.svg?maxAge=25000)](https://github.com/Peng-YM/Sub-Store/issues)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store?ref=badge_shield)
+[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
 
 Core functionalities:
 1. Conversion among various formats.
 2. Subscription formatting.
 3. Collect multiple subscriptions in one URL.
 ## 1. Subscription Conversion
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store?ref=badge_shield)
 
 ### Supported Input Formats
 - [x] SS URI
