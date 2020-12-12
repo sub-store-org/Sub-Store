@@ -3099,7 +3099,6 @@ function clone(object) {
 }
 
 function buildRegex(str, ...options) {
-    console.log("OOOOOOO: " + str);
     options = options.join("");
     if (str.startsWith("(?i)")) {
         str = str.substr(4);
