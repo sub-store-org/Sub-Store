@@ -18,7 +18,7 @@
           >
             <v-list-item-avatar>
               <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="sub.icon" v-else :class="sub.icon.indexOf('#invert') !== -1 ? 'invert' : ''"/>
+              <v-img :src="sub.icon" v-else :class="getIconClass(sub.icon)"/>
             </v-list-item-avatar>
 
             <v-list-item-content>
@@ -72,7 +72,7 @@
           >
             <v-list-item-avatar>
               <v-icon v-if="!collection.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="collection.icon" v-else :class="collection.icon.indexOf('#invert') !== -1 ? 'invert' : ''"/>
+              <v-img :src="collection.icon" v-else :class="getIconClass(collection.icon)"/>
             </v-list-item-avatar>
             <v-list-item-content>
               <v-list-item-title v-text="collection.name" class="font-weight-medium"></v-list-item-title>
@@ -123,7 +123,9 @@
           <v-toolbar>
             <v-icon>mdi-cloud</v-icon>
             <v-spacer></v-spacer>
-            <v-toolbar-title><h4>节点列表</h4></v-toolbar-title>
+            <v-toolbar-title class="flex text-xs-center">
+              <h4>节点列表</h4>
+            </v-toolbar-title>
             <v-spacer></v-spacer>
             <v-toolbar-items>
               <v-btn icon @click="refreshProxyList" v-if="sub">
@@ -254,22 +256,9 @@ export default {
     refreshProxyList() {
       this.$refs.proxyList.refresh();
     },
-    moveUpSubscription(name) {
-      let index = 0;
-      for (; index < this.subscriptions.length; index++) {
-        if (this.subscriptions[index].name === name) {
-          break;
-        }
-      }
-      if (index === 0) return;
-      // otherwise swap with previous one
-      const prev = this.subscriptions[index - 1];
-      const cur = this.subscriptions[index];
-      this.subscriptions.splice(index - 1, 2, cur, prev);
-    },
-    // moveDownSubscription(name) {
-    //
-    // }
+    getIconClass(url) {
+      return url.indexOf('#invert') !== -1 && !this.$store.state.settings.theme.darkMode ? 'invert' : ''
+    }
   }
 }
 </script>

@@ -36,7 +36,7 @@
           <v-list-item v-for="sub in availableSubs" :key="sub.name">
             <v-list-item-avatar>
               <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="sub.icon" v-else :class="sub.icon.indexOf('#invert') !== -1 ? 'invert' : ''"/>
+              <v-img :src="sub.icon" v-else :class="getIconClass(sub.icon)"/>
             </v-list-item-avatar>
             <v-list-item-content>
               {{ sub.name }}
@@ -404,6 +404,9 @@ export default {
     }
   },
   methods: {
+    getIconClass(url) {
+      return url.indexOf('#invert') !== -1 && !this.$store.state.settings.theme.darkMode ? 'invert' : ''
+    },
     save() {
       if (this.isCollection) {
         if (this.options.name && this.selected) {
@@ -570,7 +573,7 @@ function uuidv4() {
 }
 </script>
 
-<style>
+<style scoped>
 .invert {
   filter: invert(100%);
 }

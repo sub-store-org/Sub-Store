@@ -334,7 +334,7 @@ html, body {
   }
 }
 
-.v-toolbar__title {
+.theme--light.v-toolbar__title {
   font-weight: 300;
   color: #555;
   font-size: 18px;
@@ -360,7 +360,6 @@ html, body {
 
     .v-icon {
       font-size: 20px;
-      color: #555 !important;
       margin-top: -3px;
       top: 0;
       position: relative;
@@ -830,7 +829,6 @@ html, body {
 }
 
 .v-card__title {
-  color: #3c4858;
   font-size: 18px;
   padding-top: 7px;
   padding-bottom: 2px;
@@ -1138,11 +1136,6 @@ html, body {
       padding: 24px 24px 0;
 
       .v-icon {
-        //position: absolute;
-        //top: 15px;
-        //right: 20px;
-        color: #999;
-        opacity: .5;
         font-size: 16px;
 
         &:hover {
