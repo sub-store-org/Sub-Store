@@ -65,11 +65,15 @@
                 </template>
                 <v-list dense>
                   <v-list-item
-                      v-for="(name, idx) in getSources(newArtifact.type)"
-                      @click="newArtifact.source = name"
+                      v-for="(sub, idx) in getSources(newArtifact.type)"
+                      @click="newArtifact.source = sub.name"
                       :key="idx"
                   >
-                    <v-list-item-title>{{ name }}</v-list-item-title>
+                    <v-list-item-avatar>
+                      <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
+                      <v-img :src="sub.icon" v-else :class="getIconClass(sub.icon)"/>
+                    </v-list-item-avatar>
+                    <v-list-item-title>{{ sub.name }}</v-list-item-title>
                   </v-list-item>
                 </v-list>
               </v-menu>
@@ -90,7 +94,7 @@
                       @click="newArtifact.platform = platform"
                   >
                     <v-list-item-avatar>
-                      <v-img :src="getIcon(platform)"></v-img>
+                      <v-img :src="getIcon(platform)" :class="getIconClass('#invert')"></v-img>
                     </v-list-item-avatar>
                     <v-list-item-title>{{ platform }}</v-list-item-title>
                   </v-list-item>
@@ -114,7 +118,7 @@
       <template v-for="(artifact, idx) in artifacts">
         <v-list-item three-line dense :key="artifact.name">
           <v-list-item-avatar>
-            <v-img :src="getIcon(artifact.platform)"/>
+            <v-img :src="getIcon(artifact.platform)" :class="getIconClass('#invert')"/>
           </v-list-item-avatar>
           <v-list-item-content>
             <v-list-item-title>
@@ -201,10 +205,11 @@ export default {
   methods: {
     getIcon(platform) {
       const ICONS = {
-        "Clash": "https://github.com/Dreamacro/clash/raw/master/docs/logo.png",
-        "QX": "https://raw.githubusercontent.com/Orz-3/task/master/quantumultx.png",
-        "Surge": "https://raw.githubusercontent.com/Orz-3/task/master/surge.png",
-        "Loon": "https://raw.githubusercontent.com/Orz-3/task/master/loon.png"
+        "Clash": "https://raw.githubusercontent.com/58xinian/icon/master/clash_mini.png",
+        "QX": "https://raw.githubusercontent.com/Orz-3/mini/none/quanX.png",
+        "Surge": "https://raw.githubusercontent.com/Orz-3/mini/none/surge.png",
+        "Loon": "https://raw.githubusercontent.com/Orz-3/mini/none/loon.png",
+        "ShadowRocket": "https://raw.githubusercontent.com/Orz-3/mini/master/loon.png"
       }
       return ICONS[platform];
     },
@@ -287,12 +292,22 @@ export default {
         case "collection":
           data = this.$store.state.collections;
       }
-      return Object.keys(data);
+      return Object.keys(data).map(k => data[k]);
+    },
+
+    getIconClass(url) {
+      return url.indexOf('#invert') !== -1 && !this.$store.state.settings.theme.darkMode ? 'invert' : ''
     },
 
     openGist() {
-      window.open(`https://gist.github.com${ '/' + this.settings.githubUser || ''}`)
+      window.open(`https://gist.github.com${'/' + this.settings.githubUser || ''}`)
     }
   }
 }
 </script>
+
+<style scoped>
+.invert {
+  filter: invert(100%);
+}
+</style>

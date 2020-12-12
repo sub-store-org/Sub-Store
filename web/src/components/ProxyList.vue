@@ -50,11 +50,9 @@
         </v-card-title>
 
         <v-card-text>
-          {{ info.isp }}
-          <br/>
-          {{ info.region }}
-          <br/>
-          {{ info.ip }}
+          <h4>{{ info.isp }}</h4>
+          <h4>{{ info.region }}</h4>
+          <h4>{{ info.ip }}</h4>
         </v-card-text>
       </v-card>
     </v-dialog>

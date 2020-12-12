@@ -88,7 +88,6 @@
         <v-spacer></v-spacer>
         <v-btn small text @click="save()" color="primary">保存</v-btn>
       </v-card-actions>
-      <v-divider/>
     </v-card>
 
     <!--    <v-card>-->
