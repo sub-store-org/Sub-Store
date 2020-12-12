@@ -3,9 +3,7 @@
   <br>Sub-Store<br>
 </h1>
 
-<h4 align="center">Advanced Subscription Manager for QX, Loon and Surge.</h4>
-
-> This project is still under active development.
+<h4 align="center">Advanced Subscription Manager for QX, Loon, Surge and Clash</h4>
 
 [![Docs](https://readthedocs.org/projects/yt2mp3/badge/?version=latest)](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46)
 [![Issues](https://img.shields.io/github/issues-raw/Peng-YM/Sub-Store.svg?maxAge=25000)](https://github.com/Peng-YM/Sub-Store/issues)
