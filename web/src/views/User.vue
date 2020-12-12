@@ -146,7 +146,7 @@ export default {
     },
 
     // eslint-disable-next-line no-unused-vars
-    sync(action) {
+    async sync(action) {
       const setLoading = (status) => {
         if (action === 'upload') {
           this.status.uploading = status;
@@ -164,10 +164,6 @@ export default {
       axios.get(`/utils/backup?action=${action}`).then(resp => {
         if (resp.data.status === 'success') {
           this.$store.commit("SET_SUCCESS_MESSAGE", `${action === 'upload' ? "备份" : "还原"}成功！`);
-          if (action === 'upload') {
-            this.settings.syncTime = new Date().getTime();
-          }
-          axios.patch(`/settings`, this.settings);
           this.updateStore(this.$store);
         }
       }).catch(err => {
