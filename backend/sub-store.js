@@ -1653,8 +1653,10 @@ var ProxyUtils = (function () {
                 if (JSON.parse(params.ws || "false")) {
                     proxy.network = "ws";
                     proxy["ws-path"] = params["ws-path"];
+                    const res = params["ws-headers"].match(/(,|^|\s)*HOST:\s*(.*?)(,|$)/);
+                    const host = res ? res[2] : proxy.server;
                     proxy["ws-headers"] = {
-                        Host: params.sni,
+                        Host: host || params.server,
                     };
                 }
                 return proxy;
