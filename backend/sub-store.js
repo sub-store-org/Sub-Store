@@ -703,6 +703,11 @@ function service() {
                 let content;
                 switch (action) {
                     case "upload":
+                        // update syncTime.
+                        const settings = $.read(SETTINGS_KEY);
+                        settings.syncTime = new Date().getTime();
+                        $.write(settings, SETTINGS_KEY);
+
                         content = $.read("#sub-store");
                         $.info(`上传备份中...`);
                         await gist.upload({filename: GIST_BACKUP_FILE_NAME, content});
@@ -2642,14 +2647,18 @@ var ProxyUtils = (function () {
                 const {mode, content} = item.args;
                 if (mode === "link") {
                     // if this is remote script, download it
-                    script = await $.http
-                        .get(content)
-                        .then((resp) => resp.body)
-                        .catch((err) => {
-                            throw new Error(
-                                `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`
-                            );
-                        });
+                    try {
+                        script = await $.http
+                            .get(content)
+                            .then((resp) => resp.body);
+                    } catch (err) {
+                        $.error(
+                            `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`
+                        );
+                        // skip the script if download failed.
+                        continue;
+                    }
+
                 } else {
                     script = content;
                 }
@@ -2959,7 +2968,7 @@ var RuleUtils = (function () {
             let matched;
             try {
                 matched = parser.test(raw);
-            } catch {
+            } catch(err) {
                 matched = false;
             }
             if (matched) {
