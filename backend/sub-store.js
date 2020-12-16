@@ -862,7 +862,9 @@ var ProxyUtils = (function () {
         function Base64Encoded() {
             const name = "Base64 Pre-processor";
 
-            const keys = ["dm1lc3M", "c3NyOi8v", "dHJvamFu", "c3M6Ly", "c3NkOi8v"];
+            const keys = ["dm1lc3M", "c3NyOi8v", "dHJvamFu", "c3M6Ly", "c3NkOi8v",
+                "c2hhZG93", "aHR0c"
+            ];
 
             const test = function (raw) {
                 return keys.some(k => raw.indexOf(k) !== -1);

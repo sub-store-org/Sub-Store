@@ -108,12 +108,9 @@ export default {
     }
   },
   methods: {
-    refresh() {
-      axios.post(`/utils/refresh`, {url: this.sub}).then(() => {
-        this.fetch();
-      }).catch(err => {
-        this.$store.commit("SET_ERROR_MESSAGE", err.response.data.message);
-      })
+    async refresh() {
+      await axios.post(`/utils/refresh`, {url: this.sub});
+      await this.fetch();
     },
 
     async fetch() {

@@ -253,8 +253,13 @@ export default {
     createCol() {
       this.$router.push("/collection-edit/UNTITLED")
     },
-    refreshProxyList() {
-      this.$refs.proxyList.refresh();
+    async refreshProxyList() {
+      try {
+        await this.$refs.proxyList.refresh();
+        this.$store.commit("SET_SUCCESS_MESSAGE", "刷新成功！");
+      } catch (err) {
+        this.$store.commit("SET_ERROR_MESSAGE", err.response.data.message);
+      }
     },
     getIconClass(url) {
       return url.indexOf('#invert') !== -1 && !this.$store.state.settings.theme.darkMode ? 'invert' : ''
