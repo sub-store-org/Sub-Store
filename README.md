@@ -1,14 +1,19 @@
-<h1 align="center">
-  <img src="https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png" alt="Sub-Store" width="200">
-  <br>Sub-Store<br>
-</h1>
+<div align="center">
+<br>
+<img width="200" src="https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png" alt="Sub-Store">
+<br>
+<br>
+<h2 align="center">Sub-Store<h2>
+</div>
 
-<h4 align="center">Advanced Subscription Manager for QX, Loon, Surge and Clash</h4>
+<p align="center" color="#6a737d">
+Advanced Subscription Manager for QX, Loon, Surge and Clash.
+</p>
 
-[![Docs](https://readthedocs.org/projects/yt2mp3/badge/?version=latest)](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46)
-[![Issues](https://img.shields.io/github/issues-raw/Peng-YM/Sub-Store.svg?maxAge=25000)](https://github.com/Peng-YM/Sub-Store/issues)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store?ref=badge_shield)
-[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
+<div align="center">
+
+[![forthebadge](http://forthebadge.com/images/badges/built-with-love.svg)](http://forthebadge.com) [![forthebadge](http://forthebadge.com/images/badges/uses-js.svg)](http://forthebadge.com) [![forthebadge](http://forthebadge.com/images/badges/makes-people-smile.svg)](http://forthebadge.com)
+</div>
 
 Core functionalities:
 1. Conversion among various formats.
