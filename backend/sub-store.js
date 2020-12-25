@@ -1191,19 +1191,15 @@ var ProxyUtils = (function () {
 
             const parse = (line) => {
                 const supported = {};
-                // trojan forces to use 443 port
-                if (line.indexOf(":443") === -1) {
-                    throw new Error("Trojan port should always be 443!");
-                }
                 line = line.split("trojan://")[1];
-                const server = line.split("@")[1].split(":443")[0];
+                const [server, port] = line.split("@")[1].split("?")[0].split(".");
                 const name = decodeURIComponent(line.split("#")[1].trim());
 
                 return {
                     name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
                     type: "trojan",
                     server,
-                    port: 443,
+                    port,
                     password: line.split("@")[0],
                     supported,
                 };
