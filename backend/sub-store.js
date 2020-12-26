@@ -1930,6 +1930,7 @@ var ProxyUtils = (function () {
                 SG: "🇸🇬",
                 JP: "🇯🇵",
                 UK: "🇬🇧",
+                RU: "🇷🇺",
             };
             return {
                 name: "Region Filter",
