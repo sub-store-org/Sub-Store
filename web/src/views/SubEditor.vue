@@ -412,7 +412,8 @@ export default {
         if (this.options.name && this.selected) {
           if (this.$route.params.name === 'UNTITLED') {
             this.$store.dispatch("NEW_COLLECTION", this.config).then(() => {
-              showInfo(`成功创建组合订阅：${this.name}！`)
+              showInfo(`成功创建组合订阅：${this.name}！`);
+              this.$router.back();
             }).catch(() => {
               showError(`发生错误，无法创建组合订阅！`)
             });
@@ -442,6 +443,7 @@ export default {
           } else {
             this.$store.dispatch("NEW_SUBSCRIPTION", this.config).then(() => {
               showInfo(`成功创建订阅：${this.options.name}！`);
+              this.$router.back();
             }).catch(() => {
               showError(`发生错误，无法创建订阅！`);
             });

@@ -1192,7 +1192,7 @@ var ProxyUtils = (function () {
             const parse = (line) => {
                 const supported = {};
                 line = line.split("trojan://")[1];
-                const [server, port] = line.split("@")[1].split("?")[0].split(".");
+                const [server, port] = line.split("@")[1].split("?")[0].split(":");
                 const name = decodeURIComponent(line.split("#")[1].trim());
 
                 return {

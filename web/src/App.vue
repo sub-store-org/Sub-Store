@@ -24,6 +24,14 @@
     >
       {{ errorMessage }}
     </v-snackbar>
+
+    <v-overlay :value="isLoading">
+      <v-progress-circular
+          indeterminate
+          size="64"
+          color="primary"
+      ></v-progress-circular>
+    </v-overlay>
   </v-app>
 </template>
 
@@ -63,7 +71,8 @@ export default {
     this.$store.watch(
         (state => state.settings.theme.darkMode),
         (value => {
-          this.$vuetify.theme.dark = value
+          this.$vuetify.theme.dark = value;
+          window.localStorage.setItem("darkMode", value);
         })
     )
   },
@@ -75,6 +84,9 @@ export default {
     errorMessage() {
       return this.$store.state.errorMessage;
     },
+    isLoading() {
+      return this.$store.state.isLoading;
+    }
   },
 
   watch: {

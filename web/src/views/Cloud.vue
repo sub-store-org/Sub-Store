@@ -269,12 +269,15 @@ export default {
     },
 
     async sync(name) {
+      this.$store.commit("SET_LOADING", true);
       try {
         await axios.get(`/artifact/${name}?action=sync`);
         await this.$store.dispatch("FETCH_ARTIFACTS");
         this.$store.commit("SET_SUCCESS_MESSAGE", `同步配置成功！`);
       } catch (err) {
         this.$store.commit("SET_ERROR_MESSAGE", `同步配置失败！${err}`);
+      } finally {
+        this.$store.commit("SET_LOADING", false);
       }
     },
 

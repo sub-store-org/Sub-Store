@@ -8,6 +8,7 @@ const store = new Vuex.Store({
     state: {
         title: "Sub-Store",
         clipboard: "",
+        isLoading: false,
 
         successMessage: "",
         errorMessage: "",
@@ -19,7 +20,7 @@ const store = new Vuex.Store({
         env: {},
         settings: {
             theme: {
-                darkMode: false
+                darkMode: window.localStorage.getItem("darkMode") || false
             }
         }
     },
@@ -31,6 +32,10 @@ const store = new Vuex.Store({
         // UI
         SET_NAV_TITLE(state, title) {
             state.title = title;
+        },
+
+        SET_LOADING(state, loading) {
+            state.isLoading = loading;
         },
 
         SET_SNACK_BAR_TIMER(state, timer) {
