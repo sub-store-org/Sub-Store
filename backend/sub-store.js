@@ -139,6 +139,7 @@ function service() {
     async function downloadSubscription(req, res) {
         const {name} = req.params;
         const {cache} = req.query;
+        const {raw} = req.query || "false";
         const platform = req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
         const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
 
@@ -148,7 +149,13 @@ function service() {
         const sub = allSubs[name];
         if (sub) {
             try {
-                const output = await produceArtifact({type: 'subscription', item: sub, platform, useCache});
+                const output = await produceArtifact({
+                    type: 'subscription',
+                    item: sub,
+                    platform,
+                    useCache,
+                    noProcessor: raw
+                });
                 if (platform === 'JSON') {
                     res.set("Content-Type", "application/json;charset=utf-8").send(output);
                 } else {
@@ -289,6 +296,7 @@ function service() {
     async function downloadCollection(req, res) {
         const {name} = req.params;
         const {cache} = req.query || "false";
+        const {raw} = req.query || "false";
         const platform = req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
         const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
 
@@ -299,7 +307,13 @@ function service() {
 
         if (collection) {
             try {
-                const output = await produceArtifact({type: "collection", item: collection, platform, useCache});
+                const output = await produceArtifact({
+                    type: "collection",
+                    item: collection,
+                    platform,
+                    useCache,
+                    noProcessor: raw
+                });
                 if (platform === 'JSON') {
                     res.set("Content-Type", "application/json;charset=utf-8").send(output);
                 } else {
@@ -445,15 +459,19 @@ function service() {
     function createRule(req, res) {
 
     }
+
     function deleteRule(req, res) {
 
     }
+
     function updateRule(req, res) {
 
     }
+
     function getAllRules(req, res) {
 
     }
+
     function getRule(req, res) {
 
     }
@@ -790,14 +808,20 @@ function service() {
         return body;
     }
 
-    async function produceArtifact({type, item, platform, useCache} = {platform: "JSON", useCache: false}) {
+    async function produceArtifact({type, item, platform, useCache, noProcessor} = {
+        platform: "JSON",
+        useCache: false,
+        noProcessor: false
+    }) {
         if (type === 'subscription') {
             const sub = item;
             const raw = await getResource(sub.url, useCache);
             // parse proxies
             let proxies = ProxyUtils.parse(raw);
-            // apply processors
-            proxies = await ProxyUtils.process(proxies, sub.process || []);
+            if (!noProcessor) {
+                // apply processors
+                proxies = await ProxyUtils.process(proxies, sub.process || []);
+            }
             // produce
             return ProxyUtils.produce(proxies, platform);
         } else if (type === 'collection') {
@@ -812,16 +836,20 @@ function service() {
                     const raw = await getResource(sub.url, useCache);
                     // parse proxies
                     let currentProxies = ProxyUtils.parse(raw)
-                    // apply processors
-                    currentProxies = await ProxyUtils.process(currentProxies, sub.process || []);
+                    if (!noProcessor) {
+                        // apply processors
+                        currentProxies = await ProxyUtils.process(currentProxies, sub.process || []);
+                    }
                     // merge
                     proxies = proxies.concat(currentProxies);
                 } catch (err) {
                     $.error(`处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}! 该订阅已被跳过。`);
                 }
             }
-            // apply own processors
-            proxies = await ProxyUtils.process(proxies, collection.process || []);
+            if (!noProcessor) {
+                // apply own processors
+                proxies = await ProxyUtils.process(proxies, collection.process || []);
+            }
             if (proxies.length === 0) {
                 throw new Error(`组合订阅中不含有效节点！`);
             }
@@ -2966,7 +2994,7 @@ var RuleUtils = (function () {
             let matched;
             try {
                 matched = parser.test(raw);
-            } catch(err) {
+            } catch (err) {
                 matched = false;
             }
             if (matched) {

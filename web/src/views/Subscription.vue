@@ -118,27 +118,54 @@
       </v-card-text>
     </v-card>
     <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList" scrollable>
-      <v-card>
-        <v-card-title class="pa-0">
-          <v-toolbar>
-            <v-icon>mdi-cloud</v-icon>
-            <v-spacer></v-spacer>
-            <v-toolbar-title class="flex text-xs-center">
-              <h4>节点列表</h4>
-            </v-toolbar-title>
-            <v-spacer></v-spacer>
-            <v-toolbar-items>
-              <v-btn icon @click="refreshProxyList" v-if="sub">
-                <v-icon>refresh</v-icon>
-              </v-btn>
-              <v-btn icon @click="showProxyList = false">
-                <v-icon>mdi-close</v-icon>
-              </v-btn>
-            </v-toolbar-items>
-          </v-toolbar>
-        </v-card-title>
-        <v-card-text class="pl-0 pr-0">
-          <proxy-list :url="url" :sub="sub" ref="proxyList" :key="url"></proxy-list>
+      <v-card fluid>
+        <v-toolbar>
+          <v-icon>mdi-cloud</v-icon>
+          <v-spacer></v-spacer>
+          <v-toolbar-title>
+            <h4>节点列表</h4>
+          </v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-toolbar-items>
+            <v-btn icon @click="showProxyList = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-toolbar-items>
+          <template v-slot:extension>
+            <v-tabs
+                grow
+                centered
+                v-model="tab"
+            >
+              <v-tabs-slider color="primary"/>
+              <v-tab
+                  key="raw"
+              >
+                原始节点
+              </v-tab>
+              <v-tab
+                  key="processed"
+              >
+                生成节点
+              </v-tab>
+            </v-tabs>
+          </template>
+        </v-toolbar>
+        <v-card-text>
+          <v-tabs-items
+              v-model="tab"
+          >
+            <v-tab-item key="raw">
+              <v-card-text class="pl-0 pr-0">
+                <proxy-list :url="url" :sub="sub" :raw="true" ref="proxyList" :key="url + 'raw'"></proxy-list>
+              </v-card-text>
+            </v-tab-item>
+            <v-tab-item key="processed">
+              <v-card-text class="pl-0 pr-0">
+                <proxy-list :url="url" :sub="sub" ref="proxyList" :key="url"></proxy-list>
+              </v-card-text>
+            </v-tab-item>
+          </v-tabs-items>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -157,6 +184,7 @@ export default {
       showProxyList: false,
       url: "",
       sub: [],
+      tab: 1,
       editMenu: [
         {
           title: "复制",
@@ -187,11 +215,11 @@ export default {
       return BACKEND_BASE;
     },
     subscriptions: {
-      get(){
+      get() {
         const subs = this.$store.state.subscriptions;
         return Object.keys(subs).map(k => subs[k]);
       },
-      set(){
+      set() {
 
       }
     },
@@ -271,5 +299,11 @@ export default {
 <style scoped>
 .invert {
   filter: invert(100%);
+}
+
+.v-dialog > .v-card > .v-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 999;
 }
 </style>
