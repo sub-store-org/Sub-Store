@@ -89,7 +89,7 @@ const flags = new Map([["AC", "🇦🇨"], ["AF", "🇦🇫"], ["AI", "🇦🇮"
 
 export default {
   name: "ProxyList",
-  props: ['url', 'sub'],
+  props: ['url', 'sub', 'raw'],
   components: {VueQRCodeComponent},
   data: function () {
     return {
@@ -114,7 +114,7 @@ export default {
     },
 
     async fetch() {
-      await axios.get(this.url).then(resp => {
+      await axios.get(this.raw ? `${this.url}?raw=true` : this.url).then(resp => {
         let {data} = resp;
         // eslint-disable-next-line no-debugger
         this.proxies = data;
@@ -122,7 +122,7 @@ export default {
         this.$store.commit("SET_ERROR_MESSAGE", err);
       });
 
-      await axios.get(`${this.url}?target=URI`).then(resp => {
+      await axios.get(this.raw ? `${this.url}?target=URI&raw=true` : `${this.url}?target=URI`).then(resp => {
         const {data} = resp;
         this.uris = data.split("\n");
       });
