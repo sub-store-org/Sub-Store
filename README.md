@@ -38,8 +38,6 @@ Core functionalities:
 
 ## 2. Subscription Formatting
 ### Filtering
-- [x] **Keyword filter**
-- [x] **Discard keywords filter**
 - [x] **Regex filter**
 - [x] **Discard regex filter**
 - [x] **Region filter**
@@ -51,9 +49,7 @@ Core functionalities:
 - [x] **Set property operator**: set some proxy properties such as `udp`,`tfo`, `skip-cert-verify` etc.
 - [x] **Flag operator**: add flags or remove flags for proxies.
 - [x] **Sort operator**: sort proxies by name.
-- [x] **Keyword sort operator**: sort proxies by keywords (fallback to normal sort).
-- [x] **Keyword rename operator**: replace by keywords in proxy names.
-- [x] **Keyword delete operator**: delete by keywords in proxy names.
+- [x] **Regex sort operator**: sort proxies by keywords (fallback to normal sort).
 - [x] **Regex rename operator**: replace by regex in proxy names.
 - [x] **Regex delete operator**: delete by regex in proxy names.
 - [x] **Script operator**: modify proxy by script.
