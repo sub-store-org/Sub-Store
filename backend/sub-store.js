@@ -148,20 +148,6 @@ function service() {
         const allSubs = $.read(SUBS_KEY);
         const sub = allSubs[name];
         if (sub) {
-            // forward flow headers
-            if (["QX", "Surge", "Loon"].indexOf(getPlatformFromHeaders(req.headers)) !== -1) {
-                const {headers} = await $.http.get({
-                    url: sub.url,
-                    headers: {
-                        "User-Agent":
-                            "Quantumult/1.0.13 (iPhone10,3; iOS 14.0)"
-                    }
-                });
-                const subkey = Object.keys(headers).filter(k => /SUBSCRIPTION-USERINFO/i.test(k))[0];
-                const userinfo = headers[subkey];
-                res.set("subscription-userinfo", userinfo);
-            }
-
             try {
                 const output = await produceArtifact({
                     type: 'subscription',
@@ -170,6 +156,21 @@ function service() {
                     useCache,
                     noProcessor: raw
                 });
+
+                // forward flow headers
+                if (["QX", "Surge", "Loon"].indexOf(getPlatformFromHeaders(req.headers)) !== -1) {
+                    const {headers} = await $.http.get({
+                        url: sub.url,
+                        headers: {
+                            "User-Agent":
+                                "Quantumult/1.0.13 (iPhone10,3; iOS 14.0)"
+                        }
+                    });
+                    const subkey = Object.keys(headers).filter(k => /SUBSCRIPTION-USERINFO/i.test(k))[0];
+                    const userinfo = headers[subkey];
+                    res.set("subscription-userinfo", userinfo);
+                }
+
                 if (platform === 'JSON') {
                     res.set("Content-Type", "application/json;charset=utf-8").send(output);
                 } else {
