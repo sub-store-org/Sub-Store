@@ -119,8 +119,10 @@
     </v-card>
     <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList" scrollable>
       <v-card fluid>
-        <v-toolbar>
-          <v-icon>mdi-cloud</v-icon>
+        <v-toolbar
+            class="flex-grow-0"
+        >
+          <v-icon>mdi-dns</v-icon>
           <v-spacer></v-spacer>
           <v-toolbar-title>
             <h4>节点列表</h4>
@@ -141,12 +143,12 @@
               <v-tab
                   key="raw"
               >
-                原始节点
+                <h4>原始节点</h4>
               </v-tab>
               <v-tab
                   key="processed"
               >
-                生成节点
+                <h4>生成节点</h4>
               </v-tab>
             </v-tabs>
           </template>
@@ -156,14 +158,10 @@
               v-model="tab"
           >
             <v-tab-item key="raw">
-              <v-card-text class="pl-0 pr-0">
-                <proxy-list :url="url" :sub="sub" :raw="true" ref="proxyList" :key="url + 'raw'"></proxy-list>
-              </v-card-text>
+              <proxy-list :url="url" :sub="sub" :raw="true" ref="proxyList" :key="url + 'raw'"></proxy-list>
             </v-tab-item>
             <v-tab-item key="processed">
-              <v-card-text class="pl-0 pr-0">
-                <proxy-list :url="url" :sub="sub" ref="proxyList" :key="url"></proxy-list>
-              </v-card-text>
+              <proxy-list :url="url" :sub="sub" ref="proxyList" :key="url"></proxy-list>
             </v-tab-item>
           </v-tabs-items>
         </v-card-text>
