@@ -977,8 +977,6 @@ html, body {
     padding: 0 15px;
 
     .v-tab {
-      color: #555;
-
       &.primary, &.secondary {
         -webkit-box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(156, 39, 176, 0.4);
         box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(156, 39, 176, 0.4);
@@ -1002,10 +1000,6 @@ html, body {
       &.error {
         -webkit-box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(244, 67, 54, 0.4);
         box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(244, 67, 54, 0.4);
-      }
-
-      &.v-tab--active {
-        color: #fff;
       }
 
       .v-icon {

@@ -148,6 +148,20 @@ function service() {
         const allSubs = $.read(SUBS_KEY);
         const sub = allSubs[name];
         if (sub) {
+            // forward flow headers
+            if (["QX", "Surge", "Loon"].indexOf(getPlatformFromHeaders(req.headers)) !== -1) {
+                const {headers} = await $.http.get({
+                    url: sub.url,
+                    headers: {
+                        "User-Agent":
+                            "Quantumult/1.0.13 (iPhone10,3; iOS 14.0)"
+                    }
+                });
+                const subkey = Object.keys(headers).filter(k => /SUBSCRIPTION-USERINFO/i.test(k))[0];
+                const userinfo = headers[subkey];
+                res.set("subscription-userinfo", userinfo);
+            }
+
             try {
                 const output = await produceArtifact({
                     type: 'subscription',
@@ -620,8 +634,8 @@ function service() {
     async function deleteArtifact(req, res) {
         const name = req.params.name;
         $.info(`正在删除Artifact：${name}`);
+        const allArtifacts = $.read(ARTIFACTS_KEY);
         try {
-            const allArtifacts = $.read(ARTIFACTS_KEY);
             const artifact = allArtifacts[name];
             if (!artifact) throw new Error(`远程配置：${name}不存在！`);
             if (artifact.updated) {
@@ -638,6 +652,9 @@ function service() {
                 status: "success"
             });
         } catch (err) {
+            // delete local cache
+            delete allArtifacts[name];
+            $.write(allArtifacts, ARTIFACTS_KEY);
             res.status(500).json({
                 status: "failed",
                 message: `无法删除远程配置：${name}, 原因：${err}`
