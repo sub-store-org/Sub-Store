@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@dzangolab/vue-country-flag-icon": "^0.2.0",
-    "axios": "^0.20.0",
+    "axios": "^0.21.1",
     "chartist": "^0.11.4",
     "core-js": "^3.6.5",
     "material-design-icons-iconfont": "^5.0.1",
