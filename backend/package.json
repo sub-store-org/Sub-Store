@@ -16,6 +16,6 @@
     "request": "^2.88.2"
   },
   "devDependencies": {
-    "axios": "^0.20.0"
+    "axios": "^0.21.1"
   }
 }
