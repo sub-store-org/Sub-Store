@@ -1,5 +1,34 @@
+/**
+ Sub-Store 自动同步配置到gist
+ 由于机制特殊，注意需要按照说明进行配置！
+
+ 「QX配置」
+ [http_backend]
+https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.min.js, tag=Sub-Store, path=/, enabled=true
+[task_local]
+0 12 * * * https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/scripts/cron-sync-artifacts.js, tag=Sub-Store, img-url=https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png, enabled=true
+
+「Surge配置」
+[Script]
+Sub-Store 自动同步 = type=cron,cronexp=0 12 * * *, script-path=https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/scripts/cron-sync-artifacts.js
+
+「Loon配置」
+[Script]
+cron "0 12 * * *" script-path=https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/scripts/cron-sync-artifacts.js, tag=Sub-Store 自动同步
+ */
+
+
 const $ = API();
-$.http.get('https://sub.store/api/cron/sync-artifacts');
+const { isQX, isLoon, isSurge } = ENV();
+const url = 'https://sub.store/api/cron/sync-artifacts';
+if (isQX) {
+    $task.fetch({
+        url: "http://localhost:9999/api/cron/sync-artifacts"
+    });
+} else {
+    $.http.get(url);
+}
+$.log("同步配置成功！");
 $.done();
 
 // prettier ignore
