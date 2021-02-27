@@ -116,6 +116,9 @@ function service() {
     $app.get("/api/utils/env", getEnv); // get runtime environment
     $app.get("/api/utils/backup", gistBackup); // gist backup actions
 
+    // cron triggered functions
+    $app.get("/api/cron/sync-artifacts", cronSyncArtifacts); // sync all artifacts
+
     // Redirect sub.store to vercel webpage
     $app.get("/", async (req, res) => {
         // 302 redirect
@@ -600,7 +603,7 @@ function service() {
     }
 
     function updateArtifact(req, res) {
-        const allArtifacts = $.read(SETTINGS_KEY);
+        const allArtifacts = $.read(ARTIFACTS_KEY);
         const oldName = req.params.name;
         const artifact = allArtifacts[oldName];
         if (artifact) {
@@ -632,9 +635,61 @@ function service() {
         }
     }
 
+    async function cronSyncArtifacts(req, res) {
+        $.info("开始同步所有远程配置...");
+        const allArtifacts = $.read(ARTIFACTS_KEY);
+        let success = [], failed = [];
+        for (const artifact of Object.values(allArtifacts)) {
+            if (artifact.sync) {
+                $.info(`正在同步云配置：${artifact.name}...`);
+                try {
+                    let item;
+                    switch (artifact.type) {
+                        case 'subscription':
+                            item = $.read(SUBS_KEY)[artifact.source];
+                            break;
+                        case 'collection':
+                            item = $.read(COLLECTIONS_KEY)[artifact.source];
+                            break;
+                        case 'rule':
+                            item = $.read(RULES_KEY)[artifact.source];
+                            break;
+                    }
+                    const output = await produceArtifact({
+                        type: artifact.type,
+                        item,
+                        platform: artifact.platform
+                    });
+                    const resp = await syncArtifact({
+                        filename: artifact.name,
+                        content: output
+                    });
+                    artifact.updated = new Date().getTime();
+                    const body = JSON.parse(resp.body);
+                    artifact.url = body.files[artifact.name].raw_url.replace(/\/raw\/[^\/]*\/(.*)/, "/raw/$1");
+                    $.write(allArtifacts, ARTIFACTS_KEY);
+                    $.info(`✅ 成功同步云配置：${artifact.name}`);
+                    success.push(artifact);
+                } catch (err) {
+                    $.error(`云配置: ${artifact.name} 同步失败！原因：${err}`);
+                    $.notify(
+                        `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 同步订阅失败`,
+                        `❌ 无法同步订阅：${artifact.name}！`,
+                        `🤔 原因：${err}`
+                    );
+                    failed.push(artifact);
+                }
+            }
+        }
+        res.json({
+            success,
+            failed
+        });
+    }
+
     async function deleteArtifact(req, res) {
         const name = req.params.name;
-        $.info(`正在删除Artifact：${name}`);
+        $.info(`正在删除远程配置：${name}`);
         const allArtifacts = $.read(ARTIFACTS_KEY);
         try {
             const artifact = allArtifacts[name];

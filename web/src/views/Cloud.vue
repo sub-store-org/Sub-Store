@@ -8,34 +8,35 @@
         <v-btn icon @click="openGist()">
           <v-icon>visibility</v-icon>
         </v-btn>
-        <v-dialog max-width="400px" v-model="addArtifactDialog">
+        <v-dialog v-model="showArtifactDialog" max-width="400px">
           <template #activator="{on}">
-            <v-btn icon v-on="on">
+            <v-btn v-on="on" icon>
               <v-icon color="primary">mdi-plus-circle</v-icon>
             </v-btn>
           </template>
           <v-card class="pl-4 pr-4 pb-4 pt-4">
             <v-subheader>
-              <v-icon left>mdi-plus-circle</v-icon>
-              <h3>添加同步配置</h3>
+              <v-icon left>{{ editing ? 'edit_off' : 'mdi-plus-circle' }}</v-icon>
+              <h3>{{ editing ? '修改' : '添加' }}同步配置</h3>
             </v-subheader>
             <v-divider></v-divider>
-            <v-form class="pt-4 pl-4 pr-4 pb-0" v-model="formValid">
+            <v-form v-model="formValid" class="pt-4 pl-4 pr-4 pb-0">
               <v-text-field
-                  v-model="newArtifact.name"
+                  v-model="currentArtifact.name"
+                  :disabled="editing"
+                  :rules="validations.nameRules"
+                  clear-icon="clear"
+                  clearable
                   label="配置名称"
                   placeholder="填入生成配置名称，名称需唯一，如Clash.yaml。"
-                  :rules="validations.nameRules"
-                  clearable
-                  clear-icon="clear"
               />
               <v-menu offset-y>
                 <template v-slot:activator="{on}">
                   <v-text-field
-                      label="类型"
                       v-on="on"
                       :rules="validations.required"
-                      :value="getType(newArtifact.type)"
+                      :value="getType(currentArtifact.type)"
+                      label="类型"
                   />
                 </template>
                 <v-list dense>
@@ -56,22 +57,22 @@
               <v-menu offset-y>
                 <template v-slot:activator="{on}">
                   <v-text-field
-                      v-model="newArtifact.source"
-                      label="来源"
-                      :rules="validations.required"
-                      :placeholder="`填入${getType(newArtifact.type) || '来源'}的名称。`"
+                      v-model="currentArtifact.source"
                       v-on="on"
+                      :placeholder="`填入${getType(currentArtifact.type) || '来源'}的名称。`"
+                      :rules="validations.required"
+                      label="来源"
                   />
                 </template>
                 <v-list dense>
                   <v-list-item
-                      v-for="(sub, idx) in getSources(newArtifact.type)"
-                      @click="newArtifact.source = sub.name"
+                      v-for="(sub, idx) in getSources(currentArtifact.type)"
                       :key="idx"
+                      @click="currentArtifact.source = sub.name"
                   >
                     <v-list-item-avatar>
                       <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-                      <v-img :src="sub.icon" v-else :class="getIconClass(sub.icon)"/>
+                      <v-img v-else :class="getIconClass(sub.icon)" :src="sub.icon"/>
                     </v-list-item-avatar>
                     <v-list-item-title>{{ sub.name }}</v-list-item-title>
                   </v-list-item>
@@ -81,20 +82,20 @@
               <v-menu offset-y>
                 <template v-slot:activator="{on}">
                   <v-text-field
-                      label="目标"
                       v-on="on"
                       :rules="validations.required"
-                      :value="newArtifact.platform"
+                      :value="currentArtifact.platform"
+                      label="目标"
                   />
                 </template>
                 <v-list dense>
                   <v-list-item
                       v-for="platform in ['Surge', 'Loon', 'QX', 'Clash']"
                       :key="platform"
-                      @click="newArtifact.platform = platform"
+                      @click="currentArtifact.platform = platform"
                   >
                     <v-list-item-avatar>
-                      <v-img :src="getIcon(platform)" :class="getIconClass('#invert')"></v-img>
+                      <v-img :class="getIconClass('#invert')" :src="getIcon(platform)"></v-img>
                     </v-list-item-avatar>
                     <v-list-item-title>{{ platform }}</v-list-item-title>
                   </v-list-item>
@@ -104,10 +105,10 @@
             <v-divider></v-divider>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="primary" text small :disabled="!formValid" @click="createArtifact()">
+              <v-btn :disabled="!formValid" color="primary" small text @click="doneEditArtifact()">
                 确认
               </v-btn>
-              <v-btn text small @click="clear()">
+              <v-btn small text @click="clear()">
                 取消
               </v-btn>
             </v-card-actions>
@@ -116,9 +117,9 @@
       </v-card-title>
 
       <template v-for="(artifact, idx) in artifacts">
-        <v-list-item three-line dense :key="artifact.name">
+        <v-list-item :key="artifact.name" dense three-line>
           <v-list-item-avatar>
-            <v-img :src="getIcon(artifact.platform)" :class="getIconClass('#invert')"/>
+            <v-img :class="getIconClass('#invert')" :src="getIcon(artifact.platform)"/>
           </v-list-item-avatar>
           <v-list-item-content>
             <v-list-item-title>
@@ -137,27 +138,39 @@
             <v-list-item-subtitle>更新于：{{ getUpdatedTime(artifact.updated) }}</v-list-item-subtitle>
           </v-list-item-content>
           <v-list-item-action>
-            <v-menu bottom left>
-              <template #activator="{ on }">
-                <v-btn icon v-on="on">
-                  <v-icon>mdi-dots-vertical</v-icon>
+            <v-row>
+              <v-col>
+                <v-btn icon @click="toggleSync(artifact)">
+                  <v-icon :color="artifact.sync ? undefined: 'red'">{{ artifact.sync ? "alarm" : "alarm_off" }}</v-icon>
                 </v-btn>
-              </template>
-              <v-list dense>
-                <v-list-item @click="copy(artifact.url)" v-if="artifact.url">
-                  <v-list-item-title>复制</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="preview(artifact.name)">
-                  <v-list-item-title>预览</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="sync(artifact.name)">
-                  <v-list-item-title>同步</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="deleteArtifact(idx, artifact.name)">
-                  <v-list-item-title>删除</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
+              </v-col>
+              <v-col>
+                <v-menu bottom left>
+                  <template #activator="{ on }">
+                    <v-btn v-on="on" icon>
+                      <v-icon>mdi-dots-vertical</v-icon>
+                    </v-btn>
+                  </template>
+                  <v-list dense>
+                    <v-list-item v-if="artifact.url" @click="copy(artifact.url)">
+                      <v-list-item-title>复制</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="editArtifact(artifact)">
+                      <v-list-item-title>编辑</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="preview(artifact.name)">
+                      <v-list-item-title>预览</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="sync(artifact.name)">
+                      <v-list-item-title>同步</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="deleteArtifact(idx, artifact.name)">
+                      <v-list-item-title>删除</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </v-col>
+            </v-row>
           </v-list-item-action>
         </v-list-item>
       </template>
@@ -174,13 +187,14 @@ export default {
   name: "Cloud",
   data() {
     return {
-      addArtifactDialog: false,
-      newArtifact: {
+      showArtifactDialog: false,
+      currentArtifact: {
         name: "",
         type: "subscription",
         source: "",
         platform: "",
       },
+      editing: null,
       formValid: false,
       validations: {
         nameRules: [
@@ -230,13 +244,35 @@ export default {
       }
     },
 
-    async createArtifact() {
+    async doneEditArtifact() {
+      console.log(JSON.stringify(this.currentArtifact, null, 2));
       try {
-        await axios.post("/artifacts", this.newArtifact);
+        if (this.editing) {
+          await axios.patch(`/artifact/${this.currentArtifact.name}`, this.currentArtifact);
+        } else {
+          await axios.post("/artifacts", this.currentArtifact);
+        }
         await this.$store.dispatch("FETCH_ARTIFACTS");
         this.clear();
       } catch (err) {
-        this.$store.commit("SET_ERROR_MESSAGE", `创建配置失败！${err}`);
+        this.$store.commit("SET_ERROR_MESSAGE", `${this.editing ? "更新" : "创建"}配置失败！${err}`);
+      }
+    },
+
+    async editArtifact(artifact) {
+      this.editing = true;
+      Object.assign(this.currentArtifact, artifact);
+      this.showArtifactDialog = true;
+    },
+
+    async toggleSync(artifact) {
+      artifact.sync = !artifact.sync;
+      try {
+        await axios.patch(`/artifact/${artifact.name}`, artifact);
+        await this.$store.dispatch("FETCH_ARTIFACTS");
+        this.$store.commit("SET_SUCCESS_MESSAGE", `已${artifact.sync ? '启用' : '禁用'}自动同步配置${artifact.name}`);
+      } catch (err) {
+        this.$store.commit("SET_ERROR_MESSAGE", `更改同步配置失败！${err}`);
       }
     },
 
@@ -250,13 +286,14 @@ export default {
     },
 
     clear() {
-      this.newArtifact = {
+      this.currentArtifact = {
         name: "",
         type: "subscription",
         source: "",
         platform: ""
       }
-      this.addArtifactDialog = false;
+      this.showArtifactDialog = false;
+      this.editing = false;
     },
 
     copy(url) {
@@ -282,8 +319,8 @@ export default {
     },
 
     setArtifactType(type) {
-      this.newArtifact.type = type;
-      this.newArtifact.source = "";
+      this.currentArtifact.type = type;
+      this.currentArtifact.source = "";
     },
 
     getSources(type) {
