@@ -2,7 +2,7 @@
  Sub-Store 自动同步配置到gist
  由于机制特殊，注意需要按照说明进行配置！
 
- 「QX配置」
+「QX配置」
  [http_backend]
 https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.min.js, tag=Sub-Store, path=/, enabled=true
 [task_local]

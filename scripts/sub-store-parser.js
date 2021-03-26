@@ -45,7 +45,9 @@ var ProxyUtils = (function () {
         function Base64Encoded() {
             const name = "Base64 Pre-processor";
 
-            const keys = ["dm1lc3M", "c3NyOi8v", "dHJvamFu", "c3M6Ly", "c3NkOi8v"];
+            const keys = ["dm1lc3M", "c3NyOi8v", "dHJvamFu", "c3M6Ly", "c3NkOi8v",
+                "c2hhZG93", "aHR0c"
+            ];
 
             const test = function (raw) {
                 return keys.some(k => raw.indexOf(k) !== -1);
@@ -244,21 +246,21 @@ var ProxyUtils = (function () {
                     supported,
                 };
                 // get other params
-                params = {};
+                const other_params = {};
                 line = line.split("/?")[1].split("&");
                 if (line.length > 1) {
                     for (const item of line) {
                         const [key, val] = item.split("=");
-                        params[key] = val;
+                        other_params[key] = val.trim();
                     }
                 }
                 proxy = {
                     ...proxy,
-                    name: Base64.safeDecode(params.remarks),
+                    name: other_params.remarks ? Base64.safeDecode(other_params.remarks) : proxy.server,
                     "protocol-param":
-                        Base64.safeDecode(params.protoparam).replace(/\s/g, "") || "",
+                        Base64.safeDecode(other_params.protoparam || "").replace(/\s/g, ""),
                     "obfs-param":
-                        Base64.safeDecode(params.obfsparam).replace(/\s/g, "") || "",
+                        Base64.safeDecode(other_params.obfsparam || "").replace(/\s/g, ""),
                 };
                 return proxy;
             };
@@ -280,8 +282,8 @@ var ProxyUtils = (function () {
                 line = line.split("vmess://")[1];
                 const content = Base64.safeDecode(line);
                 if (/=\s*vmess/.test(content)) {
-                    const partitions = content.split(",").map((p) => p.trim());
                     // Quantumult VMess URI format
+                    const partitions = content.split(",").map((p) => p.trim());
                     // get keyword params
                     const params = {};
                     for (const part of partitions) {
@@ -299,16 +301,21 @@ var ProxyUtils = (function () {
                         cipher: partitions[3],
                         uuid: partitions[4].match(/^"(.*)"$/)[1],
                         tls: params.obfs === "over-tls" || params.obfs === "wss",
-                        udp: JSON.parse(params["udp-relay"] || "false"),
-                        tfo: JSON.parse(params["fast-open"] || "false"),
                     };
+
+                    if (typeof params['udp-relay'] !== "undefined") proxy.udp = JSON.parse(params["udp-relay"]);
+                    if (typeof params['fast-open'] !== "undefined") proxy.udp = JSON.parse(params["fast-open"]);
 
                     // handle ws headers
                     if (params.obfs === "ws" || params.obfs === "wss") {
                         proxy.network = "ws";
-                        proxy["ws-path"] = params["obfs-uri"];
+                        proxy["ws-path"] = (params["obfs-path"] || '"/"').match(/^"(.*)"$/)[1];
+                        let obfs_host = params["obfs-header"];
+                        if (obfs_host && obfs_host.indexOf("Host") !== -1) {
+                            obfs_host = obfs_host.match(/Host:\s*([a-zA-Z0-9-.]*)/)[1];
+                        }
                         proxy["ws-headers"] = {
-                            Host: params["obfs-host"] || proxy.server, // if no host provided, use the same as server
+                            Host: obfs_host || proxy.server, // if no host provided, use the same as server
                         };
                     }
 
@@ -367,19 +374,15 @@ var ProxyUtils = (function () {
 
             const parse = (line) => {
                 const supported = {};
-                // trojan forces to use 443 port
-                if (line.indexOf(":443") === -1) {
-                    throw new Error("Trojan port should always be 443!");
-                }
                 line = line.split("trojan://")[1];
-                const server = line.split("@")[1].split(":443")[0];
+                const [server, port] = line.split("@")[1].split("?")[0].split(":");
                 const name = decodeURIComponent(line.split("#")[1].trim());
 
                 return {
                     name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
                     type: "trojan",
                     server,
-                    port: 443,
+                    port,
                     password: line.split("@")[0],
                     supported,
                 };
@@ -836,8 +839,10 @@ var ProxyUtils = (function () {
                 if (JSON.parse(params.ws || "false")) {
                     proxy.network = "ws";
                     proxy["ws-path"] = params["ws-path"];
+                    const res = params["ws-headers"].match(/(,|^|\s)*HOST:\s*(.*?)(,|$)/);
+                    const host = res ? res[2] : proxy.server;
                     proxy["ws-headers"] = {
-                        Host: params.sni,
+                        Host: host || params.server,
                     };
                 }
                 return proxy;
@@ -985,48 +990,35 @@ var ProxyUtils = (function () {
             };
         }
 
-        // sort by keywords
-        function KeywordSortOperator(keywords) {
+        // sort by regex
+        function RegexSortOperator(expressions) {
             return {
-                name: "Keyword Sort Operator",
-                func: (proxies) =>
-                    proxies.sort((a, b) => {
-                        const oA = getKeywordOrder(keywords, a.name);
-                        const oB = getKeywordOrder(keywords, b.name);
+                name: "Regex Sort Operator",
+                func: (proxies) => {
+                    expressions = expressions.map(expr => buildRegex(expr));
+                    return proxies.sort((a, b) => {
+                        const oA = getRegexOrder(expressions, a.name);
+                        const oB = getRegexOrder(expressions, b.name);
                         if (oA && !oB) return -1;
                         if (oB && !oA) return 1;
                         if (oA && oB) return oA < oB ? -1 : 1;
                         if ((!oA && !oB) || (oA && oB && oA === oB))
                             return a.name < b.name ? -1 : 1; // fallback to normal sort
-                    }),
+                    })
+                }
+
             };
         }
 
-        function getKeywordOrder(keywords, str) {
+        function getRegexOrder(expressions, str) {
             let order = null;
-            for (let i = 0; i < keywords.length; i++) {
-                if (str.indexOf(keywords[i]) !== -1) {
+            for (let i = 0; i < expressions.length; i++) {
+                if (expressions[i].test(str)) {
                     order = i + 1; // plus 1 is important! 0 will be treated as false!!!
                     break;
                 }
             }
             return order;
-        }
-
-        // rename by keywords
-        // keywords: [{old: "old", now: "now"}]
-        function KeywordRenameOperator(keywords) {
-            return {
-                name: "Keyword Rename Operator",
-                func: (proxies) => {
-                    return proxies.map((proxy) => {
-                        for (const {old, now} of keywords) {
-                            proxy.name = proxy.name.replaceAll(old, now).trim();
-                        }
-                        return proxy;
-                    });
-                },
-            };
         }
 
         // rename by regex
@@ -1037,26 +1029,11 @@ var ProxyUtils = (function () {
                 func: (proxies) => {
                     return proxies.map((proxy) => {
                         for (const {expr, now} of regex) {
-                            proxy.name = proxy.name.replace(new RegExp(expr, "g"), now).trim();
+                            proxy.name = proxy.name.replace(buildRegex(expr, "g"), now).trim();
                         }
                         return proxy;
                     });
                 },
-            };
-        }
-
-        // delete keywords operator
-        // keywords: ['a', 'b', 'c']
-        function KeywordDeleteOperator(keywords) {
-            const keywords_ = keywords.map((k) => {
-                return {
-                    old: k,
-                    now: "",
-                };
-            });
-            return {
-                name: "Keyword Delete Operator",
-                func: KeywordRenameOperator(keywords_).func,
             };
         }
 
@@ -1094,16 +1071,10 @@ var ProxyUtils = (function () {
                     (function () {
                         // interface to get internal operators
                         const $get = (name, args) => {
-                            const item = AVAILABLE_OPERATORS[name];
+                            const item = PROXY_PROCESSORS[name];
                             return item(args);
                         };
-                        const $process = (item, proxies) => {
-                            if (item.name.indexOf("Filter") !== -1) {
-                                return ApplyOperator(item, proxies);
-                            } else if (item.name.indexOf("Operator") !== -1) {
-                                return ApplyFilter(item, proxies);
-                            }
-                        };
+                        const $process = ApplyProcessor;
                         eval(script);
                         output = operator(proxies);
                     })();
@@ -1113,19 +1084,6 @@ var ProxyUtils = (function () {
         }
 
         /**************************** Filters ***************************************/
-        // filter by keywords
-        function KeywordFilter({keywords = [], keep = true}) {
-            return {
-                name: "Keyword Filter",
-                func: (proxies) => {
-                    return proxies.map((proxy) => {
-                        const selected = keywords.some((k) => proxy.name.indexOf(k) !== -1);
-                        return keep ? selected : !selected;
-                    });
-                },
-            };
-        }
-
         // filter useless proxies
         function UselessFilter() {
             const KEYWORDS = [
@@ -1139,8 +1097,8 @@ var ProxyUtils = (function () {
             ];
             return {
                 name: "Useless Filter",
-                func: KeywordFilter({
-                    keywords: KEYWORDS,
+                func: RegexFilter({
+                    regex: KEYWORDS,
                     keep: false,
                 }).func,
             };
@@ -1175,8 +1133,7 @@ var ProxyUtils = (function () {
                 func: (proxies) => {
                     return proxies.map((proxy) => {
                         const selected = regex.some((r) => {
-                            r = new RegExp(r);
-                            return r.test(proxy.name);
+                            return buildRegex(r).test(proxy.name);
                         });
                         return keep ? selected : !selected;
                     });
@@ -1432,7 +1389,6 @@ var ProxyUtils = (function () {
         }
 
         return {
-            "Keyword Filter": KeywordFilter,
             "Useless Filter": UselessFilter,
             "Region Filter": RegionFilter,
             "Regex Filter": RegexFilter,
@@ -1442,9 +1398,7 @@ var ProxyUtils = (function () {
             "Set Property Operator": SetPropertyOperator,
             "Flag Operator": FlagOperator,
             "Sort Operator": SortOperator,
-            "Keyword Sort Operator": KeywordSortOperator,
-            "Keyword Rename Operator": KeywordRenameOperator,
-            "Keyword Delete Operator": KeywordDeleteOperator,
+            "Regex Sort Operator": RegexSortOperator,
             "Regex Rename Operator": RegexRenameOperator,
             "Regex Delete Operator": RegexDeleteOperator,
             "Script Operator": ScriptOperator,
@@ -1560,6 +1514,7 @@ var ProxyUtils = (function () {
             const targetPlatform = "Loon";
             const produce = (proxy) => {
                 let obfs_opts, tls_opts;
+                const udp_opts = proxy.udp ? ",udp=true" : "";
                 switch (proxy.type) {
                     case "ss":
                         obfs_opts = ",,";
@@ -1573,8 +1528,8 @@ var ProxyUtils = (function () {
                                 );
                             }
                         }
-
-                        return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}`;
+                        
+                        return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}${udp_opts}`;
                     case "ssr":
                         return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}",${proxy.protocol},{${proxy["protocol-param"] || ""}},${proxy.obfs},{${proxy["obfs-param"] || ""}}`;
                     case "vmess":
@@ -1805,7 +1760,7 @@ var ProxyUtils = (function () {
         for (const processor of PROXY_PREPROCESSORS) {
             try {
                 if (processor.test(raw)) {
-                    $.log(`Pre-processor [${processor.name}] activated`);
+                    $.info(`Pre-processor [${processor.name}] activated`);
                     return processor.parse(raw);
                 }
             } catch (e) {
@@ -1841,7 +1796,7 @@ var ProxyUtils = (function () {
                     if (safeMatch(parser, line)) {
                         lastParser = parser;
                         matched = true;
-                        $.log(`Proxy parser: ${parser.name} is activated`);
+                        $.info(`Proxy parser: ${parser.name} is activated`);
                         break;
                     }
                 }
@@ -1874,14 +1829,18 @@ var ProxyUtils = (function () {
                 const {mode, content} = item.args;
                 if (mode === "link") {
                     // if this is remote script, download it
-                    script = await $.http
-                        .get(content)
-                        .then((resp) => resp.body)
-                        .catch((err) => {
-                            throw new Error(
-                                `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`
-                            );
-                        });
+                    try {
+                        script = await $.http
+                            .get(content)
+                            .then((resp) => resp.body);
+                    } catch (err) {
+                        $.error(
+                            `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`
+                        );
+                        // skip the script if download failed.
+                        continue;
+                    }
+
                 } else {
                     script = content;
                 }
@@ -1892,7 +1851,7 @@ var ProxyUtils = (function () {
                 continue;
             }
 
-            $.log(
+            $.info(
                 `Applying "${item.type}" with arguments:\n >>> ${
                     JSON.stringify(item.args, null, 2) || "None"
                 }`
@@ -1917,7 +1876,7 @@ var ProxyUtils = (function () {
         // filter unsupported proxies
         proxies = proxies.filter(proxy => !(proxy.supported && proxy.supported[targetPlatform] === false));
 
-        $.log(`Producing proxies for target: ${targetPlatform}`);
+        $.info(`Producing proxies for target: ${targetPlatform}`);
         if (typeof producer.type === "undefined" || producer.type === 'SINGLE') {
             return proxies
                 .map(proxy => {
@@ -2287,14 +2246,6 @@ function AND(...args) {
     return args.reduce((a, b) => a.map((c, i) => b[i] && c));
 }
 
-function OR(...args) {
-    return args.reduce((a, b) => a.map((c, i) => b[i] || c));
-}
-
-function NOT(array) {
-    return array.map((c) => !c);
-}
-
 function FULL(length, bool) {
     return [...Array(length).keys()].map(() => bool);
 }
@@ -2633,370 +2584,6 @@ function API(name = "untitled", debug = false) {
             }
         }
     })(name, debug);
-}
-
-/**
- * Gist backup
- */
-function Gist(backupKey, token) {
-    const FILE_NAME = "Sub-Store";
-    const http = HTTP({
-        baseURL: "https://api.github.com",
-        headers: {
-            Authorization: `token ${token}`,
-            "User-Agent":
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36",
-        },
-        events: {
-            onResponse: (resp) => {
-                if (/^[45]/.test(String(resp.statusCode))) {
-                    return Promise.reject(`ERROR: ${JSON.parse(resp.body).message}`);
-                } else {
-                    return resp;
-                }
-            },
-        },
-    });
-
-    async function locate() {
-        return http.get("/gists").then((response) => {
-            const gists = JSON.parse(response.body);
-            for (let g of gists) {
-                if (g.description === backupKey) {
-                    return g.id;
-                }
-            }
-            return -1;
-        });
-    }
-
-    this.upload = async function (content) {
-        const id = await locate();
-        const files = {
-            [FILE_NAME]: {content}
-        };
-
-        if (id === -1) {
-            // create a new gist for backup
-            return http.post({
-                url: "/gists",
-                body: JSON.stringify({
-                    description: backupKey,
-                    public: false,
-                    files
-                })
-            });
-        } else {
-            // update an existing gist
-            return http.patch({
-                url: `/gists/${id}`,
-                body: JSON.stringify({files})
-            });
-        }
-    };
-
-    this.download = async function () {
-        const id = await locate();
-        if (id === -1) {
-            return Promise.reject("未找到Gist备份！");
-        } else {
-            try {
-                const {files} = await http
-                    .get(`/gists/${id}`)
-                    .then(resp => JSON.parse(resp.body));
-                const url = files[FILE_NAME].raw_url;
-                return await http.get(url).then(resp => resp.body);
-            } catch (err) {
-                return Promise.reject(err);
-            }
-        }
-    };
-}
-
-/**
- * Mini Express Framework
- * https://github.com/Peng-YM/QuanX/blob/master/Tools/OpenAPI/Express.js
- */
-function express({port} = {port: 3000}) {
-    const {isNode} = ENV();
-    const DEFAULT_HEADERS = {
-        "Content-Type": "text/plain;charset=UTF-8",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST,GET,OPTIONS,PATCH,PUT,DELETE",
-        "Access-Control-Allow-Headers":
-            "Origin, X-Requested-With, Content-Type, Accept",
-    };
-
-    // node support
-    if (isNode) {
-        const express_ = require("express");
-        const bodyParser = require("body-parser");
-        const app = express_();
-        app.use(bodyParser.json({verify: rawBodySaver}));
-        app.use(bodyParser.urlencoded({verify: rawBodySaver, extended: true}));
-        app.use(bodyParser.raw({verify: rawBodySaver, type: "*/*"}));
-        app.use((req, res, next) => {
-            res.set(DEFAULT_HEADERS);
-            next();
-        });
-
-        // adapter
-        app.start = () => {
-            app.listen(port, () => {
-                $.info(`Express started on port: ${port}`);
-            });
-        };
-        return app;
-    }
-
-    // route handlers
-    const handlers = [];
-
-    // http methods
-    const METHODS_NAMES = [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "PATCH",
-        "OPTIONS",
-        "HEAD'",
-        "ALL",
-    ];
-
-    // dispatch url to route
-    const dispatch = (request, start = 0) => {
-        let {method, url, headers, body} = request;
-        if (/json/i.test(headers["Content-Type"])) {
-            body = JSON.parse(body);
-        }
-
-        method = method.toUpperCase();
-        const {path, query} = extractURL(url);
-
-        // pattern match
-        let handler = null;
-        let i;
-        let longestMatchedPattern = 0;
-        for (i = start; i < handlers.length; i++) {
-            if (handlers[i].method === "ALL" || method === handlers[i].method) {
-                const {pattern} = handlers[i];
-                if (patternMatched(pattern, path)) {
-                    if (pattern.split("/").length > longestMatchedPattern) {
-                        handler = handlers[i];
-                        longestMatchedPattern = pattern.split("/").length;
-                    }
-                }
-            }
-        }
-        if (handler) {
-            // dispatch to next handler
-            const next = () => {
-                dispatch(method, url, i);
-            };
-            const req = {
-                method,
-                url,
-                path,
-                query,
-                params: extractPathParams(handler.pattern, path),
-                headers,
-                body,
-            };
-            const res = Response();
-            const cb = handler.callback;
-
-            const errFunc = err => {
-                res.status(500).json({
-                    status: "failed",
-                    message: `Internal Server Error: ${err}`,
-                });
-            }
-
-            if (cb.constructor.name === 'AsyncFunction') {
-                cb(req, res, next).catch(errFunc);
-            } else {
-                try {
-                    cb(req, res, next);
-                } catch (err) {
-                    errFunc(err);
-                }
-            }
-        } else {
-            // no route, return 404
-            const res = Response();
-            res.status(404).json({
-                status: "failed",
-                message: "ERROR: 404 not found",
-            });
-        }
-    };
-
-    const app = {};
-
-    // attach http methods
-    METHODS_NAMES.forEach((method) => {
-        app[method.toLowerCase()] = (pattern, callback) => {
-            // add handler
-            handlers.push({method, pattern, callback});
-        };
-    });
-
-    // chainable route
-    app.route = (pattern) => {
-        const chainApp = {};
-        METHODS_NAMES.forEach((method) => {
-            chainApp[method.toLowerCase()] = (callback) => {
-                // add handler
-                handlers.push({method, pattern, callback});
-                return chainApp;
-            };
-        });
-        return chainApp;
-    };
-
-    // start service
-    app.start = () => {
-        dispatch($request);
-    };
-
-    return app;
-
-    /************************************************
-     Utility Functions
-     *************************************************/
-    function rawBodySaver(req, res, buf, encoding) {
-        if (buf && buf.length) {
-            req.rawBody = buf.toString(encoding || "utf8");
-        }
-    }
-
-    function Response() {
-        let statusCode = 200;
-        const {isQX, isLoon, isSurge} = ENV();
-        const headers = DEFAULT_HEADERS;
-        const STATUS_CODE_MAP = {
-            200: "HTTP/1.1 200 OK",
-            201: "HTTP/1.1 201 Created",
-            302: "HTTP/1.1 302 Found",
-            307: "HTTP/1.1 307 Temporary Redirect",
-            308: "HTTP/1.1 308 Permanent Redirect",
-            404: "HTTP/1.1 404 Not Found",
-            500: "HTTP/1.1 500 Internal Server Error",
-        };
-        return new (class {
-            status(code) {
-                statusCode = code;
-                return this;
-            }
-
-            send(body = "") {
-                const response = {
-                    status: isQX ? STATUS_CODE_MAP[statusCode] : statusCode,
-                    body,
-                    headers,
-                };
-                if (isQX) {
-                    $done(response);
-                } else if (isLoon || isSurge) {
-                    $done({
-                        response,
-                    });
-                }
-            }
-
-            end() {
-                this.send();
-            }
-
-            html(data) {
-                this.set("Content-Type", "text/html;charset=UTF-8");
-                this.send(data);
-            }
-
-            json(data) {
-                this.set("Content-Type", "application/json;charset=UTF-8");
-                this.send(JSON.stringify(data));
-            }
-
-            set(key, val) {
-                headers[key] = val;
-                return this;
-            }
-        })();
-    }
-
-    function patternMatched(pattern, path) {
-        if (pattern instanceof RegExp && pattern.test(path)) {
-            return true;
-        } else {
-            // root pattern, match all
-            if (pattern === "/") return true;
-            // normal string pattern
-            if (pattern.indexOf(":") === -1) {
-                const spath = path.split("/");
-                const spattern = pattern.split("/");
-                for (let i = 0; i < spattern.length; i++) {
-                    if (spath[i] !== spattern[i]) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            // string pattern with path parameters
-            else if (extractPathParams(pattern, path)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function extractURL(url) {
-        // extract path
-        const match = url.match(/https?:\/\/[^\/]+(\/[^?]*)/) || [];
-        const path = match[1] || "/";
-
-        // extract query string
-        const split = url.indexOf("?");
-        const query = {};
-        if (split !== -1) {
-            let hashes = url.slice(url.indexOf("?") + 1).split("&");
-            for (let i = 0; i < hashes.length; i++) {
-                hash = hashes[i].split("=");
-                query[hash[0]] = hash[1];
-            }
-        }
-        return {
-            path,
-            query,
-        };
-    }
-
-    function extractPathParams(pattern, path) {
-        if (pattern.indexOf(":") === -1) {
-            return null;
-        } else {
-            const params = {};
-            for (let i = 0, j = 0; i < pattern.length; i++, j++) {
-                if (pattern[i] === ":") {
-                    let key = [];
-                    let val = [];
-                    while (pattern[++i] !== "/" && i < pattern.length) {
-                        key.push(pattern[i]);
-                    }
-                    while (path[j] !== "/" && j < path.length) {
-                        val.push(path[j++]);
-                    }
-                    params[key.join("")] = val.join("");
-                } else {
-                    if (pattern[i] !== path[j]) {
-                        return null;
-                    }
-                }
-            }
-            return params;
-        }
-    }
 }
 
 /****************************************** Third Party Libraries **********************************************/
