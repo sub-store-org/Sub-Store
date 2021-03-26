@@ -2433,7 +2433,7 @@ var ProxyUtils = (function () {
             const produce = (proxy) => {
                 let obfs_opts, tls_opts, udp_opts, tfo_opts;
                 if (typeof proxy.udp !== "undefined") {
-                    udp_opts = proxy.udp ? ",udp-relay=true" : ",udp-relay=false";
+                    udp_opts = proxy.udp ? ",udp=true" : ",udp=false";
                 }
                 if (typeof proxy.tfo !== 'undefined') {
                     tfo_opts = proxy.tfo ? ",fast-open=true" : ",fast-open=false";
