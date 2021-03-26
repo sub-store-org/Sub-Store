@@ -2432,6 +2432,7 @@ var ProxyUtils = (function () {
             const targetPlatform = "Loon";
             const produce = (proxy) => {
                 let obfs_opts, tls_opts;
+                const udp_opts = proxy.udp ? ",udp=true" : "";
                 switch (proxy.type) {
                     case "ss":
                         obfs_opts = ",,";
@@ -2445,8 +2446,8 @@ var ProxyUtils = (function () {
                                 );
                             }
                         }
-
-                        return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}`;
+                        
+                        return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}${udp_opts}`;
                     case "ssr":
                         return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}",${proxy.protocol},{${proxy["protocol-param"] || ""}},${proxy.obfs},{${proxy["obfs-param"] || ""}}`;
                     case "vmess":
