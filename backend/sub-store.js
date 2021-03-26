@@ -2431,8 +2431,15 @@ var ProxyUtils = (function () {
         function Loon_Producer() {
             const targetPlatform = "Loon";
             const produce = (proxy) => {
-                let obfs_opts, tls_opts;
-                const udp_opts = proxy.udp ? ",udp=true" : "";
+                let obfs_opts, tls_opts, udp_opts, tfo_opts;
+                if (typeof proxy.udp !== "undefined") {
+                    udp_opts = proxy.udp ? ",udp-relay=true" : ",udp-relay=false";
+                }
+                if (typeof proxy.tfo !== 'undefined') {
+                    tfo_opts = proxy.tfo ? ",fast-open=true" : ",fast-open=false";
+                }
+
+                
                 switch (proxy.type) {
                     case "ss":
                         obfs_opts = ",,";
@@ -2447,9 +2454,9 @@ var ProxyUtils = (function () {
                             }
                         }
                         
-                        return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}${udp_opts}`;
+                        return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}${udp_opts}${tfo_opts}`;
                     case "ssr":
-                        return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}",${proxy.protocol},{${proxy["protocol-param"] || ""}},${proxy.obfs},{${proxy["obfs-param"] || ""}}${udp_opts}`;
+                        return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}",${proxy.protocol},{${proxy["protocol-param"] || ""}},${proxy.obfs},{${proxy["obfs-param"] || ""}}${udp_opts}${tfo_opts}`;
                     case "vmess":
                         obfs_opts = "";
                         if (proxy.network === "ws") {
