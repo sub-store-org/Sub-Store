@@ -2,11 +2,11 @@
   <v-fab-transition>
     <v-speed-dial
         v-model="opened"
-        direction="top"
-        left
-        fab
         absolute
         bottom
+        direction="top"
+        fab
+        left
         small
         transition="slide-y-reverse-transition"
     >
@@ -19,14 +19,14 @@
         </v-btn>
       </template>
       <v-btn
-          fab
           color="primary"
+          fab
       >
         <v-icon>mdi-plus</v-icon>
       </v-btn>
       <v-btn
-          fab
           color="primary"
+          fab
       >
         <v-icon>create_new_folder</v-icon>
       </v-btn>
@@ -41,8 +41,6 @@ export default {
       opened: false,
     }
   },
-  computed: {
-
-  }
+  computed: {}
 }
 </script>

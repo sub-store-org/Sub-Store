@@ -6,7 +6,7 @@
         数据同步
         <v-spacer></v-spacer>
         <v-btn icon @click="openGist()">
-          <v-icon small color="primary">visibility</v-icon>
+          <v-icon color="primary" small>visibility</v-icon>
         </v-btn>
       </v-card-title>
       <v-card-text>
@@ -15,20 +15,20 @@
       <v-divider></v-divider>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn small
-               :loading="status.uploading"
-               color="blue-grey"
+        <v-btn :loading="status.uploading"
                class="ma-2 white--text"
+               color="blue-grey"
+               small
                @click="sync('upload')">
           上传
           <v-icon right>
             mdi-cloud-upload
           </v-icon>
         </v-btn>
-        <v-btn small
-               :loading="status.downloading"
-               color="blue-grey"
+        <v-btn :loading="status.downloading"
                class="ma-2 white--text"
+               color="blue-grey"
+               small
                @click="sync('download')">
           恢复
           <v-icon right>
@@ -51,18 +51,18 @@
             <v-col>
               <v-row>
                 <v-text-field
-                    label="GitHub 用户名"
-                    hint="填入GitHub用户名"
                     v-model="settings.githubUser"
-                    clearable clear-icon="clear"
+                    clear-icon="clear"
+                    clearable
+                    hint="填入GitHub用户名" label="GitHub 用户名"
                 />
               </v-row>
               <v-row>
                 <v-text-field
-                    label="GitHub Token"
-                    hint="填入GitHub Token"
                     v-model="settings.gistToken"
-                    clearable clear-icon="clear"
+                    clear-icon="clear"
+                    clearable
+                    hint="填入GitHub Token" label="GitHub Token"
                 />
               </v-row>
             </v-col>
@@ -75,9 +75,9 @@
             </v-list-item-content>
             <v-list-item-action>
               <v-switch
-                  label=""
-                  hide-details
                   v-model="settings.theme.darkMode"
+                  hide-details
+                  label=""
               />
             </v-list-item-action>
           </v-list-item>
@@ -86,7 +86,7 @@
       <v-divider></v-divider>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn small text @click="save()" color="primary">保存</v-btn>
+        <v-btn color="primary" small text @click="save()">保存</v-btn>
       </v-card-actions>
     </v-card>
 
@@ -150,7 +150,7 @@ export default {
       const setLoading = (status) => {
         if (action === 'upload') {
           this.status.uploading = status;
-        } else if (action === 'download'){
+        } else if (action === 'download') {
           this.status.downloading = status;
         }
       }

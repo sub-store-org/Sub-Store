@@ -5,8 +5,7 @@
 <script>
 export default {
   name: "Dashboard",
-  components: {
-  },
+  components: {},
   computed: {
     pie() {
       const total = 400;

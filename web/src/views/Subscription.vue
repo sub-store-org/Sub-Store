@@ -18,20 +18,20 @@
           >
             <v-list-item-avatar>
               <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="sub.icon" v-else :class="getIconClass(sub.icon)"/>
+              <v-img v-else :class="getIconClass(sub.icon)" :src="sub.icon"/>
             </v-list-item-avatar>
 
             <v-list-item-content>
-              <v-list-item-title v-text="sub.name" class="font-weight-medium"></v-list-item-title>
+              <v-list-item-title class="font-weight-medium" v-text="sub.name"></v-list-item-title>
               <v-list-item-title v-text="sub.url"></v-list-item-title>
             </v-list-item-content>
             <v-list-item-action>
               <v-menu bottom left>
                 <template v-slot:activator="{ on, attrs }">
                   <v-btn
-                      icon
                       v-bind="attrs"
                       v-on="on"
+                      icon
                   >
                     <v-icon>mdi-dots-vertical</v-icon>
                   </v-btn>
@@ -67,24 +67,24 @@
           <v-list-item
               v-for="collection in collections"
               :key="collection.name"
-              @click="preview(collection, type='collection')"
               dense
+              @click="preview(collection, type='collection')"
           >
             <v-list-item-avatar>
               <v-icon v-if="!collection.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="collection.icon" v-else :class="getIconClass(collection.icon)"/>
+              <v-img v-else :class="getIconClass(collection.icon)" :src="collection.icon"/>
             </v-list-item-avatar>
             <v-list-item-content>
-              <v-list-item-title v-text="collection.name" class="font-weight-medium"></v-list-item-title>
+              <v-list-item-title class="font-weight-medium" v-text="collection.name"></v-list-item-title>
               <v-chip-group
                   column
               >
                 <v-chip
                     v-for="subs in collection.subscriptions"
                     :key="subs"
-                    small
                     class="ma-2 ml-0 mr-1 pa-2"
                     label
+                    small
                 >
                   {{ subs }}
                 </v-chip>
@@ -94,9 +94,9 @@
               <v-menu bottom left>
                 <template v-slot:activator="{ on, attrs }">
                   <v-btn
-                      icon
                       v-bind="attrs"
                       v-on="on"
+                      icon
                   >
                     <v-icon>mdi-dots-vertical</v-icon>
                   </v-btn>
@@ -117,7 +117,7 @@
         </v-list>
       </v-card-text>
     </v-card>
-    <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="showProxyList" scrollable>
+    <v-dialog v-model="showProxyList" fullscreen hide-overlay scrollable transition="dialog-bottom-transition">
       <v-card fluid>
         <v-toolbar
             class="flex-grow-0"
@@ -135,9 +135,9 @@
           </v-toolbar-items>
           <template v-slot:extension>
             <v-tabs
-                grow
-                centered
                 v-model="tab"
+                centered
+                grow
             >
               <v-tabs-slider color="primary"/>
               <v-tab
@@ -158,10 +158,10 @@
               v-model="tab"
           >
             <v-tab-item key="raw">
-              <proxy-list :url="url" :sub="sub" :raw="true" ref="proxyList" :key="url + 'raw'"></proxy-list>
+              <proxy-list :key="url + 'raw'" ref="proxyList" :raw="true" :sub="sub" :url="url"></proxy-list>
             </v-tab-item>
             <v-tab-item key="processed">
-              <proxy-list :url="url" :sub="sub" ref="proxyList" :key="url"></proxy-list>
+              <proxy-list :key="url" ref="proxyList" :sub="sub" :url="url"></proxy-list>
             </v-tab-item>
           </v-tabs-items>
         </v-card-text>
@@ -185,7 +185,7 @@ export default {
       tab: 1,
       editMenu: [
         {
-          title: "复制",
+          title: "链接",
           action: "COPY"
         },
         {
@@ -196,6 +196,10 @@ export default {
           title: "删除",
           action: "DELETE"
         },
+        // {
+        //   title: "副本",
+        //   action: "DUPLICATE"
+        // }
         // {
         //   title: "上移",
         //   action: "MOVE_UP"
@@ -245,7 +249,6 @@ export default {
           this.moveUpSubscription(sub.name);
           break
         case 'MOVE_DOWN':
-
           break
       }
     },

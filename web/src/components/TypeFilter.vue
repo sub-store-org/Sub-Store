@@ -1,7 +1,7 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">cloud_circle</v-icon>
+      <v-icon color="primary" left>cloud_circle</v-icon>
       节点类型过滤
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">
@@ -15,7 +15,7 @@
       </v-btn>
       <v-dialog>
         <template #activator="{on}">
-          <v-btn icon v-on="on">
+          <v-btn v-on="on" icon>
             <v-icon>help</v-icon>
           </v-btn>
         </template>
@@ -30,13 +30,13 @@
       </v-dialog>
     </v-card-title>
     <v-card-text>
-      <v-chip-group multiple active-class="primary accent-4" v-model="selection" column>
+      <v-chip-group v-model="selection" active-class="primary accent-4" column multiple>
         <v-chip
-            class="ma-2"
             v-for="type in types"
-            label
             :key="type.name"
             :value="type.value"
+            class="ma-2"
+            label
         >
           {{ type.name }}
         </v-chip>

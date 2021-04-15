@@ -1,9 +1,9 @@
 <script>
-  import { VCard } from 'vuetify/lib'
+import {VCard} from 'vuetify/lib'
 
-  export default {
-    name: 'Card',
+export default {
+  name: 'Card',
 
-    extends: VCard
-  }
+  extends: VCard
+}
 </script>

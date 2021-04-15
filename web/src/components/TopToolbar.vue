@@ -1,11 +1,11 @@
 <template>
   <div>
     <v-app-bar
-        app
-        fixed
-        :mini-variant="false" :clipped="true"
+        :clipped="true"
+        :mini-variant="false"
+        app fixed
     >
-      <v-toolbar-title><h3>{{title}}</h3></v-toolbar-title>
+      <v-toolbar-title><h3>{{ title }}</h3></v-toolbar-title>
     </v-app-bar>
 
   </div>
@@ -19,8 +19,7 @@ export default {
     }
   },
 
-  methods: {
-  },
+  methods: {},
 
   computed: {
     title: function () {

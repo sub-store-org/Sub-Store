@@ -2,30 +2,30 @@
   <v-container>
     <v-card class="mb-4">
       <v-subheader>订阅配置</v-subheader>
-      <v-form class="pl-4 pr-4 pb-0" v-model="formState.basicValid">
+      <v-form v-model="formState.basicValid" class="pl-4 pr-4 pb-0">
         <v-text-field
             v-model="options.name"
-            class="mt-2"
             :rules="validations.nameRules"
-            required
+            class="mt-2"
+            clear-icon="clear"
+            clearable
             label="订阅名称"
             placeholder="填入订阅名称，名称需唯一"
-            clearable
-            clear-icon="clear"
+            required
         />
         <!--For Subscription-->
         <v-textarea
             v-if="!isCollection"
             v-model="options.url"
-            class="mt-2"
-            rows="2"
             :rules="validations.urlRules"
-            required
+            auto-grow
+            class="mt-2"
+            clear-icon="clear"
+            clearable
             label="订阅链接"
             placeholder="填入机场原始订阅链接"
-            clearable
-            auto-grow
-            clear-icon="clear"
+            required
+            rows="2"
         />
         <!--For Collection-->
         <v-list
@@ -36,28 +36,28 @@
           <v-list-item v-for="sub in availableSubs" :key="sub.name">
             <v-list-item-avatar>
               <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img :src="sub.icon" v-else :class="getIconClass(sub.icon)"/>
+              <v-img v-else :class="getIconClass(sub.icon)" :src="sub.icon"/>
             </v-list-item-avatar>
             <v-list-item-content>
               {{ sub.name }}
             </v-list-item-content>
             <v-spacer></v-spacer>
             <v-checkbox
-                :value="sub.name"
                 v-model="selected"
+                :value="sub.name"
                 class="pr-1"
             />
           </v-list-item>
         </v-list>
         <v-textarea
             v-model="options.icon"
+            auto-grow
             class="mt-2"
-            rows="2"
+            clear-icon="clear"
+            clearable
             label="图标链接"
             placeholder="填入想要展示的图标链接，可选。"
-            clearable
-            auto-grow
-            clear-icon="clear"
+            rows="2"
         />
       </v-form>
       <v-card-actions>
@@ -65,9 +65,9 @@
         <v-btn icon @click="save">
           <v-icon>save_alt</v-icon>
         </v-btn>
-        <v-dialog max-width="400px" v-model="showShareDialog">
+        <v-dialog v-model="showShareDialog" max-width="400px">
           <template #activator="{on}">
-            <v-btn icon v-on="on">
+            <v-btn v-on="on" icon>
               <v-icon>cloud_circle</v-icon>
             </v-btn>
           </template>
@@ -82,16 +82,16 @@
             </v-card-title>
             <v-textarea
                 v-model="imported"
-                solo
+                :rules="validations.importRules"
+                clear-icon="clear"
+                clearable
                 label="粘贴配置以导入"
                 rows="5"
-                clearable
-                clear-icon="clear"
-                :rules="validations.importRules"
+                solo
             />
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn text color="primary" @click="importConf">确认</v-btn>
+              <v-btn color="primary" text @click="importConf">确认</v-btn>
               <v-btn text @click="showShareDialog = false">取消</v-btn>
             </v-card-actions>
           </v-card>
@@ -105,8 +105,8 @@
         <v-item-group>
           <v-radio-group
               v-model="options.useless"
-              dense
               class="mt-0 mb-0"
+              dense
           >
             过滤非法节点
             <v-row>
@@ -122,8 +122,8 @@
 
           <v-radio-group
               v-model="options.udp"
-              dense
               class="mt-0 mb-0"
+              dense
           >
             UDP转发
             <v-row>
@@ -141,8 +141,8 @@
 
           <v-radio-group
               v-model="options['skip-cert-verify']"
-              dense
               class="mt-0 mb-0"
+              dense
           >
             跳过证书验证
             <v-row>
@@ -159,8 +159,8 @@
           </v-radio-group>
           <v-radio-group
               v-model="options.tfo"
-              dense
               class="mt-0 mb-0"
+              dense
           >
             TCP Fast Open
             <v-row>
@@ -178,13 +178,13 @@
         </v-item-group>
       </v-form>
     </v-card>
-    <v-card class="mb-4" id="processors">
+    <v-card id="processors" class="mb-4">
       <v-subheader>
         节点操作
         <v-spacer></v-spacer>
-        <v-dialog scrollable v-model="dialog">
+        <v-dialog v-model="dialog" scrollable>
           <template #activator="{on}">
-            <v-btn icon v-on="on">
+            <v-btn v-on="on" icon>
               <v-icon color="primary">add_circle</v-icon>
             </v-btn>
           </template>
@@ -192,9 +192,9 @@
             <v-card-title>选择节点操作</v-card-title>
             <v-divider></v-divider>
             <v-card-text>
-              <v-radio-group dense v-model="selectedProcess">
-                <v-radio v-for="(k, idx) in Object.keys(availableProcessors)" :label="availableProcessors[k].name"
-                         :key="idx" :value="k"></v-radio>
+              <v-radio-group v-model="selectedProcess" dense>
+                <v-radio v-for="(k, idx) in Object.keys(availableProcessors)" :key="idx"
+                         :label="availableProcessors[k].name" :value="k"></v-radio>
               </v-radio-group>
             </v-card-text>
             <v-card-actions>
@@ -207,14 +207,14 @@
 
       </v-subheader>
       <v-divider></v-divider>
-      <component v-for="p in processors"
-                 :is="p.component"
+      <component :is="p.component"
+                 v-for="p in processors"
                  :key="p.id"
                  :args="p.args"
                  @dataChanged="dataChanged"
                  @deleteProcess="deleteProcess"
-                 @up="moveUp"
                  @down="moveDown"
+                 @up="moveUp"
       >
       </component>
     </v-card>
@@ -233,6 +233,7 @@ import FlagOperator from "@/components/FlagOperator";
 import ScriptFilter from "@/components/ScriptFilter";
 import ScriptOperator from "@/components/ScriptOperator";
 import RegexSortOperator from "@/components/RegexSortOperator";
+import HandleDuplicateOperator from "@/components/HandleDuplicateOperator";
 
 const AVAILABLE_PROCESSORS = {
   "Flag Operator": {
@@ -267,6 +268,10 @@ const AVAILABLE_PROCESSORS = {
     component: "RegexDeleteOperator",
     name: "删除正则"
   },
+  "Handle Duplicate Operator": {
+    component: "HandleDuplicateOperator",
+    name: "重复节点处理"
+  },
   "Script Filter": {
     component: "ScriptFilter",
     name: "脚本过滤器"
@@ -297,6 +302,7 @@ export default {
     RegexDeleteOperator,
     ScriptFilter,
     ScriptOperator,
+    HandleDuplicateOperator
   },
   data: function () {
     return {
