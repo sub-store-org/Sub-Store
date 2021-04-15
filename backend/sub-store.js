@@ -23,7 +23,8 @@ function service() {
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
             𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 © 𝑷𝒆𝒏𝒈-𝒀𝑴
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
-`);
+`
+    );
     const $app = express();
     // Constants
     const SETTINGS_KEY = "settings";
@@ -44,48 +45,49 @@ function service() {
     if (!$.read(RULES_KEY)) $.write({}, RULES_KEY);
     if (!$.read(ARTIFACTS_KEY)) $.write({}, ARTIFACTS_KEY);
 
-    $.write({
-        rules: getBuiltInRules(),
-    }, BUILT_IN_KEY);
+    $.write(
+        {
+            rules: getBuiltInRules(),
+        },
+        BUILT_IN_KEY
+    );
 
     // download
     $app.get("/download/collection/:name", downloadCollection);
     $app.get("/download/:name", downloadSubscription);
 
     // subscription API
-    $app.route("/api/sub/:name")
+    $app
+        .route("/api/sub/:name")
         .get(getSubscription)
         .patch(updateSubscription)
         .delete(deleteSubscription);
 
-    $app.route("/api/subs")
-        .get(getAllSubscriptions)
-        .post(createSubscription);
+    $app.route("/api/subs").get(getAllSubscriptions).post(createSubscription);
 
     $app.get("/api/sub/statistics/:name");
 
     // collection API
-    $app.route("/api/collection/:name")
+    $app
+        .route("/api/collection/:name")
         .get(getCollection)
         .patch(updateCollection)
         .delete(deleteCollection);
 
-    $app.route("/api/collections")
-        .get(getAllCollections)
-        .post(createCollection);
+    $app.route("/api/collections").get(getAllCollections).post(createCollection);
 
     // rules API
     $app.get("/download/rule/:name", downloadRule);
-    $app.route("/api/rules")
-        .post(createRule)
-        .get(getAllRules);
-    $app.route("/api/rule/:name")
+    $app.route("/api/rules").post(createRule).get(getAllRules);
+    $app
+        .route("/api/rule/:name")
         .patch(updateRule)
         .delete(deleteRule)
         .get(getRule);
 
     // Storage management
-    $app.route("/api/storage")
+    $app
+        .route("/api/storage")
         .get((req, res) => {
             res.json($.read("#sub-store"));
         })
@@ -96,16 +98,13 @@ function service() {
         });
 
     // Settings
-    $app.route("/api/settings")
-        .get(getSettings)
-        .patch(updateSettings);
+    $app.route("/api/settings").get(getSettings).patch(updateSettings);
 
     // Artifacts
-    $app.route("/api/artifacts")
-        .get(getAllArtifacts)
-        .post(createArtifact);
+    $app.route("/api/artifacts").get(getAllArtifacts).post(createArtifact);
 
-    $app.route("/api/artifact/:name")
+    $app
+        .route("/api/artifact/:name")
         .get(getArtifact)
         .patch(updateArtifact)
         .delete(deleteArtifact);
@@ -143,8 +142,12 @@ function service() {
         const {name} = req.params;
         const {cache} = req.query;
         const {raw} = req.query || "false";
-        const platform = req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
-        const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
+        const platform =
+            req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
+        const useCache =
+            typeof cache === "undefined"
+                ? platform === "JSON" || platform === "URI"
+                : cache;
 
         $.info(`正在下载订阅：${name}`);
 
@@ -153,29 +156,36 @@ function service() {
         if (sub) {
             try {
                 const output = await produceArtifact({
-                    type: 'subscription',
+                    type: "subscription",
                     item: sub,
                     platform,
                     useCache,
-                    noProcessor: raw
+                    noProcessor: raw,
                 });
 
                 // forward flow headers
-                if (["QX", "Surge", "Loon"].indexOf(getPlatformFromHeaders(req.headers)) !== -1) {
+                if (
+                    ["QX", "Surge", "Loon"].indexOf(
+                        getPlatformFromHeaders(req.headers)
+                    ) !== -1
+                ) {
                     const {headers} = await $.http.get({
                         url: sub.url,
                         headers: {
-                            "User-Agent":
-                                "Quantumult/1.0.13 (iPhone10,3; iOS 14.0)"
-                        }
+                            "User-Agent": "Quantumult/1.0.13 (iPhone10,3; iOS 14.0)",
+                        },
                     });
-                    const subkey = Object.keys(headers).filter(k => /SUBSCRIPTION-USERINFO/i.test(k))[0];
+                    const subkey = Object.keys(headers).filter((k) =>
+                        /SUBSCRIPTION-USERINFO/i.test(k)
+                    )[0];
                     const userinfo = headers[subkey];
                     res.set("subscription-userinfo", userinfo);
                 }
 
-                if (platform === 'JSON') {
-                    res.set("Content-Type", "application/json;charset=utf-8").send(output);
+                if (platform === "JSON") {
+                    res
+                        .set("Content-Type", "application/json;charset=utf-8")
+                        .send(output);
                 } else {
                     res.send(output);
                 }
@@ -191,10 +201,7 @@ function service() {
                 });
             }
         } else {
-            $.notify(
-                `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`,
-                `❌ 未找到订阅：${name}！`,
-            );
+            $.notify(`🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`, `❌ 未找到订阅：${name}！`);
             res.status(404).json({
                 status: "failed",
             });
@@ -315,8 +322,12 @@ function service() {
         const {name} = req.params;
         const {cache} = req.query || "false";
         const {raw} = req.query || "false";
-        const platform = req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
-        const useCache = typeof cache === 'undefined' ? (platform === 'JSON' || platform === 'URI') : cache;
+        const platform =
+            req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
+        const useCache =
+            typeof cache === "undefined"
+                ? platform === "JSON" || platform === "URI"
+                : cache;
 
         const allCollections = $.read(COLLECTIONS_KEY);
         const collection = allCollections[name];
@@ -330,10 +341,12 @@ function service() {
                     item: collection,
                     platform,
                     useCache,
-                    noProcessor: raw
+                    noProcessor: raw,
                 });
-                if (platform === 'JSON') {
-                    res.set("Content-Type", "application/json;charset=utf-8").send(output);
+                if (platform === "JSON") {
+                    res
+                        .set("Content-Type", "application/json;charset=utf-8")
+                        .send(output);
                 } else {
                     res.send(output);
                 }
@@ -348,11 +361,10 @@ function service() {
                     message: err,
                 });
             }
-
         } else {
             $.notify(
                 `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
-                `❌ 未找到组合订阅：${name}！`,
+                `❌ 未找到组合订阅：${name}！`
             );
             res.status(404).json({
                 status: "failed",
@@ -451,22 +463,27 @@ function service() {
     async function downloadRule(req, res) {
         const {name} = req.params;
         const {builtin} = req.query;
-        const platform = req.query.target || getPlatformFromHeaders(req.headers) || "Surge";
+        const platform =
+            req.query.target || getPlatformFromHeaders(req.headers) || "Surge";
 
         $.info(`正在下载${builtin ? "内置" : ""}分流订阅：${name}...`);
 
         let rule;
         if (builtin) {
-            rule = $.read(BUILT_IN_KEY)['rules'][name];
+            rule = $.read(BUILT_IN_KEY)["rules"][name];
         }
         if (rule) {
-            const output = await produceArtifact({type: "rule", item: rule, platform})
+            const output = await produceArtifact({
+                type: "rule",
+                item: rule,
+                platform,
+            });
             res.send(output);
         } else {
             // rule not found
             $.notify(
                 `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载分流订阅失败`,
-                `❌ 未找到分流订阅：${name}！`,
+                `❌ 未找到分流订阅：${name}！`
             );
             res.status(404).json({
                 status: "failed",
@@ -475,23 +492,18 @@ function service() {
     }
 
     function createRule(req, res) {
-
     }
 
     function deleteRule(req, res) {
-
     }
 
     function updateRule(req, res) {
-
     }
 
     function getAllRules(req, res) {
-
     }
 
     function getRule(req, res) {
-
     }
 
     // settings API
@@ -503,12 +515,15 @@ function service() {
     function updateSettings(req, res) {
         const data = req.body;
         const settings = $.read(SETTINGS_KEY);
-        $.write({
-            ...settings,
-            ...data
-        }, SETTINGS_KEY);
+        $.write(
+            {
+                ...settings,
+                ...data,
+            },
+            SETTINGS_KEY
+        );
         res.json({
-            status: "success"
+            status: "success",
         });
     }
 
@@ -523,49 +538,52 @@ function service() {
             if (action) {
                 let item;
                 switch (artifact.type) {
-                    case 'subscription':
+                    case "subscription":
                         item = $.read(SUBS_KEY)[artifact.source];
                         break;
-                    case 'collection':
+                    case "collection":
                         item = $.read(COLLECTIONS_KEY)[artifact.source];
                         break;
-                    case 'rule':
+                    case "rule":
                         item = $.read(RULES_KEY)[artifact.source];
                         break;
                 }
                 const output = await produceArtifact({
                     type: artifact.type,
                     item,
-                    platform: artifact.platform
-                })
-                if (action === 'preview') {
+                    platform: artifact.platform,
+                });
+                if (action === "preview") {
                     res.send(output);
-                } else if (action === 'sync') {
+                } else if (action === "sync") {
                     $.info(`正在上传配置：${artifact.name}\n>>>`);
                     console.log(JSON.stringify(artifact, null, 2));
                     try {
                         const resp = await syncArtifact({
                             filename: artifact.name,
-                            content: output
+                            content: output,
                         });
                         artifact.updated = new Date().getTime();
                         const body = JSON.parse(resp.body);
-                        artifact.url = body.files[artifact.name].raw_url.replace(/\/raw\/[^\/]*\/(.*)/, "/raw/$1");
+                        artifact.url = body.files[artifact.name].raw_url.replace(
+                            /\/raw\/[^\/]*\/(.*)/,
+                            "/raw/$1"
+                        );
                         $.write(allArtifacts, ARTIFACTS_KEY);
                         res.json({
-                            status: "success"
+                            status: "success",
                         });
                     } catch (err) {
                         res.status(500).json({
                             status: "failed",
-                            message: err
+                            message: err,
                         });
                     }
                 }
             } else {
                 res.json({
                     status: "success",
-                    data: artifact
+                    data: artifact,
                 });
             }
         } else {
@@ -591,7 +609,7 @@ function service() {
                 $.write(allArtifacts, ARTIFACTS_KEY);
                 res.status(201).json({
                     status: "success",
-                    data: artifact
+                    data: artifact,
                 });
             } else {
                 res.status(500).json({
@@ -609,7 +627,10 @@ function service() {
         if (artifact) {
             $.info(`正在更新远程配置：${artifact.name}`);
             const newArtifact = req.body;
-            if (typeof newArtifact.name !== 'undefined' && !/^[\w-_.]*$/.test(newArtifact.name)) {
+            if (
+                typeof newArtifact.name !== "undefined" &&
+                !/^[\w-_.]*$/.test(newArtifact.name)
+            ) {
                 res.status(500).json({
                     status: "failed",
                     message: `远程配置名称 ${newArtifact.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`,
@@ -617,14 +638,14 @@ function service() {
             } else {
                 const merged = {
                     ...artifact,
-                    ...newArtifact
+                    ...newArtifact,
                 };
                 allArtifacts[merged.name] = merged;
                 if (merged.name !== oldName) delete allArtifacts[oldName];
                 $.write(allArtifacts, ARTIFACTS_KEY);
                 res.json({
                     status: "success",
-                    data: merged
+                    data: merged,
                 });
             }
         } else {
@@ -638,35 +659,39 @@ function service() {
     async function cronSyncArtifacts(req, res) {
         $.info("开始同步所有远程配置...");
         const allArtifacts = $.read(ARTIFACTS_KEY);
-        let success = [], failed = [];
+        let success = [],
+            failed = [];
         for (const artifact of Object.values(allArtifacts)) {
             if (artifact.sync) {
                 $.info(`正在同步云配置：${artifact.name}...`);
                 try {
                     let item;
                     switch (artifact.type) {
-                        case 'subscription':
+                        case "subscription":
                             item = $.read(SUBS_KEY)[artifact.source];
                             break;
-                        case 'collection':
+                        case "collection":
                             item = $.read(COLLECTIONS_KEY)[artifact.source];
                             break;
-                        case 'rule':
+                        case "rule":
                             item = $.read(RULES_KEY)[artifact.source];
                             break;
                     }
                     const output = await produceArtifact({
                         type: artifact.type,
                         item,
-                        platform: artifact.platform
+                        platform: artifact.platform,
                     });
                     const resp = await syncArtifact({
                         filename: artifact.name,
-                        content: output
+                        content: output,
                     });
                     artifact.updated = new Date().getTime();
                     const body = JSON.parse(resp.body);
-                    artifact.url = body.files[artifact.name].raw_url.replace(/\/raw\/[^\/]*\/(.*)/, "/raw/$1");
+                    artifact.url = body.files[artifact.name].raw_url.replace(
+                        /\/raw\/[^\/]*\/(.*)/,
+                        "/raw/$1"
+                    );
                     $.write(allArtifacts, ARTIFACTS_KEY);
                     $.info(`✅ 成功同步云配置：${artifact.name}`);
                     success.push(artifact);
@@ -683,7 +708,7 @@ function service() {
         }
         res.json({
             success,
-            failed
+            failed,
         });
     }
 
@@ -698,14 +723,14 @@ function service() {
                 // delete gist
                 await syncArtifact({
                     filename: name,
-                    content: ""
+                    content: "",
                 });
             }
             // delete local cache
             delete allArtifacts[name];
             $.write(allArtifacts, ARTIFACTS_KEY);
             res.json({
-                status: "success"
+                status: "success",
             });
         } catch (err) {
             // delete local cache
@@ -713,7 +738,7 @@ function service() {
             $.write(allArtifacts, ARTIFACTS_KEY);
             res.status(500).json({
                 status: "failed",
-                message: `无法删除远程配置：${name}, 原因：${err}`
+                message: `无法删除远程配置：${name}, 原因：${err}`,
             });
         }
     }
@@ -722,7 +747,7 @@ function service() {
         const allArtifacts = $.read(ARTIFACTS_KEY);
         res.json({
             status: "success",
-            data: allArtifacts
+            data: allArtifacts,
         });
     }
 
@@ -733,7 +758,7 @@ function service() {
         }
         const manager = new Gist({
             token: gistToken,
-            key: ARTIFACT_REPOSITORY_KEY
+            key: ARTIFACT_REPOSITORY_KEY,
         });
         return manager.upload({filename, content});
     }
@@ -759,7 +784,7 @@ function service() {
         } catch (err) {
             res.status(500).json({
                 status: "failed",
-                message: `无法刷新资源 ${url}： ${err}`
+                message: `无法刷新资源 ${url}： ${err}`,
             });
         }
     }
@@ -772,7 +797,7 @@ function service() {
         if (isLoon) backend = "Loon";
         if (isSurge) backend = "Surge";
         res.json({
-            backend
+            backend,
         });
     }
 
@@ -783,12 +808,12 @@ function service() {
         if (!gistToken) {
             res.status(500).json({
                 status: "failed",
-                message: "未找到Gist备份Token!"
+                message: "未找到Gist备份Token!",
             });
         } else {
             const gist = new Gist({
                 token: gistToken,
-                key: GIST_BACKUP_KEY
+                key: GIST_BACKUP_KEY,
             });
             try {
                 let content;
@@ -818,7 +843,7 @@ function service() {
                 $.error(msg);
                 res.status(500).json({
                     status: "failed",
-                    message: msg
+                    message: msg,
                 });
             }
         }
@@ -851,7 +876,7 @@ function service() {
         const $http = HTTP({
             headers: {
                 "User-Agent": "Quantumult%20X",
-            }
+            },
         });
         const key = "#" + Base64.safeEncode(url);
         const resource = $.read(key);
@@ -881,12 +906,14 @@ function service() {
         return body;
     }
 
-    async function produceArtifact({type, item, platform, useCache, noProcessor} = {
-        platform: "JSON",
-        useCache: false,
-        noProcessor: false
-    }) {
-        if (type === 'subscription') {
+    async function produceArtifact(
+        {type, item, platform, useCache, noProcessor} = {
+            platform: "JSON",
+            useCache: false,
+            noProcessor: false,
+        }
+    ) {
+        if (type === "subscription") {
             const sub = item;
             const raw = await getResource(sub.url, useCache);
             // parse proxies
@@ -895,28 +922,45 @@ function service() {
                 // apply processors
                 proxies = await ProxyUtils.process(proxies, sub.process || []);
             }
+            // check duplicate
+            const count = {};
+            proxies.forEach(p => {
+                if (count[p.name]) {
+                    $.notify("🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』", "⚠️ 订阅包含重复节点！", "请仔细检测配置！", {
+                        "media-url": "https://cdn3.iconfinder.com/data/icons/seo-outline-1/512/25_code_program_programming_develop_bug_search_developer-512.png"
+                    });
+                }
+            });
             // produce
             return ProxyUtils.produce(proxies, platform);
-        } else if (type === 'collection') {
+        } else if (type === "collection") {
             const allSubs = $.read(SUBS_KEY);
             const collection = item;
-            const subs = collection['subscriptions'];
+            const subs = collection["subscriptions"];
             let proxies = [];
             for (let i = 0; i < subs.length; i++) {
                 const sub = allSubs[subs[i]];
-                $.info(`正在处理子订阅：${sub.name}，进度--${100 * ((i + 1) / subs.length).toFixed(1)}% `);
+                $.info(
+                    `正在处理子订阅：${sub.name}，进度--${100 * ((i + 1) / subs.length).toFixed(1)
+                    }% `
+                );
                 try {
                     const raw = await getResource(sub.url, useCache);
                     // parse proxies
-                    let currentProxies = ProxyUtils.parse(raw)
+                    let currentProxies = ProxyUtils.parse(raw);
                     if (!noProcessor) {
                         // apply processors
-                        currentProxies = await ProxyUtils.process(currentProxies, sub.process || []);
+                        currentProxies = await ProxyUtils.process(
+                            currentProxies,
+                            sub.process || []
+                        );
                     }
                     // merge
                     proxies = proxies.concat(currentProxies);
                 } catch (err) {
-                    $.error(`处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}! 该订阅已被跳过。`);
+                    $.error(
+                        `处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}! 该订阅已被跳过。`
+                    );
                 }
             }
             if (!noProcessor) {
@@ -927,22 +971,29 @@ function service() {
                 throw new Error(`组合订阅中不含有效节点！`);
             }
             return ProxyUtils.produce(proxies, platform);
-        } else if (type === 'rule') {
+        } else if (type === "rule") {
             const rule = item;
             let rules = [];
             for (let i = 0; i < rule.urls.length; i++) {
                 const url = rule.urls[i];
-                $.info(`正在处理URL：${url}，进度--${100 * ((i + 1) / rule.urls.length).toFixed(1)}% `);
+                $.info(
+                    `正在处理URL：${url}，进度--${100 * ((i + 1) / rule.urls.length).toFixed(1)
+                    }% `
+                );
                 try {
                     const {body} = await $.http.get(url);
                     const currentRules = RuleUtils.parse(body);
                     rules = rules.concat(currentRules);
                 } catch (err) {
-                    $.error(`处理分流订阅中的URL: ${url}时出现错误：${err}! 该订阅已被跳过。`);
+                    $.error(
+                        `处理分流订阅中的URL: ${url}时出现错误：${err}! 该订阅已被跳过。`
+                    );
                 }
             }
             // remove duplicates
-            rules = await RuleUtils.process(rules, [{type: "Remove Duplicate Filter"}]);
+            rules = await RuleUtils.process(rules, [
+                {type: "Remove Duplicate Filter"},
+            ]);
             // produce output
             return RuleUtils.produce(rules, platform);
         }
@@ -954,26 +1005,32 @@ var ProxyUtils = (function () {
     const PROXY_PREPROCESSORS = (function () {
         function HTML() {
             const name = "HTML";
-            const test = raw => /^<!DOCTYPE html>/.test(raw);
+            const test = (raw) => /^<!DOCTYPE html>/.test(raw);
             // simply discard HTML
-            const parse = _ => "";
+            const parse = (_) => "";
             return {name, test, parse};
         }
 
         function Base64Encoded() {
             const name = "Base64 Pre-processor";
 
-            const keys = ["dm1lc3M", "c3NyOi8v", "dHJvamFu", "c3M6Ly", "c3NkOi8v",
-                "c2hhZG93", "aHR0c"
+            const keys = [
+                "dm1lc3M",
+                "c3NyOi8v",
+                "dHJvamFu",
+                "c3M6Ly",
+                "c3NkOi8v",
+                "c2hhZG93",
+                "aHR0c",
             ];
 
             const test = function (raw) {
-                return keys.some(k => raw.indexOf(k) !== -1);
-            }
+                return keys.some((k) => raw.indexOf(k) !== -1);
+            };
             const parse = function (raw) {
                 raw = Base64.safeDecode(raw);
                 return raw;
-            }
+            };
             return {name, test, parse};
         }
 
@@ -981,7 +1038,7 @@ var ProxyUtils = (function () {
             const name = "Clash Pre-processor";
             const test = function (raw) {
                 return /proxies/.test(raw);
-            }
+            };
             const parse = function (raw) {
                 // Clash YAML format
                 // codes are modified from @KOP-XIAO
@@ -998,15 +1055,19 @@ var ProxyUtils = (function () {
                         .replace(/{|}/g, "")
                         .replace(/,/g, "\n   ");
                 }
-                raw = raw.replace(/  -\n.*name/g, "  - name")
+                raw = raw
+                    .replace(/  -\n.*name/g, "  - name")
                     .replace(/\$|\`/g, "")
                     .split("proxy-providers:")[0]
                     .split("proxy-groups:")[0]
-                    .replace(/\"([\w-]+)\"\s*:/g, "$1:")
-                raw = raw.indexOf("proxies:") === -1 ? "proxies:\n" + raw : "proxies:" + raw.split("proxies:")[1]
+                    .replace(/\"([\w-]+)\"\s*:/g, "$1:");
+                raw =
+                    raw.indexOf("proxies:") === -1
+                        ? "proxies:\n" + raw
+                        : "proxies:" + raw.split("proxies:")[1];
                 const proxies = YAML.eval(raw).proxies;
-                return proxies.map(p => JSON.stringify(p)).join("\n");
-            }
+                return proxies.map((p) => JSON.stringify(p)).join("\n");
+            };
             return {name, test, parse};
         }
 
@@ -1043,16 +1104,22 @@ var ProxyUtils = (function () {
                         encodeURIComponent(server.plugin + ";" + server.plugin_options)
                         : "";
                     output[i] =
-                        "ss://" + userinfo + "@" + hostname + ":" + port + plugin + "#" + tag;
+                        "ss://" +
+                        userinfo +
+                        "@" +
+                        hostname +
+                        ":" +
+                        port +
+                        plugin +
+                        "#" +
+                        tag;
                 }
                 return output.join("\n");
             };
             return {name, test, parse};
         }
 
-        return [
-            HTML(), Base64Encoded(), Clash(), SSD()
-        ];
+        return [HTML(), Base64Encoded(), Clash(), SSD()];
     })();
     const PROXY_PARSERS = (function () {
         // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
@@ -1146,8 +1213,13 @@ var ProxyUtils = (function () {
                     splitIdx = line.indexOf(":auth_");
                 }
                 const serverAndPort = line.substring(0, splitIdx);
-                const server = serverAndPort.substring(0, serverAndPort.lastIndexOf(":"));
-                const port = serverAndPort.substring(serverAndPort.lastIndexOf(":") + 1);
+                const server = serverAndPort.substring(
+                    0,
+                    serverAndPort.lastIndexOf(":")
+                );
+                const port = serverAndPort.substring(
+                    serverAndPort.lastIndexOf(":") + 1
+                );
 
                 let params = line
                     .substring(splitIdx + 1)
@@ -1174,11 +1246,16 @@ var ProxyUtils = (function () {
                 }
                 proxy = {
                     ...proxy,
-                    name: other_params.remarks ? Base64.safeDecode(other_params.remarks) : proxy.server,
-                    "protocol-param":
-                        Base64.safeDecode(other_params.protoparam || "").replace(/\s/g, ""),
-                    "obfs-param":
-                        Base64.safeDecode(other_params.obfsparam || "").replace(/\s/g, ""),
+                    name: other_params.remarks
+                        ? Base64.safeDecode(other_params.remarks)
+                        : proxy.server,
+                    "protocol-param": Base64.safeDecode(
+                        other_params.protoparam || ""
+                    ).replace(/\s/g, ""),
+                    "obfs-param": Base64.safeDecode(other_params.obfsparam || "").replace(
+                        /\s/g,
+                        ""
+                    ),
                 };
                 return proxy;
             };
@@ -1221,13 +1298,17 @@ var ProxyUtils = (function () {
                         tls: params.obfs === "over-tls" || params.obfs === "wss",
                     };
 
-                    if (typeof params['udp-relay'] !== "undefined") proxy.udp = JSON.parse(params["udp-relay"]);
-                    if (typeof params['fast-open'] !== "undefined") proxy.udp = JSON.parse(params["fast-open"]);
+                    if (typeof params["udp-relay"] !== "undefined")
+                        proxy.udp = JSON.parse(params["udp-relay"]);
+                    if (typeof params["fast-open"] !== "undefined")
+                        proxy.udp = JSON.parse(params["fast-open"]);
 
                     // handle ws headers
                     if (params.obfs === "ws" || params.obfs === "wss") {
                         proxy.network = "ws";
-                        proxy["ws-path"] = (params["obfs-path"] || '"/"').match(/^"(.*)"$/)[1];
+                        proxy["ws-path"] = (params["obfs-path"] || '"/"').match(
+                            /^"(.*)"$/
+                        )[1];
                         let obfs_host = params["obfs-header"];
                         if (obfs_host && obfs_host.indexOf("Host") !== -1) {
                             obfs_host = obfs_host.match(/Host:\s*([a-zA-Z0-9-.]*)/)[1];
@@ -1239,7 +1320,7 @@ var ProxyUtils = (function () {
 
                     // handle scert
                     if (proxy.tls && params['"tls-verification"'] === "false") {
-                        proxy['skip-cert-verify'] = true;
+                        proxy["skip-cert-verify"] = true;
                     }
 
                     // handle sni
@@ -1275,7 +1356,7 @@ var ProxyUtils = (function () {
                     }
                     // handle scert
                     if (params.verify_cert === false) {
-                        proxy['skip-cert-verify'] = true;
+                        proxy["skip-cert-verify"] = true;
                     }
                     return proxy;
                 }
@@ -1363,8 +1444,12 @@ var ProxyUtils = (function () {
                                 path: params["obfs-uri"] || "/",
                                 tls: params.obfs === "wss",
                             };
-                            if (proxy["plugin-opts"].tls && typeof params['tls-verification'] !== "undefined") {
-                                proxy["plugin-opts"]['skip-cert-verify'] = params['tls-verification'];
+                            if (
+                                proxy["plugin-opts"].tls &&
+                                typeof params["tls-verification"] !== "undefined"
+                            ) {
+                                proxy["plugin-opts"]["skip-cert-verify"] =
+                                    params["tls-verification"];
                             }
                             proxy.plugin = "v2ray-plugin";
                             // Surge and Loon lack support for v2ray-plugin obfs
@@ -1437,7 +1522,9 @@ var ProxyUtils = (function () {
                 };
                 if (proxy.tls) {
                     proxy.sni = params["obfs-host"] || params.server;
-                    proxy['skip-cert-verify'] = !JSON.parse(params["tls-verification"] || "true");
+                    proxy["skip-cert-verify"] = !JSON.parse(
+                        params["tls-verification"] || "true"
+                    );
                 }
                 // handle ws headers
                 if (params.obfs === "ws" || params.obfs === "wss") {
@@ -1470,7 +1557,9 @@ var ProxyUtils = (function () {
                     udp: JSON.parse(params["udp-relay"] || "false"),
                     tfo: JSON.parse(params["fast-open"] || "false"),
                 };
-                proxy['skip-cert-verify'] = !JSON.parse(params["tls-verification"] || "true");
+                proxy["skip-cert-verify"] = !JSON.parse(
+                    params["tls-verification"] || "true"
+                );
                 return proxy;
             };
             return {name, test, parse};
@@ -1492,11 +1581,15 @@ var ProxyUtils = (function () {
                     udp: JSON.parse(params["udp-relay"] || "false"),
                     tfo: JSON.parse(params["fast-open"] || "false"),
                 };
-                if (params.username && params.username !== 'none') proxy.username = params.username;
-                if (params.password && params.password !== 'none') proxy.password = params.password;
+                if (params.username && params.username !== "none")
+                    proxy.username = params.username;
+                if (params.password && params.password !== "none")
+                    proxy.password = params.password;
                 if (proxy.tls) {
                     proxy.sni = params["tls-host"] || proxy.server;
-                    proxy['skip-cert-verify'] = !JSON.parse(params["tls-verification"] || "true");
+                    proxy["skip-cert-verify"] = !JSON.parse(
+                        params["tls-verification"] || "true"
+                    );
                 }
                 return proxy;
             };
@@ -1528,7 +1621,8 @@ var ProxyUtils = (function () {
             const name = "Loon SS Parser";
             const test = (line) => {
                 return (
-                    line.split(",")[0].split("=")[1].trim().toLowerCase() === "shadowsocks"
+                    line.split(",")[0].split("=")[1].trim().toLowerCase() ===
+                    "shadowsocks"
                 );
             };
             const parse = (line) => {
@@ -1558,7 +1652,8 @@ var ProxyUtils = (function () {
             const name = "Loon SSR Parser";
             const test = (line) => {
                 return (
-                    line.split(",")[0].split("=")[1].trim().toLowerCase() === "shadowsocksr"
+                    line.split(",")[0].split("=")[1].trim().toLowerCase() ===
+                    "shadowsocksr"
                 );
             };
             const parse = (line) => {
@@ -1612,7 +1707,9 @@ var ProxyUtils = (function () {
                 proxy.tls = JSON.parse(params["over-tls"] || "false");
                 if (proxy.tls) {
                     proxy.sni = params["tls-name"] || proxy.server;
-                    proxy['skip-cert-verify'] = JSON.parse(params["skip-cert-verify"] || "false");
+                    proxy["skip-cert-verify"] = JSON.parse(
+                        params["skip-cert-verify"] || "false"
+                    );
                 }
                 switch (params.transport) {
                     case "tcp":
@@ -1625,7 +1722,9 @@ var ProxyUtils = (function () {
                         };
                 }
                 if (proxy.tls) {
-                    proxy['skip-cert-verify'] = JSON.parse(params["skip-cert-verify"] || "false");
+                    proxy["skip-cert-verify"] = JSON.parse(
+                        params["skip-cert-verify"] || "false"
+                    );
                 }
                 return proxy;
             };
@@ -1689,7 +1788,9 @@ var ProxyUtils = (function () {
 
                 if (proxy.tls) {
                     proxy.sni = params["tls-name"] || proxy.server;
-                    proxy['skip-cert-verify'] = JSON.parse(params["skip-cert-verify"] || "false");
+                    proxy["skip-cert-verify"] = JSON.parse(
+                        params["skip-cert-verify"] || "false"
+                    );
                 }
 
                 return proxy;
@@ -1731,7 +1832,8 @@ var ProxyUtils = (function () {
             const name = "Surge VMess Parser";
             const test = (line) => {
                 return (
-                    /^.*=\s*vmess/.test(line.split(",")[0]) && line.indexOf("username") !== -1
+                    /^.*=\s*vmess/.test(line.split(",")[0]) &&
+                    line.indexOf("username") !== -1
                 );
             };
             const parse = (line) => {
@@ -1749,7 +1851,9 @@ var ProxyUtils = (function () {
                 };
                 if (proxy.tls) {
                     if (typeof params["skip-cert-verify"] !== "undefined") {
-                        proxy['skip-cert-verify'] = params["skip-cert-verify"] === true || params["skip-cert-verify"] === "1";
+                        proxy["skip-cert-verify"] =
+                            params["skip-cert-verify"] === true ||
+                            params["skip-cert-verify"] === "1";
                     }
                     proxy.sni = params["sni"] || params.server;
                 }
@@ -1787,7 +1891,9 @@ var ProxyUtils = (function () {
                     tfo: JSON.parse(params.tfo || "false"),
                 };
                 if (typeof params["skip-cert-verify"] !== "undefined") {
-                    proxy['skip-cert-verify'] = params["skip-cert-verify"] === true || params["skip-cert-verify"] === "1";
+                    proxy["skip-cert-verify"] =
+                        params["skip-cert-verify"] === true ||
+                        params["skip-cert-verify"] === "1";
                 }
                 return proxy;
             };
@@ -1814,12 +1920,16 @@ var ProxyUtils = (function () {
                 };
                 if (proxy.tls) {
                     if (typeof params["skip-cert-verify"] !== "undefined") {
-                        proxy['skip-cert-verify'] = params["skip-cert-verify"] === true || params["skip-cert-verify"] === "1";
+                        proxy["skip-cert-verify"] =
+                            params["skip-cert-verify"] === true ||
+                            params["skip-cert-verify"] === "1";
                     }
                     proxy.sni = params.sni || params.server;
                 }
-                if (params.username && params.username !== "none") proxy.username = params.username;
-                if (params.password && params.password !== "none") proxy.password = params.password;
+                if (params.username && params.username !== "none")
+                    proxy.username = params.username;
+                if (params.password && params.password !== "none")
+                    proxy.password = params.password;
                 return proxy;
             };
             return {name, test, parse};
@@ -1842,11 +1952,25 @@ var ProxyUtils = (function () {
         }
 
         return [
-            URI_SS(), URI_SSR(), URI_VMess(), URI_Trojan(),
+            URI_SS(),
+            URI_SSR(),
+            URI_VMess(),
+            URI_Trojan(),
             Clash_All(),
-            Surge_SS(), Surge_VMess(), Surge_Trojan(), Surge_Http(),
-            Loon_SS(), Loon_SSR(), Loon_VMess(), Loon_Trojan(), Loon_Http(),
-            QX_SS(), QX_SSR(), QX_VMess(), QX_Trojan(), QX_Http()
+            Surge_SS(),
+            Surge_VMess(),
+            Surge_Trojan(),
+            Surge_Http(),
+            Loon_SS(),
+            Loon_SSR(),
+            Loon_VMess(),
+            Loon_Trojan(),
+            Loon_Http(),
+            QX_SS(),
+            QX_SSR(),
+            QX_VMess(),
+            QX_Trojan(),
+            QX_Http(),
         ];
     })();
     const PROXY_PROCESSORS = (function () {
@@ -1886,6 +2010,69 @@ var ProxyUtils = (function () {
             };
         }
 
+        // duplicate handler
+        function HandleDuplicateOperator(arg) {
+            const {action, template, link, position} = {
+                ...{
+                    action: "rename",
+                    template: "0 1 2 3 4 5 6 7 8 9",
+                    link: "-",
+                    position: "back",
+                },
+                ...arg,
+            };
+            return {
+                name: "Handle Duplicate Operator",
+                func: (proxies) => {
+                    if (action === "delete") {
+                        const chosen = {};
+                        return proxies.filter((p) => {
+                            if (chosen[p.name]) {
+                                return false;
+                            }
+                            chosen[p.name] = true;
+                            return true;
+                        });
+                    } else if (action === "rename") {
+                        const numbers = template.split(" ");
+                        // count occurrences of each name
+                        const counter = {};
+                        let maxLen = 0;
+                        proxies.forEach((p) => {
+                            if (typeof counter[p.name] === "undefined") counter[p.name] = 1;
+                            else counter[p.name]++;
+                            maxLen = Math.max(counter[p.name].toString().length, maxLen);
+                        });
+                        const increment = {};
+                        return proxies.map((p) => {
+                            if (counter[p.name] > 1) {
+                                if (typeof increment[p.name] == "undefined")
+                                    increment[p.name] = 1;
+                                let num = "";
+                                let cnt = increment[p.name]++;
+                                let numDigits = 0;
+                                while (cnt > 0) {
+                                    num = numbers[cnt % 10] + num;
+                                    cnt = parseInt(cnt / 10);
+                                    numDigits++;
+                                }
+                                // padding
+                                while (numDigits++ < maxLen) {
+                                    num = numbers[0] + num;
+                                }
+                                if (position === "front") {
+                                    p.name = num + link + p.name;
+                                } else if (position === "back") {
+                                    p.name = p.name + link + num;
+                                }
+                            }
+                            return p;
+                        });
+                    }
+                },
+            };
+        }
+
         // sort proxies according to their names
         function SortOperator(order = "asc") {
             return {
@@ -1913,7 +2100,7 @@ var ProxyUtils = (function () {
             return {
                 name: "Regex Sort Operator",
                 func: (proxies) => {
-                    expressions = expressions.map(expr => buildRegex(expr));
+                    expressions = expressions.map((expr) => buildRegex(expr));
                     return proxies.sort((a, b) => {
                         const oA = getRegexOrder(expressions, a.name);
                         const oB = getRegexOrder(expressions, b.name);
@@ -1922,9 +2109,8 @@ var ProxyUtils = (function () {
                         if (oA && oB) return oA < oB ? -1 : 1;
                         if ((!oA && !oB) || (oA && oB && oA === oB))
                             return a.name < b.name ? -1 : 1; // fallback to normal sort
-                    })
-                }
-
+                    });
+                },
             };
         }
 
@@ -1947,7 +2133,9 @@ var ProxyUtils = (function () {
                 func: (proxies) => {
                     return proxies.map((proxy) => {
                         for (const {expr, now} of regex) {
-                            proxy.name = proxy.name.replace(buildRegex(expr, "g"), now).trim();
+                            proxy.name = proxy.name
+                                .replace(buildRegex(expr, "g"), now)
+                                .trim();
                         }
                         return proxy;
                     });
@@ -1973,9 +2161,9 @@ var ProxyUtils = (function () {
         // use base64 encoded script to rename
         /** Example script
          function operator(proxies) {
-            // do something
-            return proxies;
-         }
+                // do something
+                return proxies;
+             }
 
          WARNING:
          1. This function name should be `operator`!
@@ -2073,10 +2261,10 @@ var ProxyUtils = (function () {
         /**
          Script Example
          function func(proxies) {
-            const selected = FULL(proxies.length, true);
-            // do something
-            return selected;
-         }
+                const selected = FULL(proxies.length, true);
+                // do something
+                return selected;
+             }
          WARNING:
          1. This function name should be `func`!
          2. Always declare variables before using them!
@@ -2102,7 +2290,15 @@ var ProxyUtils = (function () {
             const flags = {
                 "🇦🇨": ["AC"],
                 "🇦🇹": ["奥地利", "维也纳"],
-                "🇦🇺": ["AU", "Australia", "Sydney", "澳大利亚", "澳洲", "墨尔本", "悉尼"],
+                "🇦🇺": [
+                    "AU",
+                    "Australia",
+                    "Sydney",
+                    "澳大利亚",
+                    "澳洲",
+                    "墨尔本",
+                    "悉尼",
+                ],
                 "🇧🇪": ["BE", "比利时"],
                 "🇧🇬": ["保加利亚", "Bulgaria"],
                 "🇧🇷": ["BR", "Brazil", "巴西", "圣保罗"],
@@ -2320,6 +2516,7 @@ var ProxyUtils = (function () {
             "Regex Rename Operator": RegexRenameOperator,
             "Regex Delete Operator": RegexDeleteOperator,
             "Script Operator": ScriptOperator,
+            "Handle Duplicate Operator": HandleDuplicateOperator,
         };
     })();
     const PROXY_PRODUCERS = (function () {
@@ -2332,37 +2529,25 @@ var ProxyUtils = (function () {
                     case "ss":
                         obfs_opts = "";
                         if (proxy.plugin === "obfs") {
-                            const {host, mode} = proxy['plugin-opts'];
-                            obfs_opts = `,obfs=${mode}${
-                                host ? ",obfs-host=" + host : ""
-                            }`;
+                            const {host, mode} = proxy["plugin-opts"];
+                            obfs_opts = `,obfs=${mode}${host ? ",obfs-host=" + host : ""}`;
                         }
                         if (proxy.plugin === "v2ray-plugin") {
                             const {tls, host, path} = proxy["plugin-opts"];
-                            obfs_opts = `,obfs=${tls ? "wss" : "ws"}${
-                                host ? ",obfs-host=" + host : ""
-                            }${
-                                path ? ",obfs-uri=" + path : ""
-                            }`;
+                            obfs_opts = `,obfs=${tls ? "wss" : "ws"}${host ? ",obfs-host=" + host : ""
+                            }${path ? ",obfs-uri=" + path : ""}`;
                         }
-                        return `shadowsocks=${proxy.server}:${proxy.port},method=${
-                            proxy.cipher
-                        },password=${proxy.password}${obfs_opts}${
-                            proxy.tfo ? ",fast-open=true" : ",fast-open=false"
-                        }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${
-                            proxy.name
+                        return `shadowsocks=${proxy.server}:${proxy.port},method=${proxy.cipher
+                        },password=${proxy.password}${obfs_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"
+                        }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name
                         }`;
                     case "ssr":
-                        return `shadowsocks=${proxy.server}:${proxy.port},method=${
-                            proxy.cipher
-                        },password=${proxy.password},ssr-protocol=${proxy.protocol}${
-                            proxy["protocol-param"]
-                                ? ",ssr-protocol-param=" + proxy["protocol-param"]
-                                : ""
-                        }${proxy.obfs ? ",obfs=" + proxy.obfs : ""}${
-                            proxy["obfs-param"] ? ",obfs-host=" + proxy["obfs-param"] : ""
-                        }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${
-                            proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
+                        return `shadowsocks=${proxy.server}:${proxy.port},method=${proxy.cipher
+                        },password=${proxy.password},ssr-protocol=${proxy.protocol}${proxy["protocol-param"]
+                            ? ",ssr-protocol-param=" + proxy["protocol-param"]
+                            : ""
+                        }${proxy.obfs ? ",obfs=" + proxy.obfs : ""}${proxy["obfs-param"] ? ",obfs-host=" + proxy["obfs-param"] : ""
+                        }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
                         },tag=${proxy.name}`;
                     case "vmess":
                         obfs_opts = "";
@@ -2370,55 +2555,43 @@ var ProxyUtils = (function () {
                             // websocket
                             if (proxy.tls) {
                                 // ws-tls
-                                obfs_opts = `,obfs=wss${
-                                    proxy.sni ? ",obfs-host=" + proxy.sni : ""
-                                }${
-                                    proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""
-                                },tls-verification=${proxy['skip-cert-verify'] ? "false" : "true"}`;
+                                obfs_opts = `,obfs=wss${proxy.sni ? ",obfs-host=" + proxy.sni : ""
+                                }${proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""
+                                },tls-verification=${proxy["skip-cert-verify"] ? "false" : "true"
+                                }`;
                             } else {
                                 // ws
-                                obfs_opts = `,obfs=ws${
-                                    proxy["ws-headers"].Host ? ",obfs-host=" + proxy["ws-headers"].Host : ""
-                                }${
-                                    proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""
-                                }`;
+                                obfs_opts = `,obfs=ws${proxy["ws-headers"].Host
+                                    ? ",obfs-host=" + proxy["ws-headers"].Host
+                                    : ""
+                                }${proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""}`;
                             }
                         } else {
                             // tcp
                             if (proxy.tls) {
-                                obfs_opts = `,obfs=over-tls${
-                                    proxy.sni ? ",obfs-host=" + proxy.sni : ""
-                                },tls-verification=${proxy['skip-cert-verify'] ? "false" : "true"}`;
+                                obfs_opts = `,obfs=over-tls${proxy.sni ? ",obfs-host=" + proxy.sni : ""
+                                },tls-verification=${proxy["skip-cert-verify"] ? "false" : "true"
+                                }`;
                             }
                         }
-                        return `vmess=${proxy.server}:${proxy.port},method=${
-                            proxy.cipher === "auto" ? "none" : proxy.cipher
-                        },password=${proxy.uuid}${obfs_opts}${
-                            proxy.tfo ? ",fast-open=true" : ",fast-open=false"
-                        }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${
-                            proxy.name
+                        return `vmess=${proxy.server}:${proxy.port},method=${proxy.cipher === "auto" ? "none" : proxy.cipher
+                        },password=${proxy.uuid}${obfs_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"
+                        }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name
                         }`;
                     case "trojan":
-                        return `trojan=${proxy.server}:${proxy.port},password=${
-                            proxy.password
-                        }${proxy.sni ? ",tls-host=" + proxy.sni : ""},over-tls=true,tls-verification=${
-                            proxy['skip-cert-verify'] ? "false" : "true"
-                        }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${
-                            proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
+                        return `trojan=${proxy.server}:${proxy.port},password=${proxy.password
+                        }${proxy.sni ? ",tls-host=" + proxy.sni : ""
+                        },over-tls=true,tls-verification=${proxy["skip-cert-verify"] ? "false" : "true"
+                        }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
                         },tag=${proxy.name}`;
                     case "http":
                         tls_opts = "";
                         if (proxy.tls) {
-                            tls_opts = `,over-tls=true,tls-verification=${
-                                proxy['skip-cert-verify'] ? "false" : "true"
-                            }${
-                                proxy.sni ? ",tls-host=" + proxy.sni : ""
-                            }`;
+                            tls_opts = `,over-tls=true,tls-verification=${proxy["skip-cert-verify"] ? "false" : "true"
+                            }${proxy.sni ? ",tls-host=" + proxy.sni : ""}`;
                         }
-                        return `http=${proxy.server}:${proxy.port},username=${
-                            proxy.username
-                        },password=${proxy.password}${tls_opts}${
-                            proxy.tfo ? ",fast-open=true" : ",fast-open=false"
+                        return `http=${proxy.server}:${proxy.port},username=${proxy.username
+                        },password=${proxy.password}${tls_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"
                         },tag=${proxy.name}`;
                 }
                 throw new Error(
@@ -2435,11 +2608,10 @@ var ProxyUtils = (function () {
                 if (typeof proxy.udp !== "undefined") {
                     udp_opts = proxy.udp ? ",udp=true" : ",udp=false";
                 }
-                if (typeof proxy.tfo !== 'undefined') {
+                if (typeof proxy.tfo !== "undefined") {
                     tfo_opts = proxy.tfo ? ",fast-open=true" : ",fast-open=false";
                 }
 
-                
                 switch (proxy.type) {
                     case "ss":
                         obfs_opts = ",,";
@@ -2453,46 +2625,40 @@ var ProxyUtils = (function () {
                                 );
                             }
                         }
-                        
+
                         return `${proxy.name}=shadowsocks,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"${obfs_opts}${udp_opts}${tfo_opts}`;
                     case "ssr":
-                        return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}",${proxy.protocol},{${proxy["protocol-param"] || ""}},${proxy.obfs},{${proxy["obfs-param"] || ""}}${udp_opts}${tfo_opts}`;
+                        return `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher
+                        },"${proxy.password}",${proxy.protocol},{${proxy["protocol-param"] || ""
+                        }},${proxy.obfs},{${proxy["obfs-param"] || ""
+                        }}${udp_opts}${tfo_opts}`;
                     case "vmess":
                         obfs_opts = "";
                         if (proxy.network === "ws") {
                             const host = proxy["ws-headers"].Host || proxy.server;
-                            obfs_opts = `,transport:ws,host:${host},path:${
-                                proxy["ws-path"] || "/"
+                            obfs_opts = `,transport:ws,host:${host},path:${proxy["ws-path"] || "/"
                             }`;
                         } else {
                             obfs_opts = `,transport:tcp`;
                         }
                         if (proxy.tls) {
-                            obfs_opts += `${
-                                proxy.sni ? ",tls-name:" + proxy.sni : ""
-                            },skip-cert-verify:${proxy['skip-cert-verify'] || "false"}`;
+                            obfs_opts += `${proxy.sni ? ",tls-name:" + proxy.sni : ""
+                            },skip-cert-verify:${proxy["skip-cert-verify"] || "false"}`;
                         }
-                        return `${proxy.name}=vmess,${proxy.server},${proxy.port},${
-                            proxy.cipher === "auto" ? "none" : proxy.cipher
+                        return `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher === "auto" ? "none" : proxy.cipher
                         },"${proxy.uuid}",over-tls:${proxy.tls || "false"}${obfs_opts}`;
                     case "trojan":
-                        return `${proxy.name}=trojan,${proxy.server},${proxy.port},"${
-                            proxy.password
-                        }"${
-                            proxy.sni ? ",tls-name:" + proxy.sni : ""
-                        },skip-cert-verify:${
-                            proxy['skip-cert-verify'] || "false"
+                        return `${proxy.name}=trojan,${proxy.server},${proxy.port},"${proxy.password
+                        }"${proxy.sni ? ",tls-name:" + proxy.sni : ""},skip-cert-verify:${proxy["skip-cert-verify"] || "false"
                         }`;
                     case "http":
                         tls_opts = "";
-                        const base = `${proxy.name}=${proxy.tls ? "http" : "https"},${
-                            proxy.server
+                        const base = `${proxy.name}=${proxy.tls ? "http" : "https"},${proxy.server
                         },${proxy.port},${proxy.username || ""},${proxy.password || ""}`;
                         if (proxy.tls) {
                             // https
-                            tls_opts = `${
-                                proxy.sni ? ",tls-name:" + proxy.sni : ""
-                            },skip-cert-verify:${proxy['skip-cert-verify']}`;
+                            tls_opts = `${proxy.sni ? ",tls-name:" + proxy.sni : ""
+                            },skip-cert-verify:${proxy["skip-cert-verify"]}`;
                             return base + tls_opts;
                         } else return base;
                 }
@@ -2511,60 +2677,52 @@ var ProxyUtils = (function () {
                     case "ss":
                         obfs_opts = "";
                         if (proxy.plugin) {
-                            const {host, mode} = proxy['plugin-opts'];
+                            const {host, mode} = proxy["plugin-opts"];
                             if (proxy.plugin === "obfs") {
-                                obfs_opts = `,obfs=${mode}${
-                                    host ? ",obfs-host=" + host : ""
-                                }`;
+                                obfs_opts = `,obfs=${mode}${host ? ",obfs-host=" + host : ""}`;
                             } else {
                                 throw new Error(
                                     `Platform ${targetPlatform} does not support obfs option: ${proxy.obfs}`
                                 );
                             }
                         }
-                        return `${proxy.name}=ss,${proxy.server}, ${proxy.port},encrypt-method=${
-                            proxy.cipher
-                        },password=${proxy.password}${obfs_opts},tfo=${
-                            proxy.tfo || "false"
-                        },udp-relay=${proxy.udp || "false"}`;
+                        return `${proxy.name}=ss,${proxy.server}, ${proxy.port
+                        },encrypt-method=${proxy.cipher},password=${proxy.password
+                        }${obfs_opts},tfo=${proxy.tfo || "false"},udp-relay=${proxy.udp || "false"
+                        }`;
                     case "vmess":
                         tls_opts = "";
-                        let config = `${proxy.name}=vmess,${proxy.server},${
-                            proxy.port
-                        },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"}`;
+                        let config = `${proxy.name}=vmess,${proxy.server},${proxy.port
+                        },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"
+                        }`;
                         if (proxy.network === "ws") {
                             const path = proxy["ws-path"] || "/";
                             const host = proxy["ws-headers"].Host;
-                            config += `,ws=true${path ? ",ws-path=" + path : ""}${
-                                host ? ",ws-headers=HOST:" + host : ""
+                            config += `,ws=true${path ? ",ws-path=" + path : ""}${host ? ",ws-headers=HOST:" + host : ""
                             }`;
                         }
                         if (proxy.tls) {
-                            config += `${
-                                typeof proxy['skip-cert-verify'] !== "undefined"
-                                    ? ",skip-cert-verify=" + proxy['skip-cert-verify']
-                                    : ""
+                            config += `${typeof proxy["skip-cert-verify"] !== "undefined"
+                                ? ",skip-cert-verify=" + proxy["skip-cert-verify"]
+                                : ""
                             }`;
                             config += proxy.sni ? `,sni=${proxy.sni}` : "";
                         }
                         return config;
                     case "trojan":
-                        return `${proxy.name}=trojan,${proxy.server},${proxy.port},password=${
-                            proxy.password
-                        }${
-                            typeof proxy['skip-cert-verify'] !== "undefined"
-                                ? ",skip-cert-verify=" + proxy['skip-cert-verify']
-                                : ""
-                        }${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"}`;
+                        return `${proxy.name}=trojan,${proxy.server},${proxy.port
+                        },password=${proxy.password}${typeof proxy["skip-cert-verify"] !== "undefined"
+                            ? ",skip-cert-verify=" + proxy["skip-cert-verify"]
+                            : ""
+                        }${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"
+                        }`;
                     case "http":
                         tls_opts = ", tls=false";
                         if (proxy.tls) {
-                            tls_opts = `,tls=true,skip-cert-verify=${proxy['skip-cert-verify']},sni=${proxy.sni}`;
+                            tls_opts = `,tls=true,skip-cert-verify=${proxy["skip-cert-verify"]},sni=${proxy.sni}`;
                         }
-                        return `${proxy.name}=http, ${proxy.server}, ${proxy.port}${
-                            proxy.username ? ",username=" + proxy.username : ""
-                        }${
-                            proxy.password ? ",password=" + proxy.password : ""
+                        return `${proxy.name}=http, ${proxy.server}, ${proxy.port}${proxy.username ? ",username=" + proxy.username : ""
+                        }${proxy.password ? ",password=" + proxy.password : ""
                         }${tls_opts},tfo=${proxy.tfo || "false"}`;
                 }
                 throw new Error(
@@ -2577,10 +2735,15 @@ var ProxyUtils = (function () {
         function Clash_Producer() {
             const type = "ALL";
             const produce = (proxies) => {
-                return "proxies:\n" + proxies.map(proxy => {
-                    delete proxy.supported;
-                    return "  - " + JSON.stringify(proxy) + "\n";
-                }).join("");
+                return (
+                    "proxies:\n" +
+                    proxies
+                        .map((proxy) => {
+                            delete proxy.supported;
+                            return "  - " + JSON.stringify(proxy) + "\n";
+                        })
+                        .join("")
+                );
             };
             return {type, produce};
         }
@@ -2592,8 +2755,7 @@ var ProxyUtils = (function () {
                 switch (proxy.type) {
                     case "ss":
                         const userinfo = `${proxy.cipher}:${proxy.password}`;
-                        result = `ss://${Base64.safeEncode(userinfo)}@${proxy.server}:${
-                            proxy.port
+                        result = `ss://${Base64.safeEncode(userinfo)}@${proxy.server}:${proxy.port
                         }/`;
                         if (proxy.plugin) {
                             result += "?plugin=";
@@ -2601,15 +2763,13 @@ var ProxyUtils = (function () {
                             switch (proxy.plugin) {
                                 case "obfs":
                                     result += encodeURIComponent(
-                                        `simple-obfs;obfs=${opts.mode}${
-                                            opts.host ? ";obfs-host=" + opts.host : ""
+                                        `simple-obfs;obfs=${opts.mode}${opts.host ? ";obfs-host=" + opts.host : ""
                                         }`
                                     );
                                     break;
                                 case "v2ray-plugin":
                                     result += encodeURIComponent(
-                                        `v2ray-plugin;obfs=${opts.mode}${
-                                            opts.host ? ";obfs-host" + opts.host : ""
+                                        `v2ray-plugin;obfs=${opts.mode}${opts.host ? ";obfs-host" + opts.host : ""
                                         }${opts.tls ? ";tls" : ""}`
                                     );
                                     break;
@@ -2620,17 +2780,14 @@ var ProxyUtils = (function () {
                         result += `#${encodeURIComponent(proxy.name)}`;
                         break;
                     case "ssr":
-                        result = `${proxy.server}:${proxy.port}:${proxy.protocol}:${
-                            proxy.cipher
+                        result = `${proxy.server}:${proxy.port}:${proxy.protocol}:${proxy.cipher
                         }:${proxy.obfs}:${Base64.safeEncode(proxy.password)}/`;
-                        result += `?remarks=${Base64.safeEncode(proxy.name)}${
-                            proxy["obfs-param"]
-                                ? "&obfsparam=" + Base64.safeEncode(proxy["obfs-param"])
-                                : ""
-                        }${
-                            proxy["protocol-param"]
-                                ? "&protocolparam=" + Base64.safeEncode(proxy["protocol-param"])
-                                : ""
+                        result += `?remarks=${Base64.safeEncode(proxy.name)}${proxy["obfs-param"]
+                            ? "&obfsparam=" + Base64.safeEncode(proxy["obfs-param"])
+                            : ""
+                        }${proxy["protocol-param"]
+                            ? "&protocolparam=" + Base64.safeEncode(proxy["protocol-param"])
+                            : ""
                         }`;
                         result = "ssr://" + Base64.safeEncode(result);
                         break;
@@ -2654,31 +2811,31 @@ var ProxyUtils = (function () {
                         result = "vmess://" + Base64.safeEncode(JSON.stringify(result));
                         break;
                     case "trojan":
-                        result = `trojan://${proxy.password}@${proxy.server}:${proxy.port}#${encodeURIComponent(proxy.name)}`;
+                        result = `trojan://${proxy.password}@${proxy.server}:${proxy.port
+                        }#${encodeURIComponent(proxy.name)}`;
                         break;
                     default:
                         throw new Error(`Cannot handle proxy type: ${proxy.type}`);
                 }
                 return result;
-            }
+            };
             return {type, produce};
         }
 
         function JSON_Producer() {
             const type = "ALL";
-            const produce = proxies => JSON.stringify(proxies, null, 2);
+            const produce = (proxies) => JSON.stringify(proxies, null, 2);
             return {type, produce};
         }
 
-
         return {
-            "QX": QX_Producer(),
-            "Surge": Surge_Producer(),
-            "Loon": Loon_Producer(),
-            "Clash": Clash_Producer(),
-            "URI": URI_Producer(),
-            "JSON": JSON_Producer()
-        }
+            QX: QX_Producer(),
+            Surge: Surge_Producer(),
+            Loon: Loon_Producer(),
+            Clash: Clash_Producer(),
+            URI: URI_Producer(),
+            JSON: JSON_Producer(),
+        };
     })();
 
     function preprocess(raw) {
@@ -2736,9 +2893,7 @@ var ProxyUtils = (function () {
                     }
                     proxies.push(proxy);
                 } catch (err) {
-                    $.error(
-                        `Failed to parse line: \n ${line}\n Reason: ${err.stack}`
-                    );
+                    $.error(`Failed to parse line: \n ${line}\n Reason: ${err.stack}`);
                 }
             }
         }
@@ -2755,9 +2910,7 @@ var ProxyUtils = (function () {
                 if (mode === "link") {
                     // if this is remote script, download it
                     try {
-                        script = await $.http
-                            .get(content)
-                            .then((resp) => resp.body);
+                        script = await $.http.get(content).then((resp) => resp.body);
                     } catch (err) {
                         $.error(
                             `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`
@@ -2765,7 +2918,6 @@ var ProxyUtils = (function () {
                         // skip the script if download failed.
                         continue;
                     }
-
                 } else {
                     script = content;
                 }
@@ -2777,12 +2929,11 @@ var ProxyUtils = (function () {
             }
 
             $.info(
-                `Applying "${item.type}" with arguments:\n >>> ${
-                    JSON.stringify(item.args, null, 2) || "None"
+                `Applying "${item.type}" with arguments:\n >>> ${JSON.stringify(item.args, null, 2) || "None"
                 }`
             );
             let processor;
-            if (item.type.indexOf('Script') !== -1) {
+            if (item.type.indexOf("Script") !== -1) {
                 processor = PROXY_PROCESSORS[item.type](script);
             } else {
                 processor = PROXY_PROCESSORS[item.type](item.args);
@@ -2799,24 +2950,28 @@ var ProxyUtils = (function () {
         }
 
         // filter unsupported proxies
-        proxies = proxies.filter(proxy => !(proxy.supported && proxy.supported[targetPlatform] === false));
+        proxies = proxies.filter(
+            (proxy) => !(proxy.supported && proxy.supported[targetPlatform] === false)
+        );
 
         $.info(`Producing proxies for target: ${targetPlatform}`);
-        if (typeof producer.type === "undefined" || producer.type === 'SINGLE') {
+        if (typeof producer.type === "undefined" || producer.type === "SINGLE") {
             return proxies
-                .map(proxy => {
+                .map((proxy) => {
                     try {
                         return producer.produce(proxy);
                     } catch (err) {
                         $.error(
                             `Cannot produce proxy: ${JSON.stringify(
-                                proxy, null, 2
+                                proxy,
+                                null,
+                                2
                             )}\nReason: ${err}`
                         );
                         return "";
                     }
                 })
-                .filter(line => line.length > 0)
+                .filter((line) => line.length > 0)
                 .join("\n");
         } else if (producer.type === "ALL") {
             return producer.produce(proxies);
@@ -2824,8 +2979,10 @@ var ProxyUtils = (function () {
     }
 
     return {
-        parse, process, produce
-    }
+        parse,
+        process,
+        produce,
+    };
 })();
 
 /****************************************** Rule Utils **********************************************************/
@@ -2841,27 +2998,25 @@ var RuleUtils = (function () {
         [/^(IN|SRC)-PORT$/, "IN-PORT"],
         [/^PROTOCOL$/, "PROTOCOL"],
         [/^IP-CIDR$/i, "IP-CIDR"],
-        [/^(IP-CIDR6|ip6-cidr|IP6-CIDR)$/]
+        [/^(IP-CIDR6|ip6-cidr|IP6-CIDR)$/],
     ];
 
     const RULE_PREPROCESSORS = (function () {
         function HTML() {
             const name = "HTML";
-            const test = raw => /^<!DOCTYPE html>/.test(raw);
+            const test = (raw) => /^<!DOCTYPE html>/.test(raw);
             // simply discard HTML
-            const parse = _ => "";
+            const parse = (_) => "";
             return {name, test, parse};
         }
 
         function ClashProvider() {
             const name = "Clash Provider";
-            const test = raw => raw.indexOf("payload:") === 0
-            const parse = raw => {
-                return raw
-                    .replace("payload:", "")
-                    .replace(/^\s*-\s*/gm, "");
-            }
-            return {name, test, parse}
+            const test = (raw) => raw.indexOf("payload:") === 0;
+            const parse = (raw) => {
+                return raw.replace("payload:", "").replace(/^\s*-\s*/gm, "");
+            };
+            return {name, test, parse};
         }
 
         return [HTML(), ClashProvider()];
@@ -2880,7 +3035,7 @@ var RuleUtils = (function () {
                     // skip comments
                     if (/\s*#/.test(line)) continue;
                     try {
-                        const params = line.split(",").map(w => w.trim());
+                        const params = line.split(",").map((w) => w.trim());
                         let rawType = params[0];
                         let matched = false;
                         for (const item of RULE_TYPES_MAPPING) {
@@ -2892,7 +3047,7 @@ var RuleUtils = (function () {
                                     content: params[1],
                                 };
                                 if (rule.type === "IP-CIDR" || rule.type === "IP-CIDR6") {
-                                    rule.options = params.slice(2)
+                                    rule.options = params.slice(2);
                                 }
                                 result.push(rule);
                             }
@@ -2903,7 +3058,7 @@ var RuleUtils = (function () {
                     }
                 }
                 return result;
-            }
+            };
             return {name, test, parse};
         }
 
@@ -2937,21 +3092,23 @@ var RuleUtils = (function () {
         function RemoveDuplicateFilter() {
             return {
                 name: "Remove Duplicate Filter",
-                func: rules => {
+                func: (rules) => {
                     const seen = new Set();
                     const result = [];
-                    rules.forEach(rule => {
+                    rules.forEach((rule) => {
                         const options = rule.options || [];
                         options.sort();
-                        const key = `${rule.type},${rule.content},${JSON.stringify(options)}`;
+                        const key = `${rule.type},${rule.content},${JSON.stringify(
+                            options
+                        )}`;
                         if (!seen.has(key)) {
-                            result.push(rule)
+                            result.push(rule);
                             seen.add(key);
                         }
                     });
                     return result;
-                }
-            }
+                },
+            };
         }
 
         // regex: [{expr: "string format regex", now: "now"}]
@@ -2961,7 +3118,9 @@ var RuleUtils = (function () {
                 func: (rules) => {
                     return rules.map((rule) => {
                         for (const {expr, now} of regex) {
-                            rule.content = rule.content.replace(new RegExp(expr, "g"), now).trim();
+                            rule.content = rule.content
+                                .replace(new RegExp(expr, "g"), now)
+                                .trim();
                         }
                         return rule;
                     });
@@ -2974,7 +3133,7 @@ var RuleUtils = (function () {
             "Remove Duplicate Filter": RemoveDuplicateFilter,
             "Type Filter": TypeFilter,
 
-            "Regex Replace Operator": RegexReplaceOperator
+            "Regex Replace Operator": RegexReplaceOperator,
         };
     })();
     const RULE_PRODUCERS = (function () {
@@ -2983,20 +3142,24 @@ var RuleUtils = (function () {
             const func = (rule) => {
                 // skip unsupported rules
                 const UNSUPPORTED = [
-                    "URL-REGEX", "DEST-PORT", "SRC-IP", "IN-PORT", "PROTOCOL"
+                    "URL-REGEX",
+                    "DEST-PORT",
+                    "SRC-IP",
+                    "IN-PORT",
+                    "PROTOCOL",
                 ];
                 if (UNSUPPORTED.indexOf(rule.type) !== -1) return null;
 
                 const TRANSFORM = {
                     "DOMAIN-KEYWORD": "HOST-KEYWORD",
                     "DOMAIN-SUFFIX": "HOST-SUFFIX",
-                    "DOMAIN": "HOST",
-                    "IP-CIDR6": "IP6-CIDR"
+                    DOMAIN: "HOST",
+                    "IP-CIDR6": "IP6-CIDR",
                 };
 
                 // QX does not support the no-resolve option
                 return `${TRANSFORM[rule.type] || rule.type},${rule.content},SUB-STORE`;
-            }
+            };
             return {type, func};
         }
 
@@ -3008,7 +3171,7 @@ var RuleUtils = (function () {
                     output += rule.options ? `,${rule.options[0]}` : "";
                 }
                 return output;
-            }
+            };
             return {type, func};
         }
 
@@ -3016,12 +3179,10 @@ var RuleUtils = (function () {
             const type = "SINGLE";
             const func = (rule) => {
                 // skip unsupported rules
-                const UNSUPPORTED = [
-                    "DEST-PORT", "SRC-IP", "IN-PORT", "PROTOCOL"
-                ];
+                const UNSUPPORTED = ["DEST-PORT", "SRC-IP", "IN-PORT", "PROTOCOL"];
                 if (UNSUPPORTED.indexOf(rule.type) !== -1) return null;
                 return SurgeRuleSet().func(rule);
-            }
+            };
             return {type, func};
         }
 
@@ -3031,27 +3192,27 @@ var RuleUtils = (function () {
                 const TRANSFORM = {
                     "DEST-PORT": "DST-PORT",
                     "SRC-IP": "SRC-IP-CIDR",
-                    "IN-PORT": "SRC-PORT"
+                    "IN-PORT": "SRC-PORT",
                 };
                 const conf = {
-                    payload: rules.map(rule => {
+                    payload: rules.map((rule) => {
                         let output = `${TRANSFORM[rule.type] || rule.type},${rule.content}`;
                         if (rule.type === "IP-CIDR" || rule.type === "IP-CIDR6") {
                             output += rule.options ? `,${rule.options[0]}` : "";
                         }
                         return output;
-                    })
-                }
+                    }),
+                };
                 return YAML.stringify(conf);
-            }
+            };
             return {type, func};
         }
 
         return {
-            "QX": QXFilter(),
-            "Surge": SurgeRuleSet(),
-            "Loon": LoonRules(),
-            "Clash": ClashRuleProvider()
+            QX: QXFilter(),
+            Surge: SurgeRuleSet(),
+            Loon: LoonRules(),
+            Clash: ClashRuleProvider(),
         };
     })();
 
@@ -3093,8 +3254,7 @@ var RuleUtils = (function () {
             }
             const processor = RULE_PROCESSORS[item.type](item.args);
             $.info(
-                `Applying "${item.type}" with arguments: \n >>> ${
-                    JSON.stringify(item.args) || "None"
+                `Applying "${item.type}" with arguments: \n >>> ${JSON.stringify(item.args) || "None"
                 }`
             );
             rules = ApplyProcessor(processor, rules);
@@ -3107,9 +3267,9 @@ var RuleUtils = (function () {
         if (!producer) {
             throw new Error(`Target platform: ${targetPlatform} is not supported!`);
         }
-        if (typeof producer.type === "undefined" || producer.type === 'SINGLE') {
+        if (typeof producer.type === "undefined" || producer.type === "SINGLE") {
             return rules
-                .map(rule => {
+                .map((rule) => {
                     try {
                         return producer.func(rule);
                     } catch (err) {
@@ -3121,7 +3281,7 @@ var RuleUtils = (function () {
                         return "";
                     }
                 })
-                .filter(line => line.length > 0)
+                .filter((line) => line.length > 0)
                 .join("\n");
         } else if (producer.type === "ALL") {
             return producer.func(rules);
@@ -3133,30 +3293,30 @@ var RuleUtils = (function () {
 
 function getBuiltInRules() {
     return {
-        "AD": {
-            "name": "AD",
-            "description": "",
-            "urls": [
+        AD: {
+            name: "AD",
+            description: "",
+            urls: [
                 "https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/anti-ad-surge.txt",
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanAD.yaml",
-            ]
+            ],
         },
-        "Global": {
-            "name": "Global",
-            "description": "",
-            "urls": [
+        Global: {
+            name: "Global",
+            description: "",
+            urls: [
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ProxyGFWlist.yaml",
-                "https://raw.githubusercontent.com/DivineEngine/Profiles/master/Quantumult/Filter/Global.list"
-            ]
+                "https://raw.githubusercontent.com/DivineEngine/Profiles/master/Quantumult/Filter/Global.list",
+            ],
         },
-        "CN": {
-            "name": "CN",
-            "description": "",
-            "urls": [
+        CN: {
+            name: "CN",
+            description: "",
+            urls: [
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ChinaDomain.yaml",
-                "https://raw.githubusercontent.com/DivineEngine/Profiles/master/Quantumult/Filter/China.list"
-            ]
-        }
+                "https://raw.githubusercontent.com/DivineEngine/Profiles/master/Quantumult/Filter/China.list",
+            ],
+        },
     };
 }
 
@@ -3191,7 +3351,6 @@ function ApplyProcessor(process, objs) {
     } else if (process.name.indexOf("Operator") !== -1) {
         return ApplyOperator(process, objs);
     }
-
 }
 
 // some logical functions
@@ -3220,14 +3379,13 @@ function buildRegex(str, ...options) {
     options = options.join("");
     if (str.startsWith("(?i)")) {
         str = str.substr(4);
-        return new RegExp(str, 'i' + options);
+        return new RegExp(str, "i" + options);
     } else {
         return new RegExp(str, options);
     }
 }
 
 /****************************************** Own Libraries *******************************************************/
-
 
 /**
  * OpenAPI
@@ -3247,7 +3405,7 @@ function ENV() {
 function HTTP(defaultOptions = {baseURL: ""}) {
     const {isQX, isLoon, isSurge, isScriptable, isNode} = ENV();
     const methods = ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"];
-    const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
+    const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
 
     function send(method, options) {
         options = typeof options === "string" ? {url: options} : options;
@@ -3272,7 +3430,12 @@ function HTTP(defaultOptions = {baseURL: ""}) {
 
         let worker;
         if (isQX) {
-            worker = $task.fetch({method, url: options.url, headers: options.headers, body: options.body});
+            worker = $task.fetch({
+                method,
+                url: options.url,
+                headers: options.headers,
+                body: options.body,
+            });
         } else if (isLoon || isSurge || isNode) {
             worker = new Promise((resolve, reject) => {
                 const request = isNode ? require("request") : $httpClient;
@@ -3595,7 +3758,7 @@ function Gist({token, key}) {
     this.upload = async function ({filename, content}) {
         const id = await locate();
         const files = {
-            [filename]: {content}
+            [filename]: {content},
         };
 
         if (id === -1) {
@@ -3605,14 +3768,14 @@ function Gist({token, key}) {
                 body: JSON.stringify({
                     description: key,
                     public: false,
-                    files
-                })
+                    files,
+                }),
             });
         } else {
             // update an existing gist
             return http.patch({
                 url: `/gists/${id}`,
-                body: JSON.stringify({files})
+                body: JSON.stringify({files}),
             });
         }
     };
@@ -3625,9 +3788,9 @@ function Gist({token, key}) {
             try {
                 const {files} = await http
                     .get(`/gists/${id}`)
-                    .then(resp => JSON.parse(resp.body));
+                    .then((resp) => JSON.parse(resp.body));
                 const url = files[filename].raw_url;
-                return await http.get(url).then(resp => resp.body);
+                return await http.get(url).then((resp) => resp.body);
             } catch (err) {
                 return Promise.reject(err);
             }
@@ -3728,14 +3891,14 @@ function express({port} = {port: 3000}) {
             const res = Response();
             const cb = handler.callback;
 
-            const errFunc = err => {
+            const errFunc = (err) => {
                 res.status(500).json({
                     status: "failed",
                     message: `Internal Server Error: ${err}`,
                 });
-            }
+            };
 
-            if (cb.constructor.name === 'AsyncFunction') {
+            if (cb.constructor.name === "AsyncFunction") {
                 cb(req, res, next).catch(errFunc);
             } else {
                 try {
@@ -4457,13 +4620,13 @@ var YAML = (function () {
         for (var i in lines) {
             if ((m = typeof lines[i] === "string" && lines[i].match(r))) {
                 /*                var cmt = "";
-                                            if(typeof m[3] != "undefined")
-                                                lines[i] = m[1];
-                                            else if(typeof m[3] != "undefined")
-                                                lines[i] = m[3];
-                                            else
-                                                lines[i] = "";
-                                                */
+                                                    if(typeof m[3] != "undefined")
+                                                        lines[i] = m[1];
+                                                    else if(typeof m[3] != "undefined")
+                                                        lines[i] = m[3];
+                                                    else
+                                                        lines[i] = "";
+                                                        */
                 if (typeof m[3] !== "undefined") {
                     lines[i] = m[0].substr(0, m[0].length - m[3].length);
                 }
