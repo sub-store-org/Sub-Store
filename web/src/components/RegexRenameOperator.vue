@@ -1,7 +1,7 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">filter_list</v-icon>
+      <v-icon color="primary" left>filter_list</v-icon>
       正则重命名
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">
@@ -15,7 +15,7 @@
       </v-btn>
       <v-dialog>
         <template #activator="{on}">
-          <v-btn icon v-on="on">
+          <v-btn v-on="on" icon>
             <v-icon>help</v-icon>
           </v-btn>
         </template>
@@ -32,15 +32,15 @@
     <v-card-text>
       正则表达式
       <v-chip-group
-        column
+          column
       >
         <v-chip
-            close
-            close-icon="mdi-delete"
             v-for="(chip, idx) in chips"
             :key="idx"
-            @click:close="remove(idx)"
+            close
+            close-icon="mdi-delete"
             @click="edit(idx)"
+            @click:close="remove(idx)"
         >
           {{ chip }}
         </v-chip>
@@ -48,21 +48,21 @@
       <v-row>
         <v-col>
           <v-text-field
-              placeholder="正则表达式"
-              clearable
-              clear-icon="clear"
-              solo
               v-model="form.regex"
+              clear-icon="clear"
+              clearable
+              placeholder="正则表达式"
+              solo
           />
         </v-col>
         <v-col>
           <v-text-field
-              placeholder="替换为"
-              solo
-              clearable
-              clear-icon="clear"
               v-model="form.replace"
               append-icon="mdi-send"
+              clear-icon="clear"
+              clearable
+              placeholder="替换为"
+              solo
               @click:append="add"
               @keyup.enter="add"
           />

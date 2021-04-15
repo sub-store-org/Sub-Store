@@ -1,10 +1,10 @@
 <template>
   <v-bottom-navigation
+      v-model="activeItem"
       app
+      color="primary"
       fixed
       grow
-      color="primary"
-      v-model="activeItem"
   >
     <v-btn :to="{path: '/'}" value="subscription">
       <span>订阅</span>

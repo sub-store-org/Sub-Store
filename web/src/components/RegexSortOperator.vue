@@ -1,7 +1,7 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">sort</v-icon>
+      <v-icon color="primary" left>sort</v-icon>
       正则排序
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">
@@ -15,7 +15,7 @@
       </v-btn>
       <v-dialog>
         <template #activator="{on}">
-          <v-btn icon v-on="on">
+          <v-btn v-on="on" icon>
             <v-icon>help</v-icon>
           </v-btn>
         </template>
@@ -35,10 +35,10 @@
           column
       >
         <v-chip
-            close
-            close-icon="mdi-delete"
             v-for="(item, idx) in items"
             :key="idx"
+            close
+            close-icon="mdi-delete"
             @click="edit(idx)"
             @click:close="remove(idx)"
         >
@@ -46,12 +46,12 @@
         </v-chip>
       </v-chip-group>
       <v-text-field
-          placeholder="添加新正则表达式"
-          clearable
-          clear-icon="clear"
-          solo
           v-model="form.item"
           append-icon="mdi-send"
+          clear-icon="clear"
+          clearable
+          placeholder="添加新正则表达式"
+          solo
           @click:append="add(form.item)"
           @keyup.enter="add(form.item)"
       />

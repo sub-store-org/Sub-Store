@@ -2,21 +2,21 @@
   <v-list>
     <v-list-item v-for="(proxy, idx) in proxies" :key="idx">
       <v-list-item-content>
-        <v-list-item-title v-text="proxy.name" class="wrap-text"></v-list-item-title>
+        <v-list-item-title class="wrap-text" v-text="proxy.name"></v-list-item-title>
         <v-chip-group>
-          <v-chip x-small color="primary" outlined>
+          <v-chip color="primary" outlined x-small>
             <v-icon left x-small>mdi-server</v-icon>
             {{ proxy.type.toUpperCase() }}
           </v-chip>
-          <v-chip x-small v-if="proxy.udp" color="blue" outlined>
+          <v-chip v-if="proxy.udp" color="blue" outlined x-small>
             <v-icon left x-small>mdi-fire</v-icon>
             UDP
           </v-chip>
-          <v-chip x-small v-if="proxy.tfo" color="success" outlined>
+          <v-chip v-if="proxy.tfo" color="success" outlined x-small>
             <v-icon left x-small>mdi-flash</v-icon>
             TFO
           </v-chip>
-          <v-chip x-small v-if="proxy['skip-cert-verify']" color="error" outlined>
+          <v-chip v-if="proxy['skip-cert-verify']" color="error" outlined x-small>
             <v-icon left x-small>error</v-icon>
             SCERT
           </v-chip>
@@ -26,16 +26,16 @@
         <v-row>
           <v-col>
             <v-btn
+                v-if="proxy.type !== 'http'"
                 icon
                 @click="showQRCode(idx)"
-                v-if="proxy.type !== 'http'"
             >
-              <v-icon small color="grey lighten-1">mdi-qrcode</v-icon>
+              <v-icon color="grey lighten-1" small>mdi-qrcode</v-icon>
             </v-btn>
           </v-col>
           <v-col>
             <v-btn icon @click="showInfo(idx)">
-              <v-icon small color="grey lighten-1">mdi-information</v-icon>
+              <v-icon color="grey lighten-1" small>mdi-information</v-icon>
             </v-btn>
           </v-col>
         </v-row>

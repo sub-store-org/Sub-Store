@@ -1,7 +1,7 @@
 <template>
   <v-card class="ml-1 mr-1 mb-1 mt-1">
     <v-card-title>
-      <v-icon left color="primary">sort_by_alpha</v-icon>
+      <v-icon color="primary" left>sort_by_alpha</v-icon>
       节点排序
       <v-spacer></v-spacer>
       <v-btn icon @click="$emit('up', idx)">
@@ -15,7 +15,7 @@
       </v-btn>
       <v-dialog>
         <template #activator="{on}">
-          <v-btn icon v-on="on">
+          <v-btn v-on="on" icon>
             <v-icon>help</v-icon>
           </v-btn>
         </template>
