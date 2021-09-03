@@ -2598,9 +2598,10 @@ var ProxyUtils = (function () {
                         }`;
                         if (proxy.network === "ws") {
                             const path = proxy["ws-path"] || "/";
-                            const host = proxy["ws-headers"].Host;
-                            config += `,ws=true${path ? ",ws-path=" + path : ""}${host ? ",ws-headers=HOST:" + host : ""
-                            }`;
+                            const wsHeaders = Object.entries(proxy["ws-headers"]).map(
+                              ([key, value]) => (`${key}:"${value}"`))
+                              .join('|');
+                            config += `,ws=true${path ? ",ws-path=" + path : ""}${wsHeaders ? ",ws-headers=" + wsHeaders : ""}`;
                         }
                         if (proxy.tls) {
                             config += `${typeof proxy["skip-cert-verify"] !== "undefined"
