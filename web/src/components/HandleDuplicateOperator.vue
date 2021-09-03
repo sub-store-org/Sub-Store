@@ -105,6 +105,14 @@ export default {
       this.save();
     },
   },
+  created() {
+    if (typeof this.args !== 'undefined') {
+      this.action = this.args.action || this.action;
+      this.position = this.args.position || this.position;
+      this.template = this.args.template || this.template;
+      this.link = typeof this.args.link !== 'undefined' ? this.args.link : this.link;
+    }
+  }
 };
 </script>
 

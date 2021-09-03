@@ -178,6 +178,30 @@
         </v-item-group>
       </v-form>
     </v-card>
+
+    <v-card class="mb-4">
+      <v-subheader>Surge 选项</v-subheader>
+      <v-form class="pl-4 pr-4">
+        <v-radio-group
+            v-model="options['surge-hybrid']"
+            class="mt-0 mb-0"
+            dense
+        >
+          Hybrid 策略
+          <v-row>
+            <v-col>
+              <v-radio label="默认" value="DEFAULT"/>
+            </v-col>
+            <v-col>
+              <v-radio label="强制开启" value="FORCE_OPEN"/>
+            </v-col>
+            <v-col>
+              <v-radio label="强制关闭" value="FORCE_CLOSE"/>
+            </v-col>
+          </v-row>
+        </v-radio-group>
+      </v-form>
+    </v-card>
     <v-card id="processors" class="mb-4">
       <v-subheader>
         节点操作
@@ -270,7 +294,7 @@ const AVAILABLE_PROCESSORS = {
   },
   "Handle Duplicate Operator": {
     component: "HandleDuplicateOperator",
-    name: "重复节点处理"
+    name: "节点去重"
   },
   "Script Filter": {
     component: "ScriptFilter",
@@ -334,6 +358,7 @@ export default {
         udp: "DEFAULT",
         "skip-cert-verify": "DEFAULT",
         tfo: "DEFAULT",
+        "surge-hybrid": "DEFAULT"
       },
       process: [],
       selected: []
@@ -345,12 +370,12 @@ export default {
     let source;
     if (this.isCollection) {
       source = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.collections[name];
-      this.$store.commit("SET_NAV_TITLE", source.name ? `组合订阅编辑 -- ${source.name}` : "新建组合订阅");
+      this.$store.commit("SET_NAV_TITLE", source.name ? `组合订阅编辑 ➤ ${source.name}` : "新建组合订阅");
       this.selected = source.subscriptions || [];
 
     } else {
       source = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.subscriptions[name];
-      this.$store.commit("SET_NAV_TITLE", source.name ? `订阅编辑 -- ${source.name}` : "新建订阅");
+      this.$store.commit("SET_NAV_TITLE", source.name ? `订阅编辑 ➤ ${source.name}` : "新建订阅");
     }
     this.name = source.name;
     const {options, process} = loadProcess(this.options, source);
@@ -395,7 +420,7 @@ export default {
         });
       }
       // udp, tfo, scert
-      for (const opt of ['udp', 'tfo', 'skip-cert-verify']) {
+      for (const opt of ['udp', 'tfo', 'skip-cert-verify', 'surge-hybrid']) {
         if (this.options[opt] !== 'DEFAULT') {
           output.process.push({
             type: "Set Property Operator",
@@ -575,7 +600,7 @@ function loadProcess(options, source, isCollection = false) {
 
 function uuidv4() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
 }
