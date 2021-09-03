@@ -2573,6 +2573,7 @@ var ProxyUtils = (function () {
         function Surge_Producer() {
             const targetPlatform = "Surge";
             const produce = (proxy) => {
+                let result = "";
                 let obfs_opts, tls_opts;
                 switch (proxy.type) {
                     case "ss":
@@ -2587,13 +2588,14 @@ var ProxyUtils = (function () {
                                 );
                             }
                         }
-                        return `${proxy.name}=ss,${proxy.server}, ${proxy.port
+                        result = `${proxy.name}=ss,${proxy.server}, ${proxy.port
                         },encrypt-method=${proxy.cipher},password=${proxy.password
                         }${obfs_opts},tfo=${proxy.tfo || "false"},udp-relay=${proxy.udp || "false"
                         }`;
+                        break;
                     case "vmess":
                         tls_opts = "";
-                        let config = `${proxy.name}=vmess,${proxy.server},${proxy.port
+                        result = `${proxy.name}=vmess,${proxy.server},${proxy.port
                         },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"
                         }`;
                         if (proxy.network === "ws") {
@@ -2601,35 +2603,42 @@ var ProxyUtils = (function () {
                             const wsHeaders = Object.entries(proxy["ws-headers"]).map(
                               ([key, value]) => (`${key}:"${value}"`))
                               .join('|');
-                            config += `,ws=true${path ? ",ws-path=" + path : ""}${wsHeaders ? ",ws-headers=" + wsHeaders : ""}`;
+                            result += `,ws=true${path ? ",ws-path=" + path : ""}${wsHeaders ? ",ws-headers=" + wsHeaders : ""}`;
                         }
                         if (proxy.tls) {
-                            config += `${typeof proxy["skip-cert-verify"] !== "undefined"
+                            result += `${typeof proxy["skip-cert-verify"] !== "undefined"
                                 ? ",skip-cert-verify=" + proxy["skip-cert-verify"]
                                 : ""
                             }`;
-                            config += proxy.sni ? `,sni=${proxy.sni}` : "";
+                            result += proxy.sni ? `,sni=${proxy.sni}` : "";
                         }
-                        return config;
+                        break;
                     case "trojan":
-                        return `${proxy.name}=trojan,${proxy.server},${proxy.port
+                        result =  `${proxy.name}=trojan,${proxy.server},${proxy.port
                         },password=${proxy.password}${typeof proxy["skip-cert-verify"] !== "undefined"
                             ? ",skip-cert-verify=" + proxy["skip-cert-verify"]
                             : ""
                         }${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"
                         }`;
+                        break;
                     case "http":
                         tls_opts = ", tls=false";
                         if (proxy.tls) {
                             tls_opts = `,tls=true,skip-cert-verify=${proxy["skip-cert-verify"]},sni=${proxy.sni}`;
                         }
-                        return `${proxy.name}=http, ${proxy.server}, ${proxy.port}${proxy.username ? ",username=" + proxy.username : ""
+                        result = `${proxy.name}=http, ${proxy.server}, ${proxy.port}${proxy.username ? ",username=" + proxy.username : ""
                         }${proxy.password ? ",password=" + proxy.password : ""
                         }${tls_opts},tfo=${proxy.tfo || "false"}`;
+                        break;
+                    default:
+                        throw new Error(
+                            `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`
+                        );
                 }
-                throw new Error(
-                    `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`
-                );
+
+                // handle surge hybrid param
+                result += proxy["surge-hybrid"] !== undefined ? `,hybrid=${proxy["surge-hybrid"]}` : "";
+                return result;
             };
             return {produce};
         }

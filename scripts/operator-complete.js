@@ -66,5 +66,7 @@ function operator(proxies) {
   // flag operator
   procedure = $get("Flag Operator", true);
   proxies = $process(procedure, proxies);
+
+  procedure = $get("Flag Operator", true);
   return proxies;
 }
