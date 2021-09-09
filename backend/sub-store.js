@@ -1376,13 +1376,22 @@ var ProxyUtils = (function () {
                 line = line.split("trojan://")[1];
                 const [server, port] = line.split("@")[1].split("?")[0].split(":");
                 const name = decodeURIComponent(line.split("#")[1].trim());
-
+                var paramArr = line.split("?")
+                var sni=null
+                if (paramArr.length > 1) {
+                    paramArr=paramArr[1].split("#")[0].split("&")
+                    const params = new Map(paramArr.map((item) => {
+                        return item.split("=")
+                    }))
+                    sni = params.get("sni")
+                }
                 return {
                     name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
                     type: "trojan",
                     server,
                     port,
                     password: line.split("@")[0],
+                    sni,
                     supported,
                 };
             };
