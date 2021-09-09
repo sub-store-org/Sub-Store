@@ -1376,8 +1376,8 @@ var ProxyUtils = (function () {
                 line = line.split("trojan://")[1];
                 const [server, port] = line.split("@")[1].split("?")[0].split(":");
                 const name = decodeURIComponent(line.split("#")[1].trim());
-                var paramArr = line.split("?")
-                var sni=null
+                let paramArr = line.split("?")
+                let sni=null
                 if (paramArr.length > 1) {
                     paramArr=paramArr[1].split("#")[0].split("&")
                     const params = new Map(paramArr.map((item) => {
@@ -1385,6 +1385,7 @@ var ProxyUtils = (function () {
                     }))
                     sni = params.get("sni")
                 }
+                
                 return {
                     name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
                     type: "trojan",
