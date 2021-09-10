@@ -1376,13 +1376,23 @@ var ProxyUtils = (function () {
                 line = line.split("trojan://")[1];
                 const [server, port] = line.split("@")[1].split("?")[0].split(":");
                 const name = decodeURIComponent(line.split("#")[1].trim());
-
+                let paramArr = line.split("?")
+                let sni=null
+                if (paramArr.length > 1) {
+                    paramArr=paramArr[1].split("#")[0].split("&")
+                    const params = new Map(paramArr.map((item) => {
+                        return item.split("=")
+                    }))
+                    sni = params.get("sni")
+                }
+                
                 return {
                     name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
                     type: "trojan",
                     server,
                     port,
                     password: line.split("@")[0],
+                    sni,
                     supported,
                 };
             };
@@ -2340,12 +2350,6 @@ var ProxyUtils = (function () {
                 "🇻🇳": ["VN", "越南", "胡志明市"], 
                 "🇮🇹": ["Italy", "IT", "Nachash", "意大利", "米兰", "義大利"], 
                 "🇿🇦": ["South Africa", "南非"], 
-                "🇸🇰": ["SI", "斯洛文尼亚"],
-                "🇨🇾": ["CY", "塞浦路斯"],
-                "🇱🇹": ["LT", "立陶宛"],
-                "🇨🇷": ["CR", "哥斯达黎加"],
-                "🇵🇦": ["PA", "巴拿马"],
-                "🇹🇳": ["TN", "突尼斯],
                 "🇦🇪": ["United Arab Emirates", "阿联酋"], 
                 "🇧🇷": ["BR", "Brazil", "巴西", "圣保罗"], 
                 "🇯🇵": ["JP", "Japan","JAPAN", "日本", "东京", "大阪", "埼玉", "沪日", "穗日", "川日", "中日", "泉日", "杭日", "深日", "辽日", "广日"], 
@@ -2579,6 +2583,7 @@ var ProxyUtils = (function () {
         function Surge_Producer() {
             const targetPlatform = "Surge";
             const produce = (proxy) => {
+                let result = "";
                 let obfs_opts, tls_opts;
                 switch (proxy.type) {
                     case "ss":
@@ -2593,48 +2598,57 @@ var ProxyUtils = (function () {
                                 );
                             }
                         }
-                        return `${proxy.name}=ss,${proxy.server}, ${proxy.port
+                        result = `${proxy.name}=ss,${proxy.server}, ${proxy.port
                         },encrypt-method=${proxy.cipher},password=${proxy.password
                         }${obfs_opts},tfo=${proxy.tfo || "false"},udp-relay=${proxy.udp || "false"
                         }`;
+                        break;
                     case "vmess":
                         tls_opts = "";
-                        let config = `${proxy.name}=vmess,${proxy.server},${proxy.port
+                        result = `${proxy.name}=vmess,${proxy.server},${proxy.port
                         },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"
                         }`;
                         if (proxy.network === "ws") {
                             const path = proxy["ws-path"] || "/";
-                            const host = proxy["ws-headers"].Host;
-                            config += `,ws=true${path ? ",ws-path=" + path : ""}${host ? ",ws-headers=HOST:" + host : ""
-                            }`;
+                            const wsHeaders = Object.entries(proxy["ws-headers"]).map(
+                              ([key, value]) => (`${key}:"${value}"`))
+                              .join('|');
+                            result += `,ws=true${path ? ",ws-path=" + path : ""}${wsHeaders ? ",ws-headers=" + wsHeaders : ""}`;
                         }
                         if (proxy.tls) {
-                            config += `${typeof proxy["skip-cert-verify"] !== "undefined"
+                            result += `${typeof proxy["skip-cert-verify"] !== "undefined"
                                 ? ",skip-cert-verify=" + proxy["skip-cert-verify"]
                                 : ""
                             }`;
-                            config += proxy.sni ? `,sni=${proxy.sni}` : "";
+                            result += proxy.sni ? `,sni=${proxy.sni}` : "";
                         }
-                        return config;
+                        break;
                     case "trojan":
-                        return `${proxy.name}=trojan,${proxy.server},${proxy.port
+                        result =  `${proxy.name}=trojan,${proxy.server},${proxy.port
                         },password=${proxy.password}${typeof proxy["skip-cert-verify"] !== "undefined"
                             ? ",skip-cert-verify=" + proxy["skip-cert-verify"]
                             : ""
                         }${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"
                         }`;
+                        break;
                     case "http":
                         tls_opts = ", tls=false";
                         if (proxy.tls) {
                             tls_opts = `,tls=true,skip-cert-verify=${proxy["skip-cert-verify"]},sni=${proxy.sni}`;
                         }
-                        return `${proxy.name}=http, ${proxy.server}, ${proxy.port}${proxy.username ? ",username=" + proxy.username : ""
+                        result = `${proxy.name}=http, ${proxy.server}, ${proxy.port}${proxy.username ? ",username=" + proxy.username : ""
                         }${proxy.password ? ",password=" + proxy.password : ""
                         }${tls_opts},tfo=${proxy.tfo || "false"}`;
+                        break;
+                    default:
+                        throw new Error(
+                            `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`
+                        );
                 }
-                throw new Error(
-                    `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`
-                );
+
+                // handle surge hybrid param
+                result += proxy["surge-hybrid"] !== undefined ? `,hybrid=${proxy["surge-hybrid"]}` : "";
+                return result;
             };
             return {produce};
         }

@@ -5,6 +5,9 @@
         <v-icon left>mdi-cloud</v-icon>
         同步配置
         <v-spacer></v-spacer>
+        <v-btn icon @click="syncAllArtifacts()">
+          <v-icon>backup</v-icon>
+        </v-btn>
         <v-btn icon @click="openGist()">
           <v-icon>visibility</v-icon>
         </v-btn>
@@ -315,6 +318,20 @@ export default {
         this.$store.commit("SET_ERROR_MESSAGE", `同步配置失败！${err}`);
       } finally {
         this.$store.commit("SET_LOADING", false);
+      }
+    },
+
+    async syncAllArtifacts() {
+      try {
+        const {data} = await axios.get(`/cron/sync-artifacts`);
+        const {failed} = data;
+        if (failed.length > 0) {
+          this.$store.commit("SET_ERROR_MESSAGE", `部分配置（${failed.map(artifact => artifact.name).join(", ")}）同步失败，请查看日志！`);
+        } else {
+          this.$store.commit("SET_SUCCESS_MESSAGE", `Gist 同步生成节点成功！`);
+        }
+      } catch (err) {
+        this.$store.commit("SET_ERROR_MESSAGE", `Gist 同步生成节点失败！${err}`);
       }
     },
 
