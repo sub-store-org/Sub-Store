@@ -50,6 +50,16 @@
           </v-list-item>
         </v-list>
         <v-textarea
+            v-model="options.ua"
+            auto-grow
+            class="mt-2"
+            clear-icon="clear"
+            clearable
+            label="User-Agent"
+            placeholder="自定义下载订阅使用的User-Agent，可选。"
+            rows="2"
+        />
+        <v-textarea
             v-model="options.icon"
             auto-grow
             class="mt-2"
@@ -354,6 +364,7 @@ export default {
         name: "",
         url: "",
         icon: "",
+        ua: "",
         useless: "KEEP",
         udp: "DEFAULT",
         "skip-cert-verify": "DEFAULT",
@@ -412,6 +423,13 @@ export default {
         output.subscriptions = this.selected;
       } else {
         output.url = this.options.url;
+      }
+      // assign user-agent, if ua is set
+      let ua = this.options.ua;
+      if (typeof ua != "undefined" && ua != null && ua.trim().length > 0) {
+        output.ua = ua;
+      }else{
+        output.ua=""
       }
       // useless filter
       if (this.options.useless === 'REMOVE') {
@@ -573,6 +591,7 @@ function loadProcess(options, source, isCollection = false) {
     ...options,
     name: source.name,
     icon: source.icon,
+    ua: source.ua
   };
   if (isCollection) {
     options.subscriptions = source.subscriptions;
