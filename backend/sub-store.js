@@ -773,10 +773,10 @@ function service() {
     }
 
     async function refreshCache(req, res) {
-        const {url} = req.body;
+        const { url, ua } = req.body;
         $.info(`Refreshing cache for URL: ${url}`);
         try {
-            const raw = await getResource(url, false);
+            const raw = await getResource(url, false, ua);
             $.write(raw, `#${Base64.safeEncode(url)}`);
             res.json({
                 status: "success",
@@ -871,11 +871,16 @@ function service() {
     }
 
     // get resource, with cache ability to speedup response time
-    async function getResource(url, useCache = true) {
-        // use QX agent to get flow headers
+    async function getResource(url, useCache = true, userAgent) {
+        // use QX agent to get flow headers ,if not assign user-agent
+        let ua = userAgent
+        if (typeof userAgent == "undefined" || userAgent == null || userAgent.trim().length == 0) {
+            ua = "Quantumult%20X"
+        }
+        
         const $http = HTTP({
             headers: {
-                "User-Agent": "Quantumult%20X",
+                "User-Agent": ua,
             },
         });
         const key = "#" + Base64.safeEncode(url);
@@ -915,7 +920,7 @@ function service() {
     ) {
         if (type === "subscription") {
             const sub = item;
-            const raw = await getResource(sub.url, useCache);
+            const raw = await getResource(sub.url, useCache, sub.ua);
             // parse proxies
             let proxies = ProxyUtils.parse(raw);
             if (!noProcessor) {
@@ -945,7 +950,7 @@ function service() {
                     }% `
                 );
                 try {
-                    const raw = await getResource(sub.url, useCache);
+                    const raw = await getResource(sub.url, useCache, sub.ua);
                     // parse proxies
                     let currentProxies = ProxyUtils.parse(raw);
                     if (!noProcessor) {
@@ -1379,13 +1384,13 @@ var ProxyUtils = (function () {
                 let paramArr = line.split("?")
                 let sni=null
                 if (paramArr.length > 1) {
-                    paramArr=paramArr[1].split("#")[0].split("&")
+                    paramArr = paramArr[1].split("#")[0].split("&")
                     const params = new Map(paramArr.map((item) => {
                         return item.split("=")
                     }))
                     sni = params.get("sni")
                 }
-                
+
                 return {
                     name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
                     type: "trojan",
