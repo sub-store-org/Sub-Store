@@ -823,8 +823,8 @@ function service() {
                         const settings = $.read(SETTINGS_KEY);
                         settings.syncTime = new Date().getTime();
                         $.write(settings, SETTINGS_KEY);
-
                         content = $.read("#sub-store");
+                        if($.env.isNode) content = JSON.stringify($.cache,null,`  `)
                         $.info(`上传备份中...`);
                         await gist.upload({filename: GIST_BACKUP_FILE_NAME, content});
                         break;
@@ -833,6 +833,12 @@ function service() {
                         content = await gist.download(GIST_BACKUP_FILE_NAME);
                         // restore settings
                         $.write(content, "#sub-store");
+                        if($.env.isNode){
+                            content = JSON.parse(content)
+                            Object.keys(content).forEach(key=>{
+                                $.write(content[key],key)
+                            })
+                        }
                         break;
                 }
                 res.json({
