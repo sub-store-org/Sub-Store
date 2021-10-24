@@ -1560,7 +1560,7 @@ var ProxyUtils = (function () {
                         }`;
                     case "http":
                         tls_opts = "";
-                        const base = `${proxy.name}=${proxy.tls ? "http" : "https"},${
+                        const base = `${proxy.name}=${proxy.tls ? "https" : "http"},${
                             proxy.server
                         },${proxy.port},${proxy.username || ""},${proxy.password || ""}`;
                         if (proxy.tls) {
