@@ -35,6 +35,7 @@ Core functionalities:
 - [x] QX
 - [x] Loon
 - [x] Surge
+- [x] Clash
 
 ## 2. Subscription Formatting
 ### Filtering
