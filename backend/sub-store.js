@@ -981,6 +981,15 @@ function service() {
             if (proxies.length === 0) {
                 throw new Error(`组合订阅中不含有效节点！`);
             }
+            // check duplicate
+            const count = {};
+            proxies.forEach(p => {
+                if (count[p.name]) {
+                    $.notify("🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』", "⚠️ 订阅包含重复节点！", "请仔细检测配置！", {
+                        "media-url": "https://cdn3.iconfinder.com/data/icons/seo-outline-1/512/25_code_program_programming_develop_bug_search_developer-512.png"
+                    });
+                }
+            });
             return ProxyUtils.produce(proxies, platform);
         } else if (type === "rule") {
             const rule = item;
