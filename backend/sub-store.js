@@ -2492,10 +2492,14 @@ var ProxyUtils = (function () {
                                 }`;
                             }
                         }
-                        return `vmess=${proxy.server}:${proxy.port},method=${proxy.cipher === "auto" ? "none" : proxy.cipher
+                        let result = `vmess=${proxy.server}:${proxy.port},method=${proxy.cipher === "auto" ? "none" : proxy.cipher
                         },password=${proxy.uuid}${obfs_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"
-                        }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"},tag=${proxy.name
-                        }`;
+                        }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"}`;
+                        if (typeof proxy['vmess-aead'] !== "undefined") {
+                            result += `,aead=${proxy['vmess-aead']}`;
+                        }
+                        result += `,tag=${proxy.name}`;
+                        return result;
                     case "trojan":
                         return `trojan=${proxy.server}:${proxy.port},password=${proxy.password
                         }${proxy.sni ? ",tls-host=" + proxy.sni : ""
@@ -2563,8 +2567,12 @@ var ProxyUtils = (function () {
                             obfs_opts += `${proxy.sni ? ",tls-name:" + proxy.sni : ""
                             },skip-cert-verify:${proxy["skip-cert-verify"] || "false"}`;
                         }
-                        return `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher === "auto" ? "none" : proxy.cipher
+                        let result = `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher === "auto" ? "none" : proxy.cipher
                         },"${proxy.uuid}",over-tls:${proxy.tls || "false"}${obfs_opts}`;
+                        if (typeof proxy['vmess-aead'] !== "undefined") {
+                            result += `,vmess-aead=${proxy['vmess-aead']}`;
+                        }
+                        return result;
                     case "trojan":
                         return `${proxy.name}=trojan,${proxy.server},${proxy.port},"${proxy.password
                         }"${proxy.sni ? ",tls-name:" + proxy.sni : ""},skip-cert-verify:${proxy["skip-cert-verify"] || "false"
@@ -2615,6 +2623,9 @@ var ProxyUtils = (function () {
                         result = `${proxy.name}=vmess,${proxy.server},${proxy.port
                         },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"
                         }`;
+                        if (typeof proxy['vmess-aead'] !== "undefined") {
+                            result += `,vmess-aead=${proxy['vmess-aead']}`;
+                        }
                         if (proxy.network === "ws") {
                             const path = proxy["ws-path"] || "/";
                             const wsHeaders = Object.entries(proxy["ws-headers"]).map(
