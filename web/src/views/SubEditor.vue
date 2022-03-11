@@ -185,6 +185,24 @@
               </v-col>
             </v-row>
           </v-radio-group>
+          <v-radio-group
+              v-model="options['vmess-aead']"
+              class="mt-0 mb-0"
+              dense
+          >
+            Vmess AEAD
+            <v-row>
+              <v-col>
+                <v-radio label="默认" value="DEFAULT"/>
+              </v-col>
+              <v-col>
+                <v-radio label="强制开启" value="FORCE_OPEN"/>
+              </v-col>
+              <v-col>
+                <v-radio label="强制关闭" value="FORCE_CLOSE"/>
+              </v-col>
+            </v-row>
+          </v-radio-group>
         </v-item-group>
       </v-form>
     </v-card>
@@ -369,7 +387,8 @@ export default {
         udp: "DEFAULT",
         "skip-cert-verify": "DEFAULT",
         tfo: "DEFAULT",
-        "surge-hybrid": "DEFAULT"
+        "surge-hybrid": "DEFAULT",
+        "vmess-aead": "DEFAULT",
       },
       process: [],
       selected: []
@@ -437,8 +456,8 @@ export default {
           type: "Useless Filter"
         });
       }
-      // udp, tfo, scert
-      for (const opt of ['udp', 'tfo', 'skip-cert-verify', 'surge-hybrid']) {
+      // udp, tfo, scert, surge-hybrid, vmess-aead
+      for (const opt of ['udp', 'tfo', 'skip-cert-verify', 'surge-hybrid', 'vmess-aead']) {
         if (this.options[opt] !== 'DEFAULT') {
           output.process.push({
             type: "Set Property Operator",
