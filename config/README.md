@@ -1,42 +1,28 @@
-# 配置说明
+# Sub-Store 配置指南
 
 ## 脚本配置：
 
-## 1. Loon
+### 1. Loon
+安装使用[插件](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Loon.plugin)即可。
+### 2. Surge
+安装使用[模块](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Surge.sgmodule)即可。
 
-1. 推荐直接使用[插件](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Loon.plugin)。
-
-2. 商店用户可以配置本地脚本和MTIM
+### 3. QX
+编辑配置文件，在对应的节下面添加以下配置：
 ```
-[MITM]
+[rewrite_local]
+^https?:\/\/sub\.store url script-analyze-echo-response https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.min.js
+
+[mitm]
+# 添加一个sub.store域名
 hostname=sub.store
-
-[Script]
-http-request https?:\/\/sub\.store script-path=https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.js, requires-body=true, timeout=120, tag=Sub-Store
+simple_cert_hostname=sub.store
 ```
 
-## 2. Surge
+### 4. Stash
+安装使用[ Stash 覆写](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Stash.stoverride)即可。
 
-目前iOS商店版本的bug未修复，暂时无法使用。TF用户直接使用[模块](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Surge.sgmodule)。
-
-
-## 3. QX
-
-QX暂时需要通过backend方式使用，添加如下配置。注意，HTTP backend开关需要打开！
-
-```
-[http_backend]
-https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.js, tag=Sub-Store, path=/, enabled=true
-```
-
-## 4. Stash
-推荐直接使用[覆写](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Stash.stoverride)。
-
-
-## 界面配置：
-
-### 1. Loon, Surge & Stash
-Loon,Surge和Stash用户，打开这个[页面](https://sub-store.vercel.app/)即可。
-
-### 2. QX
-QX用户需要曲线救国，使用[JSBox版本]()。
+## 使用 Sub-Store
+1. 使用 Safari 打开这个 https://sub.store，如网页正常打开并且未弹出任何错误提示，说明 Sub-Store 已经配置成功。
+2. 可以把 Sub-Store 添加到主屏幕，即可获得类似于 APP 的使用体验。
+3. 更详细的使用指南请参考[文档](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46)。
