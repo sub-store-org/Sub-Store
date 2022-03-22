@@ -29,10 +29,14 @@ QX暂时需要通过backend方式使用，添加如下配置。注意，HTTP bac
 https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.js, tag=Sub-Store, path=/, enabled=true
 ```
 
+## 4. Stash
+推荐直接使用[覆写](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Stash.stoverride)。
+
+
 ## 界面配置：
 
-### 1. Loon & Surge
-Loon和Surge用户，打开这个[页面](https://sub-store.vercel.app/)即可。
+### 1. Loon, Surge & Stash
+Loon,Surge和Stash用户，打开这个[页面](https://sub-store.vercel.app/)即可。
 
 ### 2. QX
 QX用户需要曲线救国，使用[JSBox版本]()。
