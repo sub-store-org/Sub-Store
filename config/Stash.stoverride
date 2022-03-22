@@ -1,0 +1,16 @@
+name: Sub-Store
+desc: 高级订阅管理工具 @Peng-YM
+
+http:
+  mitm:
+    - sub.store
+  script:
+    - match: ^https?:\/\/sub\.store
+      name: sub-store
+      type: request
+      require-body: true
+      timeout: 120
+script-providers:
+  sub-store:
+    url: https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.min.js
+    interval: 86400
