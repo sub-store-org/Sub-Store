@@ -873,8 +873,7 @@ function service() {
             return "Loon";
         } else if (UA.indexOf("Stash") !== -1) {
             return "Clash";
-        }
-        else {
+        } else {
             return null;
         }
     }
@@ -1305,14 +1304,14 @@ var ProxyUtils = (function () {
                     // handle ws headers
                     if (params.obfs === "ws" || params.obfs === "wss") {
                         proxy.network = "ws";
-                        proxy["ws-path"] = (params["obfs-path"] || '"/"').match(
+                        proxy["ws-opts"].path = (params["obfs-path"] || '"/"').match(
                             /^"(.*)"$/
                         )[1];
                         let obfs_host = params["obfs-header"];
                         if (obfs_host && obfs_host.indexOf("Host") !== -1) {
                             obfs_host = obfs_host.match(/Host:\s*([a-zA-Z0-9-.]*)/)[1];
                         }
-                        proxy["ws-headers"] = {
+                        proxy["ws-opts"].headers = {
                             Host: obfs_host || proxy.server, // if no host provided, use the same as server
                         };
                     }
@@ -1345,10 +1344,10 @@ var ProxyUtils = (function () {
                     // handle obfs
                     if (params.net === "ws") {
                         proxy.network = "ws";
-                        proxy["ws-path"] = params.path;
-                        proxy["ws-headers"] = {
-                            Host: params.host || params.add,
-                        };
+                        proxy["ws-opts"] = {
+                            path: params.path,
+                            headers: {Host: params.host || params.add}
+                        }
                         if (proxy.tls && params.host) {
                             proxy.sni = params.host;
                         }
@@ -1538,9 +1537,11 @@ var ProxyUtils = (function () {
                 // handle ws headers
                 if (params.obfs === "ws" || params.obfs === "wss") {
                     proxy.network = "ws";
-                    proxy["ws-path"] = params["obfs-uri"];
-                    proxy["ws-headers"] = {
-                        Host: params["obfs-host"] || params.server, // if no host provided, use the same as server
+                    proxy["ws-opts"] = {
+                        path: params["obfs-uri"],
+                        headers: {
+                            Host: params["obfs-host"] || params.server, // if no host provided, use the same as server
+                        }
                     };
                 }
                 return proxy;
@@ -1725,9 +1726,11 @@ var ProxyUtils = (function () {
                         break;
                     case "ws":
                         proxy.network = params.transport;
-                        proxy["ws-path"] = params.path;
-                        proxy["ws-headers"] = {
-                            Host: params.host,
+                        proxy["ws-opts"] = {
+                            path: params.path,
+                            headers: {
+                                Host: params.host,
+                            }
                         };
                 }
                 if (proxy.tls) {
@@ -1869,10 +1872,13 @@ var ProxyUtils = (function () {
                 // use websocket
                 if (JSON.parse(params.ws || "false")) {
                     proxy.network = "ws";
-                    proxy["ws-path"] = params["ws-path"];
+                    proxy["ws-opts"] = {
+                        path: params["ws-path"]
+                    };
+
                     const res = params["ws-headers"].match(/(,|^|\s)*HOST:\s*(.*?)(,|$)/);
                     const host = res ? res[2] : proxy.server;
-                    proxy["ws-headers"] = {
+                    proxy["ws-opts"].headers = {
                         Host: host || params.server,
                     };
                 }
@@ -2477,15 +2483,15 @@ var ProxyUtils = (function () {
                             if (proxy.tls) {
                                 // ws-tls
                                 obfs_opts = `,obfs=wss${proxy.sni ? ",obfs-host=" + proxy.sni : ""
-                                }${proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""
+                                }${proxy["ws-opts"].path ? ",obfs-uri=" + proxy["ws-opts"].path : ""
                                 },tls-verification=${proxy["skip-cert-verify"] ? "false" : "true"
                                 }`;
                             } else {
                                 // ws
-                                obfs_opts = `,obfs=ws${proxy["ws-headers"].Host
-                                    ? ",obfs-host=" + proxy["ws-headers"].Host
+                                obfs_opts = `,obfs=ws${proxy["ws-opts"].headers.Host
+                                    ? ",obfs-host=" + proxy["ws-opts"].headers.Host
                                     : ""
-                                }${proxy["ws-path"] ? ",obfs-uri=" + proxy["ws-path"] : ""}`;
+                                }${proxy["ws-opts"].path ? ",obfs-uri=" + proxy["ws-opts"].path : ""}`;
                             }
                         } else {
                             // tcp
@@ -2498,6 +2504,7 @@ var ProxyUtils = (function () {
                         let result = `vmess=${proxy.server}:${proxy.port},method=${proxy.cipher === "auto" ? "none" : proxy.cipher
                         },password=${proxy.uuid}${obfs_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"
                         }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"}`;
+                        if (proxy.alterId === 0) proxy['vmess-aead'] = true;
                         if (typeof proxy['vmess-aead'] !== "undefined") {
                             result += `,aead=${proxy['vmess-aead']}`;
                         }
@@ -2529,7 +2536,7 @@ var ProxyUtils = (function () {
         function Loon_Producer() {
             const targetPlatform = "Loon";
             const produce = (proxy) => {
-                let obfs_opts, tls_opts, udp_opts, tfo_opts;
+                let obfs_opts = "", tls_opts = "", udp_opts = "", tfo_opts = "";
                 if (typeof proxy.udp !== "undefined") {
                     udp_opts = proxy.udp ? ",udp=true" : ",udp=false";
                 }
@@ -2559,8 +2566,8 @@ var ProxyUtils = (function () {
                     case "vmess":
                         obfs_opts = "";
                         if (proxy.network === "ws") {
-                            const host = proxy["ws-headers"].Host || proxy.server;
-                            obfs_opts = `,transport:ws,host:${host},path:${proxy["ws-path"] || "/"
+                            const host = proxy["ws-opts"].headers.Host || proxy.server;
+                            obfs_opts = `,transport:ws,host:${host},path:${proxy["ws-opts"].path || "/"
                             }`;
                         } else {
                             obfs_opts = `,transport:tcp`;
@@ -2571,6 +2578,7 @@ var ProxyUtils = (function () {
                         }
                         let result = `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher === "auto" ? "none" : proxy.cipher
                         },"${proxy.uuid}",over-tls:${proxy.tls || "false"}${obfs_opts}`;
+                        if (proxy.alterId === 0) proxy['vmess-aead'] = true;
                         if (typeof proxy['vmess-aead'] !== "undefined") {
                             result += `,vmess-aead=${proxy['vmess-aead']}`;
                         }
@@ -2625,12 +2633,14 @@ var ProxyUtils = (function () {
                         result = `${proxy.name}=vmess,${proxy.server},${proxy.port
                         },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"
                         }`;
+
+                        if (proxy.alterId === 0) proxy['vmess-aead'] = true;
                         if (typeof proxy['vmess-aead'] !== "undefined") {
                             result += `,vmess-aead=${proxy['vmess-aead']}`;
                         }
                         if (proxy.network === "ws") {
-                            const path = proxy["ws-path"] || "/";
-                            const wsHeaders = Object.entries(proxy["ws-headers"]).map(
+                            const path = proxy["ws-opts"].path || "/";
+                            const wsHeaders = Object.entries(proxy["ws-opts"].headers).map(
                                 ([key, value]) => (`${key}:"${value}"`))
                                 .join('|');
                             result += `,ws=true${path ? ",ws-path=" + path : ""}${wsHeaders ? ",ws-headers=" + wsHeaders : ""}`;
@@ -2746,8 +2756,8 @@ var ProxyUtils = (function () {
                         };
                         // obfs
                         if (proxy.network === "ws") {
-                            result.path = proxy["ws-path"] || "/";
-                            result.host = proxy["ws-headers"].Host || proxy.server;
+                            result.path = proxy["ws-opts"].path || "/";
+                            result.host = proxy["ws-opts"].headers.Host || proxy.server;
                         }
                         result = "vmess://" + Base64.safeEncode(JSON.stringify(result));
                         break;
