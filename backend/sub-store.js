@@ -193,8 +193,9 @@ function service() {
                 $.notify(
                     `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`,
                     `❌ 无法下载订阅：${name}！`,
-                    `🤔 原因：${err}`
+                    `🤔 原因：${JSON.stringify(err)}`
                 );
+                $.error(JSON.stringify(err));
                 res.status(500).json({
                     status: "failed",
                     message: err,
@@ -2659,7 +2660,7 @@ var ProxyUtils = (function () {
                             ? ",skip-cert-verify=" + proxy["skip-cert-verify"]
                             : ""
                         }${proxy.sni ? ",sni=" + proxy.sni : ""},tfo=${proxy.tfo || "false"
-                        }`;
+                        },udp-relay=${proxy.udp || "false"}`;
                         break;
                     case "http":
                         tls_opts = ", tls=false";
