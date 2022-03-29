@@ -2475,7 +2475,7 @@ var ProxyUtils = (function () {
                             ? ",ssr-protocol-param=" + proxy["protocol-param"]
                             : ""
                         }${proxy.obfs ? ",obfs=" + proxy.obfs : ""}${proxy["obfs-param"] ? ",obfs-host=" + proxy["obfs-param"] : ""
-                        }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
+                        },fast-open=${proxy.tfo || false}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
                         },tag=${proxy.name}`;
                     case "vmess":
                         obfs_opts = "";
@@ -2503,8 +2503,7 @@ var ProxyUtils = (function () {
                             }
                         }
                         let result = `vmess=${proxy.server}:${proxy.port},method=${proxy.cipher === "auto" ? "none" : proxy.cipher
-                        },password=${proxy.uuid}${obfs_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"
-                        }${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"}`;
+                        },password=${proxy.uuid}${obfs_opts},fast-open=${proxy.tfo || false}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"}`;
                         if (proxy.alterId === 0) proxy['vmess-aead'] = true;
                         if (typeof proxy['vmess-aead'] !== "undefined") {
                             result += `,aead=${proxy['vmess-aead']}`;
@@ -2515,7 +2514,7 @@ var ProxyUtils = (function () {
                         return `trojan=${proxy.server}:${proxy.port},password=${proxy.password
                         }${proxy.sni ? ",tls-host=" + proxy.sni : ""
                         },over-tls=true,tls-verification=${proxy["skip-cert-verify"] ? "false" : "true"
-                        }${proxy.tfo ? ",fast-open=true" : ",fast-open=false"}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
+                        },fast-open=${proxy.tfo||false}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
                         },tag=${proxy.name}`;
                     case "http":
                         tls_opts = "";
@@ -2524,8 +2523,7 @@ var ProxyUtils = (function () {
                             }${proxy.sni ? ",tls-host=" + proxy.sni : ""}`;
                         }
                         return `http=${proxy.server}:${proxy.port},username=${proxy.username
-                        },password=${proxy.password}${tls_opts}${proxy.tfo ? ",fast-open=true" : ",fast-open=false"
-                        },tag=${proxy.name}`;
+                        },password=${proxy.password}${tls_opts},fast-open=${proxy.tfo||false},tag=${proxy.name}`;
                 }
                 throw new Error(
                     `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`
@@ -2541,9 +2539,7 @@ var ProxyUtils = (function () {
                 if (typeof proxy.udp !== "undefined") {
                     udp_opts = proxy.udp ? ",udp=true" : ",udp=false";
                 }
-                if (typeof proxy.tfo !== "undefined") {
-                    tfo_opts = proxy.tfo ? ",fast-open=true" : ",fast-open=false";
-                }
+                tfo_opts = `,fast-open=${proxy.tfo||false}`;
 
                 switch (proxy.type) {
                     case "ss":
@@ -2632,8 +2628,7 @@ var ProxyUtils = (function () {
                     case "vmess":
                         tls_opts = "";
                         result = `${proxy.name}=vmess,${proxy.server},${proxy.port
-                        },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"
-                        }`;
+                        },username=${proxy.uuid},tls=${proxy.tls || "false"},tfo=${proxy.tfo || "false"}`;
 
                         if (proxy.alterId === 0) proxy['vmess-aead'] = true;
                         if (typeof proxy['vmess-aead'] !== "undefined") {
