@@ -1,5 +1,4 @@
 import Vue from 'vue'
-import App from './App.vue'
 import vuetify from './plugins/vuetify';
 import 'material-design-icons-iconfont/dist/material-design-icons.css'
 import './plugins/base';
@@ -10,6 +9,7 @@ import i18n from './i18n';
 import router from './router';
 import store from './store';
 import Clipboard from 'v-clipboard';
+import App from './App.vue'
 
 Vue.config.productionTip = false
 Vue.use(Clipboard);
