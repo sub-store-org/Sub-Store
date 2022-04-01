@@ -7,7 +7,7 @@
 </div>
 
 <p align="center" color="#6a737d">
-Advanced Subscription Manager for QX, Loon, Surge and Clash.
+Advanced Subscription Manager for QX, Loon, Surge, Stash and Clash.
 </p>
 
 <div align="center">
@@ -29,13 +29,13 @@ Core functionalities:
 - [x] QX (SS, SSR, VMess, Trojan, HTTP)
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP)
 - [x] Surge (SS, VMess, Trojan, HTTP)
-- [x] Clash (SS, SSR, VMess, Trojan, HTTP)
+- [x] Stash & Clash (SS, SSR, VMess, Trojan, HTTP)
 
 ### Supported Target Platforms
 - [x] QX
 - [x] Loon
 - [x] Surge
-- [x] Clash
+- [x] Stash & Clash
 
 ## 2. Subscription Formatting
 ### Filtering
