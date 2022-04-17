@@ -934,7 +934,7 @@ function service() {
             let proxies = ProxyUtils.parse(raw);
             if (!noProcessor) {
                 // apply processors
-                proxies = await ProxyUtils.process(proxies, sub.process || []);
+                proxies = await ProxyUtils.process(proxies, sub.process || [], platform);
             }
             // check duplicate
             const count = {};
@@ -1376,7 +1376,7 @@ var ProxyUtils = (function () {
                 const [server, port] = line.split("@")[1].split("?")[0].split(":");
                 const name = decodeURIComponent(line.split("#")[1].trim());
                 let paramArr = line.split("?")
-                let sni = null
+                let sni = null;
                 if (paramArr.length > 1) {
                     paramArr = paramArr[1].split("#")[0].split("&")
                     const params = new Map(paramArr.map((item) => {
@@ -2185,7 +2185,7 @@ var ProxyUtils = (function () {
          1. This function name should be `operator`!
          2. Always declare variables before using them!
          */
-        function ScriptOperator(script) {
+        function ScriptOperator(script, targetPlatform) {
             return {
                 name: "Script Operator",
                 func: (proxies) => {
@@ -2198,7 +2198,7 @@ var ProxyUtils = (function () {
                         };
                         const $process = ApplyProcessor;
                         eval(script);
-                        output = operator(proxies);
+                        output = operator(proxies, targetPlatform);
                     })();
                     return output;
                 },
@@ -2848,7 +2848,7 @@ var ProxyUtils = (function () {
         return proxies;
     }
 
-    async function process(proxies, operators = []) {
+    async function process(proxies, operators = [], targetPlatform) {
         for (const item of operators) {
             // process script
             let script;
@@ -2881,7 +2881,7 @@ var ProxyUtils = (function () {
             );
             let processor;
             if (item.type.indexOf("Script") !== -1) {
-                processor = PROXY_PROCESSORS[item.type](script);
+                processor = PROXY_PROCESSORS[item.type](script, targetPlatform);
             } else {
                 processor = PROXY_PROCESSORS[item.type](item.args);
             }
