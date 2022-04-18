@@ -966,7 +966,8 @@ function service() {
                         // apply processors
                         currentProxies = await ProxyUtils.process(
                             currentProxies,
-                            sub.process || []
+                            sub.process || [],
+                            platform
                         );
                     }
                     // merge
@@ -979,7 +980,7 @@ function service() {
             }
             if (!noProcessor) {
                 // apply own processors
-                proxies = await ProxyUtils.process(proxies, collection.process || []);
+                proxies = await ProxyUtils.process(proxies, collection.process || [], platform);
             }
             if (proxies.length === 0) {
                 throw new Error(`组合订阅中不含有效节点！`);
