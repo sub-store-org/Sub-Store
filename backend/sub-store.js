@@ -165,7 +165,7 @@ function service() {
 
                 // forward flow headers
                 if (
-                    ["QX", "Surge", "Loon"].indexOf(
+                    ["QX", "Surge", "Loon", "Clash"].indexOf(
                         getPlatformFromHeaders(req.headers)
                     ) !== -1
                 ) {
