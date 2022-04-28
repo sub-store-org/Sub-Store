@@ -164,22 +164,9 @@ function service() {
                 });
 
                 // forward flow headers
-                if (
-                    ["QX", "Surge", "Loon", "Clash"].indexOf(
-                        getPlatformFromHeaders(req.headers)
-                    ) !== -1
-                ) {
-                    const {headers} = await $.http.get({
-                        url: sub.url,
-                        headers: {
-                            "User-Agent": "Quantumult/1.0.13 (iPhone10,3; iOS 14.0)",
-                        },
-                    });
-                    const subkey = Object.keys(headers).filter((k) =>
-                        /SUBSCRIPTION-USERINFO/i.test(k)
-                    )[0];
-                    const userinfo = headers[subkey];
-                    res.set("subscription-userinfo", userinfo);
+                const flowInfo = await getFlowHeaders(sub.url);
+                if (flowInfo) {
+                    res.set("subscription-userinfo", flowInfo);
                 }
 
                 if (platform === "JSON") {
@@ -334,6 +321,17 @@ function service() {
         const collection = allCollections[name];
 
         $.info(`正在下载组合订阅：${name}`);
+
+        // forward flow header from the first subscription in this collection
+        const allSubs = $.read(SUBS_KEY);
+        const subs = collection["subscriptions"];
+        if (subs.length > 0) {
+            const sub = allSubs[subs[0]];
+            const flowInfo = await getFlowHeaders(sub.url);
+            if (flowInfo) {
+                res.set("subscription-userinfo", flowInfo);
+            }
+        }
 
         if (collection) {
             try {
@@ -788,6 +786,19 @@ function service() {
                 message: `无法刷新资源 ${url}： ${err}`,
             });
         }
+    }
+
+    async function getFlowHeaders(url) {
+        const {headers} = await $.http.get({
+            url,
+            headers: {
+                "User-Agent": "Quantumult/1.0.13 (iPhone10,3; iOS 14.0)",
+            },
+        });
+        const subkey = Object.keys(headers).filter((k) =>
+            /SUBSCRIPTION-USERINFO/i.test(k)
+        )[0];
+        return headers[subkey];
     }
 
     function getEnv(req, res) {
