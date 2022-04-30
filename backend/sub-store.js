@@ -660,7 +660,8 @@ function service() {
         const allArtifacts = $.read(ARTIFACTS_KEY);
         let success = [],
             failed = [];
-        for (const artifact of Object.values(allArtifacts)) {
+
+        await Promise.all(Object.values(allArtifacts).map(async artifact => {
             if (artifact.sync) {
                 $.info(`正在同步云配置：${artifact.name}...`);
                 try {
@@ -687,10 +688,13 @@ function service() {
                     });
                     artifact.updated = new Date().getTime();
                     const body = JSON.parse(resp.body);
+
+                    // extract real url from gist
                     artifact.url = body.files[artifact.name].raw_url.replace(
                         /\/raw\/[^\/]*\/(.*)/,
                         "/raw/$1"
                     );
+
                     $.write(allArtifacts, ARTIFACTS_KEY);
                     $.info(`✅ 成功同步云配置：${artifact.name}`);
                     success.push(artifact);
@@ -704,7 +708,8 @@ function service() {
                     failed.push(artifact);
                 }
             }
-        }
+        }));
+
         res.json({
             success,
             failed,
