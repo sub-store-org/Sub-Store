@@ -889,7 +889,7 @@ function service() {
             return "Surge";
         } else if (UA.indexOf("Decar") !== -1 || UA.indexOf("Loon") !== -1) {
             return "Loon";
-        } else if (UA.indexOf("Stash") !== -1) {
+        } else if (UA.indexOf("Stash") !== -1 || UA.indexOf("Shadowrocket") !== -1) {
             return "Clash";
         } else {
             return null;
