@@ -681,6 +681,7 @@ function service() {
                         type: artifact.type,
                         item,
                         platform: artifact.platform,
+                        useCache: true
                     });
                     const resp = await syncArtifact({
                         filename: artifact.name,
