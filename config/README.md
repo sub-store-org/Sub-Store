@@ -22,6 +22,9 @@ simple_cert_hostname=sub.store
 ### 4. Stash
 安装使用[ Stash 覆写](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Stash.stoverride)即可。
 
+### 5. Shadowrocket
+安装使用[模块](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Surge.sgmodule)即可。
+
 ## 使用 Sub-Store
 1. 使用 Safari 打开这个 https://sub.store 如网页正常打开并且未弹出任何错误提示，说明 Sub-Store 已经配置成功。
 2. 可以把 Sub-Store 添加到主屏幕，即可获得类似于 APP 的使用体验。
