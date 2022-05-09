@@ -1,5 +1,9 @@
 #!name=Sub-Store
-#!desc=高级订阅管理工具 @Peng-YM
+#!desc=高级订阅管理工具
+#!openUrl=https://sub.store
+#!author=Peng-YM
+#!homepage=https://github.com/Peng-YM/Sub-Store
+#!icon=https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png
 
 [MITM]
 hostname=sub.store
