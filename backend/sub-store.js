@@ -757,6 +757,7 @@ function service() {
     }
 
     async function syncArtifact({filename, content}) {
+        await new Promise(r => setTimeout(r, Math.random() * 2000));
         const {gistToken} = $.read(SETTINGS_KEY);
         if (!gistToken) {
             return Promise.reject("未设置Gist Token！");
@@ -909,12 +910,19 @@ function service() {
                 "User-Agent": ua,
             },
         });
-        const key = "#" + Base64.safeEncode(url);
-        const resource = $.read(key);
+        let key = `#${Base64.safeEncode(url)}`;
+        key = key.slice(0, Math.min(key.length, 32));
 
-        const timeKey = `#TIME-${Base64.safeEncode(url)}`;
+        const resource = $.read(key);
+        $.log("Cached resource: " + resource);
+
+        let timeKey = `#TIME-${Base64.safeEncode(url)}`;
+        timeKey = timeKey.slice(0, Math.min(timeKey.length, 32));
+
         const ONE_HOUR = 60 * 60 * 1000;
         const outdated = new Date().getTime() - $.read(timeKey) > ONE_HOUR;
+        $.log(`Cache time: ${$.read(timeKey)}`);
+        $.log(`Cache outdated? ${outdated}`);
 
         if (useCache && resource && !outdated) {
             $.log(`Use cached for resource: ${url}`);
@@ -929,7 +937,8 @@ function service() {
             throw new Error(err);
         } finally {
             $.write(body, key);
-            $.write(new Date().getTime(), timeKey);
+            $.write(JSON.stringify(new Date().getTime()), timeKey);
+            $.log("Writing cache");
         }
         if (body.replace(/\s/g, "").length === 0) {
             throw new Error("订阅内容为空！");
