@@ -2377,7 +2377,8 @@ var ProxyUtils = (function () {
                 "🇳🇴": ["Norway", "挪威", "NO"],
                 "🇨🇳": ["CN", "China", "回国", "中国", "中國", "江苏", "北京", "上海", "广州", "深圳", "杭州", "徐州", "青岛", "宁波", "镇江", "back"],
                 "🇵🇱": ["PL", "POL", "波兰", "波蘭"],
-                "🇨🇱": ["智利"], "🇳🇿": ["新西蘭", "新西兰"],
+                "🇨🇱": ["智利"],
+                "🇳🇿": ["新西蘭", "新西兰"],
                 "🇬🇷": ["希腊", "希臘"],
                 "🇪🇬": ["埃及"],
                 "🇨🇾": ["CY", "塞浦路斯"],
@@ -2529,7 +2530,7 @@ var ProxyUtils = (function () {
                         return `trojan=${proxy.server}:${proxy.port},password=${proxy.password
                         }${proxy.sni ? ",tls-host=" + proxy.sni : ""
                         },over-tls=true,tls-verification=${proxy["skip-cert-verify"] ? "false" : "true"
-                        },fast-open=${proxy.tfo||false}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
+                        },fast-open=${proxy.tfo || false}${proxy.udp ? ",udp-relay=true" : ",udp-relay=false"
                         },tag=${proxy.name}`;
                     case "http":
                         tls_opts = "";
@@ -2538,7 +2539,7 @@ var ProxyUtils = (function () {
                             }${proxy.sni ? ",tls-host=" + proxy.sni : ""}`;
                         }
                         return `http=${proxy.server}:${proxy.port},username=${proxy.username
-                        },password=${proxy.password}${tls_opts},fast-open=${proxy.tfo||false},tag=${proxy.name}`;
+                        },password=${proxy.password}${tls_opts},fast-open=${proxy.tfo || false},tag=${proxy.name}`;
                 }
                 throw new Error(
                     `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`
@@ -2554,7 +2555,7 @@ var ProxyUtils = (function () {
                 if (typeof proxy.udp !== "undefined") {
                     udp_opts = proxy.udp ? ",udp=true" : ",udp=false";
                 }
-                tfo_opts = `,fast-open=${proxy.tfo||false}`;
+                tfo_opts = `,fast-open=${proxy.tfo || false}`;
 
                 switch (proxy.type) {
                     case "ss":
@@ -6988,7 +6989,7 @@ var YAML = function () {
         if (state.position < (state.length - 1)) {
             throwError(state, 'end of the stream or a document separator is expected');
         } else {
-            return;
+
         }
     }
 
@@ -8105,6 +8106,7 @@ function MD5(string) {
     function RotateLeft(lValue, iShiftBits) {
         return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));
     }
+
     function AddUnsigned(lX, lY) {
         var lX4, lY4, lX8, lY8, lResult;
         lX8 = (lX & 0x80000000);
@@ -8125,26 +8127,43 @@ function MD5(string) {
             return (lResult ^ lX8 ^ lY8);
         }
     }
-    function F(x, y, z) { return (x & y) | ((~x) & z); }
-    function G(x, y, z) { return (x & z) | (y & (~z)); }
-    function H(x, y, z) { return (x ^ y ^ z); }
-    function I(x, y, z) { return (y ^ (x | (~z))); }
+
+    function F(x, y, z) {
+        return (x & y) | ((~x) & z);
+    }
+
+    function G(x, y, z) {
+        return (x & z) | (y & (~z));
+    }
+
+    function H(x, y, z) {
+        return (x ^ y ^ z);
+    }
+
+    function I(x, y, z) {
+        return (y ^ (x | (~z)));
+    }
+
     function FF(a, b, c, d, x, s, ac) {
         a = AddUnsigned(a, AddUnsigned(AddUnsigned(F(b, c, d), x), ac));
         return AddUnsigned(RotateLeft(a, s), b);
-    };
+    }
+
     function GG(a, b, c, d, x, s, ac) {
         a = AddUnsigned(a, AddUnsigned(AddUnsigned(G(b, c, d), x), ac));
         return AddUnsigned(RotateLeft(a, s), b);
-    };
+    }
+
     function HH(a, b, c, d, x, s, ac) {
         a = AddUnsigned(a, AddUnsigned(AddUnsigned(H(b, c, d), x), ac));
         return AddUnsigned(RotateLeft(a, s), b);
-    };
+    }
+
     function II(a, b, c, d, x, s, ac) {
         a = AddUnsigned(a, AddUnsigned(AddUnsigned(I(b, c, d), x), ac));
         return AddUnsigned(RotateLeft(a, s), b);
-    };
+    }
+
     function ConvertToWordArray(string) {
         var lWordCount;
         var lMessageLength = string.length;
@@ -8166,7 +8185,8 @@ function MD5(string) {
         lWordArray[lNumberOfWords - 2] = lMessageLength << 3;
         lWordArray[lNumberOfWords - 1] = lMessageLength >>> 29;
         return lWordArray;
-    };
+    }
+
     function WordToHex(lValue) {
         var WordToHexValue = "", WordToHexValue_temp = "", lByte, lCount;
         for (lCount = 0; lCount <= 3; lCount++) {
@@ -8175,7 +8195,8 @@ function MD5(string) {
             WordToHexValue = WordToHexValue + WordToHexValue_temp.substr(WordToHexValue_temp.length - 2, 2);
         }
         return WordToHexValue;
-    };
+    }
+
     function Utf8Encode(string) {
         string = string.replace(/\r\n/g, "\n");
         var utftext = "";
@@ -8183,19 +8204,18 @@ function MD5(string) {
             var c = string.charCodeAt(n);
             if (c < 128) {
                 utftext += String.fromCharCode(c);
-            }
-            else if ((c > 127) && (c < 2048)) {
+            } else if ((c > 127) && (c < 2048)) {
                 utftext += String.fromCharCode((c >> 6) | 192);
                 utftext += String.fromCharCode((c & 63) | 128);
-            }
-            else {
+            } else {
                 utftext += String.fromCharCode((c >> 12) | 224);
                 utftext += String.fromCharCode(((c >> 6) & 63) | 128);
                 utftext += String.fromCharCode((c & 63) | 128);
             }
         }
         return utftext;
-    };
+    }
+
     var x = Array();
     var k, AA, BB, CC, DD, a, b, c, d;
     var S11 = 7, S12 = 12, S13 = 17, S14 = 22;
@@ -8204,9 +8224,15 @@ function MD5(string) {
     var S41 = 6, S42 = 10, S43 = 15, S44 = 21;
     string = Utf8Encode(string);
     x = ConvertToWordArray(string);
-    a = 0x67452301; b = 0xEFCDAB89; c = 0x98BADCFE; d = 0x10325476;
+    a = 0x67452301;
+    b = 0xEFCDAB89;
+    c = 0x98BADCFE;
+    d = 0x10325476;
     for (k = 0; k < x.length; k += 16) {
-        AA = a; BB = b; CC = c; DD = d;
+        AA = a;
+        BB = b;
+        CC = c;
+        DD = d;
         a = FF(a, b, c, d, x[k + 0], S11, 0xD76AA478);
         d = FF(d, a, b, c, x[k + 1], S12, 0xE8C7B756);
         c = FF(c, d, a, b, x[k + 2], S13, 0x242070DB);
