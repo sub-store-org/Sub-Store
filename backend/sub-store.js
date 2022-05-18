@@ -2131,7 +2131,7 @@ var ProxyUtils = (function () {
          1. This function name should be `operator`!
          2. Always declare variables before using them!
          */
-        function ScriptOperator(script, targetPlatform) {
+        function ScriptOperator(script, targetPlatform, $arguments) {
             return {
                 name: "Script Operator",
                 func: (proxies) => {
@@ -2231,14 +2231,14 @@ var ProxyUtils = (function () {
          1. This function name should be `func`!
          2. Always declare variables before using them!
          */
-        function ScriptFilter(script) {
+        function ScriptFilter(script, targetPlatform, $arguments) {
             return {
                 name: "Script Filter",
                 func: (proxies) => {
                     let output = FULL(proxies.length, true);
                     !(function () {
                         eval(script);
-                        output = filter(proxies);
+                        output = filter(proxies, targetPlatform);
                     })();
                     return output;
                 },
@@ -2807,12 +2807,24 @@ var ProxyUtils = (function () {
         for (const item of operators) {
             // process script
             let script;
+            const $arguments = {};
             if (item.type.indexOf("Script") !== -1) {
                 const {mode, content} = item.args;
                 if (mode === "link") {
+                    const url = content;
+                    // extract link arguments
+                    const rawArgs = url.split('#');
+                    if (rawArgs.length > 1) {
+                        for (const pair of rawArgs[1].split("&")) {
+                            const key = pair.split('=')[0];
+                            const value = (pair.split('=')[1] || true);
+                            $arguments[key] = value;
+                        }
+                    }
+
                     // if this is remote script, download it
                     try {
-                        script = await $.http.get(content).then((resp) => resp.body);
+                        script = await $downloader.download(url);
                     } catch (err) {
                         $.error(
                             `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`
@@ -2836,7 +2848,7 @@ var ProxyUtils = (function () {
             );
             let processor;
             if (item.type.indexOf("Script") !== -1) {
-                processor = PROXY_PROCESSORS[item.type](script, targetPlatform);
+                processor = PROXY_PROCESSORS[item.type](script, targetPlatform, $arguments);
             } else {
                 processor = PROXY_PROCESSORS[item.type](item.args);
             }
