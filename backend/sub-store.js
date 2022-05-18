@@ -12,6 +12,7 @@
  */
 const $ = API("sub-store");
 const Base64 = new Base64Code();
+const $downloader = new ResourceDownloader();
 
 service();
 
@@ -143,10 +144,6 @@ function service() {
         const {raw} = req.query || "false";
         const platform =
             req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
-        const useCache =
-            typeof cache === "undefined"
-                ? platform === "JSON" || platform === "URI"
-                : cache;
 
         $.info(`正在下载订阅：${name}`);
 
@@ -158,7 +155,6 @@ function service() {
                     type: "subscription",
                     item: sub,
                     platform,
-                    useCache,
                     noProcessor: raw,
                 });
 
@@ -307,14 +303,9 @@ function service() {
     // collection API
     async function downloadCollection(req, res) {
         const {name} = req.params;
-        const {cache} = req.query || "false";
         const {raw} = req.query || "false";
         const platform =
             req.query.target || getPlatformFromHeaders(req.headers) || "JSON";
-        const useCache =
-            typeof cache === "undefined"
-                ? platform === "JSON" || platform === "URI"
-                : cache;
 
         const allCollections = $.read(COLLECTIONS_KEY);
         const collection = allCollections[name];
@@ -338,7 +329,6 @@ function service() {
                     type: "collection",
                     item: collection,
                     platform,
-                    useCache,
                     noProcessor: raw,
                 });
                 if (platform === "JSON") {
@@ -558,8 +548,7 @@ function service() {
                     console.log(JSON.stringify(artifact, null, 2));
                     try {
                         const resp = await syncArtifact({
-                            filename: artifact.name,
-                            content: output,
+                            [artifact.name]: {content: output},
                         });
                         artifact.updated = new Date().getTime();
                         const body = JSON.parse(resp.body);
@@ -657,13 +646,12 @@ function service() {
     async function cronSyncArtifacts(req, res) {
         $.info("开始同步所有远程配置...");
         const allArtifacts = $.read(ARTIFACTS_KEY);
-        let success = [],
-            failed = [];
+        const files = {};
 
-        await Promise.all(Object.values(allArtifacts).map(async artifact => {
-            if (artifact.sync) {
-                $.info(`正在同步云配置：${artifact.name}...`);
-                try {
+        try {
+            await Promise.all(Object.values(allArtifacts).map(async artifact => {
+                if (artifact.sync) {
+                    $.info(`正在同步云配置：${artifact.name}...`);
                     let item;
                     switch (artifact.type) {
                         case "subscription":
@@ -679,41 +667,36 @@ function service() {
                     const output = await produceArtifact({
                         type: artifact.type,
                         item,
-                        platform: artifact.platform,
-                        useCache: true
+                        platform: artifact.platform
                     });
-                    const resp = await syncArtifact({
-                        filename: artifact.name,
-                        content: output,
-                    });
-                    artifact.updated = new Date().getTime();
-                    const body = JSON.parse(resp.body);
 
-                    // extract real url from gist
-                    artifact.url = body.files[artifact.name].raw_url.replace(
-                        /\/raw\/[^\/]*\/(.*)/,
-                        "/raw/$1"
-                    );
-
-                    $.write(allArtifacts, ARTIFACTS_KEY);
-                    $.info(`✅ 成功同步云配置：${artifact.name}`);
-                    success.push(artifact);
-                } catch (err) {
-                    $.error(`云配置: ${artifact.name} 同步失败！原因：${err}`);
-                    $.notify(
-                        `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 同步订阅失败`,
-                        `❌ 无法同步订阅：${artifact.name}！`,
-                        `🤔 原因：${err}`
-                    );
-                    failed.push(artifact);
+                    files[artifact.name] = {
+                        content: output
+                    };
                 }
-            }
-        }));
+            }));
 
-        res.json({
-            success,
-            failed,
-        });
+            const resp = await syncArtifact(files);
+            const body = JSON.parse(resp.body);
+
+            for (const artifact of Object.values(allArtifacts)) {
+                artifact.updated = new Date().getTime();
+                // extract real url from gist
+                artifact.url = body.files[artifact.name].raw_url.replace(
+                    /\/raw\/[^\/]*\/(.*)/,
+                    "/raw/$1"
+                );
+            }
+
+            $.write(allArtifacts, ARTIFACTS_KEY);
+            $.info("全部订阅同步成功！")
+            res.status(200).end();
+        } catch (err) {
+            res.status(500).json({
+                error: err
+            });
+            $.info(`同步订阅失败，原因：${err}`);
+        }
     }
 
     async function deleteArtifact(req, res) {
@@ -755,8 +738,7 @@ function service() {
         });
     }
 
-    async function syncArtifact({filename, content}) {
-        await new Promise(r => setTimeout(r, Math.random() * 2000));
+    async function syncArtifact(files) {
         const {gistToken} = $.read(SETTINGS_KEY);
         if (!gistToken) {
             return Promise.reject("未设置Gist Token！");
@@ -765,7 +747,7 @@ function service() {
             token: gistToken,
             key: ARTIFACT_REPOSITORY_KEY,
         });
-        return manager.upload({filename, content});
+        return manager.upload(files);
     }
 
     // util API
@@ -827,7 +809,7 @@ function service() {
                         content = $.read("#sub-store");
                         if ($.env.isNode) content = JSON.stringify($.cache, null, `  `)
                         $.info(`上传备份中...`);
-                        await gist.upload({filename: GIST_BACKUP_FILE_NAME, content});
+                        await gist.upload({[GIST_BACKUP_FILE_NAME]: { content }});
                         break;
                     case "download":
                         $.info(`还原备份中...`);
@@ -879,63 +861,15 @@ function service() {
         }
     }
 
-    // get resource, with cache ability to speedup response time
-    async function getResource(url, useCache = true, userAgent) {
-        // use QX agent to get flow headers ,if not assign user-agent
-        let ua = userAgent
-        if (typeof userAgent == "undefined" || userAgent == null || userAgent.trim().length == 0) {
-            ua = "Quantumult%20X"
-        }
-
-        const $http = HTTP({
-            headers: {
-                "User-Agent": ua,
-            },
-        });
-        let key = `#${MD5(url)}`;
-
-        const resource = $.read(key);
-        $.log("Cached resource: " + resource);
-
-        let timeKey = `#TIME-${MD5(url)}`;
-
-        const ONE_MINUTE = 60 * 1000;
-        const outdated = new Date().getTime() - $.read(timeKey) > ONE_MINUTE;
-        $.log(`Cache time: ${$.read(timeKey)}`);
-        $.log(`Cache outdated? ${outdated}`);
-
-        if (useCache && resource && !outdated) {
-            $.log(`Use cached for resource: ${url}`);
-            return resource;
-        }
-
-        let body = "";
-        try {
-            const resp = await $http.get(url);
-            body = resp.body;
-        } catch (err) {
-            throw new Error(err);
-        } finally {
-            $.write(body, key);
-            $.write(JSON.stringify(new Date().getTime()), timeKey);
-            $.log("Writing cache");
-        }
-        if (body.replace(/\s/g, "").length === 0) {
-            throw new Error("订阅内容为空！");
-        }
-        return body;
-    }
-
     async function produceArtifact(
-        {type, item, platform, useCache, noProcessor} = {
+        {type, item, platform, noProcessor} = {
             platform: "JSON",
-            useCache: false,
             noProcessor: false,
         }
     ) {
         if (type === "subscription") {
             const sub = item;
-            const raw = await getResource(sub.url, useCache, sub.ua);
+            const raw = await $downloader.download(sub.url, sub.ua);
             // parse proxies
             let proxies = ProxyUtils.parse(raw);
             if (!noProcessor) {
@@ -958,14 +892,14 @@ function service() {
             const collection = item;
             const subs = collection["subscriptions"];
             let proxies = [];
-            for (let i = 0; i < subs.length; i++) {
-                const sub = allSubs[subs[i]];
-                $.info(
-                    `正在处理子订阅：${sub.name}，进度--${100 * ((i + 1) / subs.length).toFixed(1)
-                    }% `
-                );
+
+            let processed = 0;
+
+            await Promise.all(subs.map(async name => {
+                const sub = allSubs[name];
                 try {
-                    const raw = await getResource(sub.url, useCache, sub.ua);
+                    $.info(`正在处理子订阅：${sub.name}...`);
+                    const raw = await $downloader.download(sub.url, sub.ua);
                     // parse proxies
                     let currentProxies = ProxyUtils.parse(raw);
                     if (!noProcessor) {
@@ -978,12 +912,17 @@ function service() {
                     }
                     // merge
                     proxies = proxies.concat(currentProxies);
+                    processed++;
+                    $.info(
+                        `✅ 子订阅：${sub.name}加载成功，进度--${100 * (processed / subs.length).toFixed(1)}% `
+                    );
                 } catch (err) {
+                    processed++;
                     $.error(
-                        `处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}! 该订阅已被跳过。`
+                        `❌ 处理组合订阅中的子订阅: ${sub.name}时出现错误：${err}，该订阅已被跳过！进度--${100 * (processed / subs.length).toFixed(1)}%`
                     );
                 }
-            }
+            }));
             if (!noProcessor) {
                 // apply own processors
                 proxies = await ProxyUtils.process(proxies, collection.process || [], platform);
@@ -1011,7 +950,7 @@ function service() {
                     }% `
                 );
                 try {
-                    const {body} = await $.http.get(url);
+                    const {body} = await $downloader.download(url);
                     const currentRules = RuleUtils.parse(body);
                     rules = rules.concat(currentRules);
                 } catch (err) {
@@ -3718,11 +3657,8 @@ function Gist({token, key}) {
         });
     }
 
-    this.upload = async function ({filename, content}) {
+    this.upload = async function (files) {
         const id = await locate();
-        const files = {
-            [filename]: {content},
-        };
 
         if (id === -1) {
             // create a new gist for backup
@@ -8304,4 +8240,40 @@ function MD5(string) {
     }
     var temp = WordToHex(a) + WordToHex(b) + WordToHex(c) + WordToHex(d);
     return temp.toLowerCase();
+}
+
+function ResourceDownloader() {
+    const cache = {};
+
+    async function download(url, userAgent = "Quantumult%20X") {
+        const id = userAgent + url;
+
+        if (cache[id]) {
+            $.log("Cache hit for: " + url);
+            return cache[id];
+        }
+
+        const $http = HTTP({
+            headers: {
+                "User-Agent": userAgent,
+            },
+        });
+
+        const result = new Promise((resolve, reject) => {
+            $http.get(url).then(resp => {
+                const body = resp.body;
+                if (body.replace(/\s/g, "").length === 0)
+                    reject(new Error("订阅内容为空！"));
+                else
+                    resolve(body);
+            });
+        });
+
+        cache[id] = result;
+        return result;
+    }
+
+    return {
+        download
+    }
 }
