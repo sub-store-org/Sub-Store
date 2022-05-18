@@ -2824,7 +2824,8 @@ var ProxyUtils = (function () {
 
                     // if this is remote script, download it
                     try {
-                        script = await $downloader.download(url);
+                        script = await $downloader.download(url.split("#")[0]);
+                        $.info(`Script loaded: >>>\n ${script}`);
                     } catch (err) {
                         $.error(
                             `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`
