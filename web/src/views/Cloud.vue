@@ -322,16 +322,15 @@ export default {
     },
 
     async syncAllArtifacts() {
+      this.$store.commit("SET_LOADING", true);
       try {
-        const {data} = await axios.get(`/cron/sync-artifacts`);
-        const {failed} = data;
-        if (failed.length > 0) {
-          this.$store.commit("SET_ERROR_MESSAGE", `部分配置（${failed.map(artifact => artifact.name).join(", ")}）同步失败，请查看日志！`);
-        } else {
-          this.$store.commit("SET_SUCCESS_MESSAGE", `Gist 同步生成节点成功！`);
-        }
+        await axios.get(`/cron/sync-artifacts`);
+        await this.$store.dispatch("FETCH_ARTIFACTS");
+        this.$store.commit("SET_SUCCESS_MESSAGE", `Gist 同步生成节点成功！`);
       } catch (err) {
         this.$store.commit("SET_ERROR_MESSAGE", `Gist 同步生成节点失败！${err}`);
+      } finally {
+        this.$store.commit("SET_LOADING", false);
       }
     },
 
