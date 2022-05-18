@@ -1,5 +1,5 @@
 function operator(proxies, targetPlatform) {
-    const fingerprint = "你的指纹";
+    const {fingerprint} = $arguments;
     proxies.forEach(proxy => {
         if (targetPlatform === "Surge") {
             proxy.tfo = `${proxy.tfo || false}, server-cert-fingerprint-sha256=${fingerprint}`;
