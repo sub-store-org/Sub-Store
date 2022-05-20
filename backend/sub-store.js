@@ -2275,6 +2275,7 @@ var ProxyUtils = (function () {
                 "🇫🇮": ["Finland", "芬兰", "芬蘭", "赫尔辛基"],
                 "🇫🇷": ["FR", "France", "法国", "法國", "巴黎"],
                 "🇬🇧": ["UK", "GB", "England", "United Kingdom", "英国", "伦敦", "英", "London"],
+                "🇲🇴": ["MO", "Macao", "澳门", "澳門", "CTM"],
                 "🇰🇿": ["哈萨克斯坦", "哈萨克"],
                 "🇭🇺": ["匈牙利", "Hungary"],
                 "🇭🇰": ["HK", "Hongkong", "Hong Kong", "HongKong", "HONG KONG", "香港", "深港", "沪港", "呼港", "HKT", "HKBN", "HGC", "WTT", "CMI", "穗港", "京港", "港"],
