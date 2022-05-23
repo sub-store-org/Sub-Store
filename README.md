@@ -75,7 +75,7 @@ npm install
 1. In `backend`, run the backend server on http://localhost:3000
 
 ```
-node sub-store.js
+npm run serve
 ```
 
 2. In`web`, start the vue-cli server
