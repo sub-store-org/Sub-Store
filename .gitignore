@@ -1,7 +1,7 @@
 .DS_Store
 # json config
-backend/sub-store.json
-backend/root.json
+backend/src/sub-store.json
+backend/src/root.json
 
 # Logs
 logs

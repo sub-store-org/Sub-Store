@@ -1,21 +1,25 @@
 {
-  "name": "sub-store-backend",
-  "version": "0.0.1",
-  "description": "Advanced Subscription Manager for QX, Loon, and Surge.",
-  "main": "sub-store.js",
+  "name": "sub-store",
+  "version": "1.5",
+  "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket.",
+  "main": "src/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "serve": "node sub-store.js",
-    "build": " curl -X POST -s --data-urlencode 'input@sub-store.js' https://javascript-minifier.com/raw > sub-store.min.js && printf \"// UPDATED AT: $(date) \\n\" | cat - sub-store.min.js > temp && mv temp sub-store.min.js"
+    "serve": "node src/main.js",
+    "build": "browserify -p tinyify src/main.js > bundle && cat banner bundle > sub-store.min.js && rm bundle"
   },
-  "author": "",
+  "author": "Peng-YM",
   "license": "GPL",
   "dependencies": {
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
-    "request": "^2.88.2"
+    "js-base64": "^3.7.2",
+    "request": "^2.88.2",
+    "static-js-yaml": "^1.0.0"
   },
   "devDependencies": {
-    "axios": "^0.20.0"
+    "axios": "^0.20.0",
+    "browserify": "^17.0.0",
+    "tinyify": "^3.0.0"
   }
 }
