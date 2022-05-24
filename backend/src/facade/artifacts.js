@@ -280,8 +280,7 @@ async function produceArtifact(
 		const allSubs = $.read(SUBS_KEY);
 		const collection = item;
 		const subs = collection['subscriptions'];
-		let proxies = [];
-
+		const results = {};
 		let processed = 0;
 
 		await Promise.all(
@@ -296,8 +295,7 @@ async function produceArtifact(
 						// apply processors
 						currentProxies = await ProxyUtils.process(currentProxies, sub.process || [], platform);
 					}
-					// merge
-					proxies = proxies.concat(currentProxies);
+					results[name] = currentProxies;
 					processed++;
 					$.info(`✅ 子订阅：${sub.name}加载成功，进度--${100 * (processed / subs.length).toFixed(1)}% `);
 				} catch (err) {
@@ -309,6 +307,10 @@ async function produceArtifact(
 				}
 			})
 		);
+
+		// merge proxies with the original order
+		let proxies = Array.prototype.concat.apply([], subs.map(name => results[name]));
+
 		if (!noProcessor) {
 			// apply own processors
 			proxies = await ProxyUtils.process(proxies, collection.process || [], platform);
