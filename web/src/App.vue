@@ -5,32 +5,16 @@
       <router-view></router-view>
     </v-main>
     <BottomNav></BottomNav>
-    <v-snackbar
-        :value="successMessage"
-        app
-        bottom
-        color="success"
-        elevation="20"
-    >
+    <v-snackbar :value="successMessage" app bottom color="success" elevation="20">
       {{ successMessage }}
     </v-snackbar>
 
-    <v-snackbar
-        :value="errorMessage"
-        app
-        bottom
-        color="error"
-        elevation="20"
-    >
+    <v-snackbar :value="errorMessage" app bottom color="error" elevation="20">
       {{ errorMessage }}
     </v-snackbar>
 
     <v-overlay :value="isLoading">
-      <v-progress-circular
-          indeterminate
-          size="64"
-          color="primary"
-      ></v-progress-circular>
+      <v-progress-circular indeterminate size="64" color="primary"></v-progress-circular>
     </v-overlay>
   </v-app>
 </template>
@@ -39,7 +23,7 @@
 
 import TopToolbar from "@/components/TopToolbar";
 import BottomNav from "@/components/BottomNav";
-import {showError} from "@/utils";
+import { showError } from "@/utils";
 
 
 async function initStore(store) {
@@ -68,13 +52,18 @@ export default {
 
   created() {
     initStore(this.$store);
-    this.$store.watch(
-        (state => state.settings.theme.darkMode),
-        (value => {
-          this.$vuetify.theme.dark = value;
-          window.localStorage.setItem("darkMode", value);
-        })
-    )
+
+    const vuetify = this.$vuetify;
+
+    if (window.matchMedia) {
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        vuetify.theme.dark = true;
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        console.log(`changed to ${e.matches ? "dark" : "light"} mode`)
+        vuetify.theme.dark = e.matches ? true : false;
+      });
+    }
   },
 
   computed: {

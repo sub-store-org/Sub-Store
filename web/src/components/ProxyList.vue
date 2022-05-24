@@ -110,14 +110,11 @@ export default {
   methods: {
     async fetch() {
       try {
-        this.$store.commit("SET_LOADING", true);
         await axios.get(this.raw ? `${this.url}?raw=true` : this.url).then(resp => {
           let {data} = resp;
           // eslint-disable-next-line no-debugger
           this.proxies = data;
-        }).catch(err => {
-          this.$store.commit("SET_ERROR_MESSAGE", err);
-        });
+        })
 
         await axios.get(this.raw ? `${this.url}?target=URI&raw=true` : `${this.url}?target=URI`).then(resp => {
           const {data} = resp;
@@ -130,8 +127,8 @@ export default {
             this.uris.splice(idx, 0, null);
           }
         })
-      } finally {
-        this.$store.commit("SET_LOADING", false);
+      } catch (err) {
+        this.$store.commit("SET_ERROR_MESSAGE", err);
       }
     },
 

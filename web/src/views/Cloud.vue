@@ -352,7 +352,7 @@ export default {
     },
 
     getIconClass(url) {
-      return url.indexOf('#invert') !== -1 && !this.$store.state.settings.theme.darkMode ? 'invert' : ''
+      return url.indexOf('#invert') !== -1 && !this.$vuetify.theme.dark ? 'invert' : ''
     },
 
     openGist() {
