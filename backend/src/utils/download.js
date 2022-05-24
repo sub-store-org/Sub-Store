@@ -2,15 +2,16 @@ const { HTTP } = require('./open-api');
 
 const cache = new Map();
 
-async function download(url, userAgent = 'Quantumult%20X') {
-	const id = userAgent + url;
+async function download(url, ua) {
+	ua = ua || 'Quantumult%20X/1.0.29 (iPhone14,5; iOS 15.4.1)';
+	const id = ua + url;
 	if (cache.has(id)) {
 		return cache.get(id);
 	}
 
 	const $http = HTTP({
 		headers: {
-			'User-Agent': userAgent
+			'User-Agent': ua
 		}
 	});
 
