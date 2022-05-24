@@ -1,12 +1,12 @@
 {
   "name": "sub-store",
-  "version": "1.5",
+  "version": "1.5.1",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket.",
   "main": "src/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "serve": "node src/main.js",
-    "build": "browserify -p tinyify src/main.js > bundle && cat banner bundle > sub-store.min.js && rm bundle"
+    "build": "gulp"
   },
   "author": "Peng-YM",
   "license": "GPL",
@@ -18,8 +18,20 @@
     "static-js-yaml": "^1.0.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.18.0",
+    "@babel/preset-env": "^7.18.0",
+    "@babel/register": "^7.17.7",
+    "@types/gulp": "^4.0.9",
     "axios": "^0.20.0",
+    "babelify": "^10.0.0",
+    "browser-pack-flat": "^3.4.2",
     "browserify": "^17.0.0",
+    "gulp": "^4.0.2",
+    "gulp-babel": "^8.0.0",
+    "gulp-header": "^2.0.9",
+    "gulp-prettier": "^4.0.0",
+    "prettier": "2.6.2",
+    "prettier-plugin-sort-imports": "^1.6.1",
     "tinyify": "^3.0.0"
   }
 }

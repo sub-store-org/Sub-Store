@@ -1,11 +1,7 @@
-module.exports = {
-	SETTINGS_KEY: 'settings',
-	SUBS_KEY: 'subs',
-	COLLECTIONS_KEY: 'collections',
-	RULES_KEY: 'rules',
-	BUILT_IN_KEY: 'builtin',
-	ARTIFACTS_KEY: 'artifacts',
-	GIST_BACKUP_KEY: 'Auto Generated Sub-Store Backup',
-	GIST_BACKUP_FILE_NAME: 'Sub-Store',
-	ARTIFACT_REPOSITORY_KEY: 'Sub-Store Artifacts Repository'
-};
+export const SETTINGS_KEY = 'settings';
+export const SUBS_KEY = 'subs';
+export const COLLECTIONS_KEY = 'collections';
+export const ARTIFACTS_KEY = 'artifacts';
+export const GIST_BACKUP_KEY = 'Auto Generated Sub-Store Backup';
+export const GIST_BACKUP_FILE_NAME = 'Sub-Store';
+export const ARTIFACT_REPOSITORY_KEY = 'Sub-Store Artifacts Repository';

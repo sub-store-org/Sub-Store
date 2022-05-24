@@ -1,4 +1,4 @@
-const { API } = require('../utils/open-api');
+import { API } from '../utils/open-api';
 const $ = API('sub-store');
 
-module.exports = $;
+export default $;
