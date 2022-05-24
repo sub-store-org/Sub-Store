@@ -1,7 +1,7 @@
 import { SETTINGS_KEY } from './constants';
 import $ from '../core/app';
 
-export function register($app) {
+export default function register($app) {
     if (!$.read(SETTINGS_KEY)) $.write({}, SETTINGS_KEY);
     $app.route('/api/settings').get(getSettings).patch(updateSettings);
 }

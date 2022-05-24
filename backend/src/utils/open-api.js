@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 export function ENV() {
     const isQX = typeof $task !== 'undefined';
     const isLoon = typeof $loon !== 'undefined';
@@ -18,7 +19,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
         'PATCH',
     ];
     const URL_REGEX =
-        /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+        /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/;
 
     function send(method, options) {
         options = typeof options === 'string' ? { url: options } : options;

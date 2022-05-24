@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 import { safeLoad } from 'static-js-yaml';
 import { Base64 } from 'js-base64';
 
@@ -12,7 +13,7 @@ const PROXY_PREPROCESSORS = (function () {
         const name = 'HTML';
         const test = (raw) => /^<!DOCTYPE html>/.test(raw);
         // simply discard HTML
-        const parse = (_) => '';
+        const parse = () => '';
         return { name, test, parse };
     }
 
@@ -61,12 +62,6 @@ const PROXY_PREPROCESSORS = (function () {
             // preprocessing for SSD subscription format
             const output = [];
             let ssdinfo = JSON.parse(Base64.decode(raw.split('ssd://')[1]));
-            // options (traffic_used, traffic_total, expiry, url)
-            const traffic_used = ssdinfo.traffic_used; // GB
-            const traffic_total = ssdinfo.traffic_total; // GB, -1 means unlimited
-            const expiry = ssdinfo.expiry; // YYYY-MM-DD HH:mm:ss
-            // default setting
-            let name = ssdinfo.airport; // name of the airport
             let port = ssdinfo.port;
             let method = ssdinfo.encryption;
             let password = ssdinfo.password;
@@ -124,7 +119,7 @@ const PROXY_PARSERS = (function () {
             };
             content = content.split('#')[0]; // strip proxy name
             // handle IPV4 and IPV6
-            const serverAndPort = content.match(/@([^\/]*)(\/|$)/)[1];
+            const serverAndPort = content.match(/@([^/]*)(\/|$)/)[1];
             const portIdx = serverAndPort.lastIndexOf(':');
             proxy.server = serverAndPort.substring(0, portIdx);
             proxy.port = serverAndPort.substring(portIdx + 1);
@@ -1178,9 +1173,10 @@ const PROXY_PROCESSORS = (function () {
         };
     }
 
-    // use base64 encoded script to rename
-    /** Example script
+    /** Script Operator
      function operator(proxies) {
+            const {arg1} = $arguments;
+     
             // do something
             return proxies;
          }
@@ -1189,6 +1185,7 @@ const PROXY_PROCESSORS = (function () {
      1. This function name should be `operator`!
      2. Always declare variables before using them!
      */
+    // eslint-disable-next-line no-unused-vars
     function ScriptOperator(script, targetPlatform, $arguments) {
         return {
             name: 'Script Operator',
@@ -1196,12 +1193,18 @@ const PROXY_PROCESSORS = (function () {
                 let output = proxies;
                 (function () {
                     // interface to get internal operators
+
+                    // eslint-disable-next-line no-unused-vars
                     const $get = (name, args) => {
                         const item = PROXY_PROCESSORS[name];
                         return item(args);
                     };
+                    // eslint-disable-next-line no-unused-vars
                     const $process = ApplyProcessor;
+
                     eval(script);
+
+                    // eslint-disable-next-line no-undef
                     output = operator(proxies, targetPlatform);
                 })();
                 return output;
@@ -1289,7 +1292,6 @@ const PROXY_PROCESSORS = (function () {
         };
     }
 
-    // use base64 encoded script to filter proxies
     /**
      Script Example
      function func(proxies) {
@@ -1301,6 +1303,7 @@ const PROXY_PROCESSORS = (function () {
      1. This function name should be `func`!
      2. Always declare variables before using them!
      */
+    // eslint-disable-next-line no-unused-vars
     function ScriptFilter(script, targetPlatform, $arguments) {
         return {
             name: 'Script Filter',
@@ -1308,6 +1311,7 @@ const PROXY_PROCESSORS = (function () {
                 let output = FULL(proxies.length, true);
                 !(function () {
                     eval(script);
+                    // eslint-disable-next-line no-undef
                     output = filter(proxies, targetPlatform);
                 })();
                 return output;

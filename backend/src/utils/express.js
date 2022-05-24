@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { ENV } from './open-api';
 import $ from '../core/app';
 
@@ -238,7 +239,7 @@ export default function express({ port } = { port: 3000 }) {
 
     function extractURL(url) {
         // extract path
-        const match = url.match(/https?:\/\/[^\/]+(\/[^?]*)/) || [];
+        const match = url.match(/https?:\/\/[^/]+(\/[^?]*)/) || [];
         const path = match[1] || '/';
 
         // extract query string
