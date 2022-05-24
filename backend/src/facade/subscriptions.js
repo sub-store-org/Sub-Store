@@ -2,7 +2,7 @@ import { SUBS_KEY, COLLECTIONS_KEY } from './constants';
 import { produceArtifact } from './artifacts';
 import $ from '../core/app';
 
-export function register($app) {
+export default function register($app) {
     if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 
     $app.get('/download/:name', downloadSubscription);

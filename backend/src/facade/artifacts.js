@@ -13,7 +13,7 @@ import {
     SETTINGS_KEY,
 } from './constants';
 
-function register($app) {
+export default function register($app) {
     // Initialization
     if (!$.read(ARTIFACTS_KEY)) $.write({}, ARTIFACTS_KEY);
 
@@ -66,7 +66,7 @@ async function getArtifact(req, res) {
                     artifact.updated = new Date().getTime();
                     const body = JSON.parse(resp.body);
                     artifact.url = body.files[artifact.name].raw_url.replace(
-                        /\/raw\/[^\/]*\/(.*)/,
+                        /\/raw\/[^/]*\/(.*)/,
                         '/raw/$1',
                     );
                     $.write(allArtifacts, ARTIFACTS_KEY);
@@ -198,7 +198,7 @@ async function cronSyncArtifacts(_, res) {
             artifact.updated = new Date().getTime();
             // extract real url from gist
             artifact.url = body.files[artifact.name].raw_url.replace(
-                /\/raw\/[^\/]*\/(.*)/,
+                /\/raw\/[^/]*\/(.*)/,
                 '/raw/$1',
             );
         }
@@ -410,4 +410,4 @@ async function produceArtifact(
     }
 }
 
-export { register, produceArtifact };
+export { produceArtifact };

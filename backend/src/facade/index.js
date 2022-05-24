@@ -9,21 +9,19 @@ import { IP_API } from '../utils/geo';
 import Gist from '../utils/gist';
 import $ from '../core/app';
 
+import registerSubscriptionRoutes from './subscriptions';
+import registerCollectionRoutes from './collections';
+import registerArtifactRoutes from './artifacts';
+import registerSettingRoutes from './settings';
+
 export default function serve() {
     const $app = express();
 
     // register routes
-    const collections = require('./collections');
-    collections.register($app);
-
-    const subscriptions = require('./subscriptions');
-    subscriptions.register($app);
-
-    const settings = require('./settings');
-    settings.register($app);
-
-    const artifacts = require('./artifacts');
-    artifacts.register($app);
+    registerCollectionRoutes($app);
+    registerSubscriptionRoutes($app);
+    registerSettingRoutes($app);
+    registerArtifactRoutes($app);
 
     // utils
     $app.get('/api/utils/IP_API/:server', IP_API); // IP-API reverse proxy
@@ -78,10 +76,10 @@ async function gistBackup(req, res) {
         });
         try {
             let content;
+            const settings = $.read(SETTINGS_KEY);
             switch (action) {
                 case 'upload':
                     // update syncTime.
-                    const settings = $.read(SETTINGS_KEY);
                     settings.syncTime = new Date().getTime();
                     $.write(settings, SETTINGS_KEY);
                     content = $.read('#sub-store');

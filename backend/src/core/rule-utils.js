@@ -1,3 +1,5 @@
+import { ApplyProcessor } from './proxy-utils';
+import YAML from 'static-js-yaml';
 import $ from './app';
 
 const RULE_TYPES_MAPPING = [
@@ -19,7 +21,7 @@ const RULE_PREPROCESSORS = (function () {
         const name = 'HTML';
         const test = (raw) => /^<!DOCTYPE html>/.test(raw);
         // simply discard HTML
-        const parse = (_) => '';
+        const parse = () => '';
         return { name, test, parse };
     }
 
@@ -226,7 +228,7 @@ const RULE_PRODUCERS = (function () {
                     return output;
                 }),
             };
-            return YAML.stringify(conf);
+            return YAML.dump(conf);
         };
         return { type, func };
     }
