@@ -67,20 +67,6 @@
               </v-row>
             </v-col>
           </v-list-item>
-          <v-divider></v-divider>
-          <v-subheader>外观</v-subheader>
-          <v-list-item>
-            <v-list-item-content>
-              夜间模式 (实验性支持)
-            </v-list-item-content>
-            <v-list-item-action>
-              <v-switch
-                  v-model="settings.theme.darkMode"
-                  hide-details
-                  label=""
-              />
-            </v-list-item-action>
-          </v-list-item>
         </v-list>
       </v-card-text>
       <v-divider></v-divider>
@@ -89,22 +75,6 @@
         <v-btn color="primary" small text @click="save()">保存</v-btn>
       </v-card-actions>
     </v-card>
-
-    <!--    <v-card>-->
-    <!--      <v-card-title>-->
-    <!--        <v-icon left>-->
-    <!--          mdi-star-->
-    <!--        </v-icon>-->
-    <!--        关于-->
-    <!--      </v-card-title>-->
-    <!--      <v-card-text>-->
-    <!--        <v-list>-->
-    <!--          <v-list-item>-->
-    <!--            <v-list-item-title>GitHub</v-list-item-title>-->
-    <!--          </v-list-item>-->
-    <!--        </v-list>-->
-    <!--      </v-card-text>-->
-    <!--    </v-card>-->
   </v-container>
 </template>
 

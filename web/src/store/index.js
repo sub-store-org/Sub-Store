@@ -18,11 +18,7 @@ const store = new Vuex.Store({
         collections: {},
         artifacts: {},
         env: {},
-        settings: {
-            theme: {
-                darkMode: window.localStorage.getItem("darkMode") || false
-            }
-        }
+        settings: {}
     },
 
     mutations: {
@@ -48,10 +44,6 @@ const store = new Vuex.Store({
 
         SET_ERROR_MESSAGE(state, msg) {
             state.errorMessage = msg;
-        },
-
-        SET_DARK_MODE(state, on) {
-            state.settings.theme.darkMode = on;
         }
     },
 
