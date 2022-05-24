@@ -10,7 +10,6 @@
  * @github: https://github.com/Peng-YM/Sub-Store
  * @documentation: https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46
  */
-
 console.log(
     `
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅

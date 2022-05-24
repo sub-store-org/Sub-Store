@@ -5,7 +5,8 @@
   "main": "src/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "serve": "node src/main.js",
+    "serve": "node sub-store.min.js",
+    "start": "nodemon --exec node_modules/.bin/babel-node src/main.js",
     "build": "gulp"
   },
   "author": "Peng-YM",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.18.0",
+    "@babel/node": "^7.17.10",
     "@babel/preset-env": "^7.18.0",
     "@babel/register": "^7.17.7",
     "@types/gulp": "^4.0.9",
@@ -30,6 +32,7 @@
     "gulp-babel": "^8.0.0",
     "gulp-header": "^2.0.9",
     "gulp-prettier": "^4.0.0",
+    "nodemon": "^2.0.16",
     "prettier": "2.6.2",
     "prettier-plugin-sort-imports": "^1.6.1",
     "tinyify": "^3.0.0"
