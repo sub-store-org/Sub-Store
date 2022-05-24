@@ -14,9 +14,4 @@ function FULL(length, bool) {
     return [...Array(length).keys()].map(() => bool);
 }
 
-module.exports = {
-    AND,
-    OR,
-    NOT,
-    FULL
-}
+export { AND, OR, NOT, FULL };
