@@ -35,10 +35,12 @@ async function downloadSubscription(req, res) {
                 noProcessor: raw,
             });
 
-            // forward flow headers
-            const flowInfo = await getFlowHeaders(sub.url);
-            if (flowInfo) {
-                res.set('subscription-userinfo', flowInfo);
+            if (sub.source !== 'local') {
+                // forward flow headers
+                const flowInfo = await getFlowHeaders(sub.url);
+                if (flowInfo) {
+                    res.set('subscription-userinfo', flowInfo);
+                }
             }
 
             if (platform === 'JSON') {

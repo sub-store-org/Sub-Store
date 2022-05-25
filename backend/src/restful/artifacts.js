@@ -265,15 +265,18 @@ async function syncArtifact(files) {
     return manager.upload(files);
 }
 
-async function produceArtifact(
-    { type, item, platform, noProcessor } = {
-        platform: 'JSON',
-        noProcessor: false,
-    },
-) {
+async function produceArtifact({ type, item, platform, noProcessor }) {
+    platform = platform || 'JSON';
+    noProcessor = noProcessor || false;
+
     if (type === 'subscription') {
         const sub = item;
-        const raw = await download(sub.url, sub.ua);
+        let raw;
+        if (sub.source === 'local') {
+            raw = sub.content;
+        } else {
+            raw = await download(sub.url, sub.ua);
+        }
         // parse proxies
         let proxies = ProxyUtils.parse(raw);
         if (!noProcessor) {
@@ -306,12 +309,12 @@ async function produceArtifact(
     } else if (type === 'collection') {
         const allSubs = $.read(SUBS_KEY);
         const collection = item;
-        const subs = collection['subscriptions'];
+        const subnames = collection['subscriptions'];
         const results = {};
         let processed = 0;
 
         await Promise.all(
-            subs.map(async (name) => {
+            subnames.map(async (name) => {
                 const sub = allSubs[name];
                 try {
                     $.info(`正在处理子订阅：${sub.name}...`);
@@ -330,7 +333,7 @@ async function produceArtifact(
                     processed++;
                     $.info(
                         `✅ 子订阅：${sub.name}加载成功，进度--${
-                            100 * (processed / subs.length).toFixed(1)
+                            100 * (processed / subnames.length).toFixed(1)
                         }% `,
                     );
                 } catch (err) {
@@ -339,7 +342,7 @@ async function produceArtifact(
                         `❌ 处理组合订阅中的子订阅: ${
                             sub.name
                         }时出现错误：${err}，该订阅已被跳过！进度--${
-                            100 * (processed / subs.length).toFixed(1)
+                            100 * (processed / subnames.length).toFixed(1)
                         }%`,
                     );
                 }
@@ -349,7 +352,7 @@ async function produceArtifact(
         // merge proxies with the original order
         let proxies = Array.prototype.concat.apply(
             [],
-            subs.map((name) => results[name]),
+            subnames.map((name) => results[name]),
         );
 
         if (!noProcessor) {
