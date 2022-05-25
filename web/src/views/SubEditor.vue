@@ -3,72 +3,47 @@
     <v-card class="mb-4">
       <v-subheader>订阅配置</v-subheader>
       <v-form v-model="formState.basicValid" class="pl-4 pr-4 pb-0">
-        <v-text-field
-            v-model="options.name"
-            :rules="validations.nameRules"
-            class="mt-2"
-            clear-icon="clear"
-            clearable
-            label="订阅名称"
-            placeholder="填入订阅名称，名称需唯一"
-            required
-        />
+        <v-text-field v-model="options.name" :rules="validations.nameRules" class="mt-2" clear-icon="clear" clearable
+          label="订阅名称" placeholder="填入订阅名称，名称需唯一" required />
         <!--For Subscription-->
-        <v-textarea
-            v-if="!isCollection"
-            v-model="options.url"
-            :rules="validations.urlRules"
-            auto-grow
-            class="mt-2"
-            clear-icon="clear"
-            clearable
-            label="订阅链接"
-            placeholder="填入机场原始订阅链接"
-            required
-            rows="2"
-        />
+        <v-radio-group v-if="!isCollection" v-model="options.source" class="mt-0 mb-0">
+          <template v-slot:label>
+            <div style="font-size: 2px">订阅来源</div>
+          </template>
+          <v-row dense>
+            <v-col>
+              <v-radio label="远程" value="remote" />
+            </v-col>
+            <v-col>
+              <v-radio label="本地" value="local" />
+            </v-col>
+            <v-col></v-col>
+          </v-row>
+        </v-radio-group>
+        <v-textarea v-if="options.source !== 'local'" v-model="options.url" :rules="validations.urlRules" auto-grow
+          class="mt-0" clear-icon="clear" clearable label="订阅链接" placeholder="填入机场原始订阅链接" required rows="2" />
+        <v-textarea v-if="options.source === 'local'" v-model="options.content" clear-icon="clear" clearable
+          label="订阅内容" placeholder="填入原始订阅内容" autogrow rows="5" row-height="15" class="mt-0">
+        </v-textarea>
+        <v-textarea v-if="!isCollection && options.source !== 'local'" v-model="options.ua" auto-grow class="mt-2"
+          clear-icon="clear" clearable label="User-Agent" placeholder="自定义下载订阅使用的User-Agent，可选。" rows="2" />
         <!--For Collection-->
-        <v-list
-            v-if="isCollection"
-            dense
-        >
+        <v-list v-if="isCollection" dense>
           <v-subheader class="pl-0">包含的订阅</v-subheader>
           <v-list-item v-for="sub in availableSubs" :key="sub.name">
             <v-list-item-avatar>
               <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-              <v-img v-else :class="getIconClass(sub.icon)" :src="sub.icon"/>
+              <v-img v-else :class="getIconClass(sub.icon)" :src="sub.icon" />
             </v-list-item-avatar>
             <v-list-item-content>
               {{ sub.name }}
             </v-list-item-content>
             <v-spacer></v-spacer>
-            <v-checkbox
-                v-model="selected"
-                :value="sub.name"
-                class="pr-1"
-            />
+            <v-checkbox v-model="selected" :value="sub.name" class="pr-1" />
           </v-list-item>
         </v-list>
-        <v-textarea
-            v-model="options.ua"
-            auto-grow
-            class="mt-2"
-            clear-icon="clear"
-            clearable
-            label="User-Agent"
-            placeholder="自定义下载订阅使用的User-Agent，可选。"
-            rows="2"
-        />
-        <v-textarea
-            v-model="options.icon"
-            auto-grow
-            class="mt-2"
-            clear-icon="clear"
-            clearable
-            label="图标链接"
-            placeholder="填入想要展示的图标链接，可选。"
-            rows="2"
-        />
+        <v-textarea v-model="options.icon" auto-grow class="mt-2" clear-icon="clear" clearable label="图标链接"
+          placeholder="填入想要展示的图标链接，可选。" rows="2" />
       </v-form>
       <v-card-actions>
         <v-spacer></v-spacer>
@@ -76,7 +51,7 @@
           <v-icon>save_alt</v-icon>
         </v-btn>
         <v-dialog v-model="showShareDialog" max-width="400px">
-          <template #activator="{on}">
+          <template #activator="{ on }">
             <v-btn v-on="on" icon>
               <v-icon>cloud_circle</v-icon>
             </v-btn>
@@ -85,20 +60,13 @@
             <v-card-title>
               <v-icon left>cloud_circle</v-icon>
               配置导入
-              <v-spacer/>
+              <v-spacer />
               <v-btn icon @click="share">
                 <v-icon small>share</v-icon>
               </v-btn>
             </v-card-title>
-            <v-textarea
-                v-model="imported"
-                :rules="validations.importRules"
-                clear-icon="clear"
-                clearable
-                label="粘贴配置以导入"
-                rows="5"
-                solo
-            />
+            <v-textarea v-model="imported" :rules="validations.importRules" clear-icon="clear" clearable label="粘贴配置以导入"
+              rows="5" solo />
             <v-card-actions>
               <v-spacer></v-spacer>
               <v-btn color="primary" text @click="importConf">确认</v-btn>
@@ -113,93 +81,73 @@
       <v-subheader>常用选项</v-subheader>
       <v-form class="pl-4 pr-4">
         <v-item-group>
-          <v-radio-group
-              v-model="options.useless"
-              class="mt-0 mb-0"
-              dense
-          >
+          <v-radio-group v-model="options.useless" class="mt-0 mb-0" dense>
             过滤非法节点
             <v-row>
               <v-col>
-                <v-radio label="保留" value="KEEP"/>
+                <v-radio label="保留" value="KEEP" />
               </v-col>
               <v-col>
-                <v-radio label="删除" value="REMOVE"/>
+                <v-radio label="删除" value="REMOVE" />
               </v-col>
               <v-col></v-col>
             </v-row>
           </v-radio-group>
 
-          <v-radio-group
-              v-model="options.udp"
-              class="mt-0 mb-0"
-              dense
-          >
+          <v-radio-group v-model="options.udp" class="mt-0 mb-0" dense>
             UDP转发
             <v-row>
               <v-col>
-                <v-radio label="默认" value="DEFAULT"/>
+                <v-radio label="默认" value="DEFAULT" />
               </v-col>
               <v-col>
-                <v-radio label="强制开启" value="FORCE_OPEN"/>
+                <v-radio label="强制开启" value="FORCE_OPEN" />
               </v-col>
               <v-col>
-                <v-radio label="强制关闭" value="FORCE_CLOSE"/>
+                <v-radio label="强制关闭" value="FORCE_CLOSE" />
               </v-col>
             </v-row>
           </v-radio-group>
 
-          <v-radio-group
-              v-model="options['skip-cert-verify']"
-              class="mt-0 mb-0"
-              dense
-          >
+          <v-radio-group v-model="options['skip-cert-verify']" class="mt-0 mb-0" dense>
             跳过证书验证
             <v-row>
               <v-col>
-                <v-radio label="默认" value="DEFAULT"/>
+                <v-radio label="默认" value="DEFAULT" />
               </v-col>
               <v-col>
-                <v-radio label="强制跳过" value="FORCE_OPEN"/>
+                <v-radio label="强制跳过" value="FORCE_OPEN" />
               </v-col>
               <v-col>
-                <v-radio label="强制验证" value="FORCE_CLOSE"/>
+                <v-radio label="强制验证" value="FORCE_CLOSE" />
               </v-col>
             </v-row>
           </v-radio-group>
-          <v-radio-group
-              v-model="options.tfo"
-              class="mt-0 mb-0"
-              dense
-          >
+          <v-radio-group v-model="options.tfo" class="mt-0 mb-0" dense>
             TCP Fast Open
             <v-row>
               <v-col>
-                <v-radio label="默认" value="DEFAULT"/>
+                <v-radio label="默认" value="DEFAULT" />
               </v-col>
               <v-col>
-                <v-radio label="强制开启" value="FORCE_OPEN"/>
+                <v-radio label="强制开启" value="FORCE_OPEN" />
               </v-col>
               <v-col>
-                <v-radio label="强制关闭" value="FORCE_CLOSE"/>
+                <v-radio label="强制关闭" value="FORCE_CLOSE" />
               </v-col>
             </v-row>
           </v-radio-group>
-          <v-radio-group
-              v-model="options['vmess-aead']"
-              class="mt-0 mb-0"
-              dense
-          >
+          <v-radio-group v-model="options['vmess-aead']" class="mt-0 mb-0" dense>
             Vmess AEAD
             <v-row>
               <v-col>
-                <v-radio label="默认" value="DEFAULT"/>
+                <v-radio label="默认" value="DEFAULT" />
               </v-col>
               <v-col>
-                <v-radio label="强制开启" value="FORCE_OPEN"/>
+                <v-radio label="强制开启" value="FORCE_OPEN" />
               </v-col>
               <v-col>
-                <v-radio label="强制关闭" value="FORCE_CLOSE"/>
+                <v-radio label="强制关闭" value="FORCE_CLOSE" />
               </v-col>
             </v-row>
           </v-radio-group>
@@ -210,21 +158,17 @@
     <v-card class="mb-4">
       <v-subheader>Surge 选项</v-subheader>
       <v-form class="pl-4 pr-4">
-        <v-radio-group
-            v-model="options['surge-hybrid']"
-            class="mt-0 mb-0"
-            dense
-        >
+        <v-radio-group v-model="options['surge-hybrid']" class="mt-0 mb-0" dense>
           Hybrid 策略
           <v-row>
             <v-col>
-              <v-radio label="默认" value="DEFAULT"/>
+              <v-radio label="默认" value="DEFAULT" />
             </v-col>
             <v-col>
-              <v-radio label="强制开启" value="FORCE_OPEN"/>
+              <v-radio label="强制开启" value="FORCE_OPEN" />
             </v-col>
             <v-col>
-              <v-radio label="强制关闭" value="FORCE_CLOSE"/>
+              <v-radio label="强制关闭" value="FORCE_CLOSE" />
             </v-col>
           </v-row>
         </v-radio-group>
@@ -235,7 +179,7 @@
         节点操作
         <v-spacer></v-spacer>
         <v-dialog v-model="dialog" scrollable>
-          <template #activator="{on}">
+          <template #activator="{ on }">
             <v-btn v-on="on" icon>
               <v-icon color="primary">add_circle</v-icon>
             </v-btn>
@@ -246,7 +190,7 @@
             <v-card-text>
               <v-radio-group v-model="selectedProcess" dense>
                 <v-radio v-for="(k, idx) in Object.keys(availableProcessors)" :key="idx"
-                         :label="availableProcessors[k].name" :value="k"></v-radio>
+                  :label="availableProcessors[k].name" :value="k"></v-radio>
               </v-radio-group>
             </v-card-text>
             <v-card-actions>
@@ -259,22 +203,15 @@
 
       </v-subheader>
       <v-divider></v-divider>
-      <component :is="p.component"
-                 v-for="p in processors"
-                 :key="p.id"
-                 :args="p.args"
-                 @dataChanged="dataChanged"
-                 @deleteProcess="deleteProcess"
-                 @down="moveDown"
-                 @up="moveUp"
-      >
+      <component :is="p.component" v-for="p in processors" :key="p.id" :args="p.args" @dataChanged="dataChanged"
+        @deleteProcess="deleteProcess" @down="moveDown" @up="moveUp">
       </component>
     </v-card>
   </v-container>
 </template>
 
 <script>
-import {showError, showInfo} from "@/utils";
+import { showError, showInfo } from "@/utils";
 import TypeFilter from "@/components/TypeFilter";
 import RegionFilter from "@/components/RegionFilter";
 import RegexFilter from "@/components/RegexFilter";
@@ -368,8 +305,8 @@ export default {
           v => /^[\w-_]*$/.test(v) || "订阅名称只能包含英文字符、横杠和下划线！"
         ],
         urlRules: [
-          v => !!v || "订阅链接不能为空！",
-          v => /^https?:\/\//.test(v) || "订阅链接不合法！"
+          v => this.options.source === 'remote' && (!!v || "订阅链接不能为空！"),
+          v => this.options.source === 'remote' && (/^https?:\/\//.test(v) || "订阅链接不合法！")
         ],
         importRules: [
           v => !!v || "不能导入空配置！"
@@ -380,7 +317,9 @@ export default {
       },
       options: {
         name: "",
+        source: "",
         url: "",
+        content: "",
         icon: "",
         ua: "",
         useless: "KEEP",
@@ -408,7 +347,7 @@ export default {
       this.$store.commit("SET_NAV_TITLE", source.name ? `订阅编辑 ➤ ${source.name}` : "新建订阅");
     }
     this.name = source.name;
-    const {options, process} = loadProcess(this.options, source);
+    const { options, process } = loadProcess(this.options, source);
     this.options = options;
     this.process = process;
   },
@@ -442,13 +381,15 @@ export default {
         output.subscriptions = this.selected;
       } else {
         output.url = this.options.url;
+        output.source = this.options.source;
+        output.content = this.options.content;
       }
       // assign user-agent, if ua is set
       let ua = this.options.ua;
       if (typeof ua != "undefined" && ua != null && ua.trim().length > 0) {
         output.ua = ua;
-      }else{
-        output.ua=""
+      } else {
+        output.ua = ""
       }
       // useless filter
       if (this.options.useless === 'REMOVE') {
@@ -461,7 +402,7 @@ export default {
         if (this.options[opt] !== 'DEFAULT') {
           output.process.push({
             type: "Set Property Operator",
-            args: {key: opt, value: this.options[opt] === 'FORCE_OPEN'}
+            args: { key: opt, value: this.options[opt] === 'FORCE_OPEN' }
           });
         }
       }
@@ -498,25 +439,33 @@ export default {
         }
       } else {
         console.log("Saving subscription...");
-        if (this.options.name && this.options.url) {
-          if (this.$route.params.name !== "UNTITLED") {
-            this.$store.dispatch("UPDATE_SUBSCRIPTION", {
-              name: this.$route.params.name,
-              sub: this.config
-            }).then(() => {
-              showInfo(`成功保存订阅：${this.options.name}！`);
-            }).catch(() => {
-              showError(`发生错误，无法保存订阅！`);
-            });
-          } else {
-            this.$store.dispatch("NEW_SUBSCRIPTION", this.config).then(() => {
-              showInfo(`成功创建订阅：${this.options.name}！`);
-              this.$router.back();
-            }).catch(() => {
-              showError(`发生错误，无法创建订阅！`);
-            });
-          }
+        if (!this.options.name) {
+          showError(`订阅名字不能为空！`);
+          return;
         }
+        if (this.options.source === 'remote' && !this.options.url) {
+          showError(`订阅链接不能为空！`);
+          return;
+        }
+
+        if (this.$route.params.name !== "UNTITLED") {
+          this.$store.dispatch("UPDATE_SUBSCRIPTION", {
+            name: this.$route.params.name,
+            sub: this.config
+          }).then(() => {
+            showInfo(`成功保存订阅：${this.options.name}！`);
+          }).catch(() => {
+            showError(`发生错误，无法保存订阅！`);
+          });
+        } else {
+          this.$store.dispatch("NEW_SUBSCRIPTION", this.config).then(() => {
+            showInfo(`成功创建订阅：${this.options.name}！`);
+            this.$router.back();
+          }).catch(() => {
+            showError(`发生错误，无法创建订阅！`);
+          });
+        }
+
       }
     },
 
@@ -537,9 +486,10 @@ export default {
     importConf() {
       if (this.imported) {
         const sub = JSON.parse(this.imported);
-        const {options, process} = loadProcess(this.options, sub);
+        const { options, process } = loadProcess(this.options, sub);
         delete options.name;
         delete options.url;
+        delete options.content;
 
         Object.assign(this.options, options);
         this.process = process;
@@ -562,7 +512,7 @@ export default {
     },
 
     addProcess(type) {
-      this.process.push({type, id: uuidv4()});
+      this.process.push({ type, id: uuidv4() });
       this.dialog = false;
     },
 
@@ -616,6 +566,8 @@ function loadProcess(options, source, isCollection = false) {
     options.subscriptions = source.subscriptions;
   } else {
     options.url = source.url;
+    options.source = source.source || "remote";
+    options.content = source.content;
   }
   let process = []
 
@@ -633,7 +585,7 @@ function loadProcess(options, source, isCollection = false) {
         process.push(p);
     }
   }
-  return {options, process};
+  return { options, process };
 }
 
 function uuidv4() {
