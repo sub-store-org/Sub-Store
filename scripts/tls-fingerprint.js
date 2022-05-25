@@ -1,3 +1,6 @@
+/**
+ * 为节点添加 tls 证书指纹
+ */
 function operator(proxies, targetPlatform) {
     const {fingerprint} = $arguments;
     proxies.forEach(proxy => {
