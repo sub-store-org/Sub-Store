@@ -1,4 +1,4 @@
-import { API } from '../utils/open-api';
-const $ = API('sub-store');
+import { OpenAPI } from '../utils/open-api';
 
+const $ = new OpenAPI('sub-store');
 export default $;
