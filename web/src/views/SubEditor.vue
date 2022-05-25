@@ -8,7 +8,7 @@
         <!--For Subscription-->
         <v-radio-group v-if="!isCollection" v-model="options.source" class="mt-0 mb-0">
           <template v-slot:label>
-            <div style="font-size: 2px">订阅来源</div>
+            <div>订阅来源</div>
           </template>
           <v-row dense>
             <v-col>
