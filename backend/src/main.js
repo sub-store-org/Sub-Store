@@ -18,6 +18,6 @@ console.log(
 `,
 );
 
-import serve from './facade';
+import serve from './restful';
 
 serve();
