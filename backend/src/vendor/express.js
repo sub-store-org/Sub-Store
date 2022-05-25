@@ -1,7 +1,8 @@
 /* eslint-disable no-undef */
 import { ENV } from './open-api';
 
-export default function express({ substore: $, port } = { port: 3000 }) {
+export default function express({ substore: $, port }) {
+    port = port || process.env.PORT || 3000;
     const { isNode } = ENV();
     const DEFAULT_HEADERS = {
         'Content-Type': 'text/plain;charset=UTF-8',
@@ -29,7 +30,7 @@ export default function express({ substore: $, port } = { port: 3000 }) {
         // adapter
         app.start = () => {
             app.listen(port, () => {
-                $.log(`Express started on port: ${port}`);
+                $.info(`Express started on port: ${port}`);
             });
         };
         return app;
