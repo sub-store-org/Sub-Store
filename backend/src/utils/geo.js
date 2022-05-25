@@ -1,5 +1,3 @@
-import { HTTP } from './open-api';
-
 // get proxy flag according to its name
 export function getFlag(name) {
     // flags from @KOP-XIAO: https://github.com/KOP-XIAO/QuantumultX/blob/master/Scripts/resource-parser.js
@@ -306,14 +304,4 @@ export function getFlag(name) {
         /[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/,
     ) || [])[0];
     return oldFlag || '🏴‍☠️';
-}
-
-// util API
-export async function IP_API(req, res) {
-    const server = decodeURIComponent(req.params.server);
-    const $http = HTTP();
-    const result = await $http
-        .get(`http://ip-api.com/json/${server}?lang=zh-CN`)
-        .then((resp) => JSON.parse(resp.body));
-    res.json(result);
 }

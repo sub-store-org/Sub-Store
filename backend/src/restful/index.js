@@ -3,9 +3,9 @@ import {
     GIST_BACKUP_KEY,
     GIST_BACKUP_FILE_NAME,
 } from './constants';
-import { ENV } from '../utils/open-api';
-import express from '../utils/express';
-import { IP_API } from '../utils/geo';
+import { ENV } from '../vendor/open-api';
+import express from '../vendor/express';
+import IP_API from '../utils/ip-api';
 import Gist from '../utils/gist';
 import $ from '../core/app';
 
@@ -15,7 +15,7 @@ import registerArtifactRoutes from './artifacts';
 import registerSettingRoutes from './settings';
 
 export default function serve() {
-    const $app = express();
+    const $app = express({ substore: $ });
 
     // register routes
     registerCollectionRoutes($app);
