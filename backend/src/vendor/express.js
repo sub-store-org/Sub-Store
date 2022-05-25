@@ -1,8 +1,7 @@
 /* eslint-disable no-undef */
 import { ENV } from './open-api';
-import $ from '../core/app';
 
-export default function express({ port } = { port: 3000 }) {
+export default function express({ substore: $, port } = { port: 3000 }) {
     const { isNode } = ENV();
     const DEFAULT_HEADERS = {
         'Content-Type': 'text/plain;charset=UTF-8',
@@ -212,75 +211,75 @@ export default function express({ port } = { port: 3000 }) {
             }
         })();
     }
+}
 
-    function patternMatched(pattern, path) {
-        if (pattern instanceof RegExp && pattern.test(path)) {
-            return true;
-        } else {
-            // root pattern, match all
-            if (pattern === '/') return true;
-            // normal string pattern
-            if (pattern.indexOf(':') === -1) {
-                const spath = path.split('/');
-                const spattern = pattern.split('/');
-                for (let i = 0; i < spattern.length; i++) {
-                    if (spath[i] !== spattern[i]) {
-                        return false;
-                    }
-                }
-                return true;
-            } else if (extractPathParams(pattern, path)) {
-                // string pattern with path parameters
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function extractURL(url) {
-        // extract path
-        const match = url.match(/https?:\/\/[^/]+(\/[^?]*)/) || [];
-        const path = match[1] || '/';
-
-        // extract query string
-        const split = url.indexOf('?');
-        const query = {};
-        if (split !== -1) {
-            let hashes = url.slice(url.indexOf('?') + 1).split('&');
-            for (let i = 0; i < hashes.length; i++) {
-                const hash = hashes[i].split('=');
-                query[hash[0]] = hash[1];
-            }
-        }
-        return {
-            path,
-            query,
-        };
-    }
-
-    function extractPathParams(pattern, path) {
+function patternMatched(pattern, path) {
+    if (pattern instanceof RegExp && pattern.test(path)) {
+        return true;
+    } else {
+        // root pattern, match all
+        if (pattern === '/') return true;
+        // normal string pattern
         if (pattern.indexOf(':') === -1) {
-            return null;
-        } else {
-            const params = {};
-            for (let i = 0, j = 0; i < pattern.length; i++, j++) {
-                if (pattern[i] === ':') {
-                    let key = [];
-                    let val = [];
-                    while (pattern[++i] !== '/' && i < pattern.length) {
-                        key.push(pattern[i]);
-                    }
-                    while (path[j] !== '/' && j < path.length) {
-                        val.push(path[j++]);
-                    }
-                    params[key.join('')] = val.join('');
-                } else {
-                    if (pattern[i] !== path[j]) {
-                        return null;
-                    }
+            const spath = path.split('/');
+            const spattern = pattern.split('/');
+            for (let i = 0; i < spattern.length; i++) {
+                if (spath[i] !== spattern[i]) {
+                    return false;
                 }
             }
-            return params;
+            return true;
+        } else if (extractPathParams(pattern, path)) {
+            // string pattern with path parameters
+            return true;
         }
+    }
+    return false;
+}
+
+function extractURL(url) {
+    // extract path
+    const match = url.match(/https?:\/\/[^/]+(\/[^?]*)/) || [];
+    const path = match[1] || '/';
+
+    // extract query string
+    const split = url.indexOf('?');
+    const query = {};
+    if (split !== -1) {
+        let hashes = url.slice(url.indexOf('?') + 1).split('&');
+        for (let i = 0; i < hashes.length; i++) {
+            const hash = hashes[i].split('=');
+            query[hash[0]] = hash[1];
+        }
+    }
+    return {
+        path,
+        query,
+    };
+}
+
+function extractPathParams(pattern, path) {
+    if (pattern.indexOf(':') === -1) {
+        return null;
+    } else {
+        const params = {};
+        for (let i = 0, j = 0; i < pattern.length; i++, j++) {
+            if (pattern[i] === ':') {
+                let key = [];
+                let val = [];
+                while (pattern[++i] !== '/' && i < pattern.length) {
+                    key.push(pattern[i]);
+                }
+                while (path[j] !== '/' && j < path.length) {
+                    val.push(path[j++]);
+                }
+                params[key.join('')] = val.join('');
+            } else {
+                if (pattern[i] !== path[j]) {
+                    return null;
+                }
+            }
+        }
+        return params;
     }
 }

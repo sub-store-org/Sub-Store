@@ -1,4 +1,4 @@
-import { HTTP } from './open-api';
+import { HTTP } from '../vendor/open-api';
 
 const cache = new Map();
 
