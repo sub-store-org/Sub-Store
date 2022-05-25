@@ -35,9 +35,11 @@ async function downloadCollection(req, res) {
     const subs = collection['subscriptions'];
     if (subs.length > 0) {
         const sub = allSubs[subs[0]];
-        const flowInfo = await getFlowHeaders(sub.url);
-        if (flowInfo) {
-            res.set('subscription-userinfo', flowInfo);
+        if (sub.source !== 'local') {
+            const flowInfo = await getFlowHeaders(sub.url);
+            if (flowInfo) {
+                res.set('subscription-userinfo', flowInfo);
+            }
         }
     }
 

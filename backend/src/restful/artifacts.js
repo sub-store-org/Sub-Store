@@ -318,7 +318,12 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
                 const sub = allSubs[name];
                 try {
                     $.info(`正在处理子订阅：${sub.name}...`);
-                    const raw = await download(sub.url, sub.ua);
+                    let raw;
+                    if (sub.source === 'local') {
+                        raw = sub.content;
+                    } else {
+                        raw = await download(sub.url, sub.ua);
+                    }
                     // parse proxies
                     let currentProxies = ProxyUtils.parse(raw);
                     if (!noProcessor) {
