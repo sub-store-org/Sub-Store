@@ -3,32 +3,35 @@ import { HTTP } from './open-api';
 /**
  * Gist backup
  */
-export default function Gist({ token, key }) {
-    const http = HTTP({
-        baseURL: 'https://api.github.com',
-        headers: {
-            Authorization: `token ${token}`,
-            'User-Agent':
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36',
-        },
-        events: {
-            onResponse: (resp) => {
-                if (/^[45]/.test(String(resp.statusCode))) {
-                    return Promise.reject(
-                        `ERROR: ${JSON.parse(resp.body).message}`,
-                    );
-                } else {
-                    return resp;
-                }
+export default class Gist {
+    constructor({ token, key }) {
+        this.http = HTTP({
+            baseURL: 'https://api.github.com',
+            headers: {
+                Authorization: `token ${token}`,
+                'User-Agent':
+                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36',
             },
-        },
-    });
+            events: {
+                onResponse: (resp) => {
+                    if (/^[45]/.test(String(resp.statusCode))) {
+                        return Promise.reject(
+                            `ERROR: ${JSON.parse(resp.body).message}`,
+                        );
+                    } else {
+                        return resp;
+                    }
+                },
+            },
+        });
+        this.key = key;
+    }
 
-    async function locate() {
-        return http.get('/gists').then((response) => {
+    async locate() {
+        return this.http.get('/gists').then((response) => {
             const gists = JSON.parse(response.body);
             for (let g of gists) {
-                if (g.description === key) {
+                if (g.description === this.key) {
                     return g.id;
                 }
             }
@@ -36,42 +39,42 @@ export default function Gist({ token, key }) {
         });
     }
 
-    this.upload = async function (files) {
-        const id = await locate();
+    async upload(files) {
+        const id = await this.locate();
 
         if (id === -1) {
             // create a new gist for backup
-            return http.post({
+            return this.http.post({
                 url: '/gists',
                 body: JSON.stringify({
-                    description: key,
+                    description: this.key,
                     public: false,
                     files,
                 }),
             });
         } else {
             // update an existing gist
-            return http.patch({
+            return this.http.patch({
                 url: `/gists/${id}`,
                 body: JSON.stringify({ files }),
             });
         }
-    };
+    }
 
-    this.download = async function (filename) {
-        const id = await locate();
+    async download(filename) {
+        const id = await this.locate();
         if (id === -1) {
             return Promise.reject('未找到Gist备份！');
         } else {
             try {
-                const { files } = await http
+                const { files } = await this.http
                     .get(`/gists/${id}`)
                     .then((resp) => JSON.parse(resp.body));
                 const url = files[filename].raw_url;
-                return await http.get(url).then((resp) => resp.body);
+                return await this.http.get(url).then((resp) => resp.body);
             } catch (err) {
                 return Promise.reject(err);
             }
         }
-    };
+    }
 }

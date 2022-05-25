@@ -9,14 +9,14 @@ export default async function download(url, ua) {
         return cache.get(id);
     }
 
-    const $http = HTTP({
+    const http = HTTP({
         headers: {
             'User-Agent': ua,
         },
     });
 
     const result = new Promise((resolve, reject) => {
-        $http.get(url).then((resp) => {
+        http.get(url).then((resp) => {
             const body = resp.body;
             if (body.replace(/\s/g, '').length === 0)
                 reject(new Error('订阅内容为空！'));
