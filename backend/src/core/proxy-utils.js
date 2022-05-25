@@ -915,18 +915,19 @@ const PROXY_PARSERS = (function () {
         const name = 'Surge HTTP Parser';
         const test = (line) => {
             return (
-                /^.*=\s*http/.test(line.split(',')[0]) &&
+                /^.*=\s*https?/.test(line.split(',')[0]) &&
                 !Loon_Http().test(line)
             );
         };
         const parse = (line) => {
             const params = getSurgeParams(line);
+            const tls = /^.*?=\s?https/.test(line);
             const proxy = {
                 name: params.name,
                 type: 'http',
                 server: params.server,
                 port: params.port,
-                tls: JSON.parse(params.tls || 'false'),
+                tls: JSON.parse(tls || 'false'),
                 tfo: JSON.parse(params.tfo || 'false'),
             };
             if (proxy.tls) {
@@ -1624,13 +1625,14 @@ const PROXY_PRODUCERS = (function () {
                     },udp-relay=${proxy.udp || 'false'}`;
                     break;
                 case 'http':
-                    tls_opts = ', tls=false';
                     if (proxy.tls) {
-                        tls_opts = `,tls=true,skip-cert-verify=${proxy['skip-cert-verify']},sni=${proxy.sni}`;
+                        tls_opts = `,skip-cert-verify=${proxy['skip-cert-verify']},sni=${proxy.sni}`;
                     }
-                    result = `${proxy.name}=http, ${proxy.server}, ${
-                        proxy.port
-                    }${proxy.username ? ',username=' + proxy.username : ''}${
+                    result = `${proxy.name}=${proxy.tls ? 'https' : 'http'},${
+                        proxy.server
+                    },${proxy.port}${
+                        proxy.username ? ',username=' + proxy.username : ''
+                    }${
                         proxy.password ? ',password=' + proxy.password : ''
                     }${tls_opts},tfo=${proxy.tfo || 'false'}`;
                     break;
