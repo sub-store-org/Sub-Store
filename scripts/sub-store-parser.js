@@ -15,6 +15,8 @@ Sub-Store 资源解析器版 © Peng-YM
 const $ = API("sub-store");
 const Base64 = new Base64Code();
 
+$.notify("Sub-Store 解析器", "❌ 解析器版本已过期", "点击了解如何升级", { 'open-url': 'https://t.me/cool_scripts/351' });
+
 function parseResource() {
     // parse
     let result = $resource;
