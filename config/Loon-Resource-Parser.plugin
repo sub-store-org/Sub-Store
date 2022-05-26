@@ -1,8 +1,0 @@
-#!name=Sub-Store 资源解析器
-#!desc=Sub-Store 资源解析器 for Loon
-#!author=Peng-YM
-#!homepage=https://github.com/Peng-YM/Sub-Store
-#!icon=https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png
-
-[General]
-resource-parser = https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/dist/sub-store-parser.loon.min.js
