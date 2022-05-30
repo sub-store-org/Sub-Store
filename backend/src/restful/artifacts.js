@@ -30,7 +30,8 @@ export default function register($app) {
 }
 
 async function getArtifact(req, res) {
-    const name = req.params.name;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
     const action = req.query.action;
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const artifact = allArtifacts[name];
@@ -61,14 +62,15 @@ async function getArtifact(req, res) {
                 console.log(JSON.stringify(artifact, null, 2));
                 try {
                     const resp = await syncArtifact({
-                        [artifact.name]: { content: output },
+                        [encodeURIComponent(artifact.name)]: {
+                            content: output,
+                        },
                     });
                     artifact.updated = new Date().getTime();
                     const body = JSON.parse(resp.body);
-                    artifact.url = body.files[artifact.name].raw_url.replace(
-                        /\/raw\/[^/]*\/(.*)/,
-                        '/raw/$1',
-                    );
+                    artifact.url = body.files[
+                        encodeURIComponent(artifact.name)
+                    ].raw_url.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
                     $.write(allArtifacts, ARTIFACTS_KEY);
                     res.json({
                         status: 'success',
@@ -104,25 +106,19 @@ function createArtifact(req, res) {
             message: `远程配置${artifact.name}已存在！`,
         });
     } else {
-        if (/^[\w-_.]*$/.test(artifact.name)) {
-            allArtifacts[artifact.name] = artifact;
-            $.write(allArtifacts, ARTIFACTS_KEY);
-            res.status(201).json({
-                status: 'success',
-                data: artifact,
-            });
-        } else {
-            res.status(500).json({
-                status: 'failed',
-                message: `远程配置名称 ${artifact.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`,
-            });
-        }
+        allArtifacts[artifact.name] = artifact;
+        $.write(allArtifacts, ARTIFACTS_KEY);
+        res.status(201).json({
+            status: 'success',
+            data: artifact,
+        });
     }
 }
 
 function updateArtifact(req, res) {
     const allArtifacts = $.read(ARTIFACTS_KEY);
-    const oldName = req.params.name;
+    let oldName = req.params.name;
+    oldName = decodeURIComponent(oldName);
     const artifact = allArtifacts[oldName];
     if (artifact) {
         $.info(`正在更新远程配置：${artifact.name}`);
@@ -215,7 +211,8 @@ async function cronSyncArtifacts(_, res) {
 }
 
 async function deleteArtifact(req, res) {
-    const name = req.params.name;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
     $.info(`正在删除远程配置：${name}`);
     const allArtifacts = $.read(ARTIFACTS_KEY);
     try {
@@ -223,10 +220,11 @@ async function deleteArtifact(req, res) {
         if (!artifact) throw new Error(`远程配置：${name}不存在！`);
         if (artifact.updated) {
             // delete gist
-            await syncArtifact({
-                filename: name,
+            const files = {};
+            files[encodeURIComponent(artifact.name)] = {
                 content: '',
-            });
+            };
+            await syncArtifact(files);
         }
         // delete local cache
         delete allArtifacts[name];
@@ -235,9 +233,7 @@ async function deleteArtifact(req, res) {
             status: 'success',
         });
     } catch (err) {
-        // delete local cache
-        delete allArtifacts[name];
-        $.write(allArtifacts, ARTIFACTS_KEY);
+        $.error(`无法删除远程配置：${name}，原因：${err}`);
         res.status(500).json({
             status: 'failed',
             message: `无法删除远程配置：${name}, 原因：${err}`,
