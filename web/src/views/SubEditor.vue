@@ -3,7 +3,7 @@
     <v-card class="mb-4">
       <v-subheader>订阅配置</v-subheader>
       <v-form v-model="formState.basicValid" class="pl-4 pr-4 pb-0">
-        <v-text-field v-model="options.name" :rules="validations.nameRules" class="mt-2" clear-icon="clear" clearable
+        <v-text-field v-model="options.name" class="mt-2" clear-icon="clear" clearable
           label="订阅名称" placeholder="填入订阅名称，名称需唯一" required />
         <!--For Subscription-->
         <v-radio-group v-if="!isCollection" v-model="options.source" class="mt-0 mb-0">
@@ -20,7 +20,7 @@
             <v-col></v-col>
           </v-row>
         </v-radio-group>
-        <v-textarea v-if="options.source !== 'local'" v-model="options.url" :rules="validations.urlRules" auto-grow
+        <v-textarea v-if="!isCollection && options.source !== 'local'" v-model="options.url" :rules="validations.urlRules" auto-grow
           class="mt-0" clear-icon="clear" clearable label="订阅链接" placeholder="填入机场原始订阅链接" required rows="2" />
         <v-textarea v-if="options.source === 'local'" v-model="options.content" clear-icon="clear" clearable
           label="订阅内容" placeholder="填入原始订阅内容" autogrow rows="5" row-height="15" class="mt-0">
@@ -300,10 +300,6 @@ export default {
       imported: "",
       dialog: false,
       validations: {
-        nameRules: [
-          v => !!v || "订阅名称不能为空！",
-          v => /^[\w-_]*$/.test(v) || "订阅名称只能包含英文字符、横杠和下划线！"
-        ],
         urlRules: [
           v => this.options.source === 'remote' && (!!v || "订阅链接不能为空！"),
           v => this.options.source === 'remote' && (/^https?:\/\//.test(v) || "订阅链接不合法！")
@@ -335,7 +331,7 @@ export default {
   },
 
   created() {
-    const name = this.$route.params.name;
+    const name = decodeURIComponent(this.$route.params.name);
     let source;
     if (this.isCollection) {
       source = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.collections[name];

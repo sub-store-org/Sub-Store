@@ -17,7 +17,9 @@ export default function register($app) {
 
 // subscriptions API
 async function downloadSubscription(req, res) {
-    const { name } = req.params;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
+
     const { raw } = req.query || 'false';
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
@@ -80,24 +82,17 @@ function createSubscription(req, res) {
             message: `订阅${sub.name}已存在！`,
         });
     }
-    // validate name
-    if (/^[\w-_]*$/.test(sub.name)) {
-        allSubs[sub.name] = sub;
-        $.write(allSubs, SUBS_KEY);
-        res.status(201).json({
-            status: 'success',
-            data: sub,
-        });
-    } else {
-        res.status(500).json({
-            status: 'failed',
-            message: `订阅名称 ${sub.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`,
-        });
-    }
+    allSubs[sub.name] = sub;
+    $.write(allSubs, SUBS_KEY);
+    res.status(201).json({
+        status: 'success',
+        data: sub,
+    });
 }
 
 function getSubscription(req, res) {
-    const { name } = req.params;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
     const sub = $.read(SUBS_KEY)[name];
     if (sub) {
         res.json({
@@ -113,7 +108,8 @@ function getSubscription(req, res) {
 }
 
 function updateSubscription(req, res) {
-    const { name } = req.params;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
     let sub = req.body;
     const allSubs = $.read(SUBS_KEY);
     if (allSubs[name]) {
@@ -152,7 +148,8 @@ function updateSubscription(req, res) {
 }
 
 function deleteSubscription(req, res) {
-    const { name } = req.params;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
     $.info(`删除订阅：${name}...`);
     // delete from subscriptions
     let allSubs = $.read(SUBS_KEY);
