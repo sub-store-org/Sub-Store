@@ -20,7 +20,9 @@ export default function register($app) {
 
 // collection API
 async function downloadCollection(req, res) {
-    const { name } = req.params;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
+
     const { raw } = req.query || 'false';
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
@@ -90,24 +92,17 @@ function createCollection(req, res) {
             message: `订阅集${collection.name}已存在！`,
         });
     }
-    // validate name
-    if (/^[\w-_]*$/.test(collection.name)) {
-        allCol[collection.name] = collection;
-        $.write(allCol, COLLECTIONS_KEY);
-        res.status(201).json({
-            status: 'success',
-            data: collection,
-        });
-    } else {
-        res.status(500).json({
-            status: 'failed',
-            message: `订阅集名称 ${collection.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`,
-        });
-    }
+    allCol[collection.name] = collection;
+    $.write(allCol, COLLECTIONS_KEY);
+    res.status(201).json({
+        status: 'success',
+        data: collection,
+    });
 }
 
 function getCollection(req, res) {
-    const { name } = req.params;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
     const collection = $.read(COLLECTIONS_KEY)[name];
     if (collection) {
         res.json({
@@ -123,7 +118,8 @@ function getCollection(req, res) {
 }
 
 function updateCollection(req, res) {
-    const { name } = req.params;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
     let collection = req.body;
     const allCol = $.read(COLLECTIONS_KEY);
     if (allCol[name]) {
@@ -149,7 +145,8 @@ function updateCollection(req, res) {
 }
 
 function deleteCollection(req, res) {
-    const { name } = req.params;
+    let { name } = req.params;
+    name = decodeURIComponent(name);
     $.info(`正在删除组合订阅：${name}`);
     let allCol = $.read(COLLECTIONS_KEY);
     delete allCol[name];

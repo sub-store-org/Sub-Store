@@ -48,7 +48,7 @@ const router = new Router({
             name: "collection-edit",
             component: SubEditor,
             props: {isCollection: true},
-            meta: {title: "订阅编辑"}
+            meta: {title: "组合订阅编辑"}
         }
     ]
 });

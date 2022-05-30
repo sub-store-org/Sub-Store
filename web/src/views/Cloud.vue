@@ -27,7 +27,6 @@
               <v-text-field
                   v-model="currentArtifact.name"
                   :disabled="editing"
-                  :rules="validations.nameRules"
                   clear-icon="clear"
                   clearable
                   label="配置名称"
@@ -155,7 +154,7 @@
                     </v-btn>
                   </template>
                   <v-list dense>
-                    <v-list-item v-if="artifact.url" @click="copy(artifact.url)">
+                    <v-list-item v-if="artifact.url" @click="copy(artifact)">
                       <v-list-item-title>复制</v-list-item-title>
                     </v-list-item>
                     <v-list-item @click="editArtifact(artifact)">
@@ -200,10 +199,6 @@ export default {
       editing: null,
       formValid: false,
       validations: {
-        nameRules: [
-          v => !!v || "订阅名称不能为空！",
-          v => /^[\w-_.]*$/.test(v) || "订阅名称只能包含英文字符、横杠、点和下划线！"
-        ],
         required: [
           v => !!v || "不能为空！"
         ]
@@ -299,9 +294,11 @@ export default {
       this.editing = false;
     },
 
-    copy(url) {
-      this.$clipboard(url);
-      this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制配置链接");
+    copy(artifact) {
+      if (artifact.url) {
+        this.$clipboard(artifact.url + (isPlainName(artifact.name) ? '' : `#${artifact.name}`));
+        this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制配置链接");
+      }
     },
 
     preview(name) {
@@ -359,6 +356,10 @@ export default {
       window.open(`https://gist.github.com${'/' + this.settings.githubUser || ''}`)
     }
   }
+}
+
+function isPlainName(name) {
+  return /^[\w-_]*$/.test(name);
 }
 </script>
 

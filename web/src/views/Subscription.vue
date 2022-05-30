@@ -195,19 +195,7 @@ export default {
         {
           title: "删除",
           action: "DELETE"
-        },
-        // {
-        //   title: "副本",
-        //   action: "DUPLICATE"
-        // }
-        // {
-        //   title: "上移",
-        //   action: "MOVE_UP"
-        // },
-        // {
-        //   title: "下移",
-        //   action: "MOVE_DOWN"
-        // }
+        }
       ]
     }
   },
@@ -236,19 +224,14 @@ export default {
       console.log(`${action} --> ${sub.name}`);
       switch (action) {
         case 'COPY':
-          this.$clipboard(`${this.subscriptionBaseURL}/download/${sub.name}`);
+          this.$clipboard(`${this.subscriptionBaseURL}/download/${encodeURIComponent(sub.name)}${isPlainName(sub.name) ? '' : '#' + sub.name}`);
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
-          this.$router.push(`/sub-edit/${sub.name}`);
+          this.$router.push(`/sub-edit/${encodeURIComponent(sub.name)}`);
           break
         case 'DELETE':
           this.$store.dispatch("DELETE_SUBSCRIPTION", sub.name);
-          break
-        case 'MOVE_UP':
-          this.moveUpSubscription(sub.name);
-          break
-        case 'MOVE_DOWN':
           break
       }
     },
@@ -256,7 +239,7 @@ export default {
       console.log(`${action} --> ${collection.name}`);
       switch (action) {
         case 'COPY':
-          this.$clipboard(`${this.subscriptionBaseURL}/download/collection/${collection.name}`);
+          this.$clipboard(`${this.subscriptionBaseURL}/download/collection/${encodeURIComponent(collection.name)}${isPlainName(collection.name) ? '' : '#' + collection.name}`);
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
@@ -269,10 +252,10 @@ export default {
     },
     preview(item, type = 'sub') {
       if (type === 'sub') {
-        this.url = `${BACKEND_BASE}/download/${item.name}`;
+        this.url = `${BACKEND_BASE}/download/${encodeURIComponent(item.name)}`;
         this.sub = item.url;
       } else {
-        this.url = `${BACKEND_BASE}/download/collection/${item.name}`
+        this.url = `${BACKEND_BASE}/download/collection/${encodeURIComponent(item.name)}`
       }
       this.showProxyList = true;
     },
@@ -294,6 +277,10 @@ export default {
       return url.indexOf('#invert') !== -1 && !this.$vuetify.theme.dark ? 'invert' : ''
     }
   }
+}
+
+function isPlainName(name) {
+  return /^[\w-_]*$/.test(name);
 }
 </script>
 
