@@ -8,16 +8,7 @@
 安装使用[模块](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Surge.sgmodule)即可。
 
 ### 3. QX
-编辑配置文件，在对应的节下面添加以下配置：
-```
-[rewrite_local]
-^https?:\/\/sub\.store url script-analyze-echo-response https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.min.js
-
-[mitm]
-# 添加一个sub.store域名
-hostname=sub.store
-simple_cert_hostname=sub.store
-```
+订阅[重写](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/QX.snippet)即可
 
 ### 4. Stash
 安装使用[ Stash 覆写](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Stash.stoverride)即可。
