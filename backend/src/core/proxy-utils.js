@@ -1190,9 +1190,9 @@ const PROXY_PROCESSORS = (function () {
     function ScriptOperator(script, targetPlatform, $arguments) {
         return {
             name: 'Script Operator',
-            func: (proxies) => {
+            func: async (proxies) => {
                 let output = proxies;
-                (function () {
+                await (async function () {
                     // interface to get internal operators
 
                     // eslint-disable-next-line no-unused-vars
@@ -1295,22 +1295,22 @@ const PROXY_PROCESSORS = (function () {
 
     /**
      Script Example
-     function func(proxies) {
+     function filter(proxies) {
             const selected = FULL(proxies.length, true);
             // do something
             return selected;
          }
      WARNING:
-     1. This function name should be `func`!
+     1. This function name should be `filter`!
      2. Always declare variables before using them!
      */
     // eslint-disable-next-line no-unused-vars
     function ScriptFilter(script, targetPlatform, $arguments) {
         return {
             name: 'Script Filter',
-            func: (proxies) => {
+            func: async (proxies) => {
                 let output = FULL(proxies.length, true);
-                !(function () {
+                await (async function () {
                     eval(script);
                     // eslint-disable-next-line no-undef
                     output = filter(proxies, targetPlatform);
@@ -1860,7 +1860,7 @@ export const ProxyUtils = (function () {
                         }
                     }
 
-                    // if this is remote script, download it
+                    // if this is a remote script, download it
                     try {
                         script = await download(url.split('#')[0]);
                         $.info(`Script loaded: >>>\n ${script}`);
@@ -1896,7 +1896,7 @@ export const ProxyUtils = (function () {
             } else {
                 processor = PROXY_PROCESSORS[item.type](item.args);
             }
-            proxies = ApplyProcessor(processor, proxies);
+            proxies = await ApplyProcessor(processor, proxies);
         }
         return proxies;
     }
@@ -1949,8 +1949,8 @@ export const ProxyUtils = (function () {
     };
 })();
 
-export function ApplyProcessor(processor, objs) {
-    function ApplyFilter(filter, objs) {
+export async function ApplyProcessor(processor, objs) {
+    async function ApplyFilter(filter, objs) {
         // select proxies
         let selected = FULL(objs.length, true);
         try {
@@ -1962,7 +1962,7 @@ export function ApplyProcessor(processor, objs) {
         return objs.filter((_, i) => selected[i]);
     }
 
-    function ApplyOperator(operator, objs) {
+    async function ApplyOperator(operator, objs) {
         let output = clone(objs);
         try {
             const output_ = operator.func(output);
