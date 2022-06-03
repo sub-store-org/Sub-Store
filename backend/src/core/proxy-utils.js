@@ -1,10 +1,11 @@
 /* eslint-disable no-case-declarations */
-// eslint-disable-next-line no-unused-vars
-import { AND, FULL, OR, NOT } from '../utils/logical';
+import { HTTP } from '../vendor/open-api';
 import { safeLoad } from 'static-js-yaml';
 import download from '../utils/download';
+import { FULL } from '../utils/logical';
 import { getFlag } from '../utils/geo';
 import { Base64 } from 'js-base64';
+import lodash from 'lodash';
 
 import $ from './app';
 
@@ -1186,26 +1187,18 @@ const PROXY_PROCESSORS = (function () {
      1. This function name should be `operator`!
      2. Always declare variables before using them!
      */
-    // eslint-disable-next-line no-unused-vars
     function ScriptOperator(script, targetPlatform, $arguments) {
         return {
             name: 'Script Operator',
             func: async (proxies) => {
                 let output = proxies;
                 await (async function () {
-                    // interface to get internal operators
-
-                    // eslint-disable-next-line no-unused-vars
-                    const $get = (name, args) => {
-                        const item = PROXY_PROCESSORS[name];
-                        return item(args);
-                    };
-                    // eslint-disable-next-line no-unused-vars
-                    const $process = ApplyProcessor;
-
-                    eval(script);
-
-                    // eslint-disable-next-line no-undef
+                    const operator = new Function(
+                        '$arguments',
+                        'HTTP',
+                        'lodash',
+                        `${script}\n return operator`,
+                    )($arguments, HTTP, lodash);
                     output = operator(proxies, targetPlatform);
                 })();
                 return output;
@@ -1306,15 +1299,18 @@ const PROXY_PROCESSORS = (function () {
      1. This function name should be `filter`!
      2. Always declare variables before using them!
      */
-    // eslint-disable-next-line no-unused-vars
     function ScriptFilter(script, targetPlatform, $arguments) {
         return {
             name: 'Script Filter',
             func: async (proxies) => {
                 let output = FULL(proxies.length, true);
                 await (async function () {
-                    eval(script);
-                    // eslint-disable-next-line no-undef
+                    const filter = new Function(
+                        '$arguments',
+                        'HTTP',
+                        'lodash',
+                        `${script}\n return filter`,
+                    )($arguments, HTTP, lodash);
                     output = filter(proxies, targetPlatform);
                 })();
                 return output;
@@ -1956,7 +1952,7 @@ export async function ApplyProcessor(processor, objs) {
         // select proxies
         let selected = FULL(objs.length, true);
         try {
-            selected = AND(selected, await filter.func(objs));
+            selected = await filter.func(objs);
         } catch (err) {
             // print log and skip this filter
             console.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
