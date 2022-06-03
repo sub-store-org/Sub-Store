@@ -1,10 +1,11 @@
 /* eslint-disable no-case-declarations */
+import { HTTP } from '../vendor/open-api';
 import { safeLoad } from 'static-js-yaml';
-import { Base64 } from 'js-base64';
-
-import { AND, FULL } from '../utils/logical';
 import download from '../utils/download';
+import { FULL } from '../utils/logical';
 import { getFlag } from '../utils/geo';
+import { Base64 } from 'js-base64';
+import lodash from 'lodash';
 
 import $ from './app';
 
@@ -1186,13 +1187,13 @@ const PROXY_PROCESSORS = (function () {
      1. This function name should be `operator`!
      2. Always declare variables before using them!
      */
-    // eslint-disable-next-line no-unused-vars
     function ScriptOperator(script, targetPlatform, $arguments) {
         return {
             name: 'Script Operator',
             func: async (proxies) => {
                 let output = proxies;
                 await (async function () {
+<<<<<<< HEAD
                     // interface to get internal operators
 
                     // eslint-disable-next-line no-unused-vars
@@ -1206,6 +1207,14 @@ const PROXY_PROCESSORS = (function () {
                     eval(script);
 
                     // eslint-disable-next-line no-undef
+=======
+                    const operator = new Function(
+                        '$arguments',
+                        'HTTP',
+                        'lodash',
+                        `${script}\n return operator`,
+                    )($arguments, HTTP, lodash);
+>>>>>>> 99cc8ce295b3bf31a6f583c6a1a1944662eb7575
                     output = operator(proxies, targetPlatform);
                 })();
                 return output;
@@ -1295,24 +1304,42 @@ const PROXY_PROCESSORS = (function () {
 
     /**
      Script Example
+<<<<<<< HEAD
      function filter(proxies) {
             const selected = FULL(proxies.length, true);
             // do something
             return selected;
          }
+=======
+
+     function filter(proxies) {
+        return proxies.map(p => {
+            return p.name.indexOf("🇭🇰") !== -1;
+        });
+     }
+
+>>>>>>> 99cc8ce295b3bf31a6f583c6a1a1944662eb7575
      WARNING:
      1. This function name should be `filter`!
      2. Always declare variables before using them!
      */
-    // eslint-disable-next-line no-unused-vars
     function ScriptFilter(script, targetPlatform, $arguments) {
         return {
             name: 'Script Filter',
             func: async (proxies) => {
                 let output = FULL(proxies.length, true);
                 await (async function () {
+<<<<<<< HEAD
                     eval(script);
                     // eslint-disable-next-line no-undef
+=======
+                    const filter = new Function(
+                        '$arguments',
+                        'HTTP',
+                        'lodash',
+                        `${script}\n return filter`,
+                    )($arguments, HTTP, lodash);
+>>>>>>> 99cc8ce295b3bf31a6f583c6a1a1944662eb7575
                     output = filter(proxies, targetPlatform);
                 })();
                 return output;
@@ -1954,7 +1981,7 @@ export async function ApplyProcessor(processor, objs) {
         // select proxies
         let selected = FULL(objs.length, true);
         try {
-            selected = AND(selected, filter.func(objs));
+            selected = await filter.func(objs);
         } catch (err) {
             // print log and skip this filter
             console.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
@@ -1965,7 +1992,7 @@ export async function ApplyProcessor(processor, objs) {
     async function ApplyOperator(operator, objs) {
         let output = clone(objs);
         try {
-            const output_ = operator.func(output);
+            const output_ = await operator.func(output);
             if (output_) output = output_;
         } catch (err) {
             // print log and skip this operator
