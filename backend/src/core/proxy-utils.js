@@ -1193,12 +1193,28 @@ const PROXY_PROCESSORS = (function () {
             func: async (proxies) => {
                 let output = proxies;
                 await (async function () {
+<<<<<<< HEAD
+                    // interface to get internal operators
+
+                    // eslint-disable-next-line no-unused-vars
+                    const $get = (name, args) => {
+                        const item = PROXY_PROCESSORS[name];
+                        return item(args);
+                    };
+                    // eslint-disable-next-line no-unused-vars
+                    const $process = ApplyProcessor;
+
+                    eval(script);
+
+                    // eslint-disable-next-line no-undef
+=======
                     const operator = new Function(
                         '$arguments',
                         'HTTP',
                         'lodash',
                         `${script}\n return operator`,
                     )($arguments, HTTP, lodash);
+>>>>>>> 99cc8ce295b3bf31a6f583c6a1a1944662eb7575
                     output = operator(proxies, targetPlatform);
                 })();
                 return output;
@@ -1288,6 +1304,13 @@ const PROXY_PROCESSORS = (function () {
 
     /**
      Script Example
+<<<<<<< HEAD
+     function filter(proxies) {
+            const selected = FULL(proxies.length, true);
+            // do something
+            return selected;
+         }
+=======
 
      function filter(proxies) {
         return proxies.map(p => {
@@ -1295,6 +1318,7 @@ const PROXY_PROCESSORS = (function () {
         });
      }
 
+>>>>>>> 99cc8ce295b3bf31a6f583c6a1a1944662eb7575
      WARNING:
      1. This function name should be `filter`!
      2. Always declare variables before using them!
@@ -1305,12 +1329,17 @@ const PROXY_PROCESSORS = (function () {
             func: async (proxies) => {
                 let output = FULL(proxies.length, true);
                 await (async function () {
+<<<<<<< HEAD
+                    eval(script);
+                    // eslint-disable-next-line no-undef
+=======
                     const filter = new Function(
                         '$arguments',
                         'HTTP',
                         'lodash',
                         `${script}\n return filter`,
                     )($arguments, HTTP, lodash);
+>>>>>>> 99cc8ce295b3bf31a6f583c6a1a1944662eb7575
                     output = filter(proxies, targetPlatform);
                 })();
                 return output;
