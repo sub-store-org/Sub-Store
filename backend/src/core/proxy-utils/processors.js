@@ -1,7 +1,9 @@
 import { HTTP } from '../../vendor/open-api';
+import { isIPv4, isIPv6 } from '../../utils';
 import { FULL } from '../../utils/logical';
 import { getFlag } from '../../utils/geo';
 import lodash from 'lodash';
+import $ from '../app';
 
 // force to set some properties (e.g., skip-cert-verify, udp, tfo, etc.)
 function SetPropertyOperator({ key, value }) {
@@ -222,6 +224,109 @@ function ScriptOperator(script, targetPlatform, $arguments) {
     };
 }
 
+const DOMAIN_RESOLVERS = {
+    Google: async function (domain) {
+        const resp = await $.http.get({
+            url: `https://8.8.4.4/resolve?name=${encodeURIComponent(
+                domain,
+            )}&type=A`,
+            headers: {
+                accept: 'application/dns-json',
+            },
+        });
+        const body = JSON.parse(resp.body);
+        if (body['Status'] !== 0) {
+            throw new Error(`Status is ${body['Status']}`);
+        }
+        const answers = body['Answer'];
+        if (answers.length === 0) {
+            throw new Error('No answers');
+        }
+        return answers[answers.length - 1].data;
+    },
+    'IP-API': async function (domain) {
+        const resp = await $.http.get({
+            url: `http://ip-api.com/json/${encodeURIComponent(
+                domain,
+            )}?lang=zh-CN`,
+        });
+        const body = JSON.parse(resp.body);
+        if (body['status'] !== 'success') {
+            throw new Error(`Status is ${body['status']}`);
+        }
+        return body.query;
+    },
+    Cloudflare: async function (domain) {
+        const resp = await $.http.get({
+            url: `https://1.0.0.1/dns-query?name=${encodeURIComponent(
+                domain,
+            )}&type=A`,
+            headers: {
+                accept: 'application/dns-json',
+            },
+        });
+        const body = JSON.parse(resp.body);
+        if (body['Status'] !== 0) {
+            throw new Error(`Status is ${body['Status']}`);
+        }
+        const answers = body['Answer'];
+        if (answers.length === 0) {
+            throw new Error('No answers');
+        }
+        return answers[answers.length - 1].data;
+    },
+};
+
+function ResolveDomainOperator({ provider }) {
+    const resolver = DOMAIN_RESOLVERS[provider];
+    if (!resolver) {
+        throw new Error(`Cannot find resolver: ${provider}`);
+    }
+    return {
+        name: 'Resolve Domain Operator',
+        func: async (proxies) => {
+            const results = {};
+            const resolves = new Map();
+
+            for (const proxy of proxies) {
+                const domain = proxy.server;
+                if (isIP(domain)) continue;
+                if (!resolves.has(domain)) {
+                    resolves.set(
+                        domain,
+                        resolver(domain)
+                            .then((ip) => {
+                                results[domain] = ip;
+                                $.info(
+                                    `Successfully resolved domain: ${domain} ➟ ${ip}`,
+                                );
+                            })
+                            .catch((err) => {
+                                $.error(
+                                    `Failed to resolve domain: ${domain} with resolver [${provider}]: ${err}`,
+                                );
+                            }),
+                    );
+                }
+            }
+
+            // resolve domains
+            await Promise.all([...resolves.values()]);
+            proxies.forEach((proxy) => {
+                proxy.server = results[proxy.server];
+            });
+
+            return proxies;
+        },
+    };
+}
+
+function isIP(ip) {
+    return isIPv4(ip) || isIPv6(ip);
+}
+
+ResolveDomainOperator.resolver = DOMAIN_RESOLVERS;
+
 /**************************** Filters ***************************************/
 // filter useless proxies
 function UselessFilter() {
@@ -305,7 +410,7 @@ function TypeFilter(types) {
 
  function filter(proxies) {
         return proxies.map(p => {
-            return p.name.indexOf("🇭🇰") !== -1;
+            return p.name.indexOf('🇭🇰') !== -1;
         });
      }
 
@@ -347,6 +452,7 @@ export default {
     'Regex Delete Operator': RegexDeleteOperator,
     'Script Operator': ScriptOperator,
     'Handle Duplicate Operator': HandleDuplicateOperator,
+    'Resolve Domain Operator': ResolveDomainOperator,
 };
 
 async function ApplyFilter(filter, objs) {

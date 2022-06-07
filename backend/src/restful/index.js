@@ -3,9 +3,8 @@ import {
     GIST_BACKUP_KEY,
     GIST_BACKUP_FILE_NAME,
 } from './constants';
-import { ENV } from '../vendor/open-api';
+import { ENV, HTTP } from '../vendor/open-api';
 import express from '../vendor/express';
-import IP_API from '../utils/ip-api';
 import Gist from '../utils/gist';
 import $ from '../core/app';
 
@@ -115,4 +114,13 @@ async function gistBackup(req, res) {
             });
         }
     }
+}
+
+async function IP_API(req, res) {
+    const server = decodeURIComponent(req.params.server);
+    const $http = HTTP();
+    const result = await $http
+        .get(`http://ip-api.com/json/${server}?lang=zh-CN`)
+        .then((resp) => JSON.parse(resp.body));
+    res.json(result);
 }

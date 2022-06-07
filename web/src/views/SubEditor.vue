@@ -223,6 +223,7 @@ import ScriptFilter from "@/components/ScriptFilter";
 import ScriptOperator from "@/components/ScriptOperator";
 import RegexSortOperator from "@/components/RegexSortOperator";
 import HandleDuplicateOperator from "@/components/HandleDuplicateOperator";
+import ResolveDomainOperator from "@/components/ResolveDomainOperator";
 
 const AVAILABLE_PROCESSORS = {
   "Flag Operator": {
@@ -261,6 +262,10 @@ const AVAILABLE_PROCESSORS = {
     component: "HandleDuplicateOperator",
     name: "节点去重"
   },
+  "Resolve Domain Operator": {
+    component: "ResolveDomainOperator",
+    name: "节点域名解析"
+  },
   "Script Filter": {
     component: "ScriptFilter",
     name: "脚本过滤器"
@@ -291,7 +296,8 @@ export default {
     RegexDeleteOperator,
     ScriptFilter,
     ScriptOperator,
-    HandleDuplicateOperator
+    HandleDuplicateOperator,
+    ResolveDomainOperator
   },
   data: function () {
     return {
