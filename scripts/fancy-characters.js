@@ -1,21 +1,20 @@
 /**
  * 节点名改为花里胡哨字体，仅支持英文字符和数字
- * 
+ *
  * 【字体】
  * 可参考：https://www.dute.org/weird-fonts
  * serif-bold, serif-italic, serif-bold-italic, sans-serif-regular, sans-serif-bold-italic, script-regular, script-bold, fraktur-regular, fraktur-bold, monospace-regular, double-struck-bold, circle-regular, square-regular
- * 
+ *
  * 【示例】
  * 1️⃣ 设置所有格式为 "serif-bold"
  * #type=serif-bold
- * 
+ *
  * 2️⃣ 设置字母格式为 "serif-bold"，数字格式为 "circle-regular"
  * #type=serif-bold&num=circle-regular
  */
 
 function operator(proxies) {
     const { type, num } = $arguments;
-
     const TABLE = {
         "serif-bold": ["𝟎","𝟏","𝟐","𝟑","𝟒","𝟓","𝟔","𝟕","𝟖","𝟗","𝐚","𝐛","𝐜","𝐝","𝐞","𝐟","𝐠","𝐡","𝐢","𝐣","𝐤","𝐥","𝐦","𝐧","𝐨","𝐩","𝐪","𝐫","𝐬","𝐭","𝐮","𝐯","𝐰","𝐱","𝐲","𝐳","𝐀","𝐁","𝐂","𝐃","𝐄","𝐅","𝐆","𝐇","𝐈","𝐉","𝐊","𝐋","𝐌","𝐍","𝐎","𝐏","𝐐","𝐑","𝐒","𝐓","𝐔","𝐕","𝐖","𝐗","𝐘","𝐙"] ,
         "serif-italic": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "𝑎", "𝑏", "𝑐", "𝑑", "𝑒", "𝑓", "𝑔", "ℎ", "𝑖", "𝑗", "𝑘", "𝑙", "𝑚", "𝑛", "𝑜", "𝑝", "𝑞", "𝑟", "𝑠", "𝑡", "𝑢", "𝑣", "𝑤", "𝑥", "𝑦", "𝑧", "𝐴", "𝐵", "𝐶", "𝐷", "𝐸", "𝐹", "𝐺", "𝐻", "𝐼", "𝐽", "𝐾", "𝐿", "𝑀", "𝑁", "𝑂", "𝑃", "𝑄", "𝑅", "𝑆", "𝑇", "𝑈", "𝑉", "𝑊", "𝑋", "𝑌", "𝑍"],
@@ -36,27 +35,18 @@ function operator(proxies) {
     const INDEX = { "48": 0, "49": 1, "50": 2, "51": 3, "52": 4, "53": 5, "54": 6, "55": 7, "56": 8, "57": 9, "65": 36, "66": 37, "67": 38, "68": 39, "69": 40, "70": 41, "71": 42, "72": 43, "73": 44, "74": 45, "75": 46, "76": 47, "77": 48, "78": 49, "79": 50, "80": 51, "81": 52, "82": 53, "83": 54, "84": 55, "85": 56, "86": 57, "87": 58, "88": 59, "89": 60, "90": 61, "97": 10, "98": 11, "99": 12, "100": 13, "101": 14, "102": 15, "103": 16, "104": 17, "105": 18, "106": 19, "107": 20, "108": 21, "109": 22, "110": 23, "111": 24, "112": 25, "113": 26, "114": 27, "115": 28, "116": 29, "117": 30, "118": 31, "119": 32, "120": 33, "121": 34, "122": 35 };
 
     return proxies.map(p => {
-        const { name } = p;
-        const newName = [];
-        for (let i = 0; i < name.length; i++) {
-            const code = name.charCodeAt(i);
-            if (code < 48 || code > 123) {
-                newName.push(name[i]);
-            };
-            const index = INDEX[code];
-            if (index !== undefined) {
-                let char;
+        p.name = [...p.name].map(c => {
+            if (/[a-zA-Z0-9]/.test(c)) {
+                const code = c.charCodeAt(0);
+                const index = INDEX[code];
                 if (isNumber(code) && num) {
-                    char = TABLE[num][index];
+                    return TABLE[num][index];
                 } else {
-                    char = TABLE[type][index];
+                    return TABLE[type][index];
                 }
-                newName[i] = char;
-            } else {
-                newName.push(name[i]);
             }
-        }
-        p.name = newName.join('');
+            return c;
+        }).join("");
         return p;
     })
 }
