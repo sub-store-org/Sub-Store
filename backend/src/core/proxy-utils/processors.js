@@ -313,7 +313,7 @@ function ResolveDomainOperator({ provider }) {
             // resolve domains
             await Promise.all([...resolves.values()]);
             proxies.forEach((proxy) => {
-                proxy.server = results[proxy.server];
+                proxy.server = results[proxy.server] || proxy.server;
             });
 
             return proxies;
