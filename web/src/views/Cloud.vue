@@ -359,7 +359,7 @@ export default {
 }
 
 function isPlainName(name) {
-  return /^[\w-_]*$/.test(name);
+  return /^[0-9a-zA-Z-_]*$/.test(name);
 }
 </script>
 
