@@ -286,14 +286,17 @@ function ResolveDomainOperator({ provider }) {
         name: 'Resolve Domain Operator',
         func: async (proxies) => {
             const results = {};
-            const resolves = new Map();
-
-            for (const proxy of proxies) {
-                const domain = proxy.server;
-                if (isIP(domain)) continue;
-                if (!resolves.has(domain)) {
-                    resolves.set(
-                        domain,
+            const limit = 15; // more than 20 concurrency may result in surge TCP connection shortage.
+            const totalDomain = [
+                ...new Set(
+                    proxies.filter((p) => !isIP(p.server)).map((c) => c.server),
+                ),
+            ];
+            const totalBatch = Math.ceil(totalDomain.length / limit);
+            for (let i = 0; i < totalBatch; i++) {
+                const currentBatch = [];
+                for (let domain of totalDomain.splice(0, limit)) {
+                    currentBatch.push(
                         resolver(domain)
                             .then((ip) => {
                                 results[domain] = ip;
@@ -308,10 +311,8 @@ function ResolveDomainOperator({ provider }) {
                             }),
                     );
                 }
+                await Promise.all(currentBatch);
             }
-
-            // resolve domains
-            await Promise.all([...resolves.values()]);
             proxies.forEach((proxy) => {
                 proxy.server = results[proxy.server] || proxy.server;
             });
