@@ -1,4 +1,3 @@
-import { HTTP } from '../../vendor/open-api';
 import { isIPv4, isIPv6 } from '../../utils';
 import { FULL } from '../../utils/logical';
 import { getFlag } from '../../utils/geo';
@@ -211,12 +210,11 @@ function ScriptOperator(script, targetPlatform, $arguments) {
         func: async (proxies) => {
             let output = proxies;
             await (async function () {
-                const operator = new Function(
-                    '$arguments',
-                    'HTTP',
-                    'lodash',
-                    `${script}\n return operator`,
-                )($arguments, HTTP, lodash);
+                const operator = createDynamicFunction(
+                    'operator',
+                    script,
+                    $arguments,
+                );
                 output = operator(proxies, targetPlatform);
             })();
             return output;
@@ -425,12 +423,11 @@ function ScriptFilter(script, targetPlatform, $arguments) {
         func: async (proxies) => {
             let output = FULL(proxies.length, true);
             await (async function () {
-                const filter = new Function(
-                    '$arguments',
-                    'HTTP',
-                    'lodash',
-                    `${script}\n return filter`,
-                )($arguments, HTTP, lodash);
+                const filter = createDynamicFunction(
+                    'filter',
+                    script,
+                    $arguments,
+                );
                 output = filter(proxies, targetPlatform);
             })();
             return output;
@@ -519,4 +516,35 @@ function removeFlag(str) {
     return str
         .replace(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/g, '')
         .trim();
+}
+
+function createDynamicFunction(name, script, $arguments) {
+    if ($.env.isLoon) {
+        return new Function(
+            '$arguments',
+            '$substore',
+            'lodash',
+            '$persistentStore',
+            '$httpClient',
+            '$notification',
+            `${script}\n return ${name}`,
+        )(
+            $arguments,
+            $,
+            lodash,
+            // eslint-disable-next-line no-undef
+            $persistentStore,
+            // eslint-disable-next-line no-undef
+            $httpClient,
+            // eslint-disable-next-line no-undef
+            $notification,
+        );
+    } else {
+        return new Function(
+            '$arguments',
+            '$substore',
+            'lodash',
+            `${script}\n return ${name}`,
+        )($arguments, $, lodash);
+    }
 }
