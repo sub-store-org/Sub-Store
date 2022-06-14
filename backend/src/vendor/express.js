@@ -54,7 +54,8 @@ export default function express({ substore: $, port }) {
     // dispatch url to route
     const dispatch = (request, start = 0) => {
         let { method, url, headers, body } = request;
-        if (/json/i.test(headers['Content-Type'])) {
+        headers = formatHeaders(headers);
+        if (/json/i.test(headers['content-type'])) {
             body = JSON.parse(body);
         }
 
@@ -212,6 +213,14 @@ export default function express({ substore: $, port }) {
             }
         })();
     }
+}
+
+function formatHeaders(headers) {
+    const result = {};
+    for (const k of Object.keys(headers)) {
+        result[k.toLowerCase()] = headers[k];
+    }
+    return result;
 }
 
 function patternMatched(pattern, path) {
