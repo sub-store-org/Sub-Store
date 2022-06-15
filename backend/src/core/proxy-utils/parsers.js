@@ -1,4 +1,31 @@
+import surge from './grammars/surge';
+import loon from './grammars/loon';
 import { Base64 } from 'js-base64';
+import qx from './grammars/qx';
+import * as peggy from 'peggy';
+
+let QXParser, LoonParser, SurgeParser;
+
+function getQXParser() {
+    if (!QXParser) {
+        QXParser = peggy.generate(qx);
+    }
+    return QXParser;
+}
+
+function getLoonParser() {
+    if (!LoonParser) {
+        LoonParser = peggy.generate(loon);
+    }
+    return LoonParser;
+}
+
+function getSurgeParser() {
+    if (!SurgeParser) {
+        SurgeParser = peggy.generate(surge);
+    }
+    return SurgeParser;
+}
 
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
 // reference: https://shadowsocks.org/en/spec/SIP002-URI-Scheme.html
@@ -304,53 +331,8 @@ function QX_SS() {
         );
     };
     const parse = (line) => {
-        const supported = {};
-        const params = getQXParams(line);
-        const proxy = {
-            name: params.tag,
-            type: 'ss',
-            server: params.server,
-            port: params.port,
-            cipher: params.method,
-            password: params.password,
-            udp: JSON.parse(params['udp-relay'] || 'false'),
-            tfo: JSON.parse(params['fast-open'] || 'false'),
-            supported,
-        };
-        // handle obfs options
-        if (params.obfs) {
-            proxy['plugin-opts'] = {
-                host: params['obfs-host'] || proxy.server,
-            };
-            switch (params.obfs) {
-                case 'http':
-                case 'tls':
-                    proxy.plugin = 'obfs';
-                    proxy['plugin-opts'].mode = params.obfs;
-                    break;
-                case 'ws':
-                case 'wss':
-                    proxy['plugin-opts'] = {
-                        ...proxy['plugin-opts'],
-                        mode: 'websocket',
-                        path: params['obfs-uri'] || '/',
-                        tls: params.obfs === 'wss',
-                    };
-                    if (
-                        proxy['plugin-opts'].tls &&
-                        typeof params['tls-verification'] !== 'undefined'
-                    ) {
-                        proxy['plugin-opts']['skip-cert-verify'] =
-                            params['tls-verification'];
-                    }
-                    proxy.plugin = 'v2ray-plugin';
-                    // Surge and Loon lack support for v2ray-plugin obfs
-                    proxy.supported.Surge = false;
-                    proxy.supported.Loon = false;
-                    break;
-            }
-        }
-        return proxy;
+        const parser = getQXParser();
+        return parser.parse(line);
     };
     return { name, test, parse };
 }
@@ -363,33 +345,7 @@ function QX_SSR() {
             line.indexOf('ssr-protocol') !== -1
         );
     };
-
-    const parse = (line) => {
-        const supported = {
-            Surge: false,
-        };
-        const params = getQXParams(line);
-        const proxy = {
-            name: params.tag,
-            type: 'ssr',
-            server: params.server,
-            port: params.port,
-            cipher: params.method,
-            password: params.password,
-            protocol: params['ssr-protocol'],
-            obfs: 'plain', // default obfs
-            'protocol-param': params['ssr-protocol-param'],
-            udp: JSON.parse(params['udp-relay'] || 'false'),
-            tfo: JSON.parse(params['fast-open'] || 'false'),
-            supported,
-        };
-        // handle obfs options
-        if (params.obfs) {
-            proxy.obfs = params.obfs;
-            proxy['obfs-param'] = params['obfs-host'];
-        }
-        return proxy;
-    };
+    const parse = (line) => getQXParser().parse(line);
     return { name, test, parse };
 }
 
@@ -398,39 +354,7 @@ function QX_VMess() {
     const test = (line) => {
         return /^vmess\s*=/.test(line.split(',')[0].trim());
     };
-    const parse = (line) => {
-        const params = getQXParams(line);
-        const proxy = {
-            type: 'vmess',
-            name: params.tag,
-            server: params.server,
-            port: params.port,
-            cipher: params.method || 'none',
-            uuid: params.password,
-            alterId: 0,
-            tls: params.obfs === 'over-tls' || params.obfs === 'wss',
-            udp: JSON.parse(params['udp-relay'] || 'false'),
-            tfo: JSON.parse(params['fast-open'] || 'false'),
-        };
-        if (proxy.tls) {
-            proxy.sni = params['obfs-host'] || params.server;
-            proxy['skip-cert-verify'] = !JSON.parse(
-                params['tls-verification'] || 'true',
-            );
-        }
-        // handle ws headers
-        if (params.obfs === 'ws' || params.obfs === 'wss') {
-            proxy.network = 'ws';
-            proxy['ws-opts'] = {
-                path: params['obfs-uri'],
-                headers: {
-                    Host: params['obfs-host'] || params.server, // if no host provided, use the same as server
-                },
-            };
-        }
-        return proxy;
-    };
-
+    const parse = (line) => getQXParser().parse(line);
     return { name, test, parse };
 }
 
@@ -439,23 +363,7 @@ function QX_Trojan() {
     const test = (line) => {
         return /^trojan\s*=/.test(line.split(',')[0].trim());
     };
-    const parse = (line) => {
-        const params = getQXParams(line);
-        const proxy = {
-            type: 'trojan',
-            name: params.tag,
-            server: params.server,
-            port: params.port,
-            password: params.password,
-            sni: params['tls-host'] || params.server,
-            udp: JSON.parse(params['udp-relay'] || 'false'),
-            tfo: JSON.parse(params['fast-open'] || 'false'),
-        };
-        proxy['skip-cert-verify'] = !JSON.parse(
-            params['tls-verification'] || 'true',
-        );
-        return proxy;
-    };
+    const parse = (line) => getQXParser().parse(line);
     return { name, test, parse };
 }
 
@@ -464,51 +372,8 @@ function QX_Http() {
     const test = (line) => {
         return /^http\s*=/.test(line.split(',')[0].trim());
     };
-    const parse = (line) => {
-        const params = getQXParams(line);
-        const proxy = {
-            type: 'http',
-            name: params.tag,
-            server: params.server,
-            port: params.port,
-            tls: JSON.parse(params['over-tls'] || 'false'),
-            udp: JSON.parse(params['udp-relay'] || 'false'),
-            tfo: JSON.parse(params['fast-open'] || 'false'),
-        };
-        if (params.username && params.username !== 'none')
-            proxy.username = params.username;
-        if (params.password && params.password !== 'none')
-            proxy.password = params.password;
-        if (proxy.tls) {
-            proxy.sni = params['tls-host'] || proxy.server;
-            proxy['skip-cert-verify'] = !JSON.parse(
-                params['tls-verification'] || 'true',
-            );
-        }
-        return proxy;
-    };
-
+    const parse = (line) => getQXParser().parse(line);
     return { name, test, parse };
-}
-
-function getQXParams(line) {
-    const groups = line.split(',');
-    const params = {};
-    const protocols = ['shadowsocks', 'vmess', 'http', 'trojan'];
-    groups.forEach((g) => {
-        let [key, value] = g.split('=');
-        key = key.trim();
-        value = value.trim();
-        if (protocols.indexOf(key) !== -1) {
-            params.type = key;
-            const conf = value.split(':');
-            params.server = conf[0];
-            params.port = conf[1];
-        } else {
-            params[key.trim()] = value.trim();
-        }
-    });
-    return params;
 }
 
 function Loon_SS() {
@@ -519,26 +384,7 @@ function Loon_SS() {
             'shadowsocks'
         );
     };
-    const parse = (line) => {
-        const params = line.split('=')[1].split(',');
-        const proxy = {
-            name: line.split('=')[0].trim(),
-            type: 'ss',
-            server: params[1],
-            port: params[2],
-            cipher: params[3],
-            password: params[4].replace(/"/g, ''),
-        };
-        // handle obfs
-        if (params.length > 5) {
-            proxy.plugin = 'obfs';
-            proxy['plugin-opts'] = {
-                mode: params[5],
-                host: params[6],
-            };
-        }
-        return proxy;
-    };
+    const parse = (line) => getLoonParser().parse(line);
     return { name, test, parse };
 }
 
@@ -550,25 +396,7 @@ function Loon_SSR() {
             'shadowsocksr'
         );
     };
-    const parse = (line) => {
-        const params = line.split('=')[1].split(',');
-        const supported = {
-            Surge: false,
-        };
-        return {
-            name: line.split('=')[0].trim(),
-            type: 'ssr',
-            server: params[1],
-            port: params[2],
-            cipher: params[3],
-            password: params[4].replace(/"/g, ''),
-            protocol: params[5],
-            'protocol-param': params[6].match(/{(.*)}/)[1],
-            supported,
-            obfs: params[7],
-            'obfs-param': params[8].match(/{(.*)}/)[1],
-        };
-    };
+    const parse = (line) => getLoonParser().parse(line);
     return { name, test, parse };
 }
 
@@ -581,49 +409,7 @@ function Loon_VMess() {
             line.indexOf('username') === -1
         );
     };
-    const parse = (line) => {
-        let params = line.split('=')[1].split(',');
-        const proxy = {
-            name: line.split('=')[0].trim(),
-            type: 'vmess',
-            server: params[1],
-            port: params[2],
-            cipher: params[3] || 'none',
-            uuid: params[4].replace(/"/g, ''),
-            alterId: 0,
-        };
-        // get transport options
-        params = params.splice(5);
-        for (const item of params) {
-            const [key, val] = item.split(':');
-            params[key] = val;
-        }
-        proxy.tls = JSON.parse(params['over-tls'] || 'false');
-        if (proxy.tls) {
-            proxy.sni = params['tls-name'] || proxy.server;
-            proxy['skip-cert-verify'] = JSON.parse(
-                params['skip-cert-verify'] || 'false',
-            );
-        }
-        switch (params.transport) {
-            case 'tcp':
-                break;
-            case 'ws':
-                proxy.network = params.transport;
-                proxy['ws-opts'] = {
-                    path: params.path,
-                    headers: {
-                        Host: params.host,
-                    },
-                };
-        }
-        if (proxy.tls) {
-            proxy['skip-cert-verify'] = JSON.parse(
-                params['skip-cert-verify'] || 'false',
-            );
-        }
-        return proxy;
-    };
+    const parse = (line) => getLoonParser().parse(line);
     return { name, test, parse };
 }
 
@@ -636,28 +422,7 @@ function Loon_Trojan() {
         );
     };
 
-    const parse = (line) => {
-        const params = line.split('=')[1].split(',');
-        const proxy = {
-            name: line.split('=')[0].trim(),
-            type: 'trojan',
-            server: params[1],
-            port: params[2],
-            password: params[3].replace(/"/g, ''),
-            sni: params[1], // default sni is the server itself
-            'skip-cert-verify': JSON.parse(
-                params['skip-cert-verify'] || 'false',
-            ),
-        };
-        // trojan sni
-        if (params.length > 4) {
-            const [key, val] = params[4].split(':');
-            if (key === 'tls-name') proxy.sni = val;
-            else throw new Error(`Unknown option ${key} for line: \n${line}`);
-        }
-        return proxy;
-    };
-
+    const parse = (line) => getLoonParser().parse(line);
     return { name, test, parse };
 }
 
@@ -672,27 +437,7 @@ function Loon_Http() {
         );
     };
 
-    const parse = (line) => {
-        const params = line.split('=')[1].split(',');
-        const proxy = {
-            name: line.split('=')[0].trim(),
-            type: 'http',
-            server: params[1],
-            port: params[2],
-            tls: params[2] === '443', // port 443 is considered as https type
-        };
-        if (params[3]) proxy.username = params[3];
-        if (params[4]) proxy.password = params[4];
-
-        if (proxy.tls) {
-            proxy.sni = params['tls-name'] || proxy.server;
-            proxy['skip-cert-verify'] = JSON.parse(
-                params['skip-cert-verify'] || 'false',
-            );
-        }
-
-        return proxy;
-    };
+    const parse = (line) => getLoonParser().parse(line);
     return { name, test, parse };
 }
 
@@ -701,28 +446,7 @@ function Surge_SS() {
     const test = (line) => {
         return /^.*=\s*ss/.test(line.split(',')[0]);
     };
-    const parse = (line) => {
-        const params = getSurgeParams(line);
-        const proxy = {
-            name: params.name,
-            type: 'ss',
-            server: params.server,
-            port: params.port,
-            cipher: params['encrypt-method'],
-            password: params.password,
-            tfo: JSON.parse(params.tfo || 'false'),
-            udp: JSON.parse(params['udp-relay'] || 'false'),
-        };
-        // handle obfs
-        if (params.obfs) {
-            proxy.plugin = 'obfs';
-            proxy['plugin-opts'] = {
-                mode: params.obfs,
-                host: params['obfs-host'],
-            };
-        }
-        return proxy;
-    };
+    const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
 
@@ -734,44 +458,7 @@ function Surge_VMess() {
             line.indexOf('username') !== -1
         );
     };
-    const parse = (line) => {
-        const params = getSurgeParams(line);
-        const proxy = {
-            name: params.name,
-            type: 'vmess',
-            server: params.server,
-            port: params.port,
-            uuid: params.username,
-            alterId: 0, // surge does not have this field
-            cipher: 'none', // surge does not have this field
-            tls: JSON.parse(params.tls || 'false'),
-            tfo: JSON.parse(params.tfo || 'false'),
-        };
-        if (proxy.tls) {
-            if (typeof params['skip-cert-verify'] !== 'undefined') {
-                proxy['skip-cert-verify'] =
-                    params['skip-cert-verify'] === true ||
-                    params['skip-cert-verify'] === '1';
-            }
-            proxy.sni = params['sni'] || params.server;
-        }
-        // use websocket
-        if (JSON.parse(params.ws || 'false')) {
-            proxy.network = 'ws';
-            proxy['ws-opts'] = {
-                path: params['ws-path'],
-            };
-
-            const res = params['ws-headers'].match(
-                /(,|^|\s)*HOST:\s*(.*?)(,|$)/,
-            );
-            const host = res ? res[2] : proxy.server;
-            proxy['ws-opts'].headers = {
-                Host: host || params.server,
-            };
-        }
-        return proxy;
-    };
+    const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
 
@@ -783,25 +470,7 @@ function Surge_Trojan() {
             line.indexOf('sni') !== -1
         );
     };
-    const parse = (line) => {
-        const params = getSurgeParams(line);
-        const proxy = {
-            name: params.name,
-            type: 'trojan',
-            server: params.server,
-            port: params.port,
-            password: params.password,
-            sni: params.sni || params.server,
-            tfo: JSON.parse(params.tfo || 'false'),
-        };
-        if (typeof params['skip-cert-verify'] !== 'undefined') {
-            proxy['skip-cert-verify'] =
-                params['skip-cert-verify'] === true ||
-                params['skip-cert-verify'] === '1';
-        }
-        return proxy;
-    };
-
+    const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
 
@@ -812,48 +481,8 @@ function Surge_Http() {
             /^.*=\s*https?/.test(line.split(',')[0]) && !Loon_Http().test(line)
         );
     };
-    const parse = (line) => {
-        const params = getSurgeParams(line);
-        const tls = /^.*?=\s?https/.test(line);
-        const proxy = {
-            name: params.name,
-            type: 'http',
-            server: params.server,
-            port: params.port,
-            tls: JSON.parse(tls || 'false'),
-            tfo: JSON.parse(params.tfo || 'false'),
-        };
-        if (proxy.tls) {
-            if (typeof params['skip-cert-verify'] !== 'undefined') {
-                proxy['skip-cert-verify'] =
-                    params['skip-cert-verify'] === true ||
-                    params['skip-cert-verify'] === '1';
-            }
-            proxy.sni = params.sni || params.server;
-        }
-        if (params.username && params.username !== 'none')
-            proxy.username = params.username;
-        if (params.password && params.password !== 'none')
-            proxy.password = params.password;
-        return proxy;
-    };
+    const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
-}
-
-function getSurgeParams(line) {
-    const params = {};
-    params.name = line.split('=')[0].trim();
-    const segments = line.split(',');
-    params.server = segments[1].trim();
-    params.port = segments[2].trim();
-    for (let i = 3; i < segments.length; i++) {
-        const item = segments[i];
-        if (item.indexOf('=') !== -1) {
-            const [key, value] = item.split('=');
-            params[key.trim()] = value.trim();
-        }
-    }
-    return params;
 }
 
 export default [
