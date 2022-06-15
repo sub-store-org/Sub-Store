@@ -53,9 +53,7 @@ function parse(raw) {
                 }
                 proxies.push(proxy);
             } catch (err) {
-                $.error(
-                    `Failed to parse line: \n ${line}\n Reason: ${err.stack}`,
-                );
+                $.error(`Failed to parse line: \n ${line}\n Reason: ${err}`);
             }
         }
     }
