@@ -1,6 +1,8 @@
 const $ = API("sub-store");
 $.write({}, "subs");
-$.write({}, "collections")
+$.write({}, "collections");
+$.write({}, "artifacts");
+
 $.done();
 
 // prettier-ignore
