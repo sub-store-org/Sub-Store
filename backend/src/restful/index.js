@@ -27,6 +27,17 @@ export default function serve() {
     $app.get('/api/utils/env', getEnv); // get runtime environment
     $app.get('/api/utils/backup', gistBackup); // gist backup actions
 
+    // Storage management
+    $app.route('/api/storage')
+        .get((req, res) => {
+            res.json($.read('#sub-store'));
+        })
+        .post((req, res) => {
+            const data = req.body;
+            $.write(JSON.stringify(data), '#sub-store');
+            res.end();
+        });
+
     // Redirect sub.store to vercel webpage
     $app.get('/', async (req, res) => {
         // 302 redirect
