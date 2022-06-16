@@ -29,8 +29,7 @@ const grammars = String.raw`
             $set(proxy, "ws-opts.path", obfs.path);
             $set(proxy, "ws-opts.headers.Host", obfs.host);
         } else if (obfs.type === "over-tls") {
-            proxy.tls = true;
-            proxy.sni = proxy.sni || proxy.server;
+            throw new Error("over-tls is not supported");
         } else if (obfs.type === "http") {
             proxy.network = "http";
             $set(proxy, "http-opts.path", obfs.path);
@@ -83,6 +82,7 @@ shadowsocks = "shadowsocks" equals address
 vmess = "vmess" equals address
     (uuid/method/over_tls/tls_host/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/others)* {
     proxy.type = "vmess";
+    proxy.cipher = proxy.cipher || "none";
     handleObfs();
 }
 
@@ -145,9 +145,7 @@ fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
 tls_host = comma "tls-host" equals sni:domain { proxy.sni = sni; }
 tls_verification = comma "tls-verification" equals flag:bool { 
-    if (!flag) {
-        proxy["skip-cert-verify"] = true;
-    }
+    proxy["skip-cert-verify"] = !flag;
 }
 
 obfs_ss = comma "obfs" equals type:("http"/"tls"/"wss"/"ws") { obfs.type = type; return type; }
