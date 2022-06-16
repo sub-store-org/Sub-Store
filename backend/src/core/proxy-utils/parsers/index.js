@@ -352,6 +352,15 @@ function QX_Http() {
     return { name, test, parse };
 }
 
+function QX_Socks5() {
+    const name = 'QX Socks5 Parser';
+    const test = (line) => {
+        return /^socks5\s*=/.test(line.split(',')[0].trim());
+    };
+    const parse = (line) => getQXParser().parse(line);
+    return { name, test, parse };
+}
+
 function Loon_SS() {
     const name = 'Loon SS Parser';
     const test = (line) => {
@@ -481,4 +490,5 @@ export default [
     QX_VMess(),
     QX_Trojan(),
     QX_Http(),
+    QX_Socks5(),
 ];
