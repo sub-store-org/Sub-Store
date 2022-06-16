@@ -1,7 +1,7 @@
 import RULE_PREPROCESSORS from './preprocessors';
 import RULE_PRODUCERS from './producers';
 import RULE_PARSERS from './parsers';
-import $ from '../app';
+import $ from '@/core/app';
 
 export const RuleUtils = (function () {
     function preprocess(raw) {

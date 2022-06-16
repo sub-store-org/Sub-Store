@@ -18,6 +18,6 @@ console.log(
 `,
 );
 
-import serve from './restful';
+import serve from '@/restful';
 
 serve();

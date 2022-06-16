@@ -1,8 +1,8 @@
-import { ProxyUtils } from '../core/proxy-utils';
-import { RuleUtils } from '../core/rule-utils';
-import download from '../utils/download';
-import Gist from '../utils/gist';
-import $ from '../core/app';
+import { ProxyUtils } from '@/core/proxy-utils';
+import { RuleUtils } from '@/core/rule-utils';
+import download from '@/utils/download';
+import Gist from '@/utils/gist';
+import $ from '@/core/app';
 
 import {
     SUBS_KEY,

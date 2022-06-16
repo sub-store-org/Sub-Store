@@ -43,7 +43,20 @@ function scripts(src, dest) {
     return () => {
         return browserify(src)
             .transform('babelify', {
-                presets: [['@babel/preset-env']]
+                presets: [['@babel/preset-env']],
+                plugins: [
+                    [
+                        'babel-plugin-relative-path-import',
+                        {
+                            paths: [
+                                {
+                                    'rootPathPrefix': '@',
+                                    'rootPathSuffix': 'src',
+                                }
+                            ]
+                        }
+                    ]
+                ]
             })
             .plugin('tinyify')
             .bundle()

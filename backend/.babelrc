@@ -10,5 +10,18 @@
                 "@babel/preset-env"
             ]
         }
-    }
+    },
+    "plugins": [
+        [
+            "babel-plugin-relative-path-import",
+            {
+                "paths": [
+                    {
+                        "rootPathPrefix": "@",
+                        "rootPathSuffix": "src"
+                    }
+                ]
+            }
+        ]
+    ]
 }

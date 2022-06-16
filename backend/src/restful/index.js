@@ -3,10 +3,10 @@ import {
     GIST_BACKUP_KEY,
     GIST_BACKUP_FILE_NAME,
 } from './constants';
-import { ENV, HTTP } from '../vendor/open-api';
-import express from '../vendor/express';
-import Gist from '../utils/gist';
-import $ from '../core/app';
+import { ENV, HTTP } from '@/vendor/open-api';
+import express from '@/vendor/express';
+import Gist from '@/utils/gist';
+import $ from '@/core/app';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
