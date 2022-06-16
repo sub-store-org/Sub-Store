@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
-import { ProxyUtils } from '../core/proxy-utils';
-import { RuleUtils } from '../core/rule-utils';
+import { ProxyUtils } from '@/core/proxy-utils';
+import { RuleUtils } from '@/core/rule-utils';
 
 const RESOURCE_TYPE = {
     PROXY: 1,

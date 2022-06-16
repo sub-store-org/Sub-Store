@@ -1,5 +1,5 @@
 import { SETTINGS_KEY } from './constants';
-import $ from '../core/app';
+import $ from '@/core/app';
 
 export default function register($app) {
     if (!$.read(SETTINGS_KEY)) $.write({}, SETTINGS_KEY);

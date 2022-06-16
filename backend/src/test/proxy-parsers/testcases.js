@@ -29,7 +29,11 @@ function createTestCases() {
             },
             expected: {
                 type: 'ss',
-                name, server, port, cipher, password,
+                name,
+                server,
+                port,
+                cipher,
+                password,
             },
         },
         OBFS_TLS: {
@@ -40,7 +44,11 @@ function createTestCases() {
             },
             expected: {
                 type: 'ss',
-                name, server, port, cipher, password,
+                name,
+                server,
+                port,
+                cipher,
+                password,
                 plugin: 'obfs',
                 'plugin-opts': {
                     mode: 'tls',
@@ -57,7 +65,11 @@ function createTestCases() {
             },
             expected: {
                 type: 'ss',
-                name, server, port, cipher, password,
+                name,
+                server,
+                port,
+                cipher,
+                password,
                 plugin: 'obfs',
                 'plugin-opts': {
                     mode: 'http',
@@ -72,7 +84,11 @@ function createTestCases() {
             },
             expected: {
                 type: 'ss',
-                name, server, port, cipher, password,
+                name,
+                server,
+                port,
+                cipher,
+                password,
                 plugin: 'v2ray-plugin',
                 'plugin-opts': {
                     mode: 'websocket',
@@ -87,7 +103,11 @@ function createTestCases() {
             },
             expected: {
                 type: 'ss',
-                name, server, port, cipher, password,
+                name,
+                server,
+                port,
+                cipher,
+                password,
                 plugin: 'v2ray-plugin',
                 'plugin-opts': {
                     mode: 'websocket',
@@ -106,7 +126,11 @@ function createTestCases() {
             },
             expected: {
                 type: 'ssr',
-                name, server, port, cipher, password,
+                name,
+                server,
+                port,
+                cipher,
+                password,
                 obfs: ssr_obfs,
                 protocol: ssr_protocol,
                 'obfs-param': ssr_obfs_param,
@@ -123,7 +147,10 @@ function createTestCases() {
             },
             expected: {
                 type: 'trojan',
-                name, server, port, password,
+                name,
+                server,
+                port,
+                password,
             },
         },
         WS: {
@@ -134,16 +161,18 @@ function createTestCases() {
             },
             expected: {
                 type: 'trojan',
-                name, server, port, password,
+                name,
+                server,
+                port,
+                password,
                 network: 'ws',
                 'ws-opts': {
                     path: obfs_path,
-                    'headers': {
-                        'Host': obfs_host,
+                    headers: {
+                        Host: obfs_host,
                     },
                 },
-            }
-            ,
+            },
         },
         WSS: {
             input: {
@@ -153,13 +182,16 @@ function createTestCases() {
             },
             expected: {
                 type: 'trojan',
-                name, server, port, password,
+                name,
+                server,
+                port,
+                password,
                 network: 'ws',
                 tls: true,
                 'ws-opts': {
                     path: obfs_path,
-                    'headers': {
-                        'Host': obfs_host,
+                    headers: {
+                        Host: obfs_host,
                     },
                 },
                 'skip-cert-verify': true,
@@ -177,15 +209,26 @@ function createTestCases() {
             expected: {
                 QX: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                 },
                 Loon: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                 },
                 Surge: {
                     type: 'vmess',
-                    name, server, port, uuid, // Surge lacks support for specifying cipher for vmess protocol!
+                    name,
+                    server,
+                    port,
+                    uuid, // Surge lacks support for specifying cipher for vmess protocol!
                 },
             },
         },
@@ -198,15 +241,28 @@ function createTestCases() {
             expected: {
                 QX: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher, alterId: 0,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
+                    alterId: 0,
                 },
                 Loon: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher, alterId: 0,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
+                    alterId: 0,
                 },
                 Surge: {
                     type: 'vmess',
-                    name, server, port, uuid, // Surge lacks support for specifying cipher for vmess protocol!
+                    name,
+                    server,
+                    port,
+                    uuid, // Surge lacks support for specifying cipher for vmess protocol!
                     alterId: 0,
                 },
             },
@@ -220,34 +276,45 @@ function createTestCases() {
             expected: {
                 QX: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                 },
                 Loon: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                 },
                 Surge: {
                     type: 'vmess',
-                    name, server, port, uuid, // Surge lacks support for specifying cipher for vmess protocol!
+                    name,
+                    server,
+                    port,
+                    uuid, // Surge lacks support for specifying cipher for vmess protocol!
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                 },
@@ -262,12 +329,16 @@ function createTestCases() {
             expected: {
                 QX: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                     tls: true,
@@ -276,12 +347,16 @@ function createTestCases() {
                 },
                 Loon: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                     tls: true,
@@ -290,12 +365,15 @@ function createTestCases() {
                 },
                 Surge: {
                     type: 'vmess',
-                    name, server, port, uuid, // Surge lacks support for specifying cipher for vmess protocol!
+                    name,
+                    server,
+                    port,
+                    uuid, // Surge lacks support for specifying cipher for vmess protocol!
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                     tls: true,
@@ -312,23 +390,31 @@ function createTestCases() {
             expected: {
                 QX: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                     network: 'http',
                     'http-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                 },
                 Loon: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                     network: 'http',
                     'http-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                 },
@@ -341,12 +427,16 @@ function createTestCases() {
             expected: {
                 Loon: {
                     type: 'vmess',
-                    name, server, port, uuid, cipher,
+                    name,
+                    server,
+                    port,
+                    uuid,
+                    cipher,
                     network: 'http',
                     'http-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                     tls: true,
@@ -364,7 +454,10 @@ function createTestCases() {
             expected: {
                 Loon: {
                     type: 'vless',
-                    name, server, port, uuid,
+                    name,
+                    server,
+                    port,
+                    uuid,
                 },
             },
         },
@@ -373,19 +466,20 @@ function createTestCases() {
                 Loon: `${name}=vless,${server},${port},"${uuid}",transport=ws,host=${obfs_host},path=${obfs_path}`,
             },
             expected: {
-
                 Loon: {
                     type: 'vless',
-                    name, server, port, uuid,
+                    name,
+                    server,
+                    port,
+                    uuid,
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                 },
-
             },
         },
         WSS: {
@@ -393,22 +487,23 @@ function createTestCases() {
                 Loon: `${name}=vless,${server},${port},"${uuid}",transport=ws,host=${obfs_host},path=${obfs_path},over-tls=true,tls-name=${sni},skip-cert-verify=true`,
             },
             expected: {
-
                 Loon: {
                     type: 'vless',
-                    name, server, port, uuid,
+                    name,
+                    server,
+                    port,
+                    uuid,
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                     tls: true,
                     'skip-cert-verify': true,
                     sni,
                 },
-
             },
         },
         HTTP: {
@@ -416,15 +511,17 @@ function createTestCases() {
                 Loon: `${name}=vless,${server},${port},"${uuid}",transport=http,host=${obfs_host},path=${obfs_path}`,
             },
             expected: {
-
                 Loon: {
                     type: 'vless',
-                    name, server, port, uuid,
+                    name,
+                    server,
+                    port,
+                    uuid,
                     network: 'http',
                     'http-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                 },
@@ -437,12 +534,15 @@ function createTestCases() {
             expected: {
                 Loon: {
                     type: 'vless',
-                    name, server, port, uuid,
+                    name,
+                    server,
+                    port,
+                    uuid,
                     network: 'http',
                     'http-opts': {
                         path: obfs_path,
-                        'headers': {
-                            'Host': obfs_host,
+                        headers: {
+                            Host: obfs_host,
                         },
                     },
                     tls: true,
@@ -461,8 +561,10 @@ function createTestCases() {
             },
             expected: {
                 type: 'http',
-                name, server, port,
-            }
+                name,
+                server,
+                port,
+            },
         },
         AUTH: {
             input: {
@@ -472,8 +574,12 @@ function createTestCases() {
             },
             expected: {
                 type: 'http',
-                name, server, port, username, password
-            }
+                name,
+                server,
+                port,
+                username,
+                password,
+            },
         },
         TLS: {
             input: {
@@ -483,12 +589,16 @@ function createTestCases() {
             },
             expected: {
                 type: 'http',
-                name, server, port, username, password,
+                name,
+                server,
+                port,
+                username,
+                password,
                 sni,
                 'skip-cert-verify': true,
-                tls: true
-            }
-        }
+                tls: true,
+            },
+        },
     };
     const SOCKS5 = {
         SIMPLE: {
@@ -498,8 +608,10 @@ function createTestCases() {
             },
             expected: {
                 type: 'socks5',
-                name, server, port,
-            }
+                name,
+                server,
+                port,
+            },
         },
         AUTH: {
             input: {
@@ -508,8 +620,12 @@ function createTestCases() {
             },
             expected: {
                 type: 'socks5',
-                name, server, port, username, password
-            }
+                name,
+                server,
+                port,
+                username,
+                password,
+            },
         },
         TLS: {
             input: {
@@ -518,12 +634,16 @@ function createTestCases() {
             },
             expected: {
                 type: 'socks5',
-                name, server, port, username, password,
+                name,
+                server,
+                port,
+                username,
+                password,
                 sni,
                 'skip-cert-verify': true,
-                tls: true
-            }
-        }
+                tls: true,
+            },
+        },
     };
     const SNELL = {
         SIMPLE: {
@@ -532,8 +652,12 @@ function createTestCases() {
             },
             expected: {
                 type: 'snell',
-                name, server, port, psk: password, version: 3
-            }
+                name,
+                server,
+                port,
+                psk: password,
+                version: 3,
+            },
         },
         OBFS_HTTP: {
             input: {
@@ -541,13 +665,17 @@ function createTestCases() {
             },
             expected: {
                 type: 'snell',
-                name, server, port, psk: password, version: 3,
+                name,
+                server,
+                port,
+                psk: password,
+                version: 3,
                 'obfs-opts': {
                     mode: 'http',
                     host: obfs_host,
                     path: obfs_path,
-                }
-            }
+                },
+            },
         },
         OBFS_TLS: {
             input: {
@@ -555,17 +683,28 @@ function createTestCases() {
             },
             expected: {
                 type: 'snell',
-                name, server, port, psk: password, version: 3,
+                name,
+                server,
+                port,
+                psk: password,
+                version: 3,
                 'obfs-opts': {
                     mode: 'tls',
                     host: obfs_host,
                     path: obfs_path,
-                }
-            }
+                },
+            },
         },
     };
     return {
-        SS, SSR, VMESS, VLESS, TROJAN, HTTP, SOCKS5, SNELL,
+        SS,
+        SSR,
+        VMESS,
+        VLESS,
+        TROJAN,
+        HTTP,
+        SOCKS5,
+        SNELL,
     };
 }
 

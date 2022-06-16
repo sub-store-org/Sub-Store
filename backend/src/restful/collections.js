@@ -1,7 +1,7 @@
 import { getPlatformFromHeaders, getFlowHeaders } from './subscriptions';
 import { SUBS_KEY, COLLECTIONS_KEY } from './constants';
 import { produceArtifact } from './artifacts';
-import $ from '../core/app';
+import $ from '@/core/app';
 
 export default function register($app) {
     if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);

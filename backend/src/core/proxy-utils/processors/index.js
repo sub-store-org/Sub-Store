@@ -1,8 +1,8 @@
-import { isIPv4, isIPv6 } from '../../../utils';
-import { FULL } from '../../../utils/logical';
-import { getFlag } from '../../../utils/geo';
+import { isIPv4, isIPv6 } from '@/utils';
+import { FULL } from '@/utils/logical';
+import { getFlag } from '@/utils/geo';
 import lodash from 'lodash';
-import $ from '../../app';
+import $ from '@/core/app';
 
 // force to set some properties (e.g., skip-cert-verify, udp, tfo, etc.)
 function SetPropertyOperator({ key, value }) {

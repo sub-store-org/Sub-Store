@@ -1,6 +1,6 @@
 import { SUBS_KEY, COLLECTIONS_KEY } from './constants';
 import { produceArtifact } from './artifacts';
-import $ from '../core/app';
+import $ from '@/core/app';
 
 export default function register($app) {
     if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
