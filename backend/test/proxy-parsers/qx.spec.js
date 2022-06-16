@@ -1,12 +1,11 @@
-import * as peggy from 'peggy';
-import qx from '../../src/core/proxy-utils/grammars/qx';
+import getQXParser from '../../src/core/proxy-utils/peggy/qx';
 import { expect } from 'chai';
 import testcases from './testcases';
 import { describe, it } from 'mocha';
 
 
 
-const parser = peggy.generate(qx);
+const parser = getQXParser();
 
 describe('QX', function() {
     describe('shadowsocks', function() {

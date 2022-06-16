@@ -1,3 +1,4 @@
+import * as peggy from 'peggy';
 const grammars = String.raw`
 // global initializer
 {{
@@ -169,4 +170,10 @@ _ = [ \r\t]*
 bool = b:("true"/"false") { return b === "true" }
 others = comma [^=,]+ equals [^=,]+
 `;
-export default grammars;
+let parser;
+export default function getParser() {
+    if (!parser) {
+        parser = peggy.generate(grammars);
+    }
+    return parser;
+}

@@ -1,10 +1,9 @@
 import { expect } from 'chai';
-import * as peggy from 'peggy';
-import loon from '../../src/core/proxy-utils/grammars/loon';
+import getLoonParser from '../../src/core/proxy-utils/peggy/loon';
 import testcases from './testcases';
 import { describe, it } from 'mocha';
 
-const parser = peggy.generate(loon);
+const parser = getLoonParser();
 
 describe('Loon', function() {
     describe('shadowsocks', function() {

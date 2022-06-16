@@ -1,11 +1,9 @@
-import * as peggy from 'peggy';
-import surge from '../../src/core/proxy-utils/grammars/surge';
+import getSurgeParser from '../../src/core/proxy-utils/peggy/surge';
 import { expect } from 'chai';
 import testcases from './testcases';
 import { describe, it } from 'mocha';
 
-
-const parser = peggy.generate(surge);
+const parser = getSurgeParser();
 
 describe('Surge', function() {
     describe('shadowsocks', function() {
