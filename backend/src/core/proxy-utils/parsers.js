@@ -1,31 +1,7 @@
-import surge from './grammars/surge';
-import loon from './grammars/loon';
+import getSurgeParser from './peggy/surge';
+import getLoonParser from './peggy/loon';
+import getQXParser from './peggy/qx';
 import { Base64 } from 'js-base64';
-import qx from './grammars/qx';
-import * as peggy from 'peggy';
-
-let QXParser, LoonParser, SurgeParser;
-
-function getQXParser() {
-    if (!QXParser) {
-        QXParser = peggy.generate(qx);
-    }
-    return QXParser;
-}
-
-function getLoonParser() {
-    if (!LoonParser) {
-        LoonParser = peggy.generate(loon);
-    }
-    return LoonParser;
-}
-
-function getSurgeParser() {
-    if (!SurgeParser) {
-        SurgeParser = peggy.generate(surge);
-    }
-    return SurgeParser;
-}
 
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
 // reference: https://shadowsocks.org/en/spec/SIP002-URI-Scheme.html

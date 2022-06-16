@@ -15,7 +15,7 @@ export function peggy() {
         .pipe(tap(function (file) {
             const filename = path.basename(file.path).split(".")[0] + ".js";
             const raw = fs.readFileSync(file.path, 'utf8');
-            const contents = `const grammars = String.raw\`\n${raw}\n\`;\nexport default grammars;`;
+            const contents = `import * as peggy from 'peggy';\nconst grammars = String.raw\`\n${raw}\n\`;\nlet parser;\nexport default function getParser() { if(!parser) { parser = peggy.generate(grammars); } return parser; }`;
             return newFile(filename, contents)
                 .pipe(gulp.dest(path.dirname(file.path)))
         }));
