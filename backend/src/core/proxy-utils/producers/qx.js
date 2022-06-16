@@ -154,7 +154,12 @@ function vmess(proxy) {
     const appendIfPresent = result.appendIfPresent.bind(result);
 
     append(`vmess=${proxy.server}:${proxy.port}`);
-    append(`,method=${proxy.cipher}`);
+    if (proxy.cipher === 'auto') {
+        append(`,method=none`);
+    } else {
+        append(`,method=${proxy.cipher}`);
+    }
+
     append(`,password=${proxy.uuid}`);
 
     // obfs
