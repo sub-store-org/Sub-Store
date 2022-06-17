@@ -45,7 +45,7 @@ shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/
 }
 vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/method/tls/sni/tls_verification/fast_open/udp_relay/others)* {
     proxy.type = "vmess";
-    proxy.cipher = proxy.cipher || "none";
+    proxy.cipher = proxy.cipher || "auto";
     handleWebsocket();
 }
 trojan = tag equals "trojan" address (passwordk/ws/ws_path/ws_headers/tls/sni/tls_verification/fast_open/udp_relay/others)* {

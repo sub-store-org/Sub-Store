@@ -82,7 +82,7 @@ shadowsocks = "shadowsocks" equals address
 vmess = "vmess" equals address
     (uuid/method/over_tls/tls_host/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/others)* {
     proxy.type = "vmess";
-    proxy.cipher = proxy.cipher || "none";
+    proxy.cipher = proxy.cipher || "auto";
     handleObfs();
 }
 

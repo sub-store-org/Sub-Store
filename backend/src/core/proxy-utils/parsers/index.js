@@ -401,10 +401,7 @@ function Loon_VMess() {
 function Loon_Trojan() {
     const name = 'Loon Trojan Parser';
     const test = (line) => {
-        return (
-            /^.*=\s*trojan/i.test(line.split(',')[0]) &&
-            line.indexOf('password') === -1
-        );
+        return /^.*=\s*trojan/i.test(line.split(',')[0]);
     };
 
     const parse = (line) => getLoonParser().parse(line);
@@ -414,12 +411,7 @@ function Loon_Trojan() {
 function Loon_Http() {
     const name = 'Loon HTTP Parser';
     const test = (line) => {
-        return (
-            /^.*=\s*http/i.test(line.split(',')[0]) &&
-            line.split(',').length === 5 &&
-            line.indexOf('username') === -1 &&
-            line.indexOf('password') === -1
-        );
+        return /^.*=\s*http/i.test(line.split(',')[0]);
     };
 
     const parse = (line) => getLoonParser().parse(line);
@@ -450,10 +442,7 @@ function Surge_VMess() {
 function Surge_Trojan() {
     const name = 'Surge Trojan Parser';
     const test = (line) => {
-        return (
-            /^.*=\s*trojan/.test(line.split(',')[0]) &&
-            line.indexOf('sni') !== -1
-        );
+        return /^.*=\s*trojan/.test(line.split(',')[0]);
     };
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
@@ -462,9 +451,7 @@ function Surge_Trojan() {
 function Surge_Http() {
     const name = 'Surge HTTP Parser';
     const test = (line) => {
-        return (
-            /^.*=\s*https?/.test(line.split(',')[0]) && !Loon_Http().test(line)
-        );
+        return /^.*=\s*https?/.test(line.split(',')[0]);
     };
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
