@@ -30,31 +30,31 @@ function parse(raw) {
     for (let line of lines) {
         line = line.trim();
         if (line.length === 0) continue; // skip empty line
-        let matched = lastParser && safeMatch(lastParser, line);
-        if (!matched) {
+        let success = false;
+
+        // try to parse with last used parser
+        if (lastParser) {
+            const [proxy, error] = tryParse(lastParser, line);
+            if (!error) {
+                proxies.push(proxy);
+                success = true;
+            }
+        }
+
+        if (!success) {
+            // search for a new parser
             for (const parser of PROXY_PARSERS) {
-                if (safeMatch(parser, line)) {
+                const [proxy, error] = tryParse(parser, line);
+                if (!error) {
+                    proxies.push(proxy);
                     lastParser = parser;
-                    matched = true;
-                    $.info(`Proxy parser: ${parser.name} is activated`);
-                    break;
+                    success = true;
                 }
             }
         }
-        if (!matched) {
-            $.error(`Failed to find a rule to parse line: \n${line}\n`);
-        } else {
-            try {
-                const proxy = lastParser.parse(line);
-                if (!proxy) {
-                    $.error(
-                        `Parser ${lastParser.name} return nothing for \n${line}\n`,
-                    );
-                }
-                proxies.push(proxy);
-            } catch (err) {
-                $.error(`Failed to parse line: \n ${line}\n Reason: ${err}`);
-            }
+
+        if (!success) {
+            $.error(`Failed to parse line: ${line}`);
         }
     }
 
@@ -163,12 +163,20 @@ export const ProxyUtils = {
     produce,
 };
 
-function safeMatch(p, line) {
-    let patternMatched;
+function tryParse(parser, line) {
+    if (!safeMatch(parser, line)) return [null, new Error('Parser mismatch')];
     try {
-        patternMatched = p.test(line);
+        const proxy = parser.parse(line);
+        return [proxy, null];
     } catch (err) {
-        patternMatched = false;
+        return [null, err];
     }
-    return patternMatched;
+}
+
+function safeMatch(parser, line) {
+    try {
+        return parser.test(line);
+    } catch (err) {
+        return false;
+    }
 }

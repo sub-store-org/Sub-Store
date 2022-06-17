@@ -56,7 +56,7 @@ shadowsocks = tag equals "shadowsocks"i address method password (obfs_ss/obfs_ho
 }
 vmess = tag equals "vmess"i address method uuid (transport/transport_host/transport_path/over_tls/tls_host/tls_verification/vmess_alterId/fast_open/udp_relay/others)* {
     proxy.type = "vmess";
-    proxy.cipher = proxy.cipher || "none";
+    proxy.cipher = proxy.cipher || "auto";
     handleTransport();
 }
 vless = tag equals "vless"i address uuid (transport/transport_host/transport_path/over_tls/tls_host/tls_verification/fast_open/udp_relay/others)* {
