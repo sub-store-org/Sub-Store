@@ -1,14 +1,12 @@
 /**
  * 为节点添加 tls 证书指纹
+ * 示例
+ * #fingerprint=...
  */
-function operator(proxies, targetPlatform) {
-    const {fingerprint} = $arguments;
+function operator(proxies) {
+    const { fingerprint } = $arguments;
     proxies.forEach(proxy => {
-        if (targetPlatform === "Surge") {
-            proxy.tfo = `${proxy.tfo || false}, server-cert-fingerprint-sha256=${fingerprint}`;
-        } else if (targetPlatform === "QX") {
-            proxy.tfo = `${proxy.tfo || false}, tls-cert-sha256=${fingerprint}`;
-        }
+        proxy['tls-fingerprint'] = fingerprint;
     });
     return proxies;
 }

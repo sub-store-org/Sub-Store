@@ -11,7 +11,7 @@ export class Result {
     }
 
     appendIfPresent(data, attr) {
-        if (typeof _.get(this.proxy, attr) !== 'undefined') {
+        if (isPresent(this.proxy, attr)) {
             this.append(data);
         }
     }
@@ -19,4 +19,8 @@ export class Result {
     toString() {
         return this.output.join('');
     }
+}
+
+export function isPresent(obj, attr) {
+    return typeof _.get(obj, attr) !== 'undefined';
 }
