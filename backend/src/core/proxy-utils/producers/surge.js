@@ -35,7 +35,7 @@ function shadowsocks(proxy) {
     // obfs
     if (isPresent(proxy, 'plugin')) {
         if (proxy.plugin === 'obfs') {
-            result.append(`,obfs=${proxy['plugin-opts']}`);
+            result.append(`,obfs=${proxy['plugin-opts'].mode}`);
             result.appendIfPresent(
                 `,obfs-host=${proxy['plugin-opts'].host}`,
                 'plugin-opts.host',
