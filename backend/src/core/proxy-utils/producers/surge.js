@@ -1,98 +1,241 @@
-/* eslint-disable no-case-declarations */
+import { Result, isPresent } from './utils';
+import $ from '@/core/app';
+
+const targetPlatform = 'Surge';
 
 export default function Surge_Producer() {
-    const targetPlatform = 'Surge';
     const produce = (proxy) => {
-        let result = '';
-        let obfs_opts, tls_opts;
         switch (proxy.type) {
             case 'ss':
-                obfs_opts = '';
-                if (proxy.plugin) {
-                    const { host, mode } = proxy['plugin-opts'];
-                    if (proxy.plugin === 'obfs') {
-                        obfs_opts = `,obfs=${mode}${
-                            host ? ',obfs-host=' + host : ''
-                        }`;
-                    } else {
-                        throw new Error(
-                            `Platform ${targetPlatform} does not support obfs option: ${proxy.obfs}`,
-                        );
-                    }
-                }
-                result = `${proxy.name}=ss,${proxy.server}, ${
-                    proxy.port
-                },encrypt-method=${proxy.cipher},password=${
-                    proxy.password
-                }${obfs_opts},tfo=${proxy.tfo || 'false'},udp-relay=${
-                    proxy.udp || 'false'
-                }`;
-                break;
-            case 'vmess':
-                tls_opts = '';
-                result = `${proxy.name}=vmess,${proxy.server},${
-                    proxy.port
-                },username=${proxy.uuid},tls=${proxy.tls || 'false'},tfo=${
-                    proxy.tfo || 'false'
-                }`;
-
-                if (proxy.alterId === 0) proxy['vmess-aead'] = true;
-                if (typeof proxy['vmess-aead'] !== 'undefined') {
-                    result += `,vmess-aead=${proxy['vmess-aead']}`;
-                }
-                if (proxy.network === 'ws') {
-                    const path = proxy['ws-opts'].path || '/';
-                    const wsHeaders = Object.entries(proxy['ws-opts'].headers)
-                        .map(([key, value]) => `${key}:"${value}"`)
-                        .join('|');
-                    result += `,ws=true${path ? ',ws-path=' + path : ''}${
-                        wsHeaders ? ',ws-headers=' + wsHeaders : ''
-                    }`;
-                }
-                if (proxy.tls) {
-                    result += `${
-                        typeof proxy['skip-cert-verify'] !== 'undefined'
-                            ? ',skip-cert-verify=' + proxy['skip-cert-verify']
-                            : ''
-                    }`;
-                    result += proxy.sni ? `,sni=${proxy.sni}` : '';
-                }
-                break;
+                return shadowsocks(proxy);
             case 'trojan':
-                result = `${proxy.name}=trojan,${proxy.server},${
-                    proxy.port
-                },password=${proxy.password}${
-                    typeof proxy['skip-cert-verify'] !== 'undefined'
-                        ? ',skip-cert-verify=' + proxy['skip-cert-verify']
-                        : ''
-                }${proxy.sni ? ',sni=' + proxy.sni : ''},tfo=${
-                    proxy.tfo || 'false'
-                },udp-relay=${proxy.udp || 'false'}`;
-                break;
+                return trojan(proxy);
+            case 'vmess':
+                return vmess(proxy);
             case 'http':
-                if (proxy.tls) {
-                    tls_opts = `,skip-cert-verify=${proxy['skip-cert-verify']},sni=${proxy.sni}`;
-                }
-                result = `${proxy.name}=${proxy.tls ? 'https' : 'http'},${
-                    proxy.server
-                },${proxy.port}${
-                    proxy.username ? ',username=' + proxy.username : ''
-                }${
-                    proxy.password ? ',password=' + proxy.password : ''
-                }${tls_opts},tfo=${proxy.tfo || 'false'}`;
-                break;
-            default:
-                throw new Error(
-                    `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
-                );
+                return http(proxy);
+            case 'socks5':
+                return socks5(proxy);
+            case 'snell':
+                return snell(proxy);
         }
-
-        // handle surge hybrid param
-        result +=
-            proxy['surge-hybrid'] !== undefined
-                ? `,hybrid=${proxy['surge-hybrid']}`
-                : '';
-        return result;
+        throw new Error(
+            `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
+        );
     };
     return { produce };
+}
+
+function shadowsocks(proxy) {
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
+    result.append(`,encrypt-method=${proxy.cipher}`);
+    result.appendIfPresent(`,password=${proxy.password}`, 'password');
+
+    // obfs
+    if (isPresent(proxy, 'plugin')) {
+        if (proxy.plugin === 'obfs') {
+            result.append(`,obfs=${proxy['plugin-opts']}`);
+            result.appendIfPresent(
+                `,obfs-host=${proxy['plugin-opts'].host}`,
+                'plugin-opts.host',
+            );
+            result.appendIfPresent(
+                `,obfs-uri=${proxy['plugin-opts'].path}`,
+                'plugin-opts.path',
+            );
+        } else {
+            throw new Error(`plugin ${proxy.plugin} is not supported`);
+        }
+    }
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    return result.toString();
+}
+
+function trojan(proxy) {
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,password=${proxy.password}`, 'password');
+
+    if (isPresent(proxy, 'network')) {
+        if (proxy.network === 'ws') {
+            result.append(`,ws=true`);
+            result.appendIfPresent(
+                `,ws-path=${proxy['ws-opts'].path}`,
+                'ws-opts.path',
+            );
+            result.appendIfPresent(
+                `,ws-headers=Host:${proxy['ws-opts'].headers.Host}`,
+                'ws-opts.headers.Host',
+            );
+        } else {
+            throw new Error(`network ${proxy.network} is not supported`);
+        }
+    }
+
+    // tls
+    result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
+
+    // tls fingerprint
+    result.appendIfPresent(
+        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+
+    // tls verification
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    return result.toString();
+}
+
+function vmess(proxy) {
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,username=${proxy.uuid}`, 'uuid');
+
+    if (proxy.cipher === 'auto') {
+        result.append(`,encrypt-method=none`);
+    } else {
+        result.append(`,encrypt-method=${proxy.cipher}`);
+    }
+
+    if (isPresent(proxy, 'network')) {
+        if (proxy.network === 'ws') {
+            result.append(`,ws=true`);
+            result.appendIfPresent(
+                `,ws-path=${proxy['ws-opts'].path}`,
+                'ws-opts.path',
+            );
+            result.appendIfPresent(
+                `,ws-headers=Host:${proxy['ws-opts'].headers.Host}`,
+                'ws-opts.headers.Host',
+            );
+        } else {
+            throw new Error(`network ${proxy.network} is unsupported`);
+        }
+    }
+
+    // AEAD
+    result.appendIfPresent(`,vmess-aead=${proxy.alterId === 0}`, 'alterId');
+
+    // tls fingerprint
+    result.appendIfPresent(
+        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+
+    // tls
+    result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
+
+    // tls verification
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    return result.toString();
+}
+
+function http(proxy) {
+    const result = new Result(proxy);
+    const type = proxy.tls ? 'https' : 'http';
+    result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,${proxy.username}`, 'username');
+    result.appendIfPresent(`,${proxy.password}`, 'password');
+
+    // tls fingerprint
+    result.appendIfPresent(
+        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+
+    // tls verification
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    return result.toString();
+}
+
+function socks5(proxy) {
+    const result = new Result(proxy);
+    const type = proxy.tls ? 'socks5' : 'socks5-tls';
+    result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,${proxy.username}`, 'username');
+    result.appendIfPresent(`,${proxy.password}`, 'password');
+
+    // tls fingerprint
+    result.appendIfPresent(
+        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+
+    // tls verification
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // tfo
+    if (proxy.tfo) {
+        $.info(`Option tfo is not supported by Surge, thus omitted`);
+    }
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    return result.toString();
+}
+
+function snell(proxy) {
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,version=${proxy.version}`, 'version');
+    result.appendIfPresent(`,psk=${proxy.psk}`, 'psk');
+
+    // obfs
+    result.appendIfPresent(
+        `,obfs=${proxy['obfs-opts'].mode}`,
+        'obfs-opts.mode',
+    );
+    result.appendIfPresent(
+        `,obfs-host=${proxy['obfs-opts'].host}`,
+        'obfs-opts.host',
+    );
+    result.appendIfPresent(
+        `,obfs-uri=${proxy['obfs-opts'].path}`,
+        'obfs-opts.path',
+    );
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    return result.toString();
 }

@@ -41,16 +41,16 @@ shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/
         $set(proxy, "plugin-opts.path", obfs.path);
     }
 }
-vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/method/tls/sni/tls_verification/fast_open/udp_relay/others)* {
+vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/method/tls/sni/tls_fingerprint/tls_verification/fast_open/udp_relay/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "auto";
     handleWebsocket();
 }
-trojan = tag equals "trojan" address (passwordk/ws/ws_path/ws_headers/tls/sni/tls_verification/fast_open/udp_relay/others)* {
+trojan = tag equals "trojan" address (passwordk/ws/ws_path/ws_headers/tls/sni/tls_fingerprint/tls_verification/fast_open/udp_relay/others)* {
     proxy.type = "trojan";
     handleWebsocket();
 }
-https = tag equals "https" address (username password)? (sni/tls_verification/fast_open/others)* {
+https = tag equals "https" address (username password)? (sni/tls_fingerprint/tls_verification/fast_open/others)* {
     proxy.type = "http";
     proxy.tls = true;
 }
@@ -69,7 +69,7 @@ snell = tag equals "snell" address (snell_version/snell_psk/obfs/obfs_host/obfs_
 socks5 = tag equals "socks5" address (username password)? (fast_open/others)* {
     proxy.type = "socks5";
 }
-socks5_tls = tag equals "socks5-tls" address (username password)? (sni/tls_verification/fast_open/others)* {
+socks5_tls = tag equals "socks5-tls" address (username password)? (sni/tls_fingerprint/tls_verification/fast_open/others)* {
     proxy.type = "socks5";
     proxy.tls = true;
 }
@@ -135,6 +135,7 @@ password = comma match:[^,]+ { proxy.password = match.join(""); }
 tls = comma "tls" equals flag:bool { proxy.tls = flag; }
 sni = comma "sni" equals sni:domain { proxy.sni = sni; }
 tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-verify"] = flag; }
+tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:[^,] { proxy["tls-fingerprint"] = tls_fingerprint; }
 
 snell_psk = comma "psk" equals match:[^,]+ { proxy.psk = match.join(""); }
 snell_version = comma "version" equals match:$[0-9]+ { proxy.version = parseInt(match.trim()); }

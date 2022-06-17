@@ -1,4 +1,4 @@
-import { Result } from './utils';
+import { isPresent, Result } from './utils';
 const targetPlatform = 'QX';
 
 export default function QX_Producer() {
@@ -34,7 +34,7 @@ function shadowsocks(proxy) {
     append(`,password=${proxy.password}`);
 
     // obfs
-    if (proxy.plugin) {
+    if (isPresent(proxy, 'plugin')) {
         if (proxy.plugin === 'obfs') {
             const opts = proxy['plugin-opts'];
             append(`,obfs=${opts.mode}`);
@@ -45,6 +45,8 @@ function shadowsocks(proxy) {
             const opts = proxy['plugin-opts'];
             if (opts.tls) append(`,obfs=wss`);
             else append(`,obfs=ws`);
+        } else {
+            throw new Error(`plugin is not supported`);
         }
         appendIfPresent(
             `,obfs-host=${proxy['plugin-opts'].host}`,
@@ -55,6 +57,12 @@ function shadowsocks(proxy) {
             'plugin-opts.path',
         );
     }
+
+    // tls fingerprint
+    appendIfPresent(
+        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
 
     // tls verification
     appendIfPresent(
@@ -116,18 +124,31 @@ function trojan(proxy) {
     append(`,password=${proxy.password}`);
 
     // obfs ws
-    if (proxy.network === 'ws') {
-        if (proxy.tls) append(`,obfs=wss`);
-        else append(`,obfs=ws`);
-        appendIfPresent(`,obfs-uri=${proxy['ws-opts'].path}`, 'ws-opts.path');
-        appendIfPresent(
-            `,obfs-host=${proxy['ws-opts'].headers.Host}`,
-            'ws-opts.headers.Host',
-        );
+    if (isPresent(proxy, 'network')) {
+        if (proxy.network === 'ws') {
+            if (proxy.tls) append(`,obfs=wss`);
+            else append(`,obfs=ws`);
+            appendIfPresent(
+                `,obfs-uri=${proxy['ws-opts'].path}`,
+                'ws-opts.path',
+            );
+            appendIfPresent(
+                `,obfs-host=${proxy['ws-opts'].headers.Host}`,
+                'ws-opts.headers.Host',
+            );
+        } else {
+            throw new Error(`network ${proxy.network} is unsupported`);
+        }
     }
 
     // tls
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
+
+    // tls fingerprint
+    appendIfPresent(
+        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
 
     // tls verification
     appendIfPresent(
@@ -163,25 +184,38 @@ function vmess(proxy) {
     append(`,password=${proxy.uuid}`);
 
     // obfs
-    if (proxy.network === 'ws') {
-        if (proxy.tls) append(`,obfs=wss`);
-        else append(`,obfs=ws`);
-        appendIfPresent(`,obfs-uri=${proxy['ws-opts'].path}`, 'ws-opts.path');
-        appendIfPresent(
-            `,obfs-host=${proxy['ws-opts'].headers.Host}`,
-            'ws-opts.headers.Host',
-        );
-    } else if (proxy.network === 'http') {
-        append(`,obfs=http`);
-        appendIfPresent(
-            `,obfs-uri=${proxy['http-opts'].path}`,
-            'http-opts.path',
-        );
-        appendIfPresent(
-            `,obfs-host=${proxy['http-opts'].headers.Host}`,
-            'http-opts.headers.Host',
-        );
+    if (isPresent(proxy, 'network')) {
+        if (proxy.network === 'ws') {
+            if (proxy.tls) append(`,obfs=wss`);
+            else append(`,obfs=ws`);
+            appendIfPresent(
+                `,obfs-uri=${proxy['ws-opts'].path}`,
+                'ws-opts.path',
+            );
+            appendIfPresent(
+                `,obfs-host=${proxy['ws-opts'].headers.Host}`,
+                'ws-opts.headers.Host',
+            );
+        } else if (proxy.network === 'http') {
+            append(`,obfs=http`);
+            appendIfPresent(
+                `,obfs-uri=${proxy['http-opts'].path}`,
+                'http-opts.path',
+            );
+            appendIfPresent(
+                `,obfs-host=${proxy['http-opts'].headers.Host}`,
+                'http-opts.headers.Host',
+            );
+        } else {
+            throw new Error(`network ${proxy.network} is unsupported`);
+        }
     }
+
+    // tls fingerprint
+    appendIfPresent(
+        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
 
     // tls verification
     appendIfPresent(
@@ -217,6 +251,12 @@ function http(proxy) {
     // tls
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
 
+    // tls fingerprint
+    appendIfPresent(
+        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+
     // tls verification
     appendIfPresent(
         `,tls-verification=${!proxy['skip-cert-verify']}`,
@@ -247,6 +287,12 @@ function socks5(proxy) {
 
     // tls
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
+
+    // tls fingerprint
+    appendIfPresent(
+        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
 
     // tls verification
     appendIfPresent(
