@@ -142,6 +142,9 @@ function trojan(proxy) {
     }
 
     // tls
+    if (needTls(proxy)) {
+        proxy.tls = true;
+    }
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
 
     // tls fingerprint
@@ -249,6 +252,9 @@ function http(proxy) {
     appendIfPresent(`,password=${proxy.password}`, 'password');
 
     // tls
+    if (needTls(proxy)) {
+        proxy.tls = true;
+    }
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
 
     // tls fingerprint
@@ -286,6 +292,9 @@ function socks5(proxy) {
     appendIfPresent(`,password=${proxy.password}`, 'password');
 
     // tls
+    if (needTls(proxy)) {
+        proxy.tls = true;
+    }
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
 
     // tls fingerprint
@@ -311,4 +320,13 @@ function socks5(proxy) {
     append(`,tag=${proxy.name}`);
 
     return result.toString();
+}
+
+function needTls(proxy) {
+    return (
+        proxy.tls ||
+        proxy.sni ||
+        typeof proxy['skip-cert-verify'] !== 'undefined' ||
+        typeof proxy['tls-host'] !== 'undefined'
+    );
 }

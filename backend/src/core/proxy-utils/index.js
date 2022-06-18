@@ -1,10 +1,10 @@
-import download from '../../utils/download';
+import download from '@/utils/download';
 
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
 import PROXY_PARSERS from './parsers';
-import $ from '../app';
+import $ from '@/core/app';
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
