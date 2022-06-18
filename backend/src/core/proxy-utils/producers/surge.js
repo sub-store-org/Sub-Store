@@ -107,11 +107,11 @@ function vmess(proxy) {
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,username=${proxy.uuid}`, 'uuid');
 
-    if (proxy.cipher === 'auto') {
-        result.append(`,encrypt-method=none`);
-    } else {
-        result.append(`,encrypt-method=${proxy.cipher}`);
-    }
+    // if (proxy.cipher === 'auto') {
+    //     result.append(`,encrypt-method=none`);
+    // } else {
+    //     result.append(`,encrypt-method=${proxy.cipher}`);
+    // }
 
     if (isPresent(proxy, 'network')) {
         if (proxy.network === 'ws') {
