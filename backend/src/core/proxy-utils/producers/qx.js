@@ -34,6 +34,9 @@ function shadowsocks(proxy) {
     append(`,password=${proxy.password}`);
 
     // obfs
+    if (needTls(proxy)) {
+        proxy.tls = true;
+    }
     if (isPresent(proxy, 'plugin')) {
         if (proxy.plugin === 'obfs') {
             const opts = proxy['plugin-opts'];
@@ -187,6 +190,9 @@ function vmess(proxy) {
     append(`,password=${proxy.uuid}`);
 
     // obfs
+    if (needTls(proxy)) {
+        proxy.tls = true;
+    }
     if (isPresent(proxy, 'network')) {
         if (proxy.network === 'ws') {
             if (proxy.tls) append(`,obfs=wss`);

@@ -7,6 +7,9 @@ export class Result {
     }
 
     append(data) {
+        if (typeof data === 'undefined') {
+            throw new Error('required field is missing');
+        }
         this.output.push(data);
     }
 
