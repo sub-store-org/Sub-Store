@@ -1,10 +1,6 @@
-export default function Clash_Producer() {
+export default function Stash_Producer() {
     const type = 'ALL';
     const produce = (proxies) => {
-        proxies.filter((proxy) => {
-            if (proxy.type === 'vless') return false;
-            return true;
-        });
         return (
             'proxies:\n' +
             proxies

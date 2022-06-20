@@ -204,11 +204,10 @@ export function getPlatformFromHeaders(headers) {
         return 'Surge';
     } else if (UA.indexOf('Decar') !== -1 || UA.indexOf('Loon') !== -1) {
         return 'Loon';
-    } else if (
-        UA.indexOf('Stash') !== -1 ||
-        UA.indexOf('Shadowrocket') !== -1
-    ) {
+    } else if (UA.indexOf('Shadowrocket') !== -1) {
         return 'Clash';
+    } else if (UA.indexOf('Stash') !== -1) {
+        return 'Stash';
     } else {
         return null;
     }

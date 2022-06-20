@@ -1,5 +1,6 @@
 import Surge_Producer from './surge';
 import Clash_Producer from './clash';
+import Stash_Producer from './stash';
 import Loon_Producer from './loon';
 import URI_Producer from './uri';
 import QX_Producer from './qx';
@@ -17,4 +18,5 @@ export default {
     Clash: Clash_Producer(),
     URI: URI_Producer(),
     JSON: JSON_Producer(),
+    Stash: Stash_Producer(),
 };
