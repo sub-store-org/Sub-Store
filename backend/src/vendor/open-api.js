@@ -2,7 +2,10 @@
 const isQX = typeof $task !== 'undefined';
 const isLoon = typeof $loon !== 'undefined';
 const isSurge = typeof $httpClient !== 'undefined' && !isLoon;
-const isNode = eval(`typeof process !== "undefined"`);
+const isNode = eval(`typeof process !== "undefined"`); // eval is needed in order to avoid browserify processing
+const isStash =
+    'undefined' !== typeof $environment && $environment['stash-version'];
+const isShadowRocket = 'undefined' !== typeof $rocket;
 
 export class OpenAPI {
     constructor(name = 'untitled', debug = false) {
@@ -218,7 +221,7 @@ export class OpenAPI {
 }
 
 export function ENV() {
-    return { isQX, isLoon, isSurge, isNode };
+    return { isQX, isLoon, isSurge, isNode, isStash, isShadowRocket };
 }
 
 export function HTTP(defaultOptions = { baseURL: '' }) {
