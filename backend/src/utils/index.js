@@ -13,4 +13,20 @@ function isIPv6(ip) {
     return IPV6_REGEX.test(ip);
 }
 
-export { isIPv4, isIPv6 };
+function isNotBlank(str) {
+    return typeof str === 'string' && str.trim().length > 0;
+}
+
+function getIfNotBlank(str, defaultValue) {
+    return isNotBlank(str) ? str : defaultValue;
+}
+
+function isPresent(obj) {
+    return typeof obj !== 'undefined' && obj !== null;
+}
+
+function getIfPresent(obj, defaultValue) {
+    return isPresent(obj) ? obj : defaultValue;
+}
+
+export { isIPv4, isIPv6, isNotBlank, getIfNotBlank, isPresent, getIfPresent };
