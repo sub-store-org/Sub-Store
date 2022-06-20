@@ -129,7 +129,7 @@ function trojan(proxy) {
     // obfs ws
     if (isPresent(proxy, 'network')) {
         if (proxy.network === 'ws') {
-            if (proxy.tls) append(`,obfs=wss`);
+            if (needTls(proxy)) append(`,obfs=wss`);
             else append(`,obfs=ws`);
             appendIfPresent(
                 `,obfs-uri=${proxy['ws-opts'].path}`,
@@ -145,9 +145,6 @@ function trojan(proxy) {
     }
 
     // tls
-    if (needTls(proxy)) {
-        proxy.tls = true;
-    }
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
 
     // tls fingerprint
