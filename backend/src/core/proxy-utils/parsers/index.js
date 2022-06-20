@@ -241,15 +241,21 @@ function URI_Trojan() {
         const [server, port] = line.split('@')[1].split('?')[0].split(':');
         const name = decodeURIComponent(line.split('#')[1].trim());
         let paramArr = line.split('?');
-        let sni = null;
+        let scert = null;
+        let params;
         if (paramArr.length > 1) {
             paramArr = paramArr[1].split('#')[0].split('&');
-            const params = new Map(
+            params = new Map(
                 paramArr.map((item) => {
                     return item.split('=');
                 }),
             );
-            sni = params.get('sni');
+            if (
+                params.get('allowInsecure') === '1' ||
+                params.get('allowInsecure') === 'true'
+            ) {
+                scert = true;
+            }
         }
 
         return {
@@ -258,7 +264,8 @@ function URI_Trojan() {
             server,
             port,
             password: line.split('@')[0],
-            sni,
+            sni: getIfPresent(params.get('sni')),
+            'skip-cert-verify': getIfPresent(scert),
         };
     };
     return { name, test, parse };

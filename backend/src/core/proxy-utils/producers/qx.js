@@ -144,6 +144,11 @@ function trojan(proxy) {
         }
     }
 
+    // over tls
+    if (proxy.network !== 'ws' && needTls(proxy)) {
+        append(`,over-tls=true`);
+    }
+
     // tls fingerprint
     appendIfPresent(
         `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
@@ -327,6 +332,7 @@ function needTls(proxy) {
         proxy.tls ||
         proxy.sni ||
         typeof proxy['skip-cert-verify'] !== 'undefined' ||
+        typeof proxy['tls-fingerprint'] !== 'undefined' ||
         typeof proxy['tls-host'] !== 'undefined'
     );
 }
