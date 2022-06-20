@@ -1,3 +1,4 @@
+import { getIfNotBlank, isPresent, isNotBlank, getIfPresent } from '@/utils';
 import getSurgeParser from './peggy/surge';
 import getLoonParser from './peggy/loon';
 import getQXParser from './peggy/qx';
@@ -11,14 +12,12 @@ function URI_SS() {
         return /^ss:\/\//.test(line);
     };
     const parse = (line) => {
-        const supported = {};
         // parse url
         let content = line.split('ss://')[1];
 
         const proxy = {
             name: decodeURIComponent(line.split('#')[1]),
             type: 'ss',
-            supported,
         };
         content = content.split('#')[0]; // strip proxy name
         // handle IPV4 and IPV6
@@ -49,21 +48,16 @@ function URI_SS() {
                     proxy.plugin = 'obfs';
                     proxy['plugin-opts'] = {
                         mode: params.obfs,
-                        host: params['obfs-host'],
+                        host: getIfNotBlank(params['obfs-host']),
                     };
                     break;
                 case 'v2ray-plugin':
-                    proxy.supported = {
-                        ...supported,
-                        Loon: false,
-                        Surge: false,
-                    };
                     proxy.obfs = 'v2ray-plugin';
                     proxy['plugin-opts'] = {
                         mode: 'websocket',
-                        host: params['obfs-host'],
-                        path: params.path || '',
-                        tls: params.tls || false,
+                        host: getIfNotBlank(params['obfs-host']),
+                        path: getIfNotBlank(params.path),
+                        tls: getIfPresent(params.tls),
                     };
                     break;
                 default:
@@ -83,10 +77,6 @@ function URI_SSR() {
     const test = (line) => {
         return /^ssr:\/\//.test(line);
     };
-    const supported = {
-        Surge: false,
-    };
-
     const parse = (line) => {
         line = Base64.decode(line.split('ssr://')[1]);
 
@@ -116,7 +106,6 @@ function URI_SSR() {
             cipher: params[1],
             obfs: params[2],
             password: Base64.decode(params[3]),
-            supported,
         };
         // get other params
         const other_params = {};
@@ -132,12 +121,11 @@ function URI_SSR() {
             name: other_params.remarks
                 ? Base64.decode(other_params.remarks)
                 : proxy.server,
-            'protocol-param': Base64.decode(
-                other_params.protoparam || '',
-            ).replace(/\s/g, ''),
-            'obfs-param': Base64.decode(other_params.obfsparam || '').replace(
-                /\s/g,
-                '',
+            'protocol-param': getIfNotBlank(
+                Base64.decode(other_params.protoparam || '').replace(/\s/g, ''),
+            ),
+            'obfs-param': getIfNotBlank(
+                Base64.decode(other_params.obfsparam || '').replace(/\s/g, ''),
             ),
         };
         return proxy;
@@ -156,7 +144,6 @@ function URI_VMess() {
         return /^vmess:\/\//.test(line);
     };
     const parse = (line) => {
-        const supported = {};
         line = line.split('vmess://')[1];
         const content = Base64.decode(line);
         if (/=\s*vmess/.test(content)) {
@@ -176,41 +163,38 @@ function URI_VMess() {
                 type: 'vmess',
                 server: partitions[1],
                 port: partitions[2],
-                cipher: partitions[3],
+                cipher: getIfNotBlank(partitions[3], 'auto'),
                 uuid: partitions[4].match(/^"(.*)"$/)[1],
-                tls: params.obfs === 'over-tls' || params.obfs === 'wss',
+                tls: params.obfs === 'wss',
+                udp: getIfPresent(params['udp-relay']),
+                tfo: getIfPresent(params['fast-open']),
+                'skip-cert-verify': isPresent(params['tls-verification'])
+                    ? !params['tls-verification']
+                    : undefined,
             };
 
-            if (typeof params['udp-relay'] !== 'undefined')
-                proxy.udp = JSON.parse(params['udp-relay']);
-            if (typeof params['fast-open'] !== 'undefined')
-                proxy.udp = JSON.parse(params['fast-open']);
-
             // handle ws headers
-            if (params.obfs === 'ws' || params.obfs === 'wss') {
-                proxy.network = 'ws';
-                proxy['ws-opts'].path = (params['obfs-path'] || '"/"').match(
-                    /^"(.*)"$/,
-                )[1];
-                let obfs_host = params['obfs-header'];
-                if (obfs_host && obfs_host.indexOf('Host') !== -1) {
-                    obfs_host = obfs_host.match(/Host:\s*([a-zA-Z0-9-.]*)/)[1];
+            if (isPresent(params.obfs)) {
+                if (params.obfs === 'ws' || params.obfs === 'wss') {
+                    proxy.network = 'ws';
+                    proxy['ws-opts'].path = (
+                        getIfNotBlank(params['obfs-path']) || '"/"'
+                    ).match(/^"(.*)"$/)[1];
+                    let obfs_host = params['obfs-header'];
+                    if (obfs_host && obfs_host.indexOf('Host') !== -1) {
+                        obfs_host = obfs_host.match(
+                            /Host:\s*([a-zA-Z0-9-.]*)/,
+                        )[1];
+                    }
+                    if (isNotBlank(obfs_host)) {
+                        proxy['ws-opts'].headers = {
+                            Host: obfs_host,
+                        };
+                    }
+                } else {
+                    throw new Error(`Unsupported obfs: ${params.obfs}`);
                 }
-                proxy['ws-opts'].headers = {
-                    Host: obfs_host || proxy.server, // if no host provided, use the same as server
-                };
             }
-
-            // handle scert
-            if (proxy.tls && params['"tls-verification"'] === 'false') {
-                proxy['skip-cert-verify'] = true;
-            }
-
-            // handle sni
-            if (proxy.tls && params['obfs-host']) {
-                proxy.sni = params['obfs-host'];
-            }
-
             return proxy;
         } else {
             // V2rayN URI format
@@ -222,24 +206,22 @@ function URI_VMess() {
                 port: params.port,
                 cipher: 'auto', // V2rayN has no default cipher! use aes-128-gcm as default.
                 uuid: params.id,
-                alterId: params.aid || 0,
+                alterId: getIfPresent(params.aid, 0),
                 tls: params.tls === 'tls' || params.tls === true,
-                supported,
+                'skip-cert-verify': isPresent(params.verify_cert)
+                    ? !params.verify_cert
+                    : undefined,
             };
             // handle obfs
             if (params.net === 'ws') {
                 proxy.network = 'ws';
                 proxy['ws-opts'] = {
-                    path: params.path,
-                    headers: { Host: params.host || params.add },
+                    path: getIfNotBlank(params.path),
+                    headers: { Host: getIfNotBlank(params.host) },
                 };
                 if (proxy.tls && params.host) {
                     proxy.sni = params.host;
                 }
-            }
-            // handle scert
-            if (params.verify_cert === false) {
-                proxy['skip-cert-verify'] = true;
             }
             return proxy;
         }
@@ -255,7 +237,6 @@ function URI_Trojan() {
     };
 
     const parse = (line) => {
-        const supported = {};
         line = line.split('trojan://')[1];
         const [server, port] = line.split('@')[1].split('?')[0].split(':');
         const name = decodeURIComponent(line.split('#')[1].trim());
@@ -278,7 +259,6 @@ function URI_Trojan() {
             port,
             password: line.split('@')[0],
             sni,
-            supported,
         };
     };
     return { name, test, parse };

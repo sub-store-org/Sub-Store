@@ -25,5 +25,6 @@ export class Result {
 }
 
 export function isPresent(obj, attr) {
-    return typeof _.get(obj, attr) !== 'undefined';
+    const data = _.get(obj, attr);
+    return typeof data !== 'undefined' && data !== null;
 }

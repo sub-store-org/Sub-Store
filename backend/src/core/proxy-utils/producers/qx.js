@@ -144,9 +144,6 @@ function trojan(proxy) {
         }
     }
 
-    // tls
-    appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
-
     // tls fingerprint
     appendIfPresent(
         `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
