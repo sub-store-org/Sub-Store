@@ -385,6 +385,15 @@ function Loon_VMess() {
     return { name, test, parse };
 }
 
+function Loon_Vless() {
+    const name = 'Loon Vless Parser';
+    const test = (line) => {
+        return /^.*=\s*vless/i.test(line.split(',')[0]);
+    };
+    const parse = (line) => getLoonParser().parse(line);
+    return { name, test, parse };
+}
+
 function Loon_Trojan() {
     const name = 'Loon Trojan Parser';
     const test = (line) => {
@@ -444,6 +453,24 @@ function Surge_Http() {
     return { name, test, parse };
 }
 
+function Surge_Socks5() {
+    const name = 'Surge Socks5 Parser';
+    const test = (line) => {
+        return /^.*=\s*socks5(-tls)?/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
+
+function Surge_Snell() {
+    const name = 'Surge Snell Parser';
+    const test = (line) => {
+        return /^.*=\s*snell?/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
+
 export default [
     URI_SS(),
     URI_SSR(),
@@ -454,9 +481,12 @@ export default [
     Surge_VMess(),
     Surge_Trojan(),
     Surge_Http(),
+    Surge_Snell(),
+    Surge_Socks5(),
     Loon_SS(),
     Loon_SSR(),
     Loon_VMess(),
+    Loon_Vless(),
     Loon_Trojan(),
     Loon_Http(),
     QX_SS(),

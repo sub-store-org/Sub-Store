@@ -181,7 +181,7 @@ function http(proxy) {
 
 function socks5(proxy) {
     const result = new Result(proxy);
-    const type = proxy.tls ? 'socks5' : 'socks5-tls';
+    const type = proxy.tls ? 'socks5-tls' : 'socks5';
     result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,${proxy.username}`, 'username');
     result.appendIfPresent(`,${proxy.password}`, 'password');

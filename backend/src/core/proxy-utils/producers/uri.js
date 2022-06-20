@@ -77,8 +77,6 @@ export default function URI_Producer() {
                     proxy.port
                 }#${encodeURIComponent(proxy.name)}`;
                 break;
-            default:
-                throw new Error(`Cannot handle proxy type: ${proxy.type}`);
         }
         return result;
     };

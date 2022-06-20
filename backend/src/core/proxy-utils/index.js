@@ -49,6 +49,7 @@ function parse(raw) {
                     proxies.push(proxy);
                     lastParser = parser;
                     success = true;
+                    $.info(`${parser.name} is activated`);
                 }
             }
         }
