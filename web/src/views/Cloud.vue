@@ -296,7 +296,7 @@ export default {
 
     copy(artifact) {
       if (artifact.url) {
-        this.$clipboard(artifact.url + (isPlainName(artifact.name) ? '' : `#${artifact.name}`));
+        this.$clipboard(artifact.url);
         this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制配置链接");
       }
     },
@@ -356,10 +356,6 @@ export default {
       window.open(`https://gist.github.com${'/' + this.settings.githubUser || ''}`)
     }
   }
-}
-
-function isPlainName(name) {
-  return /^[0-9a-zA-Z-_]*$/.test(name);
 }
 </script>
 
