@@ -1,0 +1,29 @@
+name: update
+on: 
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: 'master'
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "14"
+      - name: Install dependencies
+        run: cd backend && npm i
+      - name: Build
+        run: cd backend && npm run build
+      - name: Commit changes
+        if: contains(github.event.head_commit.message, '#build')
+        run: |
+          git config user.email github-actions
+          git config user.name github-actions@github.com
+          git add .
+          git commit -m "Release" -a
+          git push

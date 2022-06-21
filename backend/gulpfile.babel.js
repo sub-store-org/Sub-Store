@@ -15,7 +15,16 @@ export function peggy() {
         .pipe(tap(function (file) {
             const filename = path.basename(file.path).split(".")[0] + ".js";
             const raw = fs.readFileSync(file.path, 'utf8');
-            const contents = `import * as peggy from 'peggy';\nconst grammars = String.raw\`\n${raw}\n\`;\nlet parser;\nexport default function getParser() { if(!parser) { parser = peggy.generate(grammars); } return parser; }`;
+            const contents = 
+`import * as peggy from 'peggy';
+const grammars = String.raw\`\n${raw}\n\`;
+let parser;
+export default function getParser() {
+    if (!parser) {
+        parser = peggy.generate(grammars);
+    }
+    return parser;
+}\n`;
             return newFile(filename, contents)
                 .pipe(gulp.dest(path.dirname(file.path)))
         }));
@@ -67,7 +76,7 @@ function scripts(src, dest) {
 function banner(dest) {
     return () => gulp
         .src(dest)
-        .pipe(header(fs.readFileSync('./banner', 'utf-8'), {pkg, updated: new Date().toLocaleString()}))
+        .pipe(header(fs.readFileSync('./banner', 'utf-8'), {pkg, updated: new Date().toLocaleString('zh-CN')}))
         .pipe(gulp.dest((file) => file.base));
 }
 
