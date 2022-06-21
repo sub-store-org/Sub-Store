@@ -214,7 +214,7 @@ function createTestCases() {
                     port,
                     uuid,
                     cipher,
-                    alterId: 0
+                    alterId: 0,
                 },
                 Loon: {
                     type: 'vmess',
@@ -223,7 +223,7 @@ function createTestCases() {
                     port,
                     uuid,
                     cipher,
-                    alterId: 0
+                    alterId: 0,
                 },
                 Surge: {
                     type: 'vmess',
@@ -232,7 +232,7 @@ function createTestCases() {
                     port,
                     uuid,
                     cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
-                    alterId: 0
+                    alterId: 0,
                 },
             },
         },
