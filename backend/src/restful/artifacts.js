@@ -414,4 +414,4 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
     }
 }
 
-export { produceArtifact };
+export { syncArtifact, produceArtifact };
