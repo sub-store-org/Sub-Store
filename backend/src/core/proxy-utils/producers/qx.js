@@ -91,15 +91,15 @@ function shadowsocksr(proxy) {
     const append = result.append.bind(result);
     const appendIfPresent = result.appendIfPresent.bind(result);
 
-    append(`shadowsocksr=${proxy.server}:${proxy.port}`);
+    append(`shadowsocks=${proxy.server}:${proxy.port}`);
     append(`,method=${proxy.cipher}`);
     append(`,password=${proxy.password}`);
 
     // ssr protocol
     append(`,ssr-protocol=${proxy.protocol}`);
     appendIfPresent(
-        `,ssr-proctol-param=${proxy['proctol-param']}`,
-        'proctol-param',
+        `,ssr-protocol-param=${proxy['protocol-param']}`,
+        'protocol-param',
     );
 
     // obfs
