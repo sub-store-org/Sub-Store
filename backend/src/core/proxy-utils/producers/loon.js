@@ -174,7 +174,11 @@ function vmess(proxy) {
     result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
 
     // AEAD
-    result.appendIfPresent(`,alterId=${proxy.alterId}`, 'alterId');
+    if (isPresent(proxy, 'aead')) {
+        result.append(`,alterId=0`);
+    } else {
+        result.append(`,alterId=${proxy.alterId}`);
+    }
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');

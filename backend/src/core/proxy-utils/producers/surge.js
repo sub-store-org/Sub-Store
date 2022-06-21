@@ -124,7 +124,11 @@ function vmess(proxy) {
     }
 
     // AEAD
-    result.appendIfPresent(`,vmess-aead=${proxy.alterId === 0}`, 'alterId');
+    if (isPresent(proxy, 'aead')) {
+        result.append(`,vmess-aead=${proxy.aead}`);
+    } else {
+        result.append(`,vmess-aead=${proxy.alterId === 0}`);
+    }
 
     // tls fingerprint
     result.appendIfPresent(

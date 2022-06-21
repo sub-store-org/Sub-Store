@@ -180,12 +180,7 @@ function vmess(proxy) {
     const appendIfPresent = result.appendIfPresent.bind(result);
 
     append(`vmess=${proxy.server}:${proxy.port}`);
-    if (proxy.cipher === 'auto') {
-        append(`,method=none`);
-    } else {
-        append(`,method=${proxy.cipher}`);
-    }
-
+    append(`,method=${proxy.cipher === 'auto' ? 'none' : proxy.cipher}`);
     append(`,password=${proxy.uuid}`);
 
     // obfs
@@ -196,27 +191,19 @@ function vmess(proxy) {
         if (proxy.network === 'ws') {
             if (proxy.tls) append(`,obfs=wss`);
             else append(`,obfs=ws`);
-            appendIfPresent(
-                `,obfs-uri=${proxy['ws-opts'].path}`,
-                'ws-opts.path',
-            );
-            appendIfPresent(
-                `,obfs-host=${proxy['ws-opts'].headers.Host}`,
-                'ws-opts.headers.Host',
-            );
         } else if (proxy.network === 'http') {
             append(`,obfs=http`);
-            appendIfPresent(
-                `,obfs-uri=${proxy['http-opts'].path}`,
-                'http-opts.path',
-            );
-            appendIfPresent(
-                `,obfs-host=${proxy['http-opts'].headers.Host}`,
-                'http-opts.headers.Host',
-            );
         } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
+        appendIfPresent(`,obfs-uri=${proxy['ws-opts'].path}`, 'ws-opts.path');
+        appendIfPresent(
+            `,obfs-host=${proxy[`${proxy.network}-opts`].headers.Host}`,
+            `${proxy.network}-opts.headers.Host`,
+        );
+    } else {
+        // over-tls
+        if (proxy.tls) append(`,obfs=over-tls`);
     }
 
     // tls fingerprint
@@ -233,7 +220,11 @@ function vmess(proxy) {
     appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
 
     // AEAD
-    appendIfPresent(`,aead=${proxy.alterId === 0}`, 'alterId');
+    if (isPresent(proxy, 'aead')) {
+        append(`,aead=${proxy.aead}`);
+    } else {
+        append(`,aead=${proxy.alterId === 0}`);
+    }
 
     // tfo
     appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
