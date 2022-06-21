@@ -214,6 +214,7 @@ function createTestCases() {
                     port,
                     uuid,
                     cipher,
+                    alterId: 0
                 },
                 Loon: {
                     type: 'vmess',
@@ -222,13 +223,16 @@ function createTestCases() {
                     port,
                     uuid,
                     cipher,
+                    alterId: 0
                 },
                 Surge: {
                     type: 'vmess',
                     name,
                     server,
                     port,
-                    uuid, // Surge lacks support for specifying cipher for vmess protocol!
+                    uuid,
+                    cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
+                    alterId: 0
                 },
             },
         },
@@ -246,6 +250,7 @@ function createTestCases() {
                     port,
                     uuid,
                     cipher,
+                    aead: true,
                     alterId: 0,
                 },
                 Loon: {
@@ -262,8 +267,10 @@ function createTestCases() {
                     name,
                     server,
                     port,
-                    uuid, // Surge lacks support for specifying cipher for vmess protocol!
+                    uuid,
+                    cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
                     alterId: 0,
+                    aead: true,
                 },
             },
         },
@@ -288,6 +295,7 @@ function createTestCases() {
                             Host: obfs_host,
                         },
                     },
+                    alterId: 0,
                 },
                 Loon: {
                     type: 'vmess',
@@ -303,13 +311,15 @@ function createTestCases() {
                             Host: obfs_host,
                         },
                     },
+                    alterId: 0,
                 },
                 Surge: {
                     type: 'vmess',
                     name,
                     server,
                     port,
-                    uuid, // Surge lacks support for specifying cipher for vmess protocol!
+                    uuid,
+                    cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
@@ -317,6 +327,7 @@ function createTestCases() {
                             Host: obfs_host,
                         },
                     },
+                    alterId: 0,
                 },
             },
         },
@@ -344,6 +355,7 @@ function createTestCases() {
                     tls: true,
                     'skip-cert-verify': true,
                     sni,
+                    alterId: 0,
                 },
                 Loon: {
                     type: 'vmess',
@@ -362,13 +374,15 @@ function createTestCases() {
                     tls: true,
                     'skip-cert-verify': true,
                     sni,
+                    alterId: 0,
                 },
                 Surge: {
                     type: 'vmess',
                     name,
                     server,
                     port,
-                    uuid, // Surge lacks support for specifying cipher for vmess protocol!
+                    uuid,
+                    cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
@@ -379,6 +393,7 @@ function createTestCases() {
                     tls: true,
                     'skip-cert-verify': true,
                     sni,
+                    alterId: 0,
                 },
             },
         },
@@ -402,6 +417,7 @@ function createTestCases() {
                             Host: obfs_host,
                         },
                     },
+                    alterId: 0,
                 },
                 Loon: {
                     type: 'vmess',
@@ -417,6 +433,7 @@ function createTestCases() {
                             Host: obfs_host,
                         },
                     },
+                    alterId: 0,
                 },
             },
         },
@@ -442,6 +459,7 @@ function createTestCases() {
                     tls: true,
                     'skip-cert-verify': true,
                     sni,
+                    alterId: 0,
                 },
             },
         },

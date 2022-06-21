@@ -46,7 +46,11 @@ shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/
 vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/method/tls/sni/tls_fingerprint/tls_verification/fast_open/udp_relay/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "auto";
-    proxy.alterId = proxy.alterId || 0;
+    if (proxy.aead) {
+        proxy.alterId = 0;
+    } else {
+        proxy.alterId = proxy.alterId || 0;
+    }
     handleWebsocket();
 }
 trojan = tag equals "trojan" address (passwordk/ws/ws_path/ws_headers/tls/sni/tls_fingerprint/tls_verification/fast_open/udp_relay/others)* {
@@ -145,7 +149,7 @@ snell_version = comma "version" equals match:$[0-9]+ { proxy.version = parseInt(
 
 passwordk = comma "password" equals match:[^,]+ { proxy.password = match.join(""); }
 vmess_uuid = comma "username" equals match:[^,]+ { proxy.uuid = match.join(""); }
-vmess_aead = comma "vmess-aead" equals flag:bool { proxy.alterId = 0; }
+vmess_aead = comma "vmess-aead" equals flag:bool { proxy.aead = flag; }
 
 method = comma "encrypt-method" equals cipher:cipher {
     if (cipher !== 'none') proxy.cipher = cipher;

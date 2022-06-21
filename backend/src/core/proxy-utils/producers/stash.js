@@ -6,7 +6,7 @@ export default function Stash_Producer() {
             proxies
                 .map((proxy) => {
                     delete proxy['tls-fingerprint'];
-                    delete proxy['vmess-aead'];
+                    delete proxy['aead'];
                     return '  - ' + JSON.stringify(proxy) + '\n';
                 })
                 .join('')

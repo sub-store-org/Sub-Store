@@ -10,7 +10,9 @@ function SetPropertyOperator({ key, value }) {
         name: 'Set Property Operator',
         func: (proxies) => {
             return proxies.map((p) => {
-                p[key] = value;
+                if ((key == 'aead' && p.type === 'vmess') || key !== 'aead') {
+                    p[key] = value;
+                }
                 return p;
             });
         },
