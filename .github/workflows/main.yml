@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - master
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,6 +20,8 @@ jobs:
           node-version: "14"
       - name: Install dependencies
         run: cd backend && npm i
+      - name: Test
+        run: cd backend && npm test
       - name: Build
         run: cd backend && npm run build
       - name: Commit changes
@@ -25,5 +30,5 @@ jobs:
           git config user.email github-actions
           git config user.name github-actions@github.com
           git add .
-          git commit -m "Release" -a
+          git commit -m "Build sub-store.min.js" -a
           git push
