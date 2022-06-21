@@ -224,14 +224,14 @@ export default {
       console.log(`${action} --> ${sub.name}`);
       switch (action) {
         case 'COPY':
-          this.$clipboard(`${this.subscriptionBaseURL}/download/${encodeURIComponent(sub.name)}${isPlainName(sub.name) ? '' : '#' + sub.name}`);
+          this.$clipboard(`${this.subscriptionBaseURL}/download/${encodeURIComponent(sub.name)}`);
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
           this.$router.push(`/sub-edit/${encodeURIComponent(sub.name)}`);
           break
         case 'DELETE':
-          this.$store.dispatch("DELETE_SUBSCRIPTION", sub.name);
+          this.$store.dispatch("DELETE_SUBSCRIPTION", encodeURIComponent(sub.name));
           break
       }
     },
@@ -239,7 +239,7 @@ export default {
       console.log(`${action} --> ${collection.name}`);
       switch (action) {
         case 'COPY':
-          this.$clipboard(`${this.subscriptionBaseURL}/download/collection/${encodeURIComponent(collection.name)}${isPlainName(collection.name) ? '' : '#' + collection.name}`);
+          this.$clipboard(`${this.subscriptionBaseURL}/download/collection/${encodeURIComponent(collection.name)}`);
           this.$store.commit("SET_SUCCESS_MESSAGE", "成功复制订阅链接");
           break
         case 'EDIT':
@@ -277,10 +277,6 @@ export default {
       return url.indexOf('#invert') !== -1 && !this.$vuetify.theme.dark ? 'invert' : ''
     }
   }
-}
-
-function isPlainName(name) {
-  return /^[0-9a-zA-Z-_]*$/.test(name);
 }
 </script>
 

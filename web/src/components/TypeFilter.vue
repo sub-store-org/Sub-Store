@@ -56,16 +56,28 @@ const types = [
     value: "ssr"
   },
   {
-    name: "V2Ray",
+    name: "VMess",
     value: "vmess"
+  },
+  {
+    name: "VLess",
+    value: "vless"
   },
   {
     name: "Trojan",
     value: "trojan"
   },
   {
-    name: "HTTP",
+    name: "HTTP(s)",
     value: "http"
+  },
+  {
+    name: "Socks5",
+    value: "socks5"
+  },
+  {
+    name: "Snell",
+    value: "snell"
   }
 ];
 export default {
