@@ -3,8 +3,10 @@
     <v-card class="mb-4">
       <v-subheader>订阅配置</v-subheader>
       <v-form v-model="formState.basicValid" class="pl-4 pr-4 pb-0">
-        <v-text-field v-model="options.name" class="mt-2" clear-icon="clear" clearable
-          label="订阅名称" placeholder="填入订阅名称，名称需唯一" required />
+        <v-text-field v-model="options.name" class="mt-2" clear-icon="clear" clearable label="订阅名称"
+          placeholder="填入订阅名称，名称需唯一" required />
+        <v-text-field v-model="options['display-name']" class="mt-2" clear-icon="clear" clearable label="订阅显示名称"
+          placeholder="填入订阅显示名称，名称无需唯一" />
         <!--For Subscription-->
         <v-radio-group v-if="!isCollection" v-model="options.source" class="mt-0 mb-0">
           <template v-slot:label>
@@ -20,8 +22,9 @@
             <v-col></v-col>
           </v-row>
         </v-radio-group>
-        <v-textarea v-if="!isCollection && options.source !== 'local'" v-model="options.url" :rules="validations.urlRules" auto-grow
-          class="mt-0" clear-icon="clear" clearable label="订阅链接" placeholder="填入机场原始订阅链接" required rows="2" />
+        <v-textarea v-if="!isCollection && options.source !== 'local'" v-model="options.url"
+          :rules="validations.urlRules" auto-grow class="mt-0" clear-icon="clear" clearable label="订阅链接"
+          placeholder="填入机场原始订阅链接" required rows="2" />
         <v-textarea v-if="options.source === 'local'" v-model="options.content" clear-icon="clear" clearable
           label="订阅内容" placeholder="填入原始订阅内容" autogrow rows="5" row-height="15" class="mt-0">
         </v-textarea>
@@ -319,6 +322,7 @@ export default {
       },
       options: {
         name: "",
+        "display-name": "",
         source: "",
         url: "",
         content: "",
@@ -376,6 +380,7 @@ export default {
     config() {
       const output = {
         name: this.options.name,
+        'display-name': this.options['display-name'],
         icon: this.options.icon,
         process: []
       };
@@ -561,6 +566,7 @@ function loadProcess(options, source, isCollection = false) {
   options = {
     ...options,
     name: source.name,
+    'display-name': source['display-name'],
     icon: source.icon,
     ua: source.ua
   };
