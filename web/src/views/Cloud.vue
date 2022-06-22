@@ -24,22 +24,14 @@
             </v-subheader>
             <v-divider></v-divider>
             <v-form v-model="formValid" class="pt-4 pl-4 pr-4 pb-0">
-              <v-text-field
-                  v-model="currentArtifact.name"
-                  :disabled="editing"
-                  clear-icon="clear"
-                  clearable
-                  label="配置名称"
-                  placeholder="填入生成配置名称，名称需唯一，如Clash.yaml。"
-              />
+              <v-text-field v-model="currentArtifact.name" :disabled="editing" clear-icon="clear" clearable label="配置名称"
+                placeholder="填入生成配置名称，名称需唯一，如Clash.yaml。" />
+              <v-text-field v-model="currentArtifact['display-name']" clear-icon="clear" clearable label="配置显示名称"
+                placeholder="填入生成配置显示名称，名称无需唯一。" />
               <v-menu offset-y>
                 <template v-slot:activator="{on}">
-                  <v-text-field
-                      v-on="on"
-                      :rules="validations.required"
-                      :value="getType(currentArtifact.type)"
-                      label="类型"
-                  />
+                  <v-text-field v-on="on" :rules="validations.required" :value="getType(currentArtifact.type)"
+                    label="类型" />
                 </template>
                 <v-list dense>
                   <v-list-item @click="setArtifactType('subscription')">
@@ -58,44 +50,29 @@
               </v-menu>
               <v-menu offset-y>
                 <template v-slot:activator="{on}">
-                  <v-text-field
-                      v-model="currentArtifact.source"
-                      v-on="on"
-                      :placeholder="`填入${getType(currentArtifact.type) || '来源'}的名称。`"
-                      :rules="validations.required"
-                      label="来源"
-                  />
+                  <v-text-field v-model="currentArtifact.source" v-on="on"
+                    :placeholder="`填入${getType(currentArtifact.type) || '来源'}的名称。`" :rules="validations.required"
+                    label="来源" />
                 </template>
                 <v-list dense>
-                  <v-list-item
-                      v-for="(sub, idx) in getSources(currentArtifact.type)"
-                      :key="idx"
-                      @click="currentArtifact.source = sub.name"
-                  >
+                  <v-list-item v-for="(sub, idx) in getSources(currentArtifact.type)" :key="idx"
+                    @click="currentArtifact.source = sub.name">
                     <v-list-item-avatar>
                       <v-icon v-if="!sub.icon" color="teal darken-1">mdi-cloud</v-icon>
-                      <v-img v-else :class="getIconClass(sub.icon)" :src="sub.icon"/>
+                      <v-img v-else :class="getIconClass(sub.icon)" :src="sub.icon" />
                     </v-list-item-avatar>
-                    <v-list-item-title>{{ sub.name }}</v-list-item-title>
+                    <v-list-item-title>{{ sub['display-name'] || sub.name }}</v-list-item-title>
                   </v-list-item>
                 </v-list>
               </v-menu>
 
               <v-menu offset-y>
                 <template v-slot:activator="{on}">
-                  <v-text-field
-                      v-on="on"
-                      :rules="validations.required"
-                      :value="currentArtifact.platform"
-                      label="目标"
-                  />
+                  <v-text-field v-on="on" :rules="validations.required" :value="currentArtifact.platform" label="目标" />
                 </template>
                 <v-list dense>
-                  <v-list-item
-                      v-for="platform in ['Surge', 'Loon', 'QX', 'Clash']"
-                      :key="platform"
-                      @click="currentArtifact.platform = platform"
-                  >
+                  <v-list-item v-for="platform in ['Surge', 'Loon', 'QX', 'Clash']" :key="platform"
+                    @click="currentArtifact.platform = platform">
                     <v-list-item-avatar>
                       <v-img :class="getIconClass('#invert')" :src="getIcon(platform)"></v-img>
                     </v-list-item-avatar>
@@ -121,11 +98,11 @@
       <template v-for="(artifact, idx) in artifacts">
         <v-list-item :key="artifact.name" dense three-line>
           <v-list-item-avatar>
-            <v-img :class="getIconClass('#invert')" :src="getIcon(artifact.platform)"/>
+            <v-img :class="getIconClass('#invert')" :src="getIcon(artifact.platform)" />
           </v-list-item-avatar>
           <v-list-item-content>
             <v-list-item-title>
-              {{ artifact.name }}
+              {{ artifact['display-name'] || artifact.name }}
             </v-list-item-title>
             <v-chip-group>
               <v-chip label>
@@ -192,6 +169,7 @@ export default {
       showArtifactDialog: false,
       currentArtifact: {
         name: "",
+        'display-name': "",
         type: "subscription",
         source: "",
         platform: "",
@@ -286,6 +264,7 @@ export default {
     clear() {
       this.currentArtifact = {
         name: "",
+        'display-name': "",
         type: "subscription",
         source: "",
         platform: ""
