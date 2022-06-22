@@ -5,7 +5,7 @@ import getQXParser from './peggy/qx';
 import { Base64 } from 'js-base64';
 
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
-// reference: https://shadowsocks.org/en/spec/SIP002-URI-Scheme.html
+// reference: https://github.com/shadowsocks/shadowsocks-org/wiki/SIP002-URI-Scheme
 function URI_SS() {
     const name = 'URI SS Parser';
     const test = (line) => {
