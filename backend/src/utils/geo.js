@@ -15,7 +15,11 @@ export function getFlag(name) {
         '🇦🇲': ['AM', 'ARM', 'Armenia', '亚美尼亚'],
         '🇦🇷': ['AR', 'ARG', 'Argentina', '阿根廷'],
         '🇦🇹': ['AT', 'AUT', 'Austria', '奥地利', '奧地利', '维也纳'],
-        '🇦🇺': ['AU', 'AUS', 'Australia', '澳大利亚',
+        '🇦🇺': [
+            'AU',
+            'AUS',
+            'Australia',
+            '澳大利亚',
             '澳洲',
             '墨尔本',
             '悉尼',
@@ -25,7 +29,7 @@ export function getFlag(name) {
             '滬澳',
             '沪澳',
             '广澳',
-            'Sydney'
+            'Sydney',
         ],
         '🇦🇿': ['AZ', 'AZE', 'Azerbaijan', '阿塞拜疆'],
         '🇧🇦': ['BA', 'BIH', 'Bosnia and Herzegovina', '波黑共和国', '波黑'],
@@ -35,7 +39,11 @@ export function getFlag(name) {
         '🇧🇭': ['BH', 'BHR', 'Bahrain', '巴林'],
         '🇧🇷': ['BR', 'BRA', 'Brazil', '巴西', '圣保罗'],
         '🇧🇾': ['BY', 'BLR', 'Belarus', '白俄罗斯', '白俄'],
-        '🇨🇦': ['CA', 'CAN', 'Canada', '加拿大',
+        '🇨🇦': [
+            'CA',
+            'CAN',
+            'Canada',
+            '加拿大',
             '蒙特利尔',
             '温哥华',
             '楓葉',
@@ -46,7 +54,11 @@ export function getFlag(name) {
         ],
         '🇨🇭': ['CH', 'CHE', 'Switzerland', '瑞士', '苏黎世', 'Zurich'],
         '🇨🇱': ['CL', 'CHL', 'Chile', '智利'],
-        '🇨🇳': ['CN', 'CHN', 'China', '中国',
+        '🇨🇳': [
+            'CN',
+            'CHN',
+            'China',
+            '中国',
             '中國',
             '回国',
             '回國',
@@ -66,7 +78,11 @@ export function getFlag(name) {
         '🇨🇷': ['CR', 'CRI', 'Costa Rica', '哥斯达黎加'],
         '🇨🇾': ['CY', 'CYP', 'Cyprus', '塞浦路斯'],
         '🇨🇿': ['CZ', 'CZE', 'Czechia', '捷克'],
-        '🇩🇪': ['DE', 'DEU', 'German', '德国',
+        '🇩🇪': [
+            'DE',
+            'DEU',
+            'German',
+            '德国',
             '德國',
             '京德',
             '滬德',
@@ -84,7 +100,11 @@ export function getFlag(name) {
         '🇪🇺': ['EU', 'European Union', '欧盟', '欧罗巴'],
         '🇫🇮': ['FI', 'FIN', 'Finland', '芬兰', '芬蘭', '赫尔辛基'],
         '🇫🇷': ['FR', 'FRA', 'France', '法国', '法國', '巴黎'],
-        '🇬🇧': ['GB', 'GBR', 'Great Britain', '英国',
+        '🇬🇧': [
+            'GB',
+            'GBR',
+            'Great Britain',
+            '英国',
             'UK',
             'England',
             'United Kingdom',
@@ -94,7 +114,11 @@ export function getFlag(name) {
         ],
         '🇬🇪': ['GE', 'GEO', 'Georgia', '格鲁吉亚', '格魯吉亞'],
         '🇬🇷': ['GR', 'GRC', 'Greece', '希腊', '希臘'],
-        '🇭🇰': ['HK', 'HKG', 'Hongkong', '香港',
+        '🇭🇰': [
+            'HK',
+            'HKG',
+            'Hongkong',
+            '香港',
             'Hong Kong',
             'HongKong',
             'HONG KONG',
@@ -113,7 +137,11 @@ export function getFlag(name) {
         '🇭🇷': ['HR', 'HRV', 'Croatia', '克罗地亚', '克羅地亞'],
         '🇭🇺': ['HU', 'HUN', 'Hungary', '匈牙利'],
         '🇯🇴': ['JO', 'JOR', 'Jordan', '约旦'],
-        '🇯🇵': ['JP', 'JPN', 'Japan', '日本',
+        '🇯🇵': [
+            'JP',
+            'JPN',
+            'Japan',
+            '日本',
             '东京',
             '大阪',
             '埼玉',
@@ -134,7 +162,11 @@ export function getFlag(name) {
         '🇰🇬': ['KG', 'KGZ', 'Kyrgyzstan', '吉尔吉斯斯坦'],
         '🇰🇭': ['KH', 'KGZ', 'Cambodia', '柬埔寨'],
         '🇰🇵': ['KP', 'PRK', 'North Korea', '朝鲜'],
-        '🇰🇷': ['KR', 'KOR', 'Korea', '韩国',
+        '🇰🇷': [
+            'KR',
+            'KOR',
+            'Korea',
+            '韩国',
             '韩',
             '韓',
             '首尔',
@@ -162,8 +194,24 @@ export function getFlag(name) {
         '🇲🇴': ['MO', 'MAC', 'Macao', '澳门', '澳門', 'CTM'],
         '🇲🇹': ['MT', 'Malta', '马耳他'],
         '🇲🇽': ['MX', 'MEX', 'Mexico', '墨西哥'],
-        '🇲🇾': ['MY', 'MYS', 'Malaysia', '马来西亚', '馬來西亞', '吉隆坡', '大馬'],
-        '🇳🇱': ['NL', 'NLD', 'Netherlands', '荷兰', '荷蘭', '尼德蘭', '阿姆斯特丹'],
+        '🇲🇾': [
+            'MY',
+            'MYS',
+            'Malaysia',
+            '马来西亚',
+            '馬來西亞',
+            '吉隆坡',
+            '大馬',
+        ],
+        '🇳🇱': [
+            'NL',
+            'NLD',
+            'Netherlands',
+            '荷兰',
+            '荷蘭',
+            '尼德蘭',
+            '阿姆斯特丹',
+        ],
         '🇳🇴': ['NO', 'NOR', 'Norway', '挪威'],
         '🇳🇵': ['NP', 'Nepal', '尼泊尔'],
         '🇳🇿': ['NZ', 'NZL', 'New Zealand', '新西兰', '新西蘭'],
@@ -178,7 +226,11 @@ export function getFlag(name) {
         '🇷🇴': ['RO', 'Romania', '罗马尼亚'],
         '🇷🇸': ['RS', 'Serbia', '塞尔维亚'],
         '🇷🇪': ['RE', 'Réunion', '留尼汪', '法属留尼汪'],
-        '🇷🇺': ['RU', 'RUS', 'Russia', '俄罗斯',
+        '🇷🇺': [
+            'RU',
+            'RUS',
+            'Russia',
+            '俄罗斯',
             '俄国',
             '俄羅斯',
             '伯力',
@@ -195,7 +247,11 @@ export function getFlag(name) {
         ],
         '🇸🇦': ['SA', 'SAU', 'Saudi', '沙特阿拉伯', '沙特'],
         '🇸🇪': ['SE', 'SWE', 'Sweden', '瑞典'],
-        '🇸🇬': ['SG', 'SGP', 'Singapore', '新加坡',
+        '🇸🇬': [
+            'SG',
+            'SGP',
+            'Singapore',
+            '新加坡',
             '狮城',
             '沪新',
             '京新',
@@ -213,7 +269,11 @@ export function getFlag(name) {
         '🇹🇭': ['TH', 'THA', 'Thailand', '泰国', '泰國', '曼谷'],
         '🇹🇳': ['TN', 'Tunisia', '突尼斯'],
         '🇹🇷': ['TR', 'TUR', 'Turkey', '土耳其', '伊斯坦布尔'],
-        '🇹🇼': ['TW', 'TWN', 'Taiwan', '台湾',
+        '🇹🇼': [
+            'TW',
+            'TWN',
+            'Taiwan',
+            '台湾',
             '台北',
             '台中',
             '新北',
@@ -224,7 +284,11 @@ export function getFlag(name) {
             'Taipei',
         ],
         '🇺🇦': ['UA', 'UKR', 'Ukraine', '乌克兰', '烏克蘭'],
-        '🇺🇸': ['US', 'USA', 'United States', '美国',
+        '🇺🇸': [
+            'US',
+            'USA',
+            'United States',
+            '美国',
             'America',
             '美',
             '京美',
@@ -249,36 +313,48 @@ export function getFlag(name) {
             'Sillicon Valley',
             'Michigan',
             'LAX',
-            'SFO'
+            'SFO',
         ],
         '🇺🇾': ['UY', 'Uruguay', '乌拉圭'],
         '🇻🇪': ['VE', 'Venezuela', '委内瑞拉'],
         '🇻🇳': ['VN', 'VNM', 'Vietnam', '越南', '胡志明'],
-        '🇿🇦': ['ZA', 'ZAF', 'South Africa', '南非']
+        '🇿🇦': ['ZA', 'ZAF', 'South Africa', '南非'],
     };
     // 原旗帜或空
-    let Flag = name.match(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/)?.[0] || '🏴‍☠️'
+    let Flag =
+        name.match(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/)?.[0] ||
+        '🏴‍☠️';
     // 旗帜匹配
     for (let flag of Object.keys(Flags)) {
-        const keywords = Flags[flag]
+        const keywords = Flags[flag];
         //console.log(`keywords = ${keywords}`)
         // 精确匹配(两侧均有分割)
-        if (keywords.some(keyword => RegExp(`[^a-zA-Z]${keyword}[^a-zA-Z]`, "i").test(name))) {
+        if (
+            keywords.some((keyword) =>
+                RegExp(`[^a-zA-Z]${keyword}[^a-zA-Z]`, 'i').test(name),
+            )
+        ) {
             //console.log(`new Flag1 = ${flag}`)
             Flag = flag;
             break; // 这里及时跳出，避免被之后的匹配覆盖结果
             // 半精确匹配(至少一侧有分隔符)
-        } else if (keywords.some(keyword =>
-            RegExp(`[^a-zA-Z]${keyword}`, "i").test(name) || RegExp(`${keyword}[^a-zA-Z]`, "i").test(name)
-        )) {
+        } else if (
+            keywords.some(
+                (keyword) =>
+                    RegExp(`[^a-zA-Z]${keyword}`, 'i').test(name) ||
+                    RegExp(`${keyword}[^a-zA-Z]`, 'i').test(name),
+            )
+        ) {
             //console.log(`new Flag2 = ${flag}`)
             Flag = flag;
             // 不精确匹配（只要包含就算)
-        } else if (keywords.some(keyword => RegExp(`${keyword}`, "i").test(name))) {
+        } else if (
+            keywords.some((keyword) => RegExp(`${keyword}`, 'i').test(name))
+        ) {
             //console.log(`new Flag3 = ${flag}`)
             Flag = flag;
         }
     }
     //console.log(`Final Flag = ${Flag}`)
-    return Flag
+    return Flag;
 }
