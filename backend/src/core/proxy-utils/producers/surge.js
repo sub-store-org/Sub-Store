@@ -1,4 +1,5 @@
 import { Result, isPresent } from './utils';
+import { isNotBlank } from '@/utils';
 import $ from '@/core/app';
 
 const targetPlatform = 'Surge';
@@ -62,21 +63,8 @@ function trojan(proxy) {
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,password=${proxy.password}`, 'password');
 
-    if (isPresent(proxy, 'network')) {
-        if (proxy.network === 'ws') {
-            result.append(`,ws=true`);
-            result.appendIfPresent(
-                `,ws-path=${proxy['ws-opts'].path}`,
-                'ws-opts.path',
-            );
-            result.appendIfPresent(
-                `,ws-headers=Host:${proxy['ws-opts'].headers.Host}`,
-                'ws-opts.headers.Host',
-            );
-        } else {
-            throw new Error(`network ${proxy.network} is not supported`);
-        }
-    }
+    // transport
+    handleTransport(result, proxy);
 
     // tls
     result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
@@ -107,21 +95,8 @@ function vmess(proxy) {
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,username=${proxy.uuid}`, 'uuid');
 
-    if (isPresent(proxy, 'network')) {
-        if (proxy.network === 'ws') {
-            result.append(`,ws=true`);
-            result.appendIfPresent(
-                `,ws-path=${proxy['ws-opts'].path}`,
-                'ws-opts.path',
-            );
-            result.appendIfPresent(
-                `,ws-headers=Host:${proxy['ws-opts'].headers.Host}`,
-                'ws-opts.headers.Host',
-            );
-        } else {
-            throw new Error(`network ${proxy.network} is unsupported`);
-        }
-    }
+    // transport
+    handleTransport(result, proxy);
 
     // AEAD
     if (isPresent(proxy, 'aead')) {
@@ -236,4 +211,29 @@ function snell(proxy) {
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
     return result.toString();
+}
+
+function handleTransport(result, proxy) {
+    if (isPresent(proxy, 'network')) {
+        if (proxy.network === 'ws') {
+            result.append(`,ws=true`);
+            if (isPresent(proxy, 'ws-opts')) {
+                result.appendIfPresent(
+                    `,ws-path=${proxy['ws-opts'].path}`,
+                    'ws-opts.path',
+                );
+                if (isPresent(proxy, 'ws-opts.headers')) {
+                    const headers = proxy['ws-opts'].headers;
+                    const value = Object.keys(headers)
+                        .map((k) => `${k}:${headers[k]}`)
+                        .join('|');
+                    if (isNotBlank(value)) {
+                        result.append(`,ws-headers=${value}`);
+                    }
+                }
+            }
+        } else {
+            throw new Error(`network ${proxy.network} is unsupported`);
+        }
+    }
 }
