@@ -89,4 +89,19 @@ function SSD() {
     return { name, test, parse };
 }
 
-export default [HTML(), Base64Encoded(), Clash(), SSD()];
+function FullConfig() {
+    const name = 'Full Config Preprocessor';
+    const test = function (raw) {
+        return /^(\[server_local\]|\[Proxy\])/gm.test(raw);
+    };
+    const parse = function (raw) {
+        const regex = /^(\[server_local\]|\[Proxy\])\n?((.|\n)*?)\[/gm;
+        const result = regex.exec(raw);
+        if (result) {
+            return result[2] || '';
+        }
+    };
+    return { name, test, parse };
+}
+
+export default [HTML(), Base64Encoded(), Clash(), SSD(), FullConfig()];
