@@ -10,6 +10,8 @@ const store = new Vuex.Store({
         clipboard: "",
         isLoading: false,
 
+        bottomNavBarHeight: 0,
+
         successMessage: "",
         errorMessage: "",
         snackbarTimer: "",
@@ -28,6 +30,10 @@ const store = new Vuex.Store({
         // UI
         SET_NAV_TITLE(state, title) {
             state.title = title;
+        },
+
+        SET_BOTTOM_NAVBAR_HEIGHT (state, height){
+            state.bottomNavBarHeight = height;
         },
 
         SET_LOADING(state, loading) {

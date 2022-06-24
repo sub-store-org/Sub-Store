@@ -1,23 +1,19 @@
 <template>
+  <div class="float-menu-switch-wrapper" ref = "floatMenuSwitch">
   <v-speed-dial
-    class="float-menu-switch"
-    v-model="fab"
-    :top="top"
-    :bottom="bottom"
-    :right="right"
-    :left="left"
-    :direction="direction"
-    :open-on-hover="hover"
-    :transition="transition"
+                v-model="fab"
+                :direction="direction"
+                :transition="transition"
   >
     <template v-slot:activator>
-      <v-btn v-model="fab" color="primary" dark fab>
+      <v-btn v-model="fab" color="primary" fab>
         <v-icon v-if="fab"> mdi-close</v-icon>
         <v-icon v-else> mdi-gesture-double-tap</v-icon>
       </v-btn>
     </template>
     <slot></slot>
   </v-speed-dial>
+  </div>
 </template>
 <script>
 export default {
@@ -29,38 +25,38 @@ export default {
       fling: false,
       hover: false,
       tabs: null,
-      top: false,
-      right: true,
-      bottom: true,
-      left: false,
       transition: "scale-transition",
     };
   },
-  watch: {
-    top(val) {
-      this.bottom = !val;
-    },
-    right(val) {
-      this.left = !val;
-    },
-    bottom(val) {
-      this.top = !val;
-    },
-    left(val) {
-      this.right = !val;
+
+  updated (){
+    const floatMenuSwitch = this.$refs.floatMenuSwitch;
+    console.log(floatMenuSwitch);
+    floatMenuSwitch.style.bottom = 2*this.bottomNavBarHeight + "px";
+  },
+
+  computed : {
+    bottomNavBarHeight (){
+      return this.$store.state.bottomNavBarHeight;
     },
   },
 };
 </script>
 <style lang="scss" scoped>
-.float-menu-switch {
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  > .v-btn {
-    width: 40px;
-    height: 40px;
-  }
+  .float-menu-switch-wrapper {
+    position : fixed;
+    right: 16px;;
+    z-index  : 99;
+
+    .v-speed-dial > button.v-btn.v-btn--round {
+        margin-right : 0;
+        width        : 40px;
+        height       : 40px;
+      }
+
+      ::v-deep .v-speed-dial__list button.theme--light.v-btn {
+        margin-right : 0;
+      }
 }
 
 /* This is for documentation purposes and will not be needed in your application */

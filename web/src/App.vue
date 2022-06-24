@@ -4,7 +4,7 @@
     <v-main>
       <router-view></router-view>
     </v-main>
-    <BottomNav></BottomNav>
+    <BottomNav ref="bottomNavBar"></BottomNav>
     <v-snackbar :value="successMessage" app bottom color="success" elevation="20">
       {{ successMessage }}
     </v-snackbar>
@@ -64,6 +64,12 @@ export default {
         vuetify.theme.dark = e.matches ? true : false;
       });
     }
+  },
+
+  mounted (){
+    const bottomNavBar = this.$refs.bottomNavBar.$el;
+    const height = bottomNavBar.offsetHeight || bottomNavBar.clientHeight;
+    this.$store.commit("SET_BOTTOM_NAVBAR_HEIGHT", height);
   },
 
   computed: {
