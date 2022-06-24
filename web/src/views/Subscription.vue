@@ -64,8 +64,8 @@
               <v-list-item-title class="font-weight-medium" v-text="collection['display-name'] || collection.name">
               </v-list-item-title>
               <v-chip-group column>
-                <v-chip v-for="subs in collection.subscriptions" :key="subs" class="ma-2 ml-0 mr-1 pa-2" label small>
-                  {{ subs }}
+                <v-chip v-for="subs in collection.subsInfo" :key="subs.name" class="ma-2 ml-0 mr-1 pa-2" label small>
+                  {{ subs['display-name'] || subs.name}}
                 </v-chip>
               </v-chip-group>
             </v-list-item-content>
@@ -175,8 +175,14 @@ export default {
     },
     collections() {
       const cols = this.$store.state.collections;
-      return Object.keys(cols).map(k => cols[k]);
-    }
+      const collections = Object.keys(cols).map(k => cols[k]);
+      const subscriptions = this.$store.state.subscriptions;
+      collections.map(item => {
+        item.subsInfo = []
+        item.subscriptions.map(sub => item.subsInfo.push(subscriptions[sub]))
+      })
+      return collections
+    },
   },
 
   methods: {
