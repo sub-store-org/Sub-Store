@@ -1,13 +1,12 @@
 <template>
   <div class="float-menu-switch-wrapper" ref = "floatMenuSwitch">
   <v-speed-dial
-                class="float-menu-switch"
                 v-model="fab"
                 :direction="direction"
                 :transition="transition"
   >
     <template v-slot:activator>
-      <v-btn v-model="fab" color="primary" dark fab>
+      <v-btn v-model="fab" color="primary" fab>
         <v-icon v-if="fab"> mdi-close</v-icon>
         <v-icon v-else> mdi-gesture-double-tap</v-icon>
       </v-btn>
@@ -49,14 +48,15 @@ export default {
     right: 16px;;
     z-index  : 99;
 
-    > .float-menu-switch{
-
-      .v-btn {
-        width  : 40px;
-        height : 40px;
+    .v-speed-dial > button.v-btn.v-btn--round {
+        margin-right : 0;
+        width        : 40px;
+        height       : 40px;
       }
-    }
 
+      ::v-deep .v-speed-dial__list button.theme--light.v-btn {
+        margin-right : 0;
+      }
 }
 
 /* This is for documentation purposes and will not be needed in your application */
