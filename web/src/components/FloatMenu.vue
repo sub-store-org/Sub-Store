@@ -31,7 +31,6 @@ export default {
 
   updated (){
     const floatMenuSwitch = this.$refs.floatMenuSwitch;
-    console.log(floatMenuSwitch);
     floatMenuSwitch.style.bottom = 2*this.bottomNavBarHeight + "px";
   },
 
