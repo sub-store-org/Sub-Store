@@ -24,7 +24,7 @@ const grammars = String.raw`
         if (obfs.type === "ws") {
             proxy.network = "ws";
             $set(proxy, "ws-opts.path", obfs.path);
-            $set(proxy, "ws-opts.headers.Host", obfs.host);
+            $set(proxy, "ws-opts.headers", obfs['ws-headers']);
         }
     }
 }
@@ -158,8 +158,14 @@ method = comma "encrypt-method" equals cipher:cipher {
 cipher = ("aes-128-gcm"/"aes-192-gcm"/"aes-256-gcm"/"aes-128-cfb"/"aes-192-cfb"/"aes-256-cfb"/"aes-128-ctr"/"aes-192-ctr"/"aes-256-ctr"/"rc4-md5"/"chacha20-ietf-poly1305"/"chacha20-ietf"/"chacha20-poly1305"/"chacha20"/"none");
 
 ws = comma "ws" equals flag:bool { obfs.type = "ws"; }
-ws_headers = comma "ws-headers" equals "Host:" host:domain {
-    obfs.host = host;
+ws_headers = comma "ws-headers" equals headers:$[^,]+ {
+    const pairs = headers.split("|");
+    const result = {};
+    pairs.forEach(pair => {
+        const [key, value] = pair.trim().split(":");
+        result[key.trim()] = value.trim();
+    })
+    obfs["ws-headers"] = result;
 }
 ws_path = comma "ws-path" equals path:uri { obfs.path = path; }
 
