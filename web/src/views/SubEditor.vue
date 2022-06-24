@@ -1,10 +1,10 @@
 <template>
   <v-container>
-    <FloatMenu>
-      <v-btn fab dark small color="#ffffff" @click.stop="dialog = true">
+    <FloatMenu class="floatActionBtn">
+      <v-btn fab small @click.stop="dialog = true">
         <v-icon color="purple lighten-1">mdi-plus-circle</v-icon>
       </v-btn>
-      <v-btn fab dark small color="#ffffff" @click="save">
+      <v-btn fab small @click="save">
         <v-icon color="teal lighten-1">mdi-content-save</v-icon>
       </v-btn>
     </FloatMenu>
@@ -161,15 +161,15 @@
       </v-form>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn text small color="#707277" @click = "save" >
+        <v-btn text small @click = "save" class="fixedActionBtn">
           <v-icon>mdi-content-save</v-icon>
           保存
         </v-btn>
-        <v-btn text small color = "#707277" @click.stop = "showShareDialog = true">
+        <v-btn text small @click.stop = "showShareDialog = true" class = "fixedActionBtn">
           <v-icon>mdi-file-import</v-icon>
           导入
         </v-btn>
-        <v-btn text small color = "#707277" @click = "share">
+        <v-btn text small @click = "share" class = "fixedActionBtn">
           <v-icon>mdi-share-circle</v-icon>
           分享
         </v-btn>
@@ -374,6 +374,7 @@ const AVAILABLE_PROCESSORS = {
 
 export default {
   props: {
+
     isCollection: {
       type: Boolean,
       default() {
@@ -735,8 +736,17 @@ function uuidv4() {
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .invert {
   filter: invert(100%);
+}
+.fixedActionBtn{
+  &.theme--dark{
+    color: #ffffffcc;
+  }
+
+  &.theme--light {
+    color : #00000099;
+  }
 }
 </style>
