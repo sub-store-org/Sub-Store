@@ -7,15 +7,6 @@
       <v-btn fab dark small color="#ffffff" @click="save">
         <v-icon color="teal lighten-1">mdi-content-save</v-icon>
       </v-btn>
-      <v-btn
-        fab
-        dark
-        small
-        color="#ffffff"
-        @click.stop="showShareDialog = true"
-      >
-        <v-icon color="blue lighten-1">mdi-file-import</v-icon>
-      </v-btn>
     </FloatMenu>
 
     <v-dialog v-model="dialog" scrollable>
@@ -42,29 +33,21 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showShareDialog" max-width="400px">
-      <v-card class="pl-4 pr-4 pb-4 pt-4">
+    <v-dialog v-model = "showShareDialog" max-width = "400px">
+      <v-card class = "pl-4 pr-4 pb-4 pt-4">
         <v-card-title>
-          <v-icon left>cloud_circle</v-icon>
+          <v-icon left>mdi-file-import</v-icon>
           配置导入
           <v-spacer />
-          <v-btn icon @click="share">
-            <v-icon small>share</v-icon>
-          </v-btn>
         </v-card-title>
-        <v-textarea
-          v-model="imported"
-          :rules="validations.importRules"
-          clear-icon="clear"
-          clearable
-          label="粘贴配置以导入"
-          rows="5"
-          solo
+        <v-textarea v-model = "imported" :rules = "validations.importRules"
+                    clear-icon = "clear" clearable label = "粘贴配置以导入" rows = "5"
+                    solo
         />
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="primary" text @click="importConf">确认</v-btn>
-          <v-btn text @click="showShareDialog = false">取消</v-btn>
+          <v-btn color = "primary" text @click = "importConf">确认</v-btn>
+          <v-btn text @click = "showShareDialog = false">取消</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -176,6 +159,22 @@
           rows="2"
         />
       </v-form>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn text small color="#707277" @click = "save" >
+          <v-icon>mdi-content-save</v-icon>
+          保存
+        </v-btn>
+        <v-btn text small color = "#707277" @click.stop = "showShareDialog = true">
+          <v-icon>mdi-file-import</v-icon>
+          导入
+        </v-btn>
+        <v-btn text small color = "#707277" @click = "share">
+          <v-icon>mdi-share-circle</v-icon>
+          分享
+        </v-btn>
+
+      </v-card-actions>
     </v-card>
     <v-card class="mb-4">
       <v-subheader>常用选项</v-subheader>
@@ -283,8 +282,14 @@
       </v-form>
     </v-card>
     <v-card id="processors" class="mb-4">
-      <v-subheader> 节点操作 </v-subheader>
-      <v-divider></v-divider>
+      <v-subheader> 节点操作
+        <v-spacer></v-spacer>
+      <v-btn icon color = "primary" @click.stop = "dialog = true"
+      >
+        <v-icon>mdi-plus-circle</v-icon>
+      </v-btn>
+      </v-subheader>
+      <!--<v-divider></v-divider>-->
       <component
         :is="p.component"
         v-for="p in processors"
@@ -612,7 +617,7 @@ export default {
         "SET_SUCCESS_MESSAGE",
         "导出成功，订阅已复制到剪贴板！"
       );
-      this.showShareDialog = false;
+      // this.showShareDialog = false;
     },
 
     importConf() {
