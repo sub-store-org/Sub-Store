@@ -39,7 +39,12 @@
               <v-img v-else :class="getIconClass(sub.icon)" :src="sub.icon" />
             </v-list-item-avatar>
             <v-list-item-content>
-              {{ sub.name }}
+              <template v-if="sub['display-name']">
+                {{ sub['display-name'] }} ({{ sub.name }})
+              </template>
+              <template v-else>
+                {{ sub.name }}
+              </template>
             </v-list-item-content>
             <v-spacer></v-spacer>
             <v-checkbox v-model="selected" :value="sub.name" class="pr-1" />
