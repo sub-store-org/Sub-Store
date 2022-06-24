@@ -277,7 +277,7 @@
 
     methods : {
       previewSpecificPlatform (path){
-        window.location = `${this.subscriptionBaseURL}/download/${this.isCollectionPreview ? 'collection/' : ''}${this.previewSubName}?target=${path}`
+        window.open(`${this.subscriptionBaseURL}/download/${this.isCollectionPreview ? 'collection/' : ''}${this.previewSubName}?target=${path}`)
         this.showPreviewDialog = false
       },
       subscriptionMenu (action, sub){
