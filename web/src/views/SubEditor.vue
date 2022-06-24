@@ -1,14 +1,100 @@
 <template>
   <v-container>
+    <FloatMenu>
+      <v-btn fab dark small color="#ffffff" @click.stop="dialog = true">
+        <v-icon color="purple lighten-1">mdi-plus-circle</v-icon>
+      </v-btn>
+      <v-btn fab dark small color="#ffffff" @click="save">
+        <v-icon color="teal lighten-1">mdi-content-save</v-icon>
+      </v-btn>
+      <v-btn
+        fab
+        dark
+        small
+        color="#ffffff"
+        @click.stop="showShareDialog = true"
+      >
+        <v-icon color="blue lighten-1">mdi-file-import</v-icon>
+      </v-btn>
+    </FloatMenu>
+
+    <v-dialog v-model="dialog" scrollable>
+      <v-card>
+        <v-card-title>选择节点操作</v-card-title>
+        <v-divider></v-divider>
+        <v-card-text>
+          <v-radio-group v-model="selectedProcess" dense>
+            <v-radio
+              v-for="(k, idx) in Object.keys(availableProcessors)"
+              :key="idx"
+              :label="availableProcessors[k].name"
+              :value="k"
+            ></v-radio>
+          </v-radio-group>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" text @click="addProcess(selectedProcess)"
+            >确认
+          </v-btn>
+          <v-btn text @click="dialog = false">取消</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="showShareDialog" max-width="400px">
+      <v-card class="pl-4 pr-4 pb-4 pt-4">
+        <v-card-title>
+          <v-icon left>cloud_circle</v-icon>
+          配置导入
+          <v-spacer />
+          <v-btn icon @click="share">
+            <v-icon small>share</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-textarea
+          v-model="imported"
+          :rules="validations.importRules"
+          clear-icon="clear"
+          clearable
+          label="粘贴配置以导入"
+          rows="5"
+          solo
+        />
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" text @click="importConf">确认</v-btn>
+          <v-btn text @click="showShareDialog = false">取消</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-card class="mb-4">
       <v-subheader>订阅配置</v-subheader>
       <v-form v-model="formState.basicValid" class="pl-4 pr-4 pb-0">
-        <v-text-field v-model="options.name" class="mt-2" clear-icon="clear" clearable label="订阅名称"
-          placeholder="填入订阅名称，名称需唯一" required />
-        <v-text-field v-model="options['display-name']" class="mt-2" clear-icon="clear" clearable label="订阅显示名称"
-          placeholder="填入订阅显示名称，名称无需唯一" />
+        <v-text-field
+          v-model="options.name"
+          class="mt-2"
+          clear-icon="clear"
+          clearable
+          label="订阅名称"
+          placeholder="填入订阅名称，名称需唯一"
+          required
+        />
+        <v-text-field
+          v-model="options['display-name']"
+          class="mt-2"
+          clear-icon="clear"
+          clearable
+          label="订阅显示名称"
+          placeholder="填入订阅显示名称，名称无需唯一"
+        />
         <!--For Subscription-->
-        <v-radio-group v-if="!isCollection" v-model="options.source" class="mt-0 mb-0">
+        <v-radio-group
+          v-if="!isCollection"
+          v-model="options.source"
+          class="mt-0 mb-0"
+        >
           <template v-slot:label>
             <div>订阅来源</div>
           </template>
@@ -22,14 +108,43 @@
             <v-col></v-col>
           </v-row>
         </v-radio-group>
-        <v-textarea v-if="!isCollection && options.source !== 'local'" v-model="options.url"
-          :rules="validations.urlRules" auto-grow class="mt-0" clear-icon="clear" clearable label="订阅链接"
-          placeholder="填入机场原始订阅链接" required rows="2" />
-        <v-textarea v-if="options.source === 'local'" v-model="options.content" clear-icon="clear" clearable
-          label="订阅内容" placeholder="填入原始订阅内容" autogrow rows="5" row-height="15" class="mt-0">
+        <v-textarea
+          v-if="!isCollection && options.source !== 'local'"
+          v-model="options.url"
+          :rules="validations.urlRules"
+          auto-grow
+          class="mt-0"
+          clear-icon="clear"
+          clearable
+          label="订阅链接"
+          placeholder="填入机场原始订阅链接"
+          required
+          rows="2"
+        />
+        <v-textarea
+          v-if="options.source === 'local'"
+          v-model="options.content"
+          clear-icon="clear"
+          clearable
+          label="订阅内容"
+          placeholder="填入原始订阅内容"
+          autogrow
+          rows="5"
+          row-height="15"
+          class="mt-0"
+        >
         </v-textarea>
-        <v-textarea v-if="!isCollection && options.source !== 'local'" v-model="options.ua" auto-grow class="mt-2"
-          clear-icon="clear" clearable label="User-Agent" placeholder="自定义下载订阅使用的User-Agent，可选。" rows="2" />
+        <v-textarea
+          v-if="!isCollection && options.source !== 'local'"
+          v-model="options.ua"
+          auto-grow
+          class="mt-2"
+          clear-icon="clear"
+          clearable
+          label="User-Agent"
+          placeholder="自定义下载订阅使用的User-Agent，可选。"
+          rows="2"
+        />
         <!--For Collection-->
         <v-list v-if="isCollection" dense>
           <v-subheader class="pl-0">包含的订阅</v-subheader>
@@ -50,40 +165,17 @@
             <v-checkbox v-model="selected" :value="sub.name" class="pr-1" />
           </v-list-item>
         </v-list>
-        <v-textarea v-model="options.icon" auto-grow class="mt-2" clear-icon="clear" clearable label="图标链接"
-          placeholder="填入想要展示的图标链接，可选。" rows="2" />
+        <v-textarea
+          v-model="options.icon"
+          auto-grow
+          class="mt-2"
+          clear-icon="clear"
+          clearable
+          label="图标链接"
+          placeholder="填入想要展示的图标链接，可选。"
+          rows="2"
+        />
       </v-form>
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn icon @click="save">
-          <v-icon>save_alt</v-icon>
-        </v-btn>
-        <v-dialog v-model="showShareDialog" max-width="400px">
-          <template #activator="{ on }">
-            <v-btn v-on="on" icon>
-              <v-icon>cloud_circle</v-icon>
-            </v-btn>
-          </template>
-          <v-card class="pl-4 pr-4 pb-4 pt-4">
-            <v-card-title>
-              <v-icon left>cloud_circle</v-icon>
-              配置导入
-              <v-spacer />
-              <v-btn icon @click="share">
-                <v-icon small>share</v-icon>
-              </v-btn>
-            </v-card-title>
-            <v-textarea v-model="imported" :rules="validations.importRules" clear-icon="clear" clearable label="粘贴配置以导入"
-              rows="5" solo />
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="primary" text @click="importConf">确认</v-btn>
-              <v-btn text @click="showShareDialog = false">取消</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-
-      </v-card-actions>
     </v-card>
     <v-card class="mb-4">
       <v-subheader>常用选项</v-subheader>
@@ -117,7 +209,11 @@
             </v-row>
           </v-radio-group>
 
-          <v-radio-group v-model="options['skip-cert-verify']" class="mt-0 mb-0" dense>
+          <v-radio-group
+            v-model="options['skip-cert-verify']"
+            class="mt-0 mb-0"
+            dense
+          >
             跳过证书验证
             <v-row>
               <v-col>
@@ -166,7 +262,11 @@
     <v-card class="mb-4">
       <v-subheader>Surge 选项</v-subheader>
       <v-form class="pl-4 pr-4">
-        <v-radio-group v-model="options['surge-hybrid']" class="mt-0 mb-0" dense>
+        <v-radio-group
+          v-model="options['surge-hybrid']"
+          class="mt-0 mb-0"
+          dense
+        >
           Hybrid 策略
           <v-row>
             <v-col>
@@ -183,36 +283,18 @@
       </v-form>
     </v-card>
     <v-card id="processors" class="mb-4">
-      <v-subheader>
-        节点操作
-        <v-spacer></v-spacer>
-        <v-dialog v-model="dialog" scrollable>
-          <template #activator="{ on }">
-            <v-btn v-on="on" icon>
-              <v-icon color="primary">add_circle</v-icon>
-            </v-btn>
-          </template>
-          <v-card>
-            <v-card-title>选择节点操作</v-card-title>
-            <v-divider></v-divider>
-            <v-card-text>
-              <v-radio-group v-model="selectedProcess" dense>
-                <v-radio v-for="(k, idx) in Object.keys(availableProcessors)" :key="idx"
-                  :label="availableProcessors[k].name" :value="k"></v-radio>
-              </v-radio-group>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="primary" text @click="addProcess(selectedProcess)">确认</v-btn>
-              <v-btn text @click="dialog = false">取消</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-
-      </v-subheader>
+      <v-subheader> 节点操作 </v-subheader>
       <v-divider></v-divider>
-      <component :is="p.component" v-for="p in processors" :key="p.id" :args="p.args" @dataChanged="dataChanged"
-        @deleteProcess="deleteProcess" @down="moveDown" @up="moveUp">
+      <component
+        :is="p.component"
+        v-for="p in processors"
+        :key="p.id"
+        :args="p.args"
+        @dataChanged="dataChanged"
+        @deleteProcess="deleteProcess"
+        @down="moveDown"
+        @up="moveUp"
+      >
       </component>
     </v-card>
   </v-container>
@@ -220,6 +302,7 @@
 
 <script>
 import { showError, showInfo } from "@/utils";
+import FloatMenu from "@/components/FloatMenu.vue";
 import TypeFilter from "@/components/TypeFilter";
 import RegionFilter from "@/components/RegionFilter";
 import RegexFilter from "@/components/RegexFilter";
@@ -236,53 +319,53 @@ import ResolveDomainOperator from "@/components/ResolveDomainOperator";
 const AVAILABLE_PROCESSORS = {
   "Flag Operator": {
     component: "FlagOperator",
-    name: "国旗"
+    name: "国旗",
   },
   "Type Filter": {
     component: "TypeFilter",
-    name: "类型过滤器"
+    name: "类型过滤器",
   },
   "Region Filter": {
     component: "RegionFilter",
-    name: "区域过滤器"
+    name: "区域过滤器",
   },
   "Regex Filter": {
     component: "RegexFilter",
-    name: "正则过滤器"
+    name: "正则过滤器",
   },
   "Sort Operator": {
     component: "SortOperator",
-    name: "节点排序"
+    name: "节点排序",
   },
   "Regex Sort Operator": {
     component: "RegexSortOperator",
-    name: "正则排序"
+    name: "正则排序",
   },
   "Regex Rename Operator": {
     component: "RegexRenameOperator",
-    name: "正则重命名"
+    name: "正则重命名",
   },
   "Regex Delete Operator": {
     component: "RegexDeleteOperator",
-    name: "删除正则"
+    name: "删除正则",
   },
   "Handle Duplicate Operator": {
     component: "HandleDuplicateOperator",
-    name: "节点去重"
+    name: "节点去重",
   },
   "Resolve Domain Operator": {
     component: "ResolveDomainOperator",
-    name: "节点域名解析"
+    name: "节点域名解析",
   },
   "Script Filter": {
     component: "ScriptFilter",
-    name: "脚本过滤器"
+    name: "脚本过滤器",
   },
   "Script Operator": {
     component: "ScriptOperator",
-    name: "脚本操作"
-  }
-}
+    name: "脚本操作",
+  },
+};
 
 export default {
   props: {
@@ -290,8 +373,8 @@ export default {
       type: Boolean,
       default() {
         return false;
-      }
-    }
+      },
+    },
   },
   components: {
     FlagOperator,
@@ -305,7 +388,8 @@ export default {
     ScriptFilter,
     ScriptOperator,
     HandleDuplicateOperator,
-    ResolveDomainOperator
+    ResolveDomainOperator,
+    FloatMenu,
   },
   data: function () {
     return {
@@ -315,15 +399,16 @@ export default {
       dialog: false,
       validations: {
         urlRules: [
-          v => this.options.source === 'remote' && (!!v || "订阅链接不能为空！"),
-          v => this.options.source === 'remote' && (/^https?:\/\//.test(v) || "订阅链接不合法！")
+          (v) =>
+            this.options.source === "remote" && (!!v || "订阅链接不能为空！"),
+          (v) =>
+            this.options.source === "remote" &&
+            (/^https?:\/\//.test(v) || "订阅链接不合法！"),
         ],
-        importRules: [
-          v => !!v || "不能导入空配置！"
-        ]
+        importRules: [(v) => !!v || "不能导入空配置！"],
       },
       formState: {
-        basicValid: false
+        basicValid: false,
       },
       options: {
         name: "",
@@ -338,24 +423,35 @@ export default {
         "skip-cert-verify": "DEFAULT",
         tfo: "DEFAULT",
         "surge-hybrid": "DEFAULT",
-        "aead": "DEFAULT",
+        aead: "DEFAULT",
       },
       process: [],
-      selected: []
-    }
+      selected: [],
+    };
   },
 
   created() {
     const name = decodeURIComponent(this.$route.params.name);
     let source;
     if (this.isCollection) {
-      source = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.collections[name];
-      this.$store.commit("SET_NAV_TITLE", source.name ? `组合订阅编辑 ➤ ${source.name}` : "新建组合订阅");
+      source =
+        typeof name === "undefined" || name === "UNTITLED"
+          ? {}
+          : this.$store.state.collections[name];
+      this.$store.commit(
+        "SET_NAV_TITLE",
+        source.name ? `组合订阅编辑 ➤ ${source.name}` : "新建组合订阅"
+      );
       this.selected = source.subscriptions || [];
-
     } else {
-      source = (typeof name === 'undefined' || name === 'UNTITLED') ? {} : this.$store.state.subscriptions[name];
-      this.$store.commit("SET_NAV_TITLE", source.name ? `订阅编辑 ➤ ${source.name}` : "新建订阅");
+      source =
+        typeof name === "undefined" || name === "UNTITLED"
+          ? {}
+          : this.$store.state.subscriptions[name];
+      this.$store.commit(
+        "SET_NAV_TITLE",
+        source.name ? `订阅编辑 ➤ ${source.name}` : "新建订阅"
+      );
     }
     this.name = source.name;
     const { options, process } = loadProcess(this.options, source);
@@ -373,21 +469,23 @@ export default {
     },
 
     processors() {
-      return this.process.filter(p => AVAILABLE_PROCESSORS[p.type]).map(p => {
-        return {
-          component: AVAILABLE_PROCESSORS[p.type].component,
-          args: p.args,
-          id: p.id
-        }
-      });
+      return this.process
+        .filter((p) => AVAILABLE_PROCESSORS[p.type])
+        .map((p) => {
+          return {
+            component: AVAILABLE_PROCESSORS[p.type].component,
+            args: p.args,
+            id: p.id,
+          };
+        });
     },
 
     config() {
       const output = {
         name: this.options.name,
-        'display-name': this.options['display-name'],
+        "display-name": this.options["display-name"],
         icon: this.options.icon,
-        process: []
+        process: [],
       };
       if (this.isCollection) {
         output.subscriptions = this.selected;
@@ -401,20 +499,26 @@ export default {
       if (typeof ua != "undefined" && ua != null && ua.trim().length > 0) {
         output.ua = ua;
       } else {
-        output.ua = ""
+        output.ua = "";
       }
       // useless filter
-      if (this.options.useless === 'REMOVE') {
+      if (this.options.useless === "REMOVE") {
         output.process.push({
-          type: "Useless Filter"
+          type: "Useless Filter",
         });
       }
       // udp, tfo, scert, surge-hybrid, aead
-      for (const opt of ['udp', 'tfo', 'skip-cert-verify', 'surge-hybrid', 'aead']) {
-        if (this.options[opt] !== 'DEFAULT') {
+      for (const opt of [
+        "udp",
+        "tfo",
+        "skip-cert-verify",
+        "surge-hybrid",
+        "aead",
+      ]) {
+        if (this.options[opt] !== "DEFAULT") {
           output.process.push({
             type: "Set Property Operator",
-            args: { key: opt, value: this.options[opt] === 'FORCE_OPEN' }
+            args: { key: opt, value: this.options[opt] === "FORCE_OPEN" },
           });
         }
       }
@@ -422,31 +526,39 @@ export default {
         output.process.push(p);
       }
       return output;
-    }
+    },
   },
   methods: {
     getIconClass(url) {
-      return url.indexOf('#invert') !== -1 && !this.$vuetify.theme.dark ? 'invert' : ''
+      return url.indexOf("#invert") !== -1 && !this.$vuetify.theme.dark
+        ? "invert"
+        : "";
     },
     save() {
       if (this.isCollection) {
         if (this.options.name && this.selected) {
-          if (this.$route.params.name === 'UNTITLED') {
-            this.$store.dispatch("NEW_COLLECTION", this.config).then(() => {
-              showInfo(`成功创建组合订阅：${this.name}！`);
-              this.$router.back();
-            }).catch(() => {
-              showError(`发生错误，无法创建组合订阅！`)
-            });
+          if (this.$route.params.name === "UNTITLED") {
+            this.$store
+              .dispatch("NEW_COLLECTION", this.config)
+              .then(() => {
+                showInfo(`成功创建组合订阅：${this.name}！`);
+                this.$router.back();
+              })
+              .catch(() => {
+                showError(`发生错误，无法创建组合订阅！`);
+              });
           } else {
-            this.$store.dispatch("UPDATE_COLLECTION", {
-              name: this.$route.params.name,
-              collection: this.config
-            }).then(() => {
-              showInfo(`成功保存组合订阅：${this.name}！`)
-            }).catch(() => {
-              showError(`发生错误，无法保存组合订阅！`)
-            });
+            this.$store
+              .dispatch("UPDATE_COLLECTION", {
+                name: this.$route.params.name,
+                collection: this.config,
+              })
+              .then(() => {
+                showInfo(`成功保存组合订阅：${this.name}！`);
+              })
+              .catch(() => {
+                showError(`发生错误，无法保存组合订阅！`);
+              });
           }
         }
       } else {
@@ -455,29 +567,34 @@ export default {
           showError(`订阅名字不能为空！`);
           return;
         }
-        if (this.options.source === 'remote' && !this.options.url) {
+        if (this.options.source === "remote" && !this.options.url) {
           showError(`订阅链接不能为空！`);
           return;
         }
 
         if (this.$route.params.name !== "UNTITLED") {
-          this.$store.dispatch("UPDATE_SUBSCRIPTION", {
-            name: this.$route.params.name,
-            sub: this.config
-          }).then(() => {
-            showInfo(`成功保存订阅：${this.options.name}！`);
-          }).catch(() => {
-            showError(`发生错误，无法保存订阅！`);
-          });
+          this.$store
+            .dispatch("UPDATE_SUBSCRIPTION", {
+              name: this.$route.params.name,
+              sub: this.config,
+            })
+            .then(() => {
+              showInfo(`成功保存订阅：${this.options.name}！`);
+            })
+            .catch(() => {
+              showError(`发生错误，无法保存订阅！`);
+            });
         } else {
-          this.$store.dispatch("NEW_SUBSCRIPTION", this.config).then(() => {
-            showInfo(`成功创建订阅：${this.options.name}！`);
-            this.$router.back();
-          }).catch(() => {
-            showError(`发生错误，无法创建订阅！`);
-          });
+          this.$store
+            .dispatch("NEW_SUBSCRIPTION", this.config)
+            .then(() => {
+              showInfo(`成功创建订阅：${this.options.name}！`);
+              this.$router.back();
+            })
+            .catch(() => {
+              showError(`发生错误，无法创建订阅！`);
+            });
         }
-
       }
     },
 
@@ -491,7 +608,10 @@ export default {
       }
       config = JSON.stringify(config);
       this.$clipboard(config);
-      this.$store.commit("SET_SUCCESS_MESSAGE", "导出成功，订阅已复制到剪贴板！");
+      this.$store.commit(
+        "SET_SUCCESS_MESSAGE",
+        "导出成功，订阅已复制到剪贴板！"
+      );
       this.showShareDialog = false;
     },
 
@@ -561,19 +681,19 @@ export default {
       }
       // otherwise swap with latter one
       const cur = this.process[index];
-      const next = this.process[index + 1]
+      const next = this.process[index + 1];
       this.process.splice(index, 2, next, cur);
     },
-  }
-}
+  },
+};
 
 function loadProcess(options, source, isCollection = false) {
   options = {
     ...options,
     name: source.name,
-    'display-name': source['display-name'],
+    "display-name": source["display-name"],
     icon: source.icon,
-    ua: source.ua
+    ua: source.ua,
   };
   if (isCollection) {
     options.subscriptions = source.subscriptions;
@@ -582,17 +702,17 @@ function loadProcess(options, source, isCollection = false) {
     options.source = source.source || "remote";
     options.content = source.content;
   }
-  let process = []
+  let process = [];
 
   // flag
-  for (const p of (source.process || [])) {
+  for (const p of source.process || []) {
     switch (p.type) {
-      case 'Useless Filter':
+      case "Useless Filter":
         options.useless = "REMOVE";
-        break
-      case 'Set Property Operator':
+        break;
+      case "Set Property Operator":
         options[p.args.key] = p.args.value ? "FORCE_OPEN" : "FORCE_CLOSE";
-        break
+        break;
       default:
         p.id = uuidv4();
         process.push(p);
@@ -602,8 +722,9 @@ function loadProcess(options, source, isCollection = false) {
 }
 
 function uuidv4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    var r = (Math.random() * 16) | 0,
+      v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
