@@ -15,7 +15,9 @@ export function getFlag(name) {
         '🇦🇲': ['Armenia', '亚美尼亚'],
         '🇦🇷': ['Argentina', '阿根廷'],
         '🇦🇹': ['Austria', '奥地利', '奧地利', '维也纳'],
-        '🇦🇺': ['Australia', '澳大利亚',
+        '🇦🇺': [
+            'Australia',
+            '澳大利亚',
             '澳洲',
             '墨尔本',
             '悉尼',
@@ -35,7 +37,9 @@ export function getFlag(name) {
         '🇧🇭': ['Bahrain', '巴林'],
         '🇧🇷': ['Brazil', '巴西', '圣保罗'],
         '🇧🇾': ['Belarus', '白俄罗斯', '白俄'],
-        '🇨🇦': ['Canada', '加拿大',
+        '🇨🇦': [
+            'Canada',
+            '加拿大',
             '蒙特利尔',
             '温哥华',
             '楓葉',
@@ -46,7 +50,10 @@ export function getFlag(name) {
         ],
         '🇨🇭': ['Switzerland', '瑞士', '苏黎世', 'Zurich'],
         '🇨🇱': ['Chile', '智利'],
-        '🇨🇳': ['China', '中国', '中國',
+        '🇨🇳': [
+            'China',
+            '中国',
+            '中國',
             '回国',
             '回國',
             '国内',
@@ -72,7 +79,10 @@ export function getFlag(name) {
         '🇨🇷': ['Costa Rica', '哥斯达黎加'],
         '🇨🇾': ['Cyprus', '塞浦路斯'],
         '🇨🇿': ['Czechia', '捷克'],
-        '🇩🇪': ['German', '德国', '德國',
+        '🇩🇪': [
+            'German',
+            '德国',
+            '德國',
             '京德',
             '滬德',
             '廣德',
@@ -89,7 +99,9 @@ export function getFlag(name) {
         '🇪🇺': ['European Union', '欧盟', '欧罗巴'],
         '🇫🇮': ['Finland', '芬兰', '芬蘭', '赫尔辛基'],
         '🇫🇷': ['France', '法国', '法國', '巴黎'],
-        '🇬🇧': ['Great Britain', '英国',
+        '🇬🇧': [
+            'Great Britain',
+            '英国',
             'England',
             'United Kingdom',
             '伦敦',
@@ -98,7 +110,9 @@ export function getFlag(name) {
         ],
         '🇬🇪': ['Georgia', '格鲁吉亚', '格魯吉亞'],
         '🇬🇷': ['Greece', '希腊', '希臘'],
-        '🇭🇰': ['Hongkong', '香港',
+        '🇭🇰': [
+            'Hongkong',
+            '香港',
             'Hong Kong',
             'HongKong',
             'HONG KONG',
@@ -112,7 +126,9 @@ export function getFlag(name) {
         '🇭🇷': ['Croatia', '克罗地亚', '克羅地亞'],
         '🇭🇺': ['Hungary', '匈牙利'],
         '🇯🇴': ['Jordan', '约旦'],
-        '🇯🇵': ['Japan', '日本',
+        '🇯🇵': [
+            'Japan',
+            '日本',
             '东京',
             '大阪',
             '埼玉',
@@ -133,7 +149,10 @@ export function getFlag(name) {
         '🇰🇬': ['Kyrgyzstan', '吉尔吉斯斯坦'],
         '🇰🇭': ['Cambodia', '柬埔寨'],
         '🇰🇵': ['North Korea', '朝鲜'],
-        '🇰🇷': ['Korea', '韩国', '韓國',
+        '🇰🇷': [
+            'Korea',
+            '韩国',
+            '韓國',
             '韩',
             '韓',
             '首尔',
@@ -161,14 +180,8 @@ export function getFlag(name) {
         '🇲🇴': ['Macao', '澳门', '澳門', 'CTM'],
         '🇲🇹': ['Malta', '马耳他'],
         '🇲🇽': ['Mexico', '墨西哥'],
-        '🇲🇾': ['Malaysia', '马来西亚', '馬來西亞',
-            '吉隆坡',
-            '大馬',
-        ],
-        '🇳🇱': ['Netherlands', '荷兰', '荷蘭',
-            '尼德蘭',
-            '阿姆斯特丹',
-        ],
+        '🇲🇾': ['Malaysia', '马来西亚', '馬來西亞', '吉隆坡', '大馬'],
+        '🇳🇱': ['Netherlands', '荷兰', '荷蘭', '尼德蘭', '阿姆斯特丹'],
         '🇳🇴': ['Norway', '挪威'],
         '🇳🇵': ['Nepal', '尼泊尔'],
         '🇳🇿': ['New Zealand', '新西兰', '新西蘭'],
@@ -183,7 +196,9 @@ export function getFlag(name) {
         '🇷🇴': ['Romania', '罗马尼亚'],
         '🇷🇸': ['Serbia', '塞尔维亚'],
         '🇷🇪': ['Réunion', '留尼汪', '法属留尼汪'],
-        '🇷🇺': ['Russia', '俄罗斯',
+        '🇷🇺': [
+            'Russia',
+            '俄罗斯',
             '俄国',
             '俄羅斯',
             '伯力',
@@ -200,7 +215,9 @@ export function getFlag(name) {
         ],
         '🇸🇦': ['Saudi', '沙特阿拉伯', '沙特'],
         '🇸🇪': ['Sweden', '瑞典'],
-        '🇸🇬': ['Singapore', '新加坡',
+        '🇸🇬': [
+            'Singapore',
+            '新加坡',
             '狮城',
             '沪新',
             '京新',
@@ -218,7 +235,9 @@ export function getFlag(name) {
         '🇹🇭': ['Thailand', '泰国', '泰國', '曼谷'],
         '🇹🇳': ['Tunisia', '突尼斯'],
         '🇹🇷': ['Turkey', '土耳其', '伊斯坦布尔'],
-        '🇹🇼': ['Taiwan', '台湾',
+        '🇹🇼': [
+            'Taiwan',
+            '台湾',
             '台北',
             '台中',
             '新北',
@@ -227,7 +246,9 @@ export function getFlag(name) {
             'Taipei',
         ],
         '🇺🇦': ['Ukraine', '乌克兰', '烏克蘭'],
-        '🇺🇸': ['United States', '美国',
+        '🇺🇸': [
+            'United States',
+            '美国',
             'America',
             '美',
             '京美',
@@ -250,7 +271,7 @@ export function getFlag(name) {
             'Los Angeles',
             'San Jose',
             'Sillicon Valley',
-            'Michigan'
+            'Michigan',
         ],
         '🇺🇾': ['Uruguay', '乌拉圭'],
         '🇻🇪': ['Venezuela', '委内瑞拉'],
@@ -328,7 +349,7 @@ export function getFlag(name) {
         '🇲🇹': ['MT', 'MLT'],
         '🇲🇽': ['MX', 'MEX'],
         '🇲🇾': ['MY', 'MYS'],
-        '🇳🇱': ['NL', 'NLD',],
+        '🇳🇱': ['NL', 'NLD'],
         '🇳🇴': ['NO', 'NOR'],
         '🇳🇵': ['NP', 'NPL'],
         '🇳🇿': ['NZ', 'NZL'],
@@ -364,31 +385,33 @@ export function getFlag(name) {
     let Flag =
         name.match(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/)?.[0] ||
         '🏴‍☠️';
-        //console.log(`oldFlag = ${Flag}`)
+    //console.log(`oldFlag = ${Flag}`)
     // 旗帜匹配
     for (let flag of Object.keys(Flags)) {
         const keywords = Flags[flag];
         //console.log(`keywords = ${keywords}`)
-        if ( // 不精确匹配（只要包含就算,忽略大小写)
+        if (
+            // 不精确匹配（只要包含就算,忽略大小写)
             keywords.some((keyword) => RegExp(`${keyword}`, 'i').test(name))
         ) {
             //console.log(`newFlag = ${flag}`)
-            return Flag = flag;
+            return (Flag = flag);
         }
-    };
+    }
     // ISO旗帜匹配
     for (let flag of Object.keys(ISOFlags)) {
         const keywords = ISOFlags[flag];
         //console.log(`keywords = ${keywords}`)
-        if ( // 精确匹配(两侧均有分割)
+        if (
+            // 精确匹配(两侧均有分割)
             keywords.some((keyword) =>
                 RegExp(`[^a-zA-Z]${keyword}[^a-zA-Z]`).test(name),
             )
         ) {
             //console.log(`ISOFlag = ${flag}`)
-            return Flag = flag;
+            return (Flag = flag);
         }
-    };
+    }
     //console.log(`Final Flag = ${Flag}`)
     return Flag;
 }
