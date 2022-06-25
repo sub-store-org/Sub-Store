@@ -1,0 +1,47 @@
+printWidth :                 80      # 显示宽度
+tabWidth :                   2       # tab 宽度
+useTabs :                    false   # 使用 tab 而不是空格
+semi :                       false   # 使用分号
+singleQuote :                true    # 使用单引号
+jsxSingleQuote :             false   # 在 JSX 中使用单引号而不是双引号
+bracketSpacing :             true    # 在对象花括号内打印空格  true { foo: bar }  false {foo: bar}
+arrowParens :                "avoid" # 箭头函数只有一个参数的时候的周围的括号   "always" - (x) => x  "avoid" - x => x
+embeddedLanguageFormatting : "auto"  # "auto" - 嵌入代码如果 Prettier 可以识别则格式化它  "off" - 永远不要自动格式化
+bracketSameLine :            false   # 多行属性的 HTML（HTML、JSX、Vue、Angular）标签的 ">" 放在最后一行的末尾，而不是单独在下一行（不适用于自闭合元素）
+#htmlWhitespaceSensitivity : "strict"
+vueIndentScriptAndStyle :    true    # 在 Vue 文件中缩进 <script> 和 <style> 标签
+insertPragma :               false   # 是否插入一个特殊 @format 标记指定文件已使用 Prettier 格式化
+
+# 行尾风格
+# "lf"   – 仅换行 ( \n)，常见于 Linux 和 macOS 以及 git repos 内部
+# "crlf" - 回车 + 换行字符 ( \r\n)，常见于 Windows
+# "cr"   - 仅回车字符 ( \r)，很少使用
+# "auto" - 保持现有的行尾（一个文件中的混合值通过查看第一行之后使用的内容进行标准化）
+endOfLine :                  "lf"
+
+# 需要提供注释才允许格式化
+# /**
+# * @prettier  或  @format
+# */
+requirePragma :              false
+
+# 对象属性的引号风格
+# "as-needed"    仅在需要时在对象属性周围添加引号
+# "consistent"   如果对象中至少一个属性需要引号，则所有属性都使用引号
+# "preserve"     尊重对象属性中的引号
+quoteProps :                 "consistent"
+
+# 在多行逗号分隔的句法结构中尽可能打印尾随逗号
+# "es5"          在 ES5 中有效的尾随逗号（对象、数组等），TypeScript 中的类型参数中没有尾随逗号
+# "none"         没有尾随逗号。
+# "all"          尽可能使用尾随逗号（包括函数参数和调用）。要运行，以这种方式格式化的 JavaScript 代码需要一个支持 ES2017（Node.js 8+ 或现代浏览器）或下级编译的引擎。这还可以在 TypeScript 中的类型参数中启用尾随逗号（自 2018 年 1 月发布的 TypeScript 2.7 起支持）
+trailingComma :              "es5"
+
+# 例外配置覆盖
+overrides :
+  - files :
+      - "*.ts"
+      - "*.tsx"
+    options :
+      semi :        true
+      arrowParens : "always"
