@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "vue-prism-editor": "^1.3.0",
-    "prismjs": "^1.28.0"
+    "prismjs": "^1.28.0",
     "@dzangolab/vue-country-flag-icon": "^0.2.0",
     "axios": "^0.20.0",
     "chartist": "^0.11.4",
