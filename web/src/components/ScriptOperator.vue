@@ -96,7 +96,7 @@ export default {
             content: this.content
           }
         });
-      };
+      }
     },
     highlighter(code) {
       return highlight(code, languages.js); 
