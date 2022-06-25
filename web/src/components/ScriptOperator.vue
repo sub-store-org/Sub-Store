@@ -41,20 +41,24 @@
           </v-col>
         </v-row>
       </v-radio-group>
-      <v-textarea
-          v-model="content"
-          :label="hint"
-          auto-grow
-          clear-icon="clear"
-          clearable
-          solo
-      />
+      <prism-editor class="my-editor" v-model="content" :highlight="highlighter" line-numbers></prism-editor>
     </v-card-text>
   </v-card>
 </template>
 
 <script>
+import { PrismEditor } from 'vue-prism-editor';
+import 'vue-prism-editor/dist/prismeditor.min.css';
+
+import { highlight, languages } from 'prismjs/components/prism-core';
+import 'prismjs/components/prism-clike';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/themes/prism-tomorrow.css';
+
 export default {
+  components: {
+    PrismEditor,
+  },
   props: ["args"],
   data: function () {
     return {
@@ -92,8 +96,11 @@ export default {
             content: this.content
           }
         });
-      }
-    }
+      };
+    },
+    highlighter(code) {
+      return highlight(code, languages.js); 
+    },
   }
 }
 </script>
