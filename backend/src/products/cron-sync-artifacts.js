@@ -5,12 +5,13 @@ import {
     RULES_KEY,
 } from '@/restful/constants';
 import { syncArtifact, produceArtifact } from '@/restful/artifacts';
+import { version } from '../../package.json';
 import $ from '@/core/app';
 
 console.log(
     `
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
-            𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 © 𝑷𝒆𝒏𝒈-𝒀𝑴
+     Sub-Store © Peng-YM -- v${version}
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 `,
 );
