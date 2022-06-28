@@ -1,6 +1,15 @@
 /* eslint-disable no-undef */
 import { ProxyUtils } from '@/core/proxy-utils';
 import { RuleUtils } from '@/core/rule-utils';
+import { version } from '../../package.json';
+
+console.log(
+    `
+┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
+     Sub-Store © Peng-YM -- v${version}
+┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
+`,
+);
 
 const RESOURCE_TYPE = {
     PROXY: 1,
