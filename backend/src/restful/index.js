@@ -66,6 +66,7 @@ function getEnv(req, res) {
     if (isLoon) backend = 'Loon';
     if (isSurge) backend = 'Surge';
     res.json({
+        status: 200,
         backend,
     });
 }
