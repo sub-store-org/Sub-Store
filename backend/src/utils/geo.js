@@ -405,7 +405,7 @@ export function getFlag(name) {
         if (
             // 精确匹配(两侧均有分割)
             keywords.some((keyword) =>
-                RegExp(`[^a-zA-Z]${keyword}[^a-zA-Z]`).test(name),
+                RegExp(`(^|[^a-zA-Z])${keyword}([^a-zA-Z]|$)`).test(name),
             )
         ) {
             //console.log(`ISOFlag = ${flag}`)
