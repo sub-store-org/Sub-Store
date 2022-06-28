@@ -7,6 +7,8 @@ export default function register($app) {
 
     $app.get('/download/:name', downloadSubscription);
 
+    $app.get('/api/sub/flow/:name', getFlowInfo);
+
     $app.route('/api/sub/:name')
         .get(getSubscription)
         .patch(updateSubscription)
@@ -68,6 +70,59 @@ async function downloadSubscription(req, res) {
         $.notify(`🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`, `❌ 未找到订阅：${name}！`);
         res.status(404).json({
             status: 'failed',
+        });
+    }
+}
+
+async function getFlowInfo(req, res) {
+    let { name } = req.params;
+    name = decodeURIComponent(name);
+    const sub = $.read(SUBS_KEY)[name];
+
+    if (!sub) {
+        res.status(404).json({
+            status: 'failed',
+            code: 'NOT_FOUND',
+        });
+    }
+    if (sub.source === 'local') {
+        res.status(500).json({
+            status: 'failed',
+            code: 'IS_LOCAL_SUB',
+        });
+    }
+    try {
+        const flowHeaders = await getFlowHeaders(sub.url);
+        if (!flowHeaders) {
+            res.status(500).json({
+                status: 'failed',
+                code: 'NO_FLOW_INFO',
+            });
+        }
+
+        // unit is KB
+        const upload = Number(flowHeaders.match(/upload=(\d+)/)[1]);
+        const download = Number(flowHeaders.match(/download=(\d+)/)[1]);
+        const total = Number(flowHeaders.match(/total=(\d+)/)[1]);
+
+        // optional expire timestamp
+        const expires = flowHeaders.match(/expire=(\d+)/);
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                expires: expires ? Number(expires[1]) : undefined,
+                total,
+                usage: {
+                    upload,
+                    download,
+                },
+            },
+        });
+    } catch (err) {
+        res.status(500).json({
+            status: 'failed',
+            code: 'NOT_AVAILABLE',
         });
     }
 }
