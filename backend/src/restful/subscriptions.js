@@ -1,5 +1,11 @@
+import {
+    NetworkError,
+    InternalServerError,
+    ResourceNotFoundError,
+} from './errors';
 import { SUBS_KEY, COLLECTIONS_KEY } from './constants';
 import { produceArtifact } from './artifacts';
+import { success, failed } from './response';
 import $ from '@/core/app';
 
 export default function register($app) {
@@ -80,24 +86,25 @@ async function getFlowInfo(req, res) {
     const sub = $.read(SUBS_KEY)[name];
 
     if (!sub) {
-        res.status(404).json({
-            status: 'failed',
-            code: 'NOT_FOUND',
-        });
+        failed(
+            res,
+            new ResourceNotFoundError(
+                'RESOURCE_NOT_FOUND',
+                `Subscription ${name} does not exist!`,
+            ),
+            404,
+        );
+        return;
     }
     if (sub.source === 'local') {
-        res.status(500).json({
-            status: 'failed',
-            code: 'IS_LOCAL_SUB',
-        });
+        failed(res, new InternalServerError('NO_FLOW_INFO', 'N/A'));
+        return;
     }
     try {
         const flowHeaders = await getFlowHeaders(sub.url);
         if (!flowHeaders) {
-            res.status(500).json({
-                status: 'failed',
-                code: 'NO_FLOW_INFO',
-            });
+            failed(res, new InternalServerError('NO_FLOW_INFO', 'N/A'));
+            return;
         }
 
         // unit is KB
@@ -106,24 +113,18 @@ async function getFlowInfo(req, res) {
         const total = Number(flowHeaders.match(/total=(\d+)/)[1]);
 
         // optional expire timestamp
-        const expires = flowHeaders.match(/expire=(\d+)/);
+        const match = flowHeaders.match(/expire=(\d+)/);
+        const expires = match ? Number(match[1]) : undefined;
 
-        res.status(200).json({
-            status: 'success',
-            data: {
-                expires: expires ? Number(expires[1]) : undefined,
-                total,
-                usage: {
-                    upload,
-                    download,
-                },
-            },
-        });
+        success(res, { expires, total, usage: { upload, download } });
     } catch (err) {
-        res.status(500).json({
-            status: 'failed',
-            code: 'NOT_AVAILABLE',
-        });
+        failed(
+            res,
+            new NetworkError(
+                `URL_NOT_ACCESSIBLE`,
+                `The URL for subscription ${name} is inaccessible.`,
+            ),
+        );
     }
 }
 
