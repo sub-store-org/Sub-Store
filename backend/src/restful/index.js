@@ -3,6 +3,7 @@ import {
     GIST_BACKUP_KEY,
     GIST_BACKUP_FILE_NAME,
 } from './constants';
+import { version as substoreVersion } from '../../package.json';
 import { ENV, HTTP } from '@/vendor/open-api';
 import express from '@/vendor/express';
 import Gist from '@/utils/gist';
@@ -59,15 +60,21 @@ export default function serve() {
 }
 
 function getEnv(req, res) {
-    const { isNode, isQX, isLoon, isSurge } = ENV();
+    const { isNode, isQX, isLoon, isSurge, isStash, isShadowRocket } = ENV();
     let backend = 'Node';
     if (isNode) backend = 'Node';
     if (isQX) backend = 'QX';
     if (isLoon) backend = 'Loon';
     if (isSurge) backend = 'Surge';
+    if (isStash) backend = 'Stash';
+    if (isShadowRocket) backend = 'ShadowRocket';
+
     res.json({
         status: 200,
-        backend,
+        data: {
+            backend,
+            version: substoreVersion,
+        },
     });
 }
 

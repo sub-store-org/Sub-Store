@@ -77,7 +77,8 @@ const store = new Vuex.Store({
         // fetch env
         async FETCH_ENV({state}) {
             return axios.get("/utils/env").then(resp => {
-                state.env = resp.data;
+                const {data} = resp.data;
+                state.env = data;
             })
         },
         async FETCH_SETTINGS({state}) {
