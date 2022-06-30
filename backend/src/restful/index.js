@@ -12,6 +12,7 @@ import $ from '@/core/app';
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
 import registerArtifactRoutes from './artifacts';
+import registerDownloadRoutes from './download';
 import registerSettingRoutes from './settings';
 
 export default function serve() {
@@ -20,6 +21,7 @@ export default function serve() {
     // register routes
     registerCollectionRoutes($app);
     registerSubscriptionRoutes($app);
+    registerDownloadRoutes($app);
     registerSettingRoutes($app);
     registerArtifactRoutes($app);
 

@@ -16,12 +16,16 @@ export default async function download(url, ua) {
     });
 
     const result = new Promise((resolve, reject) => {
-        http.get(url).then((resp) => {
-            const body = resp.body;
-            if (body.replace(/\s/g, '').length === 0)
-                reject(new Error('订阅内容为空！'));
-            else resolve(body);
-        });
+        http.get(url)
+            .then((resp) => {
+                const body = resp.body;
+                if (body.replace(/\s/g, '').length === 0)
+                    reject(new Error('订阅内容为空！'));
+                else resolve(body);
+            })
+            .catch(() => {
+                reject(new Error(`无法下载 URL：${url}`));
+            });
     });
 
     cache.set(id, result);
