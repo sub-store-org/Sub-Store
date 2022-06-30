@@ -4,15 +4,12 @@ import {
     ResourceNotFoundError,
 } from './errors';
 import { SUBS_KEY, COLLECTIONS_KEY } from './constants';
-import { produceArtifact } from './artifacts';
+import { getFlowHeaders } from '@/utils/flow';
 import { success, failed } from './response';
 import $ from '@/core/app';
 
 export default function register($app) {
     if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
-
-    $app.get('/download/:name', downloadSubscription);
-
     $app.get('/api/sub/flow/:name', getFlowInfo);
 
     $app.route('/api/sub/:name')
@@ -24,62 +21,6 @@ export default function register($app) {
 }
 
 // subscriptions API
-async function downloadSubscription(req, res) {
-    let { name } = req.params;
-    name = decodeURIComponent(name);
-
-    const { raw } = req.query || 'false';
-    const platform =
-        req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
-
-    $.info(`正在下载订阅：${name}`);
-
-    const allSubs = $.read(SUBS_KEY);
-    const sub = allSubs[name];
-    if (sub) {
-        try {
-            const output = await produceArtifact({
-                type: 'subscription',
-                item: sub,
-                platform,
-                noProcessor: raw,
-            });
-
-            if (sub.source !== 'local') {
-                // forward flow headers
-                const flowInfo = await getFlowHeaders(sub.url);
-                if (flowInfo) {
-                    res.set('subscription-userinfo', flowInfo);
-                }
-            }
-
-            if (platform === 'JSON') {
-                res.set('Content-Type', 'application/json;charset=utf-8').send(
-                    output,
-                );
-            } else {
-                res.send(output);
-            }
-        } catch (err) {
-            $.notify(
-                `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`,
-                `❌ 无法下载订阅：${name}！`,
-                `🤔 原因：${JSON.stringify(err)}`,
-            );
-            $.error(JSON.stringify(err));
-            res.status(500).json({
-                status: 'failed',
-                message: err,
-            });
-        }
-    } else {
-        $.notify(`🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`, `❌ 未找到订阅：${name}！`);
-        res.status(404).json({
-            status: 'failed',
-        });
-    }
-}
-
 async function getFlowInfo(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
@@ -230,41 +171,4 @@ function getAllSubscriptions(req, res) {
         status: 'success',
         data: allSubs,
     });
-}
-
-export async function getFlowHeaders(url) {
-    const { headers } = await $.http.get({
-        url,
-        headers: {
-            'User-Agent': 'Quantumult%20X/1.0.30 (iPhone14,2; iOS 15.6)',
-        },
-    });
-    const subkey = Object.keys(headers).filter((k) =>
-        /SUBSCRIPTION-USERINFO/i.test(k),
-    )[0];
-    return headers[subkey];
-}
-
-export function getPlatformFromHeaders(headers) {
-    const keys = Object.keys(headers);
-    let UA = '';
-    for (let k of keys) {
-        if (/USER-AGENT/i.test(k)) {
-            UA = headers[k];
-            break;
-        }
-    }
-    if (UA.indexOf('Quantumult%20X') !== -1) {
-        return 'QX';
-    } else if (UA.indexOf('Surge') !== -1) {
-        return 'Surge';
-    } else if (UA.indexOf('Decar') !== -1 || UA.indexOf('Loon') !== -1) {
-        return 'Loon';
-    } else if (UA.indexOf('Shadowrocket') !== -1) {
-        return 'Clash';
-    } else if (UA.indexOf('Stash') !== -1) {
-        return 'Stash';
-    } else {
-        return null;
-    }
 }

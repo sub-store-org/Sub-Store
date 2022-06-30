@@ -29,6 +29,14 @@ export default function register($app) {
     $app.get('/api/cron/sync-artifacts', cronSyncArtifacts);
 }
 
+function getAllArtifacts(req, res) {
+    const allArtifacts = $.read(ARTIFACTS_KEY);
+    res.json({
+        status: 'success',
+        data: allArtifacts,
+    });
+}
+
 async function getArtifact(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
@@ -152,6 +160,37 @@ function updateArtifact(req, res) {
     }
 }
 
+async function deleteArtifact(req, res) {
+    let { name } = req.params;
+    name = decodeURIComponent(name);
+    $.info(`正在删除远程配置：${name}`);
+    const allArtifacts = $.read(ARTIFACTS_KEY);
+    try {
+        const artifact = allArtifacts[name];
+        if (!artifact) throw new Error(`远程配置：${name}不存在！`);
+        if (artifact.updated) {
+            // delete gist
+            const files = {};
+            files[encodeURIComponent(artifact.name)] = {
+                content: '',
+            };
+            await syncArtifact(files);
+        }
+        // delete local cache
+        delete allArtifacts[name];
+        $.write(allArtifacts, ARTIFACTS_KEY);
+        res.json({
+            status: 'success',
+        });
+    } catch (err) {
+        $.error(`无法删除远程配置：${name}，原因：${err}`);
+        res.status(500).json({
+            status: 'failed',
+            message: `无法删除远程配置：${name}, 原因：${err}`,
+        });
+    }
+}
+
 async function cronSyncArtifacts(_, res) {
     $.info('开始同步所有远程配置...');
     const allArtifacts = $.read(ARTIFACTS_KEY);
@@ -210,45 +249,6 @@ async function cronSyncArtifacts(_, res) {
     }
 }
 
-async function deleteArtifact(req, res) {
-    let { name } = req.params;
-    name = decodeURIComponent(name);
-    $.info(`正在删除远程配置：${name}`);
-    const allArtifacts = $.read(ARTIFACTS_KEY);
-    try {
-        const artifact = allArtifacts[name];
-        if (!artifact) throw new Error(`远程配置：${name}不存在！`);
-        if (artifact.updated) {
-            // delete gist
-            const files = {};
-            files[encodeURIComponent(artifact.name)] = {
-                content: '',
-            };
-            await syncArtifact(files);
-        }
-        // delete local cache
-        delete allArtifacts[name];
-        $.write(allArtifacts, ARTIFACTS_KEY);
-        res.json({
-            status: 'success',
-        });
-    } catch (err) {
-        $.error(`无法删除远程配置：${name}，原因：${err}`);
-        res.status(500).json({
-            status: 'failed',
-            message: `无法删除远程配置：${name}, 原因：${err}`,
-        });
-    }
-}
-
-function getAllArtifacts(req, res) {
-    const allArtifacts = $.read(ARTIFACTS_KEY);
-    res.json({
-        status: 'success',
-        data: allArtifacts,
-    });
-}
-
 async function syncArtifact(files) {
     const { gistToken } = $.read(SETTINGS_KEY);
     if (!gistToken) {
@@ -276,6 +276,7 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
         // parse proxies
         let proxies = ProxyUtils.parse(raw);
         if (!noProcessor) {
+            console.log('Processing proxy...');
             // apply processors
             proxies = await ProxyUtils.process(
                 proxies,
