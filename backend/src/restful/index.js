@@ -14,6 +14,7 @@ import registerCollectionRoutes from './collections';
 import registerArtifactRoutes from './artifacts';
 import registerDownloadRoutes from './download';
 import registerSettingRoutes from './settings';
+import registerPreviewRoutes from './preview';
 
 export default function serve() {
     const $app = express({ substore: $ });
@@ -22,6 +23,7 @@ export default function serve() {
     registerCollectionRoutes($app);
     registerSubscriptionRoutes($app);
     registerDownloadRoutes($app);
+    registerPreviewRoutes($app);
     registerSettingRoutes($app);
     registerArtifactRoutes($app);
 

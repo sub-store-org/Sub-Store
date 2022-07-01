@@ -276,7 +276,6 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
         // parse proxies
         let proxies = ProxyUtils.parse(raw);
         if (!noProcessor) {
-            console.log('Processing proxy...');
             // apply processors
             proxies = await ProxyUtils.process(
                 proxies,
