@@ -142,7 +142,7 @@ password = comma match:[^,]+ { proxy.password = match.join(""); }
 tls = comma "tls" equals flag:bool { proxy.tls = flag; }
 sni = comma "sni" equals sni:domain { proxy.sni = sni; }
 tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-verify"] = flag; }
-tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:[^,] { proxy["tls-fingerprint"] = tls_fingerprint; }
+tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:$[^,]+ { proxy["tls-fingerprint"] = tls_fingerprint.trim(); }
 
 snell_psk = comma "psk" equals match:[^,]+ { proxy.psk = match.join(""); }
 snell_version = comma "version" equals match:$[0-9]+ { proxy.version = parseInt(match.trim()); }

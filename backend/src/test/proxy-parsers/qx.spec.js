@@ -60,6 +60,12 @@ describe('QX', function () {
             const proxy = parser.parse(input.QX);
             expect(proxy).eql(expected);
         });
+
+        it('test trojan + tls fingerprint', function () {
+            const { input, expected } = testcases.TROJAN.TLS_FINGERPRINT;
+            const proxy = parser.parse(input.QX);
+            expect(proxy).eql(expected);
+        });
     });
 
     describe('vmess', function () {
