@@ -20,6 +20,9 @@ function createTestCases() {
 
     const sni = 'sni.com';
 
+    const tls_fingerprint =
+        '67:1B:C8:F2:D4:60:DD:A7:EE:60:DA:BB:A3:F9:A4:D7:C8:29:0F:3E:2F:75:B6:A9:46:88:48:7D:D3:97:7E:98';
+
     const SS = {
         SIMPLE: {
             input: {
@@ -196,6 +199,23 @@ function createTestCases() {
                 },
                 'skip-cert-verify': true,
                 sni,
+            },
+        },
+        TLS_FINGERPRINT: {
+            input: {
+                QX: `trojan=${server}:${port},password=${password},tls-verification=false,tls-host=${sni},tls-cert-sha256=${tls_fingerprint},tag=${name},over-tls=true`,
+                Surge: `${name}=trojan,${server},${port},password=${password},skip-cert-verify=true,sni=${sni},tls=true,server-cert-fingerprint-sha256=${tls_fingerprint}`,
+            },
+            expected: {
+                type: 'trojan',
+                name,
+                server,
+                port,
+                password,
+                tls: true,
+                'skip-cert-verify': true,
+                sni,
+                'tls-fingerprint': tls_fingerprint,
             },
         },
     };

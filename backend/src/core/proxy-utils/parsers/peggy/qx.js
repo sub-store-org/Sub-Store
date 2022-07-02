@@ -155,7 +155,7 @@ tls_host = comma "tls-host" equals sni:domain { proxy.sni = sni; }
 tls_verification = comma "tls-verification" equals flag:bool { 
     proxy["skip-cert-verify"] = !flag;
 }
-tls_fingerprint = comma "tls-cert-sha256" equals tls_fingerprint:[^,] { proxy["tls-fingerprint"] = tls_fingerprint; }
+tls_fingerprint = comma "tls-cert-sha256" equals tls_fingerprint:$[^,]+ { proxy["tls-fingerprint"] = tls_fingerprint.trim(); }
 
 obfs_ss = comma "obfs" equals type:("http"/"tls"/"wss"/"ws"/"over-tls") { obfs.type = type; return type; }
 obfs_ssr = comma "obfs" equals type:("plain"/"http_simple"/"http_post"/"random_head"/"tls1.2_ticket_auth"/"tls1.2_ticket_fastauth") { obfs.type = type; return type; }
