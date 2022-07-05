@@ -4,6 +4,7 @@
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket.",
   "main": "src/main.js",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "test": "gulp peggy && npx cross-env BABEL_ENV=test mocha src/test/**/*.spec.js --require @babel/register --recursive",
     "serve": "node sub-store.min.js",
     "start": "nodemon --exec node_modules/.bin/babel-node src/main.js",
@@ -44,7 +45,6 @@
     "peggy": "^2.0.1",
     "prettier": "2.6.2",
     "prettier-plugin-sort-imports": "^1.6.1",
-    "through2": "^4.0.2",
     "tinyify": "^3.0.0"
   }
 }
