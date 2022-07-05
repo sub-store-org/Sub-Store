@@ -1,5 +1,6 @@
 import { getPlatformFromHeaders } from '@/utils/platform';
-import { COLLECTIONS_KEY, SUBS_KEY } from './constants';
+import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
+import { findByName } from '@/utils/database';
 import { getFlowHeaders } from '@/utils/flow';
 import { produceArtifact } from './artifacts';
 import $ from '@/core/app';
@@ -13,21 +14,19 @@ async function downloadSubscription(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
 
-    const raw = req.query.raw || false;
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
     $.info(`正在下载订阅：${name}`);
 
     const allSubs = $.read(SUBS_KEY);
-    const sub = allSubs[name];
+    const sub = findByName(allSubs, name);
     if (sub) {
         try {
             const output = await produceArtifact({
                 type: 'subscription',
-                item: sub,
+                name,
                 platform,
-                noProcessor: raw,
             });
 
             if (sub.source !== 'local') {
@@ -69,36 +68,35 @@ async function downloadCollection(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
 
-    const { raw } = req.query || 'false';
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
-    const allCollections = $.read(COLLECTIONS_KEY);
-    const collection = allCollections[name];
+    const allCols = $.read(COLLECTIONS_KEY);
+    const collection = findByName(allCols, name);
 
     $.info(`正在下载组合订阅：${name}`);
-
-    // forward flow header from the first subscription in this collection
-    const allSubs = $.read(SUBS_KEY);
-    const subs = collection['subscriptions'];
-    if (subs.length > 0) {
-        const sub = allSubs[subs[0]];
-        if (sub.source !== 'local') {
-            const flowInfo = await getFlowHeaders(sub.url);
-            if (flowInfo) {
-                res.set('subscription-userinfo', flowInfo);
-            }
-        }
-    }
 
     if (collection) {
         try {
             const output = await produceArtifact({
                 type: 'collection',
-                item: collection,
+                name,
                 platform,
-                noProcessor: raw,
             });
+
+            // forward flow header from the first subscription in this collection
+            const allSubs = $.read(SUBS_KEY);
+            const subnames = collection.subscriptions;
+            if (subnames.length > 0) {
+                const sub = findByName(allSubs, subnames[0]);
+                if (sub.source !== 'local') {
+                    const flowInfo = await getFlowHeaders(sub.url);
+                    if (flowInfo) {
+                        res.set('subscription-userinfo', flowInfo);
+                    }
+                }
+            }
+
             if (platform === 'JSON') {
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
                     output,

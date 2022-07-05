@@ -1,8 +1,9 @@
 import { InternalServerError, NetworkError } from './errors';
 import { ProxyUtils } from '@/core/proxy-utils';
+import { findByName } from '@/utils/database';
 import { success, failed } from './response';
 import download from '@/utils/download';
-import { SUBS_KEY } from './constants';
+import { SUBS_KEY } from '@/constants';
 import $ from '@/core/app';
 
 export default function register($app) {
@@ -53,12 +54,12 @@ async function compareSub(req, res) {
 async function compareCollection(req, res) {
     const allSubs = $.read(SUBS_KEY);
     const collection = req.body;
-    const subnames = collection['subscriptions'];
+    const subnames = collection.subscriptions;
     const results = {};
 
     await Promise.all(
         subnames.map(async (name) => {
-            const sub = allSubs[name];
+            const sub = findByName(allSubs, name);
             try {
                 let raw;
                 if (sub.source === 'local') {

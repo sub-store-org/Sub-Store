@@ -1,4 +1,6 @@
-import { COLLECTIONS_KEY } from './constants';
+import { deleteByName, findByName, updateByName } from '@/utils/database';
+import { COLLECTIONS_KEY } from '@/constants';
+import { success } from '@/restful/response';
 import $ from '@/core/app';
 
 export default function register($app) {
@@ -18,30 +20,25 @@ export default function register($app) {
 function createCollection(req, res) {
     const collection = req.body;
     $.info(`正在创建组合订阅：${collection.name}`);
-    const allCol = $.read(COLLECTIONS_KEY);
-    if (allCol[collection.name]) {
+    const allCols = $.read(COLLECTIONS_KEY);
+    if (findByName(allCols, collection.name)) {
         res.status(500).json({
             status: 'failed',
             message: `订阅集${collection.name}已存在！`,
         });
     }
-    allCol[collection.name] = collection;
-    $.write(allCol, COLLECTIONS_KEY);
-    res.status(201).json({
-        status: 'success',
-        data: collection,
-    });
+    allCols.push(collection);
+    $.write(allCols, COLLECTIONS_KEY);
+    success(res, collection, 201);
 }
 
 function getCollection(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
-    const collection = $.read(COLLECTIONS_KEY)[name];
+    const allCols = $.read(COLLECTIONS_KEY);
+    const collection = findByName(allCols, name);
     if (collection) {
-        res.json({
-            status: 'success',
-            data: collection,
-        });
+        success(res, collection);
     } else {
         res.status(404).json({
             status: 'failed',
@@ -54,21 +51,17 @@ function updateCollection(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
     let collection = req.body;
-    const allCol = $.read(COLLECTIONS_KEY);
-    if (allCol[name]) {
+    const allCols = $.read(COLLECTIONS_KEY);
+    const oldCol = findByName(allCols, name);
+    if (oldCol) {
         const newCol = {
-            ...allCol[name],
+            ...oldCol,
             ...collection,
         };
         $.info(`正在更新组合订阅：${name}...`);
-        // allow users to update collection name
-        delete allCol[name];
-        allCol[collection.name || name] = newCol;
-        $.write(allCol, COLLECTIONS_KEY);
-        res.json({
-            status: 'success',
-            data: newCol,
-        });
+        updateByName(allCols, name, newCol);
+        $.write(allCols, COLLECTIONS_KEY);
+        success(res, newCol);
     } else {
         res.status(500).json({
             status: 'failed',
@@ -81,18 +74,13 @@ function deleteCollection(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
     $.info(`正在删除组合订阅：${name}`);
-    let allCol = $.read(COLLECTIONS_KEY);
-    delete allCol[name];
-    $.write(allCol, COLLECTIONS_KEY);
-    res.json({
-        status: 'success',
-    });
+    let allCols = $.read(COLLECTIONS_KEY);
+    deleteByName(allCols, name);
+    $.write(allCols, COLLECTIONS_KEY);
+    success(res);
 }
 
 function getAllCollections(req, res) {
     const allCols = $.read(COLLECTIONS_KEY);
-    res.json({
-        status: 'success',
-        data: allCols,
-    });
+    success(res, allCols);
 }

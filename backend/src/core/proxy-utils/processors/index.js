@@ -4,19 +4,32 @@ import { getFlag } from '@/utils/geo';
 import lodash from 'lodash';
 import $ from '@/core/app';
 
-// force to set some properties (e.g., skip-cert-verify, udp, tfo, etc.)
-function SetPropertyOperator({ key, value }) {
+function QuickSettingOperator(args) {
     return {
-        name: 'Set Property Operator',
+        name: 'Quick Setting Operator',
         func: (proxies) => {
-            return proxies.map((p) => {
-                if ((key == 'aead' && p.type === 'vmess') || key !== 'aead') {
-                    p[key] = value;
+            return proxies.map((proxy) => {
+                proxy.udp = convert(args.udp);
+                proxy.tfo = convert(args.tfo);
+                proxy['skip-cert-verify'] = convert(args.scert);
+                if (proxy.type === 'vmess') {
+                    proxy.aead = convert(args['vmess aead']);
                 }
-                return p;
+                return proxy;
             });
         },
     };
+
+    function convert(value) {
+        switch (value) {
+            case 'ENABLED':
+                return true;
+            case 'DISABLED':
+                return false;
+            default:
+                return undefined;
+        }
+    }
 }
 
 // add or remove flag for proxies
@@ -389,7 +402,7 @@ function RegexFilter({ regex = [], keep = true }) {
 function buildRegex(str, ...options) {
     options = options.join('');
     if (str.startsWith('(?i)')) {
-        str = str.substr(4);
+        str = str.substring(4);
         return new RegExp(str, 'i' + options);
     } else {
         return new RegExp(str, options);
@@ -444,7 +457,7 @@ export default {
     'Type Filter': TypeFilter,
     'Script Filter': ScriptFilter,
 
-    'Set Property Operator': SetPropertyOperator,
+    'Quick Setting Operator': QuickSettingOperator,
     'Flag Operator': FlagOperator,
     'Sort Operator': SortOperator,
     'Regex Sort Operator': RegexSortOperator,
@@ -462,7 +475,7 @@ async function ApplyFilter(filter, objs) {
         selected = await filter.func(objs);
     } catch (err) {
         // print log and skip this filter
-        console.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
+        $.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
     }
     return objs.filter((_, i) => selected[i]);
 }
@@ -474,7 +487,7 @@ async function ApplyOperator(operator, objs) {
         if (output_) output = output_;
     } catch (err) {
         // print log and skip this operator
-        console.log(`Cannot apply operator ${operator.name}! Reason: ${err}`);
+        $.log(`Cannot apply operator ${operator.name}! Reason: ${err}`);
     }
     return output;
 }
