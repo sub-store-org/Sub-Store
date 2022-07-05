@@ -8,31 +8,34 @@ function QuickSettingOperator(args) {
     return {
         name: 'Quick Setting Operator',
         func: (proxies) => {
-            if (convert(args.useless)) {
+            if (get(args.useless)) {
                 const filter = UselessFilter();
                 proxies = filter.func(proxies);
             }
 
             return proxies.map((proxy) => {
-                proxy.udp = convert(args.udp);
-                proxy.tfo = convert(args.tfo);
-                proxy['skip-cert-verify'] = convert(args.scert);
+                proxy.udp = get(args.udp, proxy.udp);
+                proxy.tfo = get(args.tfo, proxy.tfo);
+                proxy['skip-cert-verify'] = get(
+                    args.scert,
+                    proxy['skip-cert-verify'],
+                );
                 if (proxy.type === 'vmess') {
-                    proxy.aead = convert(args['vmess aead']);
+                    proxy.aead = get(args['vmess aead'], proxy.aead);
                 }
                 return proxy;
             });
         },
     };
 
-    function convert(value) {
+    function get(value, defaultValue) {
         switch (value) {
             case 'ENABLED':
                 return true;
             case 'DISABLED':
                 return false;
             default:
-                return undefined;
+                return defaultValue;
         }
     }
 }

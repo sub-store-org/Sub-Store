@@ -3,8 +3,8 @@ import $ from '@/core/app';
 import { success } from '@/restful/response';
 
 export default function register($app) {
-    $app.post('/api/sort/sub', sortSubs);
-    $app.post('/api/sort/collection', sortCollections);
+    $app.post('/api/sort/subs', sortSubs);
+    $app.post('/api/sort/collections', sortCollections);
     $app.post('/api/sort/artifacts', sortArtifacts);
 }
 
