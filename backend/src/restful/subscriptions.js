@@ -2,6 +2,7 @@ import {
     NetworkError,
     InternalServerError,
     ResourceNotFoundError,
+    RequestInvalidError,
 } from './errors';
 import { deleteByName, findByName, updateByName } from '@/utils/database';
 import { SUBS_KEY, COLLECTIONS_KEY } from '@/constants';
@@ -40,7 +41,7 @@ async function getFlowInfo(req, res) {
         return;
     }
     if (sub.source === 'local') {
-        failed(res, new InternalServerError('NO_FLOW_INFO', 'N/A'));
+        failed(res, new RequestInvalidError('NO_FLOW_INFO', 'N/A'));
         return;
     }
     try {
@@ -76,10 +77,13 @@ function createSubscription(req, res) {
     $.info(`正在创建订阅： ${sub.name}`);
     const allSubs = $.read(SUBS_KEY);
     if (findByName(allSubs, sub.name)) {
-        res.status(500).json({
-            status: 'failed',
-            message: `订阅${sub.name}已存在！`,
-        });
+        failed(
+            res,
+            new RequestInvalidError(
+                'DUPLICATE_KEY',
+                `Subscription ${sub.name} already exists.`,
+            ),
+        );
     }
     allSubs.push(sub);
     $.write(allSubs, SUBS_KEY);
@@ -98,6 +102,14 @@ function getSubscription(req, res) {
             status: 'failed',
             message: `未找到订阅：${name}!`,
         });
+        failed(
+            res,
+            new ResourceNotFoundError(
+                `SUBSCRIPTION_NOT_FOUND`,
+                `Subscription ${name} does not exist`,
+                404,
+            ),
+        );
     }
 }
 
@@ -128,10 +140,14 @@ function updateSubscription(req, res) {
         $.write(allSubs, SUBS_KEY);
         success(res, newSub);
     } else {
-        res.status(500).json({
-            status: 'failed',
-            message: `订阅${name}不存在，无法更新！`,
-        });
+        failed(
+            res,
+            new ResourceNotFoundError(
+                'RESOURCE_NOT_FOUND',
+                `Subscription ${name} does not exist!`,
+            ),
+            404,
+        );
     }
 }
 
