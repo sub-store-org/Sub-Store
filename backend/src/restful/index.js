@@ -15,6 +15,7 @@ import registerArtifactRoutes from './artifacts';
 import registerDownloadRoutes from './download';
 import registerSettingRoutes from './settings';
 import registerPreviewRoutes from './preview';
+import registerSortingRoutes from './sort';
 import { success } from '@/restful/response';
 
 export default function serve() {
@@ -25,6 +26,7 @@ export default function serve() {
     registerSubscriptionRoutes($app);
     registerDownloadRoutes($app);
     registerPreviewRoutes($app);
+    registerSortingRoutes($app);
     registerSettingRoutes($app);
     registerArtifactRoutes($app);
 
