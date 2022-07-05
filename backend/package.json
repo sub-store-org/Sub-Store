@@ -1,17 +1,17 @@
 {
   "name": "sub-store",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket.",
   "main": "src/main.js",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "test": "gulp peggy && npx cross-env BABEL_ENV=test mocha src/test/**/*.spec.js --require @babel/register --recursive",
     "serve": "node sub-store.min.js",
-    "start": "nodemon --exec node_modules/.bin/babel-node src/main.js",
+    "start": "nodemon -w src -w package.json --exec babel-node src/main.js",
     "build": "gulp"
   },
   "author": "Peng-YM",
-  "license": "GPL",
+  "license": "GPL-3.0",
   "dependencies": {
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
