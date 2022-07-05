@@ -10,7 +10,8 @@ function QuickSettingOperator(args) {
         func: (proxies) => {
             if (get(args.useless)) {
                 const filter = UselessFilter();
-                proxies = filter.func(proxies);
+                const selected = filter.func(proxies);
+                proxies.filter((_, i) => selected[i]);
             }
 
             return proxies.map((proxy) => {
