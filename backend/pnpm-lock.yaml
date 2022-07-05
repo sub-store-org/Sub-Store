@@ -30,9 +30,10 @@ specifiers:
   prettier: 2.6.2
   prettier-plugin-sort-imports: ^1.6.1
   request: ^2.88.2
+  semver: ^7.3.7
   static-js-yaml: ^1.0.0
-  through2: ^4.0.2
   tinyify: ^3.0.0
+  uuid: ^8.3.2
 
 dependencies:
   body-parser: registry.npmmirror.com/body-parser/1.19.0
@@ -40,7 +41,9 @@ dependencies:
   js-base64: registry.npmmirror.com/js-base64/3.7.2
   lodash: registry.npmmirror.com/lodash/4.17.21
   request: registry.npmmirror.com/request/2.88.2
+  semver: registry.npmmirror.com/semver/7.3.7
   static-js-yaml: registry.npmmirror.com/static-js-yaml/1.0.0
+  uuid: registry.npmmirror.com/uuid/8.3.2
 
 devDependencies:
   '@babel/core': registry.npmmirror.com/@babel/core/7.18.0
@@ -67,7 +70,6 @@ devDependencies:
   peggy: registry.npmmirror.com/peggy/2.0.1
   prettier: registry.npmmirror.com/prettier/2.6.2
   prettier-plugin-sort-imports: registry.npmmirror.com/prettier-plugin-sort-imports/1.6.1
-  through2: registry.npmmirror.com/through2/4.0.2
   tinyify: registry.npmmirror.com/tinyify/3.0.0
 
 packages:
@@ -6421,7 +6423,6 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       yallist: registry.npmmirror.com/yallist/4.0.0
-    dev: true
 
   registry.npmmirror.com/magic-string/0.23.2:
     resolution: {integrity: sha512-oIUZaAxbcxYIp4AyLafV6OVKoB3YouZs0UTCJ8mOKBHNyJgGDaMJ4TgA+VylJh6fx7EQCC52XkbURxxG9IoJXA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/magic-string/-/magic-string-0.23.2.tgz}
@@ -8206,7 +8207,6 @@ packages:
     hasBin: true
     dependencies:
       lru-cache: registry.npmmirror.com/lru-cache/6.0.0
-    dev: true
 
   registry.npmmirror.com/send/0.17.1:
     resolution: {integrity: sha512-BsVKsiGcQMFwT8UxypobUKyv7irCNRHk1T0G680vk88yf6LBByGcZJOTJCrTP2xVN6yI+XjPJcNuE3V4fT9sAg==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/send/-/send-0.17.1.tgz}
@@ -9459,6 +9459,13 @@ packages:
     hasBin: true
     dev: false
 
+  registry.npmmirror.com/uuid/8.3.2:
+    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/uuid/-/uuid-8.3.2.tgz}
+    name: uuid
+    version: 8.3.2
+    hasBin: true
+    dev: false
+
   registry.npmmirror.com/v8-compile-cache/2.3.0:
     resolution: {integrity: sha512-l8lCEmLcLYZh4nbunNZvQCJc5pv7+RCwa8q/LdUx8u7lsWvPDKmpodJAJNwkAhJC//dFY48KuIEmjtd4RViDrA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/v8-compile-cache/-/v8-compile-cache-2.3.0.tgz}
     name: v8-compile-cache
@@ -9731,7 +9738,6 @@ packages:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/yallist/-/yallist-4.0.0.tgz}
     name: yallist
     version: 4.0.0
-    dev: true
 
   registry.npmmirror.com/yargs-parser/20.2.4:
     resolution: {integrity: sha512-WOkpgNhPTlE73h4VFAFsOnomJVaovO8VqLDzy5saChRBFQFBoMYirowyW+Q9HB4HFF4Z7VZTiG3iSzJJA29yRA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/yargs-parser/-/yargs-parser-20.2.4.tgz}

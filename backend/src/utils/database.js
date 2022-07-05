@@ -3,7 +3,7 @@ export function findByName(list, name) {
 }
 
 export function findIndexByName(list, name) {
-    return list.find((item) => item.name === name);
+    return list.findIndex((item) => item.name === name);
 }
 
 export function deleteByName(list, name) {
