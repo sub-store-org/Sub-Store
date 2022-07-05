@@ -7,6 +7,7 @@ import { version as substoreVersion } from '../../package.json';
 import { ENV, HTTP } from '@/vendor/open-api';
 import express from '@/vendor/express';
 import Gist from '@/utils/gist';
+import migrate from '@/utils/migration';
 import $ from '@/core/app';
 
 import registerSubscriptionRoutes from './subscriptions';
@@ -124,6 +125,8 @@ async function gistBackup(req, res) {
                         $.cache = content;
                         $.persistCache();
                     }
+                    // perform migration after restoring from gist
+                    migrate();
                     break;
             }
             success(res);
