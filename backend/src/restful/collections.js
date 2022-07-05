@@ -1,7 +1,8 @@
 import { deleteByName, findByName, updateByName } from '@/utils/database';
 import { COLLECTIONS_KEY } from '@/constants';
-import { success } from '@/restful/response';
+import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
+import { RequestInvalidError, ResourceNotFoundError } from '@/restful/errors';
 
 export default function register($app) {
     if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
@@ -22,10 +23,13 @@ function createCollection(req, res) {
     $.info(`正在创建组合订阅：${collection.name}`);
     const allCols = $.read(COLLECTIONS_KEY);
     if (findByName(allCols, collection.name)) {
-        res.status(500).json({
-            status: 'failed',
-            message: `订阅集${collection.name}已存在！`,
-        });
+        failed(
+            res,
+            new RequestInvalidError(
+                'DUPLICATE_KEY',
+                `Collection ${collection.name} already exists.`,
+            ),
+        );
     }
     allCols.push(collection);
     $.write(allCols, COLLECTIONS_KEY);
@@ -40,10 +44,14 @@ function getCollection(req, res) {
     if (collection) {
         success(res, collection);
     } else {
-        res.status(404).json({
-            status: 'failed',
-            message: `未找到订阅集：${name}!`,
-        });
+        failed(
+            res,
+            new ResourceNotFoundError(
+                `SUBSCRIPTION_NOT_FOUND`,
+                `Collection ${name} does not exist`,
+                404,
+            ),
+        );
     }
 }
 
@@ -63,10 +71,14 @@ function updateCollection(req, res) {
         $.write(allCols, COLLECTIONS_KEY);
         success(res, newCol);
     } else {
-        res.status(500).json({
-            status: 'failed',
-            message: `订阅集${name}不存在，无法更新！`,
-        });
+        failed(
+            res,
+            new ResourceNotFoundError(
+                'RESOURCE_NOT_FOUND',
+                `Collection ${name} does not exist!`,
+            ),
+            404,
+        );
     }
 }
 

@@ -75,14 +75,13 @@ function doMigrationV2() {
                 tfo: 'DEFAULT',
                 scert: 'DEFAULT',
                 'vmess aead': 'DEFAULT',
-                'useless': 'DEFAULT',
+                useless: 'DEFAULT',
             },
         };
         processes.forEach((p) => {
             if (p.type === 'Useless Filter') {
                 quickSettingOperator.args.useless = 'ENABLED';
-            }
-            else if (p.type === 'Set Property Operator') {
+            } else if (p.type === 'Set Property Operator') {
                 const { key, value } = p.args;
                 switch (key) {
                     case 'udp':

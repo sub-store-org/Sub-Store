@@ -16,7 +16,8 @@ import registerDownloadRoutes from './download';
 import registerSettingRoutes from './settings';
 import registerPreviewRoutes from './preview';
 import registerSortingRoutes from './sort';
-import { success } from '@/restful/response';
+import { failed, success } from '@/restful/response';
+import { InternalServerError, RequestInvalidError } from '@/restful/errors';
 
 export default function serve() {
     const $app = express({ substore: $ });
@@ -76,12 +77,9 @@ function getEnv(req, res) {
     if (isStash) backend = 'Stash';
     if (isShadowRocket) backend = 'ShadowRocket';
 
-    res.json({
-        status: 200,
-        data: {
-            backend,
-            version: substoreVersion,
-        },
+    success(res, {
+        backend,
+        version: substoreVersion,
     });
 }
 
@@ -90,10 +88,13 @@ async function gistBackup(req, res) {
     // read token
     const { gistToken } = $.read(SETTINGS_KEY);
     if (!gistToken) {
-        res.status(500).json({
-            status: 'failed',
-            message: '未找到Gist备份Token!',
-        });
+        failed(
+            res,
+            new RequestInvalidError(
+                'GIST_TOKEN_NOT_FOUND',
+                `GitHub Token is required for backup!`,
+            ),
+        );
     } else {
         const gist = new Gist({
             token: gistToken,
@@ -127,14 +128,14 @@ async function gistBackup(req, res) {
             }
             success(res);
         } catch (err) {
-            const msg = `${
-                action === 'upload' ? '上传' : '下载'
-            }备份失败！${err}`;
-            $.error(msg);
-            res.status(500).json({
-                status: 'failed',
-                message: msg,
-            });
+            failed(
+                res,
+                new InternalServerError(
+                    'BACKUP_FAILED',
+                    `Failed to ${action} data to gist!`,
+                    `Reason: ${JSON.stringify(err)}`,
+                ),
+            );
         }
     }
 }

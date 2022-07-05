@@ -4,6 +4,8 @@ import { findByName } from '@/utils/database';
 import { getFlowHeaders } from '@/utils/flow';
 import { produceArtifact } from './artifacts';
 import $ from '@/core/app';
+import { failed } from '@/restful/response';
+import { InternalServerError, ResourceNotFoundError } from '@/restful/errors';
 
 export default function register($app) {
     $app.get('/download/collection/:name', downloadCollection);
@@ -51,16 +53,25 @@ async function downloadSubscription(req, res) {
                 `🤔 原因：${JSON.stringify(err)}`,
             );
             $.error(JSON.stringify(err));
-            res.status(500).json({
-                status: 'failed',
-                message: err,
-            });
+            failed(
+                res,
+                new InternalServerError(
+                    'INTERNAL_SERVER_ERROR',
+                    `Failed to download subscription: ${name}`,
+                    `Reason: ${JSON.stringify(err)}`,
+                ),
+            );
         }
     } else {
         $.notify(`🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`, `❌ 未找到订阅：${name}！`);
-        res.status(404).json({
-            status: 'failed',
-        });
+        failed(
+            res,
+            new ResourceNotFoundError(
+                'RESOURCE_NOT_FOUND',
+                `Subscription ${name} does not exist!`,
+            ),
+            404,
+        );
     }
 }
 
@@ -110,18 +121,27 @@ async function downloadCollection(req, res) {
                 `❌ 下载组合订阅错误：${name}！`,
                 `🤔 原因：${err}`,
             );
-            res.status(500).json({
-                status: 'failed',
-                message: err,
-            });
+            failed(
+                res,
+                new InternalServerError(
+                    'INTERNAL_SERVER_ERROR',
+                    `Failed to download collection: ${name}`,
+                    `Reason: ${JSON.stringify(err)}`,
+                ),
+            );
         }
     } else {
         $.notify(
             `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
             `❌ 未找到组合订阅：${name}！`,
         );
-        res.status(404).json({
-            status: 'failed',
-        });
+        failed(
+            res,
+            new ResourceNotFoundError(
+                'RESOURCE_NOT_FOUND',
+                `Collection ${name} does not exist!`,
+            ),
+            404,
+        );
     }
 }
