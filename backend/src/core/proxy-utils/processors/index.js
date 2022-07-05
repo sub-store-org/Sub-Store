@@ -8,6 +8,11 @@ function QuickSettingOperator(args) {
     return {
         name: 'Quick Setting Operator',
         func: (proxies) => {
+            if (convert(args.useless)) {
+                const filter = UselessFilter();
+                proxies = filter.func(proxies);
+            }
+
             return proxies.map((proxy) => {
                 proxy.udp = convert(args.udp);
                 proxy.tfo = convert(args.tfo);
