@@ -1,3 +1,4 @@
+export const SCHEMA_VERSION_KEY = 'schemaVersion';
 export const SETTINGS_KEY = 'settings';
 export const SUBS_KEY = 'subs';
 export const COLLECTIONS_KEY = 'collections';

@@ -2,7 +2,7 @@ import {
     SETTINGS_KEY,
     GIST_BACKUP_KEY,
     GIST_BACKUP_FILE_NAME,
-} from './constants';
+} from '@/constants';
 import { version as substoreVersion } from '../../package.json';
 import { ENV, HTTP } from '@/vendor/open-api';
 import express from '@/vendor/express';
@@ -15,6 +15,7 @@ import registerArtifactRoutes from './artifacts';
 import registerDownloadRoutes from './download';
 import registerSettingRoutes from './settings';
 import registerPreviewRoutes from './preview';
+import { success } from '@/restful/response';
 
 export default function serve() {
     const $app = express({ substore: $ });
@@ -117,15 +118,12 @@ async function gistBackup(req, res) {
                     $.write(content, '#sub-store');
                     if ($.env.isNode) {
                         content = JSON.parse(content);
-                        Object.keys(content).forEach((key) => {
-                            $.write(content[key], key);
-                        });
+                        $.cache = content;
+                        $.persistCache();
                     }
                     break;
             }
-            res.json({
-                status: 'success',
-            });
+            success(res);
         } catch (err) {
             const msg = `${
                 action === 'upload' ? '上传' : '下载'

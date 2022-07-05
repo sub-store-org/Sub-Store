@@ -1,17 +1,12 @@
-import {
-    ARTIFACTS_KEY,
-    SUBS_KEY,
-    COLLECTIONS_KEY,
-    RULES_KEY,
-} from '@/restful/constants';
 import { syncArtifact, produceArtifact } from '@/restful/artifacts';
 import { version } from '../../package.json';
+import { ARTIFACTS_KEY } from '@/constants';
 import $ from '@/core/app';
 
 console.log(
     `
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
-     Sub-Store © Peng-YM -- v${version}
+     Sub-Store -- v${version}
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 `,
 );
@@ -22,24 +17,12 @@ console.log(
 
     try {
         await Promise.all(
-            Object.values(allArtifacts).map(async (artifact) => {
+            allArtifacts.map(async (artifact) => {
                 if (artifact.sync) {
                     $.info(`正在同步云配置：${artifact.name}...`);
-                    let item;
-                    switch (artifact.type) {
-                        case 'subscription':
-                            item = $.read(SUBS_KEY)[artifact.source];
-                            break;
-                        case 'collection':
-                            item = $.read(COLLECTIONS_KEY)[artifact.source];
-                            break;
-                        case 'rule':
-                            item = $.read(RULES_KEY)[artifact.source];
-                            break;
-                    }
                     const output = await produceArtifact({
                         type: artifact.type,
-                        item,
+                        name: artifact.source,
                         platform: artifact.platform,
                     });
 
@@ -53,7 +36,7 @@ console.log(
         const resp = await syncArtifact(files);
         const body = JSON.parse(resp.body);
 
-        for (const artifact of Object.values(allArtifacts)) {
+        for (const artifact of allArtifacts) {
             artifact.updated = new Date().getTime();
             // extract real url from gist
             artifact.url = body.files[artifact.name].raw_url.replace(

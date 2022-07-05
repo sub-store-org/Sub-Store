@@ -1,4 +1,5 @@
-import { SETTINGS_KEY } from './constants';
+import { SETTINGS_KEY } from '@/constants';
+import { success } from './response';
 import $ from '@/core/app';
 
 export default function register($app) {
@@ -8,20 +9,15 @@ export default function register($app) {
 
 function getSettings(req, res) {
     const settings = $.read(SETTINGS_KEY);
-    res.json(settings);
+    success(res, settings);
 }
 
 function updateSettings(req, res) {
-    const data = req.body;
     const settings = $.read(SETTINGS_KEY);
-    $.write(
-        {
-            ...settings,
-            ...data,
-        },
-        SETTINGS_KEY,
-    );
-    res.json({
-        status: 'success',
-    });
+    const newSettings = {
+        ...settings,
+        ...req.body,
+    };
+    $.write(newSettings, SETTINGS_KEY);
+    success(res, newSettings);
 }

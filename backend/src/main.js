@@ -14,11 +14,13 @@ import { version } from '../package.json';
 console.log(
     `
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
-     Sub-Store © Peng-YM -- v${version}
+     Sub-Store -- v${version}
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 `,
 );
 
+import migrate from '@/utils/migration';
 import serve from '@/restful';
 
+migrate();
 serve();

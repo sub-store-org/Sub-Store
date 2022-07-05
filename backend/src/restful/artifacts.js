@@ -11,7 +11,9 @@ import {
     COLLECTIONS_KEY,
     RULES_KEY,
     SETTINGS_KEY,
-} from './constants';
+} from '@/constants';
+import { deleteByName, findByName, updateByName } from '@/utils/database';
+import { success } from '@/restful/response';
 
 export default function register($app) {
     // Initialization
@@ -31,10 +33,7 @@ export default function register($app) {
 
 function getAllArtifacts(req, res) {
     const allArtifacts = $.read(ARTIFACTS_KEY);
-    res.json({
-        status: 'success',
-        data: allArtifacts,
-    });
+    success(res, allArtifacts);
 }
 
 async function getArtifact(req, res) {
@@ -42,32 +41,25 @@ async function getArtifact(req, res) {
     name = decodeURIComponent(name);
     const action = req.query.action;
     const allArtifacts = $.read(ARTIFACTS_KEY);
-    const artifact = allArtifacts[name];
+    const artifact = findByName(allArtifacts, name);
 
     if (artifact) {
         if (action) {
-            let item;
-            switch (artifact.type) {
-                case 'subscription':
-                    item = $.read(SUBS_KEY)[artifact.source];
-                    break;
-                case 'collection':
-                    item = $.read(COLLECTIONS_KEY)[artifact.source];
-                    break;
-                case 'rule':
-                    item = $.read(RULES_KEY)[artifact.source];
-                    break;
-            }
             const output = await produceArtifact({
                 type: artifact.type,
-                item,
+                name: artifact.source,
                 platform: artifact.platform,
             });
             if (action === 'preview') {
                 res.send(output);
             } else if (action === 'sync') {
-                $.info(`正在上传配置：${artifact.name}\n>>>`);
-                console.log(JSON.stringify(artifact, null, 2));
+                $.info(
+                    `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
+                        artifact,
+                        null,
+                        2,
+                    )}`,
+                );
                 try {
                     const resp = await syncArtifact({
                         [encodeURIComponent(artifact.name)]: {
@@ -80,9 +72,7 @@ async function getArtifact(req, res) {
                         encodeURIComponent(artifact.name)
                     ].raw_url.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
                     $.write(allArtifacts, ARTIFACTS_KEY);
-                    res.json({
-                        status: 'success',
-                    });
+                    success(res);
                 } catch (err) {
                     res.status(500).json({
                         status: 'failed',
@@ -91,10 +81,7 @@ async function getArtifact(req, res) {
                 }
             }
         } else {
-            res.json({
-                status: 'success',
-                data: artifact,
-            });
+            success(res, artifact);
         }
     } else {
         res.status(404).json({
@@ -108,18 +95,15 @@ function createArtifact(req, res) {
     const artifact = req.body;
     $.info(`正在创建远程配置：${artifact.name}`);
     const allArtifacts = $.read(ARTIFACTS_KEY);
-    if (allArtifacts[artifact.name]) {
+    if (findByName(allArtifacts, artifact.name)) {
         res.status(500).json({
             status: 'failed',
             message: `远程配置${artifact.name}已存在！`,
         });
     } else {
-        allArtifacts[artifact.name] = artifact;
+        allArtifacts.push(artifact);
         $.write(allArtifacts, ARTIFACTS_KEY);
-        res.status(201).json({
-            status: 'success',
-            data: artifact,
-        });
+        success(res, artifact, 201);
     }
 }
 
@@ -127,31 +111,16 @@ function updateArtifact(req, res) {
     const allArtifacts = $.read(ARTIFACTS_KEY);
     let oldName = req.params.name;
     oldName = decodeURIComponent(oldName);
-    const artifact = allArtifacts[oldName];
+    const artifact = findByName(allArtifacts, oldName);
     if (artifact) {
         $.info(`正在更新远程配置：${artifact.name}`);
-        const newArtifact = req.body;
-        if (
-            typeof newArtifact.name !== 'undefined' &&
-            !/^[\w-_.]*$/.test(newArtifact.name)
-        ) {
-            res.status(500).json({
-                status: 'failed',
-                message: `远程配置名称 ${newArtifact.name} 中含有非法字符！名称中只能包含英文字母、数字、下划线、横杠。`,
-            });
-        } else {
-            const merged = {
-                ...artifact,
-                ...newArtifact,
-            };
-            allArtifacts[merged.name] = merged;
-            if (merged.name !== oldName) delete allArtifacts[oldName];
-            $.write(allArtifacts, ARTIFACTS_KEY);
-            res.json({
-                status: 'success',
-                data: merged,
-            });
-        }
+        const newArtifact = {
+            ...artifact,
+            ...req.body,
+        };
+        updateByName(allArtifacts, oldName, newArtifact);
+        $.write(allArtifacts, ARTIFACTS_KEY);
+        success(res, newArtifact);
     } else {
         res.status(404).json({
             status: 'failed',
@@ -166,7 +135,7 @@ async function deleteArtifact(req, res) {
     $.info(`正在删除远程配置：${name}`);
     const allArtifacts = $.read(ARTIFACTS_KEY);
     try {
-        const artifact = allArtifacts[name];
+        const artifact = findByName(allArtifacts, name);
         if (!artifact) throw new Error(`远程配置：${name}不存在！`);
         if (artifact.updated) {
             // delete gist
@@ -177,11 +146,9 @@ async function deleteArtifact(req, res) {
             await syncArtifact(files);
         }
         // delete local cache
-        delete allArtifacts[name];
+        deleteByName(allArtifacts, name);
         $.write(allArtifacts, ARTIFACTS_KEY);
-        res.json({
-            status: 'success',
-        });
+        success(res);
     } catch (err) {
         $.error(`无法删除远程配置：${name}，原因：${err}`);
         res.status(500).json({
@@ -198,24 +165,12 @@ async function cronSyncArtifacts(_, res) {
 
     try {
         await Promise.all(
-            Object.values(allArtifacts).map(async (artifact) => {
+            allArtifacts.map(async (artifact) => {
                 if (artifact.sync) {
                     $.info(`正在同步云配置：${artifact.name}...`);
-                    let item;
-                    switch (artifact.type) {
-                        case 'subscription':
-                            item = $.read(SUBS_KEY)[artifact.source];
-                            break;
-                        case 'collection':
-                            item = $.read(COLLECTIONS_KEY)[artifact.source];
-                            break;
-                        case 'rule':
-                            item = $.read(RULES_KEY)[artifact.source];
-                            break;
-                    }
                     const output = await produceArtifact({
                         type: artifact.type,
-                        item,
+                        name: artifact.source,
                         platform: artifact.platform,
                     });
 
@@ -229,7 +184,7 @@ async function cronSyncArtifacts(_, res) {
         const resp = await syncArtifact(files);
         const body = JSON.parse(resp.body);
 
-        for (const artifact of Object.values(allArtifacts)) {
+        for (const artifact of allArtifacts) {
             artifact.updated = new Date().getTime();
             // extract real url from gist
             artifact.url = body.files[artifact.name].raw_url.replace(
@@ -240,7 +195,7 @@ async function cronSyncArtifacts(_, res) {
 
         $.write(allArtifacts, ARTIFACTS_KEY);
         $.info('全部订阅同步成功！');
-        res.status(200).end();
+        success(res);
     } catch (err) {
         res.status(500).json({
             error: err,
@@ -261,12 +216,12 @@ async function syncArtifact(files) {
     return manager.upload(files);
 }
 
-async function produceArtifact({ type, item, platform, noProcessor }) {
+async function produceArtifact({ type, name, platform }) {
     platform = platform || 'JSON';
-    noProcessor = noProcessor || false;
 
     if (type === 'subscription') {
-        const sub = item;
+        const allSubs = $.read(SUBS_KEY);
+        const sub = findByName(allSubs, name);
         let raw;
         if (sub.source === 'local') {
             raw = sub.content;
@@ -275,14 +230,12 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
         }
         // parse proxies
         let proxies = ProxyUtils.parse(raw);
-        if (!noProcessor) {
-            // apply processors
-            proxies = await ProxyUtils.process(
-                proxies,
-                sub.process || [],
-                platform,
-            );
-        }
+        // apply processors
+        proxies = await ProxyUtils.process(
+            proxies,
+            sub.process || [],
+            platform,
+        );
         // check duplicate
         const exist = {};
         for (const proxy of proxies) {
@@ -304,14 +257,15 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
         return ProxyUtils.produce(proxies, platform);
     } else if (type === 'collection') {
         const allSubs = $.read(SUBS_KEY);
-        const collection = item;
-        const subnames = collection['subscriptions'];
+        const allCols = $.read(COLLECTIONS_KEY);
+        const collection = findByName(allCols, name);
+        const subnames = collection.subscriptions;
         const results = {};
         let processed = 0;
 
         await Promise.all(
             subnames.map(async (name) => {
-                const sub = allSubs[name];
+                const sub = findByName(allSubs, name);
                 try {
                     $.info(`正在处理子订阅：${sub.name}...`);
                     let raw;
@@ -322,14 +276,12 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
                     }
                     // parse proxies
                     let currentProxies = ProxyUtils.parse(raw);
-                    if (!noProcessor) {
-                        // apply processors
-                        currentProxies = await ProxyUtils.process(
-                            currentProxies,
-                            sub.process || [],
-                            platform,
-                        );
-                    }
+                    // apply processors
+                    currentProxies = await ProxyUtils.process(
+                        currentProxies,
+                        sub.process || [],
+                        platform,
+                    );
                     results[name] = currentProxies;
                     processed++;
                     $.info(
@@ -356,14 +308,12 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
             subnames.map((name) => results[name]),
         );
 
-        if (!noProcessor) {
-            // apply own processors
-            proxies = await ProxyUtils.process(
-                proxies,
-                collection.process || [],
-                platform,
-            );
-        }
+        // apply own processors
+        proxies = await ProxyUtils.process(
+            proxies,
+            collection.process || [],
+            platform,
+        );
         if (proxies.length === 0) {
             throw new Error(`组合订阅中不含有效节点！`);
         }
@@ -386,7 +336,8 @@ async function produceArtifact({ type, item, platform, noProcessor }) {
         }
         return ProxyUtils.produce(proxies, platform);
     } else if (type === 'rule') {
-        const rule = item;
+        const allRules = $.read(RULES_KEY);
+        const rule = findByName(allRules, name);
         let rules = [];
         for (let i = 0; i < rule.urls.length; i++) {
             const url = rule.urls[i];
