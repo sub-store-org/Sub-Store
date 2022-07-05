@@ -78,7 +78,6 @@ function doMigrationV2() {
             },
         };
         processes.forEach((p) => {
-            delete p.id;
             if (p.type === 'Set Property Operator') {
                 const { key, value } = p.args;
                 switch (key) {
