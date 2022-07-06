@@ -104,12 +104,12 @@ function QuickSettingOperator(args) {
 }
 
 // add or remove flag for proxies
-function FlagOperator(add = true) {
+function FlagOperator({ mode }) {
     return {
         name: 'Flag Operator',
         func: (proxies) => {
             return proxies.map((proxy) => {
-                if (!add) {
+                if (mode === 'remove') {
                     // no flag
                     proxy.name = removeFlag(proxy.name);
                 } else {
