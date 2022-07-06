@@ -57,7 +57,7 @@ function doMigrationV2() {
 
     // 5. delete builtin rules
     delete $.cache.builtin;
-    $.info('Migration complete!');    
+    $.info('Migration complete!');
 
     function migrateDisplayName(item) {
         const displayName = item['display-name'];
@@ -110,6 +110,13 @@ function doMigrationV2() {
                 }
             } else if (p.type.indexOf('Keyword') !== -1) {
                 // drop keyword operators and keyword filters
+            } else if (p.type === 'Flag Operator') {
+                // set default args
+                const add = typeof p.args === 'undefined' ? true : p.args;
+                p.args = {
+                    mode: add ? 'add' : 'remove',
+                };
+                newProcesses.push(p);
             } else {
                 newProcesses.push(p);
             }
