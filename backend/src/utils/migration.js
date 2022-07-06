@@ -26,6 +26,9 @@ function doMigrationV2() {
     // 1. migrate subscriptions
     const subs = $.read(SUBS_KEY) || {};
     const newSubs = Object.values(subs).map((sub) => {
+        // set default source to remote
+        sub.source = sub.source || 'remote';
+
         migrateDisplayName(sub);
         migrateProcesses(sub);
         return sub;
@@ -54,7 +57,7 @@ function doMigrationV2() {
 
     // 5. delete builtin rules
     delete $.cache.builtin;
-    $.info('Migration complete!');
+    $.info('Migration complete!');    
 
     function migrateDisplayName(item) {
         const displayName = item['display-name'];
@@ -106,7 +109,7 @@ function doMigrationV2() {
                         break;
                 }
             } else if (p.type.indexOf('Keyword') !== -1) {
-                // do nothing
+                // drop keyword operators and keyword filters
             } else {
                 newProcesses.push(p);
             }
