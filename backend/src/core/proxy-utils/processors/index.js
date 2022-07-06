@@ -27,36 +27,39 @@ function ConditionalFilter({ rule }) {
     return {
         name: 'Conditional Filter',
         func: (proxies) => {
-            return proxies.map(proxy => isMatch(rule, proxy));
-        }
-    }
+            return proxies.map((proxy) => isMatch(rule, proxy));
+        },
+    };
 }
 
 function isMatch(rule, proxy) {
     // leaf node
     if (!rule.operator) {
         switch (rule.proposition) {
-            case "IN":
+            case 'IN':
                 return rule.value.indexOf(proxy[rule.attr]) !== -1;
-            case "CONTAINS":
-                if (typeof proxy[rule.attr] !== "string") return false;
+            case 'CONTAINS':
+                if (typeof proxy[rule.attr] !== 'string') return false;
                 return proxy[rule.attr].indexOf(rule.value) !== -1;
-            case "EQUALS":
+            case 'EQUALS':
                 return proxy[rule.attr] === rule.value;
-            case "EXISTS":
-                return proxy[rule.attr] !== null || typeof proxy[rule.attr] !== "undefined";
+            case 'EXISTS':
+                return (
+                    proxy[rule.attr] !== null ||
+                    typeof proxy[rule.attr] !== 'undefined'
+                );
             default:
                 throw new Error(`Unknown proposition: ${rule.proposition}`);
         }
     }
 
     // operator nodes
-    switch (rule.operator) { 
-        case "AND":
-            return rule.child.every(child => isMatch(child, proxy));
-        case "OR":
-            return rule.child.some(child => isMatch(child, proxy));
-        case "NOT":
+    switch (rule.operator) {
+        case 'AND':
+            return rule.child.every((child) => isMatch(child, proxy));
+        case 'OR':
+            return rule.child.some((child) => isMatch(child, proxy));
+        case 'NOT':
             return !isMatch(rule.child, proxy);
         default:
             throw new Error(`Unknown operator: ${rule.operator}`);
