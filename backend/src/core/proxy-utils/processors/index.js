@@ -4,6 +4,65 @@ import { getFlag } from '@/utils/geo';
 import lodash from 'lodash';
 import $ from '@/core/app';
 
+/**
+The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed as follows:
+{
+    operator: "AND",
+    child: [
+        {
+            attr: "name",
+            proposition: "CONTAINS",
+            value: "🇨🇳"
+        },
+        {
+            attr: "port",
+            proposition: "IN",
+            value: [80, 443]
+        }
+    ]
+}
+*/
+
+function ConditionalFilter({ rule }) {
+    return {
+        name: 'Conditional Filter',
+        func: (proxies) => {
+            return proxies.map(proxy => isMatch(rule, proxy));
+        }
+    }
+}
+
+function isMatch(rule, proxy) {
+    // leaf node
+    if (!rule.operator) {
+        switch (rule.proposition) {
+            case "IN":
+                return rule.value.indexOf(proxy[rule.attr]) !== -1;
+            case "CONTAINS":
+                if (typeof proxy[rule.attr] !== "string") return false;
+                return proxy[rule.attr].indexOf(rule.value) !== -1;
+            case "EQUALS":
+                return proxy[rule.attr] === rule.value;
+            case "EXISTS":
+                return proxy[rule.attr] !== null || typeof proxy[rule.attr] !== "undefined";
+            default:
+                throw new Error(`Unknown proposition: ${rule.proposition}`);
+        }
+    }
+
+    // operator nodes
+    switch (rule.operator) { 
+        case "AND":
+            return rule.child.every(child => isMatch(child, proxy));
+        case "OR":
+            return rule.child.some(child => isMatch(child, proxy));
+        case "NOT":
+            return !isMatch(rule.child, proxy);
+        default:
+            throw new Error(`Unknown operator: ${rule.operator}`);
+    }
+}
+
 function QuickSettingOperator(args) {
     return {
         name: 'Quick Setting Operator',
@@ -465,6 +524,7 @@ export default {
     'Regex Filter': RegexFilter,
     'Type Filter': TypeFilter,
     'Script Filter': ScriptFilter,
+    'Conditional Filter': ConditionalFilter,
 
     'Quick Setting Operator': QuickSettingOperator,
     'Flag Operator': FlagOperator,
