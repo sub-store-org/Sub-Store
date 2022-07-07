@@ -1,16 +1,18 @@
-import { SETTINGS_KEY } from '@/constants';
+import { SETTINGS_KEY, ARTIFACT_REPOSITORY_KEY } from '@/constants';
 import { success } from './response';
 import $ from '@/core/app';
+import Gist from '@/utils/gist';
 
 export default function register($app) {
     const settings = $.read(SETTINGS_KEY);
     if (!settings) $.write({}, SETTINGS_KEY);
-    if (!settings.avatarUrl) updateGitHubAvatar();
     $app.route('/api/settings').get(getSettings).patch(updateSettings);
 }
 
-function getSettings(req, res) {
+async function getSettings(req, res) {
     const settings = $.read(SETTINGS_KEY);
+    if (!settings.avatarUrl) await updateGitHubAvatar();
+    if (!settings.artifactStore) await updateArtifactStore();
     success(res, settings);
 }
 
@@ -22,6 +24,7 @@ async function updateSettings(req, res) {
     };
     $.write(newSettings, SETTINGS_KEY);
     await updateGitHubAvatar();
+    await updateArtifactStore();
     success(res, newSettings);
 }
 
@@ -43,6 +46,26 @@ async function updateGitHubAvatar() {
             $.write(settings, SETTINGS_KEY);
         } catch (e) {
             $.error('Failed to fetch GitHub avatar for User: ' + username);
+        }
+    }
+}
+
+async function updateArtifactStore() {
+    console.log('Updating artifact store');
+    const settings = $.read(SETTINGS_KEY);
+    const { githubUser, gistToken } = settings;
+    if (githubUser && gistToken) {
+        const manager = new Gist({
+            token: gistToken,
+            key: ARTIFACT_REPOSITORY_KEY,
+        });
+
+        try {
+            const gistId = await manager.locate();
+            settings.artifactStore = `https://gist.github.com/${githubUser}/${gistId}`;
+            $.write(settings, SETTINGS_KEY);
+        } catch (err) {
+            $.error('Failed to fetch artifact store for User: ' + githubUser);
         }
     }
 }
