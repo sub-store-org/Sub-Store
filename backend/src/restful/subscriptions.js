@@ -41,13 +41,27 @@ async function getFlowInfo(req, res) {
         return;
     }
     if (sub.source === 'local') {
-        failed(res, new RequestInvalidError('NO_FLOW_INFO', 'N/A'));
+        failed(
+            res,
+            new RequestInvalidError(
+                'NO_FLOW_INFO',
+                'N/A',
+                `Local subscription ${name} has no flow information!`,
+            ),
+        );
         return;
     }
     try {
         const flowHeaders = await getFlowHeaders(sub.url);
         if (!flowHeaders) {
-            failed(res, new InternalServerError('NO_FLOW_INFO', 'N/A'));
+            failed(
+                res,
+                new InternalServerError(
+                    'NO_FLOW_INFO',
+                    'No flow info',
+                    `Failed to fetch flow headers`,
+                ),
+            );
             return;
         }
 
