@@ -1,4 +1,4 @@
-import { syncArtifact, produceArtifact } from '@/restful/artifacts';
+import { syncToGist, produceArtifact } from '@/restful/artifacts';
 import { version } from '../../package.json';
 import { ARTIFACTS_KEY } from '@/constants';
 import $ from '@/core/app';
@@ -33,7 +33,7 @@ console.log(
             }),
         );
 
-        const resp = await syncArtifact(files);
+        const resp = await syncToGist(files);
         const body = JSON.parse(resp.body);
 
         for (const artifact of allArtifacts) {
