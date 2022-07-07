@@ -13,7 +13,12 @@ import {
     SETTINGS_KEY,
 } from '@/constants';
 import { deleteByName, findByName, updateByName } from '@/utils/database';
-import { success } from '@/restful/response';
+import { failed, success } from '@/restful/response';
+import {
+    InternalServerError,
+    RequestInvalidError,
+    ResourceNotFoundError,
+} from '@/restful/errors';
 
 export default function register($app) {
     // Initialization
@@ -28,7 +33,8 @@ export default function register($app) {
         .delete(deleteArtifact);
 
     // sync all artifacts
-    $app.get('/api/cron/sync-artifacts', cronSyncArtifacts);
+    $app.get('/api/sync/artifacts', syncAllArtifacts);
+    $app.get('/api/sync/artifact/:name', syncArtifact);
 }
 
 function getAllArtifacts(req, res) {
@@ -39,55 +45,20 @@ function getAllArtifacts(req, res) {
 async function getArtifact(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
-    const action = req.query.action;
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const artifact = findByName(allArtifacts, name);
 
     if (artifact) {
-        if (action) {
-            const output = await produceArtifact({
-                type: artifact.type,
-                name: artifact.source,
-                platform: artifact.platform,
-            });
-            if (action === 'preview') {
-                res.send(output);
-            } else if (action === 'sync') {
-                $.info(
-                    `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
-                        artifact,
-                        null,
-                        2,
-                    )}`,
-                );
-                try {
-                    const resp = await syncArtifact({
-                        [encodeURIComponent(artifact.name)]: {
-                            content: output,
-                        },
-                    });
-                    artifact.updated = new Date().getTime();
-                    const body = JSON.parse(resp.body);
-                    artifact.url = body.files[
-                        encodeURIComponent(artifact.name)
-                    ].raw_url.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
-                    $.write(allArtifacts, ARTIFACTS_KEY);
-                    success(res);
-                } catch (err) {
-                    res.status(500).json({
-                        status: 'failed',
-                        message: err,
-                    });
-                }
-            }
-        } else {
-            success(res, artifact);
-        }
+        success(res, artifact);
     } else {
-        res.status(404).json({
-            status: 'failed',
-            message: '未找到对应的配置！',
-        });
+        failed(
+            res,
+            new ResourceNotFoundError(
+                'RESOURCE_NOT_FOUND',
+                `Artifact ${name} does not exist!`,
+            ),
+            404,
+        );
     }
 }
 
@@ -96,10 +67,13 @@ function createArtifact(req, res) {
     $.info(`正在创建远程配置：${artifact.name}`);
     const allArtifacts = $.read(ARTIFACTS_KEY);
     if (findByName(allArtifacts, artifact.name)) {
-        res.status(500).json({
-            status: 'failed',
-            message: `远程配置${artifact.name}已存在！`,
-        });
+        failed(
+            res,
+            new RequestInvalidError(
+                'DUPLICATE_KEY',
+                `Artifact ${artifact.name} already exists.`,
+            ),
+        );
     } else {
         allArtifacts.push(artifact);
         $.write(allArtifacts, ARTIFACTS_KEY);
@@ -122,10 +96,13 @@ function updateArtifact(req, res) {
         $.write(allArtifacts, ARTIFACTS_KEY);
         success(res, newArtifact);
     } else {
-        res.status(404).json({
-            status: 'failed',
-            message: '未找到对应的远程配置！',
-        });
+        failed(
+            res,
+            new RequestInvalidError(
+                'DUPLICATE_KEY',
+                `Artifact ${oldName} already exists.`,
+            ),
+        );
     }
 }
 
@@ -143,7 +120,7 @@ async function deleteArtifact(req, res) {
             files[encodeURIComponent(artifact.name)] = {
                 content: '',
             };
-            await syncArtifact(files);
+            await syncToGist(files);
         }
         // delete local cache
         deleteByName(allArtifacts, name);
@@ -151,14 +128,74 @@ async function deleteArtifact(req, res) {
         success(res);
     } catch (err) {
         $.error(`无法删除远程配置：${name}，原因：${err}`);
-        res.status(500).json({
-            status: 'failed',
-            message: `无法删除远程配置：${name}, 原因：${err}`,
-        });
+        failed(
+            res,
+            new InternalServerError(
+                `FAILED_TO_DELETE_ARTIFACT`,
+                `Failed to delete artifact ${name}`,
+                `Reason: ${err}`,
+            ),
+        );
     }
 }
 
-async function cronSyncArtifacts(_, res) {
+async function syncArtifact(req, res) {
+    let { name } = req.params;
+    name = decodeURIComponent(name);
+    const allArtifacts = $.read(ARTIFACTS_KEY);
+    const artifact = findByName(allArtifacts, name);
+
+    if (!artifact) {
+        failed(
+            res,
+            new ResourceNotFoundError(
+                'RESOURCE_NOT_FOUND',
+                `Artifact ${name} does not exist!`,
+            ),
+            404,
+        );
+        return;
+    }
+
+    const output = await produceArtifact({
+        type: artifact.type,
+        name: artifact.source,
+        platform: artifact.platform,
+    });
+
+    $.info(
+        `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
+            artifact,
+            null,
+            2,
+        )}`,
+    );
+    try {
+        const resp = await syncToGist({
+            [encodeURIComponent(artifact.name)]: {
+                content: output,
+            },
+        });
+        artifact.updated = new Date().getTime();
+        const body = JSON.parse(resp.body);
+        artifact.url = body.files[
+            encodeURIComponent(artifact.name)
+        ].raw_url.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
+        $.write(allArtifacts, ARTIFACTS_KEY);
+        success(res, artifact);
+    } catch (err) {
+        failed(
+            res,
+            new InternalServerError(
+                `FAILED_TO_SYNC_ARTIFACT`,
+                `Failed to sync artifact ${name}`,
+                `Reason: ${err}`,
+            ),
+        );
+    }
+}
+
+async function syncAllArtifacts(_, res) {
     $.info('开始同步所有远程配置...');
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const files = {};
@@ -181,7 +218,7 @@ async function cronSyncArtifacts(_, res) {
             }),
         );
 
-        const resp = await syncArtifact(files);
+        const resp = await syncToGist(files);
         const body = JSON.parse(resp.body);
 
         for (const artifact of allArtifacts) {
@@ -197,14 +234,19 @@ async function cronSyncArtifacts(_, res) {
         $.info('全部订阅同步成功！');
         success(res);
     } catch (err) {
-        res.status(500).json({
-            error: err,
-        });
+        failed(
+            res,
+            new InternalServerError(
+                `FAILED_TO_SYNC_ARTIFACTS`,
+                `Failed to sync all artifacts`,
+                `Reason: ${err}`,
+            ),
+        );
         $.info(`同步订阅失败，原因：${err}`);
     }
 }
 
-async function syncArtifact(files) {
+async function syncToGist(files) {
     const { gistToken } = $.read(SETTINGS_KEY);
     if (!gistToken) {
         return Promise.reject('未设置Gist Token！');
@@ -365,4 +407,4 @@ async function produceArtifact({ type, name, platform }) {
     }
 }
 
-export { syncArtifact, produceArtifact };
+export { syncToGist, produceArtifact };

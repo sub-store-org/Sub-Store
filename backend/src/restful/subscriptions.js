@@ -98,10 +98,6 @@ function getSubscription(req, res) {
     if (sub) {
         success(res, sub);
     } else {
-        res.status(404).json({
-            status: 'failed',
-            message: `未找到订阅：${name}!`,
-        });
         failed(
             res,
             new ResourceNotFoundError(
