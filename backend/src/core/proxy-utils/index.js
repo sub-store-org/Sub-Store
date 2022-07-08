@@ -115,7 +115,7 @@ async function process(proxies, operators = [], targetPlatform) {
                 $arguments,
             );
         } else {
-            processor = PROXY_PROCESSORS[item.type](item.args);
+            processor = PROXY_PROCESSORS[item.type](item.args || {});
         }
         proxies = await ApplyProcessor(processor, proxies);
     }
