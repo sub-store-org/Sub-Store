@@ -104,16 +104,26 @@ async function gistBackup(req, res) {
         try {
             let content;
             const settings = $.read(SETTINGS_KEY);
+            const updated = settings.syncTime;
             switch (action) {
                 case 'upload':
-                    // update syncTime.
+                    // update syncTime
                     settings.syncTime = new Date().getTime();
                     $.write(settings, SETTINGS_KEY);
                     content = $.read('#sub-store');
                     if ($.env.isNode)
                         content = JSON.stringify($.cache, null, `  `);
                     $.info(`上传备份中...`);
-                    await gist.upload({ [GIST_BACKUP_FILE_NAME]: { content } });
+                    try {
+                        await gist.upload({
+                            [GIST_BACKUP_FILE_NAME]: { content },
+                        });
+                    } catch (err) {
+                        // restore syncTime if upload failed
+                        settings.syncTime = updated;
+                        $.write(settings, SETTINGS_KEY);
+                        throw err;
+                    }
                     break;
                 case 'download':
                     $.info(`还原备份中...`);
