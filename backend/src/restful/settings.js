@@ -62,8 +62,10 @@ async function updateArtifactStore() {
 
         try {
             const gistId = await manager.locate();
-            settings.artifactStore = `https://gist.github.com/${githubUser}/${gistId}`;
-            $.write(settings, SETTINGS_KEY);
+            if (gistId !== -1) {
+                settings.artifactStore = `https://gist.github.com/${githubUser}/${gistId}`;
+                $.write(settings, SETTINGS_KEY);
+            }
         } catch (err) {
             $.error('Failed to fetch artifact store for User: ' + githubUser);
         }
