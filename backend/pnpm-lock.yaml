@@ -6,6 +6,7 @@ specifiers:
   '@babel/preset-env': ^7.18.0
   '@babel/register': ^7.17.7
   '@types/gulp': ^4.0.9
+  automerge: 1.0.1-preview.7
   axios: ^0.20.0
   babel-plugin-relative-path-import: ^2.0.1
   babelify: ^10.0.0
@@ -36,6 +37,7 @@ specifiers:
   uuid: ^8.3.2
 
 dependencies:
+  automerge: registry.npmmirror.com/automerge/1.0.1-preview.7
   body-parser: registry.npmmirror.com/body-parser/1.19.0
   express: registry.npmmirror.com/express/4.17.1
   js-base64: registry.npmmirror.com/js-base64/3.7.2
@@ -2209,6 +2211,16 @@ packages:
     engines: {node: '>= 4.5.0'}
     hasBin: true
     dev: true
+
+  registry.npmmirror.com/automerge/1.0.1-preview.7:
+    resolution: {integrity: sha512-Fz5fJdU59xYYj0viteMKTGg/bQWTyibZlkY3V8VQqx9Do1Eg3jtud2+BAI5ZQiKwdWocXc4KKC5o5vT1dzouag==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/automerge/-/automerge-1.0.1-preview.7.tgz}
+    name: automerge
+    version: 1.0.1-preview.7
+    dependencies:
+      fast-sha256: registry.npmmirror.com/fast-sha256/1.3.0
+      pako: registry.npmmirror.com/pako/2.0.4
+      uuid: registry.npmmirror.com/uuid/3.4.0
+    dev: false
 
   registry.npmmirror.com/available-typed-arrays/1.0.5:
     resolution: {integrity: sha512-DMD0KiN46eipeziST1LPP/STfDU0sufISXmjSgvVsoU2tqxctQeASejWcfNtxYKqETM1UxQ8sp2OrSBWpHY6sw==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/available-typed-arrays/-/available-typed-arrays-1.0.5.tgz}
@@ -4480,6 +4492,12 @@ packages:
     name: fast-safe-stringify
     version: 2.1.1
     dev: true
+
+  registry.npmmirror.com/fast-sha256/1.3.0:
+    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/fast-sha256/-/fast-sha256-1.3.0.tgz}
+    name: fast-sha256
+    version: 1.3.0
+    dev: false
 
   registry.npmmirror.com/file-entry-cache/6.0.1:
     resolution: {integrity: sha512-7Gps/XWymbLk2QLYK4NzpMOrYjMhdIxXuIvy2QBsLE6ljuodKvdkWs/cpyJJ3CVIVpH0Oi1Hvg1ovbMzLdFBBg==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/file-entry-cache/-/file-entry-cache-6.0.1.tgz}
@@ -7210,6 +7228,12 @@ packages:
     name: pako
     version: 1.0.11
     dev: true
+
+  registry.npmmirror.com/pako/2.0.4:
+    resolution: {integrity: sha512-v8tweI900AUkZN6heMU/4Uy4cXRc2AYNRggVmTR+dEncawDJgCdLMximOVA2p4qO57WMynangsfGRb5WD6L1Bg==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/pako/-/pako-2.0.4.tgz}
+    name: pako
+    version: 2.0.4
+    dev: false
 
   registry.npmmirror.com/parent-module/1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/parent-module/-/parent-module-1.0.1.tgz}
