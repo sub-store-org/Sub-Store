@@ -64,6 +64,17 @@ async function getArtifact(req, res) {
 
 function createArtifact(req, res) {
     const artifact = req.body;
+    if (!validateArtifactName(artifact.name)) {
+        failed(
+            res,
+            new RequestInvalidError(
+                'INVALID_ARTIFACT_NAME',
+                `Artifact name ${artifact.name} is invalid.`,
+            ),
+        );
+        return;
+    }
+
     $.info(`正在创建远程配置：${artifact.name}`);
     const allArtifacts = $.read(ARTIFACTS_KEY);
     if (findByName(allArtifacts, artifact.name)) {
@@ -92,6 +103,16 @@ function updateArtifact(req, res) {
             ...artifact,
             ...req.body,
         };
+        if (!validateArtifactName(newArtifact.name)) {
+            failed(
+                res,
+                new RequestInvalidError(
+                    'INVALID_ARTIFACT_NAME',
+                    `Artifact name ${newArtifact.name} is invalid.`,
+                ),
+            );
+            return;
+        }
         updateByName(allArtifacts, oldName, newArtifact);
         $.write(allArtifacts, ARTIFACTS_KEY);
         success(res, newArtifact);
@@ -405,6 +426,10 @@ async function produceArtifact({ type, name, platform }) {
         // produce output
         return RuleUtils.produce(rules, platform);
     }
+}
+
+function validateArtifactName(name) {
+    return /^[a-zA-Z0-9._-]*$/.test(name);
 }
 
 export { syncToGist, produceArtifact };
