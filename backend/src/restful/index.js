@@ -14,11 +14,15 @@ import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
 import registerArtifactRoutes from './artifacts';
 import registerDownloadRoutes from './download';
-import registerSettingRoutes from './settings';
+import registerSettingRoutes, {
+    updateArtifactStore,
+    updateGitHubAvatar,
+} from './settings';
 import registerPreviewRoutes from './preview';
 import registerSortingRoutes from './sort';
 import { failed, success } from '@/restful/response';
 import { InternalServerError, RequestInvalidError } from '@/restful/errors';
+import resourceCache from '@/utils/resource-cache';
 
 export default function serve() {
     const $app = express({ substore: $ });
@@ -36,6 +40,7 @@ export default function serve() {
     $app.get('/api/utils/IP_API/:server', IP_API); // IP-API reverse proxy
     $app.get('/api/utils/env', getEnv); // get runtime environment
     $app.get('/api/utils/backup', gistBackup); // gist backup actions
+    $app.get('/api/utils/refresh', refresh);
 
     // Storage management
     $app.route('/api/storage')
@@ -82,6 +87,16 @@ function getEnv(req, res) {
         backend,
         version: substoreVersion,
     });
+}
+
+async function refresh(_, res) {
+    // 1. get GitHub avatar and artifact store
+    await updateGitHubAvatar();
+    await updateArtifactStore();
+
+    // 2. clear resource cache
+    resourceCache.revokeAll();
+    success(res);
 }
 
 async function gistBackup(req, res) {

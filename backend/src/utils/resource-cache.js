@@ -25,6 +25,14 @@ class ResourceCache {
         if (clear) this._persist();
     }
 
+    revokeAll() {
+        Object.keys(this.resourceCache).forEach((id) => {
+            $.delete(`#${id}`);
+        });
+        this.resourceCache = {};
+        this._persist();
+    }
+
     _persist() {
         $.write(JSON.stringify(this.resourceCache), RESOURCE_CACHE_KEY);
     }
