@@ -282,6 +282,9 @@ async function syncToGist(files) {
 async function produceArtifact({ type, name, platform }) {
     platform = platform || 'JSON';
 
+    // produce Clash node format for ShadowRocket
+    if (platform === 'ShadowRocket') platform = 'Clash';
+
     if (type === 'subscription') {
         const allSubs = $.read(SUBS_KEY);
         const sub = findByName(allSubs, name);
