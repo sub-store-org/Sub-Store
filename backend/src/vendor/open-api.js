@@ -51,24 +51,20 @@ export class OpenAPI {
             // create a json for root cache
             let fpath = 'root.json';
             if (!this.node.fs.existsSync(fpath)) {
-                this.node.fs.writeFileSync(
-                    fpath,
-                    JSON.stringify({}),
-                    { flag: 'wx' },
-                    (err) => console.log(err),
-                );
+                this.node.fs.writeFileSync(fpath, JSON.stringify({}), {
+                    flag: 'wx',
+                });
+                this.root = {};
+            } else {
+                this.root = JSON.parse(this.node.fs.readFileSync(`${fpath}`));
             }
-            this.root = {};
 
             // create a json file with the given name if not exists
             fpath = `${this.name}.json`;
             if (!this.node.fs.existsSync(fpath)) {
-                this.node.fs.writeFileSync(
-                    fpath,
-                    JSON.stringify({}),
-                    { flag: 'wx' },
-                    (err) => console.log(err),
-                );
+                this.node.fs.writeFileSync(fpath, JSON.stringify({}), {
+                    flag: 'wx',
+                });
                 this.cache = {};
             } else {
                 this.cache = JSON.parse(
