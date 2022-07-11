@@ -84,7 +84,7 @@ async function process(proxies, operators = [], targetPlatform) {
                 // if this is a remote script, download it
                 try {
                     script = await download(url.split('#')[0]);
-                    $.info(`Script loaded: >>>\n ${script}`);
+                    // $.info(`Script loaded: >>>\n ${script}`);
                 } catch (err) {
                     $.error(
                         `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`,
