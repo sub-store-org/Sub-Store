@@ -51,7 +51,7 @@ async function updateGitHubAvatar() {
 }
 
 async function updateArtifactStore() {
-    console.log('Updating artifact store');
+    $.log('Updating artifact store');
     const settings = $.read(SETTINGS_KEY);
     const { githubUser, gistToken } = settings;
     if (githubUser && gistToken) {
