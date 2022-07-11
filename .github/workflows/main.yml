@@ -1,4 +1,4 @@
-name: update
+name: build
 on: 
   push:
     branches:
@@ -21,16 +21,16 @@ jobs:
         with:
           node-version: "14"
       - name: Install dependencies
-        run: cd backend && npm i
+        run: npm install -g pnpm && cd backend && pnpm i
       - name: Test
-        run: cd backend && npm test
+        run: cd backend && pnpm test
       - name: Build
-        run: cd backend && npm run build
+        run: cd backend && pnpm run build
       - name: Commit changes
         if: contains(github.event.head_commit.message, '#build')
         run: |
           git config user.email github-actions
           git config user.name github-actions@github.com
           git add .
-          git commit -m "Build sub-store.min.js" -a
+          git commit -m "Release" -a
           git push
