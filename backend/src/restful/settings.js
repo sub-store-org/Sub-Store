@@ -28,7 +28,7 @@ async function updateSettings(req, res) {
     success(res, newSettings);
 }
 
-async function updateGitHubAvatar() {
+export async function updateGitHubAvatar() {
     const settings = $.read(SETTINGS_KEY);
     const username = settings.githubUser;
     if (username) {
@@ -50,7 +50,7 @@ async function updateGitHubAvatar() {
     }
 }
 
-async function updateArtifactStore() {
+export async function updateArtifactStore() {
     $.log('Updating artifact store');
     const settings = $.read(SETTINGS_KEY);
     const { githubUser, gistToken } = settings;

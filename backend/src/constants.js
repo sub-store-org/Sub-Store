@@ -8,4 +8,4 @@ export const GIST_BACKUP_KEY = 'Auto Generated Sub-Store Backup';
 export const GIST_BACKUP_FILE_NAME = 'Sub-Store';
 export const ARTIFACT_REPOSITORY_KEY = 'Sub-Store Artifacts Repository';
 export const RESOURCE_CACHE_KEY = '#sub-store-cached-resource';
-export const CACHE_EXPIRATION_TIME_MS = 5 * 60 * 1000;
+export const CACHE_EXPIRATION_TIME_MS = 60 * 60 * 1000; // 1 hour
