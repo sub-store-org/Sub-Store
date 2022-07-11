@@ -1,4 +1,5 @@
 import { isPresent, Result } from './utils';
+
 const targetPlatform = 'QX';
 
 export default function QX_Producer() {
@@ -180,7 +181,16 @@ function vmess(proxy) {
     const appendIfPresent = result.appendIfPresent.bind(result);
 
     append(`vmess=${proxy.server}:${proxy.port}`);
-    append(`,method=${proxy.cipher === 'auto' ? 'none' : proxy.cipher}`);
+
+    // cipher
+    let cipher;
+    if (proxy.cipher === 'auto') {
+        cipher = 'chacha20-ietf-poly1305';
+    } else {
+        cipher = proxy.cipher;
+    }
+    append(`,method=${cipher}`);
+
     append(`,password=${proxy.uuid}`);
 
     // obfs

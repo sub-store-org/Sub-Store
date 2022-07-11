@@ -82,7 +82,7 @@ shadowsocks = "shadowsocks" equals address
 vmess = "vmess" equals address
     (uuid/method/over_tls/tls_host/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/others)* {
     proxy.type = "vmess";
-    proxy.cipher = proxy.cipher || "auto";
+    proxy.cipher = proxy.cipher || "none";
     if (proxy.aead) {
         proxy.alterId = 0;
     } else {
@@ -140,8 +140,7 @@ password = comma "password" equals password:[^=,]+ { proxy.password = password.j
 uuid = comma "password" equals uuid:[^=,]+ { proxy.uuid = uuid.join("").trim(); }
 
 method = comma "method" equals cipher:cipher { 
-    if (cipher !== 'none') proxy.cipher = cipher;
-    else proxy.cipher = 'auto';
+    proxy.cipher = cipher;
 };
 cipher = ("aes-128-gcm"/"aes-192-gcm"/"aes-256-gcm"/"aes-128-cfb"/"aes-192-cfb"/"aes-256-cfb"/"aes-128-ctr"/"aes-192-ctr"/"aes-256-ctr"/"rc4-md5"/"chacha20-ietf-poly1305"/"chacha20-ietf"/"chacha20-poly1305"/"chacha20"/"none");
 aead = comma "aead" equals flag:bool { proxy.aead = flag; }

@@ -251,7 +251,7 @@ function createTestCases() {
                     server,
                     port,
                     uuid,
-                    cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
+                    cipher: 'none', // Surge lacks support for specifying cipher for vmess protocol!
                     alterId: 0,
                 },
             },
@@ -288,7 +288,7 @@ function createTestCases() {
                     server,
                     port,
                     uuid,
-                    cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
+                    cipher: 'none', // Surge lacks support for specifying cipher for vmess protocol!
                     alterId: 0,
                     aead: true,
                 },
@@ -339,7 +339,7 @@ function createTestCases() {
                     server,
                     port,
                     uuid,
-                    cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
+                    cipher: 'none', // Surge lacks support for specifying cipher for vmess protocol!
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
@@ -402,7 +402,7 @@ function createTestCases() {
                     server,
                     port,
                     uuid,
-                    cipher: 'auto', // Surge lacks support for specifying cipher for vmess protocol!
+                    cipher: 'none', // Surge lacks support for specifying cipher for vmess protocol!
                     network: 'ws',
                     'ws-opts': {
                         path: obfs_path,
