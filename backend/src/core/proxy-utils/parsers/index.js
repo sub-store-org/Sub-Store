@@ -281,7 +281,30 @@ function Clash_All() {
         }
         return true;
     };
-    const parse = (line) => JSON.parse(line);
+    const parse = (line) => {
+        const proxy = JSON.parse(line);
+        if (
+            ![
+                'ss',
+                'ssr',
+                'vmess',
+                'socks',
+                'http',
+                'snell',
+                'trojan',
+            ].includes(proxy.type)
+        ) {
+            throw new Error(
+                `Clash does not support proxy with type: ${proxy.type}`,
+            );
+        }
+
+        // handle vmess sni
+        proxy.sni = proxy.servername;
+        delete proxy.servername;
+
+        return proxy;
+    };
     return { name, test, parse };
 }
 
