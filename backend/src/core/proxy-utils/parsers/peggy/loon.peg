@@ -54,7 +54,7 @@ shadowsocks = tag equals "shadowsocks"i address method password (obfs_ss/obfs_ho
 }
 vmess = tag equals "vmess"i address method uuid (transport/transport_host/transport_path/over_tls/tls_host/tls_verification/vmess_alterId/fast_open/udp_relay/others)* {
     proxy.type = "vmess";
-    proxy.cipher = proxy.cipher || "auto";
+    proxy.cipher = proxy.cipher || "none";
     proxy.alterId = proxy.alterId || 0;
     handleTransport();
 }
@@ -110,10 +110,9 @@ port = digits:[0-9]+ {
 }
 
 method = comma cipher:cipher { 
-    if (cipher !== 'none') proxy.cipher = cipher;
-    else proxy.cipher = 'auto';
- }
-cipher = ("aes-128-gcm"/"aes-192-gcm"/"aes-256-gcm"/"aes-128-cfb"/"aes-192-cfb"/"aes-256-cfb"/"aes-128-ctr"/"aes-192-ctr"/"aes-256-ctr"/"rc4-md5"/"chacha20-ietf-poly1305"/"chacha20-ietf"/"chacha20-poly1305"/"chacha20"/"none");
+    proxy.cipher = cipher;
+}
+cipher = ("aes-128-gcm"/"aes-192-gcm"/"aes-256-gcm"/"aes-128-cfb"/"aes-192-cfb"/"aes-256-cfb"/"aes-128-ctr"/"aes-192-ctr"/"aes-256-ctr"/"rc4-md5"/"chacha20-ietf-poly1305"/"chacha20-ietf"/"chacha20-poly1305"/"chacha20"/"none"/"auto");
 
 username = & {
     let j = peg$currPos; 
