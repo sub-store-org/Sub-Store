@@ -1,16 +1,24 @@
 import { syncToGist, produceArtifact } from '@/restful/artifacts';
 import { version } from '../../package.json';
-import { ARTIFACTS_KEY } from '@/constants';
+import { SETTINGS_KEY, ARTIFACTS_KEY } from '@/constants';
 import $ from '@/core/app';
 
-console.log(
-    `
+!(async function () {
+    const settings = $.read(SETTINGS_KEY);
+    if (settings.enableCronSyncArtifacts === true) {
+        await doSync();
+    }
+})().finally(() => $.done());
+
+async function doSync() {
+    console.log(
+        `
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
-     Sub-Store -- v${version}
+     Sub-Store Sync -- v${version}
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 `,
-);
-!(async function () {
+    );
+
     $.info('开始同步所有远程配置...');
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const files = {};
@@ -46,9 +54,9 @@ console.log(
         }
 
         $.write(allArtifacts, ARTIFACTS_KEY);
-        $.notify('🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』', '全部订阅同步成功！');
+        $.notify('🌍 Sub-Store', '全部订阅同步成功！');
     } catch (err) {
-        $.notify('🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』', '同步订阅失败', `原因：${err}`);
+        $.notify('🌍 Sub-Store', '同步订阅失败', `原因：${err}`);
         $.error(`无法同步订阅配置到 Gist，原因：${err}`);
     }
-})().finally(() => $.done());
+}
