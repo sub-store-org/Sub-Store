@@ -21,8 +21,13 @@ import registerSettingRoutes, {
 import registerPreviewRoutes from './preview';
 import registerSortingRoutes from './sort';
 import { failed, success } from '@/restful/response';
-import { InternalServerError, RequestInvalidError } from '@/restful/errors';
+import {
+    InternalServerError,
+    NetworkError,
+    RequestInvalidError,
+} from '@/restful/errors';
 import resourceCache from '@/utils/resource-cache';
+import producer from '@/core/proxy-utils/producers';
 
 export default function serve() {
     const $app = express({ substore: $ });
@@ -37,7 +42,7 @@ export default function serve() {
     registerArtifactRoutes($app);
 
     // utils
-    $app.get('/api/utils/IP_API/:server', IP_API); // IP-API reverse proxy
+    $app.post('/api/utils/node-info', getNodeInfo);
     $app.get('/api/utils/env', getEnv); // get runtime environment
     $app.get('/api/utils/backup', gistBackup); // gist backup actions
     $app.get('/api/utils/refresh', refresh);
@@ -168,11 +173,38 @@ async function gistBackup(req, res) {
     }
 }
 
-async function IP_API(req, res) {
-    const server = decodeURIComponent(req.params.server);
-    const $http = HTTP();
-    const result = await $http
-        .get(`http://ip-api.com/json/${server}?lang=zh-CN`)
-        .then((resp) => JSON.parse(resp.body));
-    res.json(result);
+async function getNodeInfo(req, res) {
+    const proxy = req.body;
+    let shareUrl;
+    try {
+        shareUrl = producer.URI.produce(proxy);
+    } catch (err) {
+        // do nothing
+    }
+
+    try {
+        const $http = HTTP();
+        const info = await $http
+            .get({
+                url: `http://ip-api.com/json/${proxy.server}?lang=zh-CN`,
+                headers: {
+                    'User-Agent':
+                        'Mozilla/5.0 (Macintosh; Intel Mac OS X 12_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+                },
+            })
+            .then((resp) => JSON.parse(resp.body));
+        success(res, {
+            shareUrl,
+            info,
+        });
+    } catch (err) {
+        failed(
+            res,
+            new NetworkError(
+                'FAILED_TO_GET_NODE_INFO',
+                `Failed to get node info`,
+                `Reason: ${err}`,
+            ),
+        );
+    }
 }
