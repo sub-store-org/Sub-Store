@@ -307,7 +307,7 @@ async function produceArtifact({ type, name, platform }) {
         for (const proxy of proxies) {
             if (exist[proxy.name]) {
                 $.notify(
-                    '🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』',
+                    '🌍 Sub-Store',
                     '⚠️ 订阅包含重复节点！',
                     '请仔细检测配置！',
                     {
@@ -388,7 +388,7 @@ async function produceArtifact({ type, name, platform }) {
         for (const proxy of proxies) {
             if (exist[proxy.name]) {
                 $.notify(
-                    '🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』',
+                    '🌍 Sub-Store',
                     '⚠️ 订阅包含重复节点！',
                     '请仔细检测配置！',
                     {

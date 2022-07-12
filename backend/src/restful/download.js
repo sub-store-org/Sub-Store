@@ -48,7 +48,7 @@ async function downloadSubscription(req, res) {
             }
         } catch (err) {
             $.notify(
-                `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`,
+                `🌍 Sub-Store 下载订阅失败`,
                 `❌ 无法下载订阅：${name}！`,
                 `🤔 原因：${JSON.stringify(err)}`,
             );
@@ -63,7 +63,7 @@ async function downloadSubscription(req, res) {
             );
         }
     } else {
-        $.notify(`🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载订阅失败`, `❌ 未找到订阅：${name}！`);
+        $.notify(`🌍 Sub-Store 下载订阅失败`, `❌ 未找到订阅：${name}！`);
         failed(
             res,
             new ResourceNotFoundError(
@@ -117,7 +117,7 @@ async function downloadCollection(req, res) {
             }
         } catch (err) {
             $.notify(
-                `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
+                `🌍 Sub-Store 下载组合订阅失败`,
                 `❌ 下载组合订阅错误：${name}！`,
                 `🤔 原因：${err}`,
             );
@@ -132,7 +132,7 @@ async function downloadCollection(req, res) {
         }
     } else {
         $.notify(
-            `🌍 『 𝑺𝒖𝒃-𝑺𝒕𝒐𝒓𝒆 』 下载组合订阅失败`,
+            `🌍 Sub-Store 下载组合订阅失败`,
             `❌ 未找到组合订阅：${name}！`,
         );
         failed(
