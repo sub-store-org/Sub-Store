@@ -175,6 +175,7 @@ async function gistBackup(req, res) {
 
 async function getNodeInfo(req, res) {
     const proxy = req.body;
+    const lang = req.query.lang || 'zh-CN';
     let shareUrl;
     try {
         shareUrl = producer.URI.produce(proxy);
@@ -186,13 +187,26 @@ async function getNodeInfo(req, res) {
         const $http = HTTP();
         const info = await $http
             .get({
-                url: `http://ip-api.com/json/${proxy.server}?lang=zh-CN`,
+                url: `http://ip-api.com/json/${encodeURIComponent(
+                    proxy.server,
+                )}?lang=${lang}`,
                 headers: {
                     'User-Agent':
                         'Mozilla/5.0 (Macintosh; Intel Mac OS X 12_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
                 },
             })
-            .then((resp) => JSON.parse(resp.body));
+            .then((resp) => {
+                const data = JSON.parse(resp.body);
+                if (data.status !== 'success') {
+                    throw new Error(data.message);
+                }
+
+                // remove unnecessary fields
+                delete data.status;
+                delete data.query;
+
+                return data;
+            });
         success(res, {
             shareUrl,
             info,
