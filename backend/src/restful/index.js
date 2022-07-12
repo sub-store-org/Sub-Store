@@ -203,8 +203,6 @@ async function getNodeInfo(req, res) {
 
                 // remove unnecessary fields
                 delete data.status;
-                delete data.query;
-
                 return data;
             });
         success(res, {
