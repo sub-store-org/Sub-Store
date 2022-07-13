@@ -12,5 +12,5 @@ http:
       timeout: 120
 script-providers:
   sub-store:
-    url: https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/backend/sub-store.min.js
+    url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store.min.js
     interval: 86400
