@@ -300,8 +300,10 @@ function Clash_All() {
         }
 
         // handle vmess sni
-        proxy.sni = proxy.servername;
-        delete proxy.servername;
+        if (proxy.type === 'vmess') {
+            proxy.sni = proxy.servername;
+            delete proxy.servername;
+        }
 
         return proxy;
     };
