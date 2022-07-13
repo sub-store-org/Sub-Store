@@ -21,16 +21,30 @@ jobs:
         with:
           node-version: "14"
       - name: Install dependencies
-        run: npm install -g pnpm && cd backend && pnpm i
-      - name: Test
-        run: cd backend && pnpm test
-      - name: Build
-        run: cd backend && pnpm run build
-      - name: Commit changes
-        if: contains(github.event.head_commit.message, '#build')
         run: |
-          git config user.email github-actions
-          git config user.name github-actions@github.com
-          git add .
-          git commit -m "Release" -a
-          git push
+          npm install -g pnpm
+          cd backend && pnpm i
+      - name: Test
+        run: |
+          cd backend
+          pnpm test
+      - name: Build
+        run: |
+          cd backend
+          pnpm run build
+      - id: tag
+        name: Generate release tag
+        run: |
+          cd backend
+          SUBSTORE_RELEASE=`node --eval="process.stdout.write(require('./package.json').version)"`
+          echo "::set-output name=release_tag::$SUBSTORE_RELEASE"
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+          files: |
+            ./backend/sub-store.min.js
+            ./backend/dist/cron-sync-artifacts.min.js
+            ./backend/dist/sub-store-parser.loon.min.js
