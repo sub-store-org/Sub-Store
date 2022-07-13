@@ -5,9 +5,14 @@ import $ from '@/core/app';
 
 !(async function () {
     const settings = $.read(SETTINGS_KEY);
-    if (settings.enableCronSyncArtifacts === true) {
-        await doSync();
-    }
+    // if GitHub token is not configured
+    if (!settings.githubUser || !settings.gistToken) return;
+
+    const artifacts = $.read(ARTIFACTS_KEY);
+    if (!artifacts || artifacts.length === 0) return;
+
+    const shouldSync = artifacts.some((artifact) => artifact.sync);
+    if (shouldSync) doSync();
 })().finally(() => $.done());
 
 async function doSync() {
