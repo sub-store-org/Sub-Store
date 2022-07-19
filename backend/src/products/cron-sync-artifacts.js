@@ -12,7 +12,7 @@ import $ from '@/core/app';
     if (!artifacts || artifacts.length === 0) return;
 
     const shouldSync = artifacts.some((artifact) => artifact.sync);
-    if (shouldSync) doSync();
+    if (shouldSync) await doSync();
 })().finally(() => $.done());
 
 async function doSync() {
