@@ -1,12 +1,14 @@
+import resourceCache from '@/utils/resource-cache';
 import { isIPv4, isIPv6 } from '@/utils';
 import { FULL } from '@/utils/logical';
 import { getFlag } from '@/utils/geo';
 import lodash from 'lodash';
 import $ from '@/core/app';
+import { hex_md5 } from '@/vendor/md5';
 
 /**
-The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed as follows:
-{
+ The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed as follows:
+ {
     operator: "AND",
     child: [
         {
@@ -21,7 +23,7 @@ The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed a
         }
     ]
 }
-*/
+ */
 
 function ConditionalFilter({ rule }) {
     return {
@@ -310,6 +312,9 @@ function ScriptOperator(script, targetPlatform, $arguments) {
 
 const DOMAIN_RESOLVERS = {
     Google: async function (domain) {
+        const id = hex_md5(`GOOGLE:${domain}`);
+        const cached = resourceCache.get(id);
+        if (cached) return cached;
         const resp = await $.http.get({
             url: `https://8.8.4.4/resolve?name=${encodeURIComponent(
                 domain,
@@ -326,9 +331,14 @@ const DOMAIN_RESOLVERS = {
         if (answers.length === 0) {
             throw new Error('No answers');
         }
-        return answers[answers.length - 1].data;
+        const result = answers[answers.length - 1].data;
+        resourceCache.set(id, result);
+        return result;
     },
     'IP-API': async function (domain) {
+        const id = hex_md5(`IP-API:${domain}`);
+        const cached = resourceCache.get(id);
+        if (cached) return cached;
         const resp = await $.http.get({
             url: `http://ip-api.com/json/${encodeURIComponent(
                 domain,
@@ -338,9 +348,14 @@ const DOMAIN_RESOLVERS = {
         if (body['status'] !== 'success') {
             throw new Error(`Status is ${body['status']}`);
         }
-        return body.query;
+        const result = body.query;
+        resourceCache.set(id, result);
+        return result;
     },
     Cloudflare: async function (domain) {
+        const id = hex_md5(`CLOUDFLARE:${domain}`);
+        const cached = resourceCache.get(id);
+        if (cached) return cached;
         const resp = await $.http.get({
             url: `https://1.0.0.1/dns-query?name=${encodeURIComponent(
                 domain,
@@ -357,7 +372,9 @@ const DOMAIN_RESOLVERS = {
         if (answers.length === 0) {
             throw new Error('No answers');
         }
-        return answers[answers.length - 1].data;
+        const result = answers[answers.length - 1].data;
+        resourceCache.set(id, result);
+        return result;
     },
 };
 
