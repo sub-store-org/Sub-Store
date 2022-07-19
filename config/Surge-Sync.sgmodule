@@ -1,0 +1,5 @@
+#!name=Sub-Store Sync
+#!desc=托管订阅更新
+
+[Script]
+Sub-Store Sync = type=cron,cronexp=0 0 * * *,wake-system=1,timeout=120,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
