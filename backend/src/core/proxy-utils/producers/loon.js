@@ -72,7 +72,7 @@ function shadowsocksr(proxy) {
 
     // obfs
     result.appendIfPresent(`,obfs=${proxy.obfs}`, 'obfs');
-    result.appendIfPresent(`,obfs-host=${proxy['obfs-param']}`, 'obfs-param');
+    result.appendIfPresent(`,obfs-param=${proxy['obfs-param']}`, 'obfs-param');
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
