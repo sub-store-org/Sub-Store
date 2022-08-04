@@ -112,8 +112,11 @@ function URI_SSR() {
         line = line.split('/?')[1].split('&');
         if (line.length > 1) {
             for (const item of line) {
-                const [key, val] = item.split('=');
-                other_params[key] = val.trim();
+                let [key, val] = item.split('=');
+                val = val.trim();
+                if (val.length > 0) {
+                    other_params[key] = val;
+                }
             }
         }
         proxy = {
@@ -242,14 +245,17 @@ function URI_Trojan() {
         const name = decodeURIComponent(line.split('#')[1].trim());
         let paramArr = line.split('?');
         let scert = null;
-        let params;
+        const params = new Map();
         if (paramArr.length > 1) {
             paramArr = paramArr[1].split('#')[0].split('&');
-            params = new Map(
-                paramArr.map((item) => {
-                    return item.split('=');
-                }),
-            );
+            for (const pair of paramArr) {
+                let [key, val] = pair.split('=');
+                // skip empty values
+                val = val.trim();
+                if (val.length > 0) {
+                    params.set(key, val);
+                }
+            }
             if (
                 params.get('allowInsecure') === '1' ||
                 params.get('allowInsecure') === 'true'
