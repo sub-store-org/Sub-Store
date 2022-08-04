@@ -50,6 +50,7 @@ function parse(raw) {
                     lastParser = parser;
                     success = true;
                     $.info(`${parser.name} is activated`);
+                    break;
                 }
             }
         }
