@@ -10,7 +10,18 @@ http:
       type: request
       require-body: true
       timeout: 120
+
+cron:
+  script:
+    - name: cron-sync-artifacts
+      cron: "0 0 * * *"
+      timeout: 120
+
 script-providers:
   sub-store:
     url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store.min.js
+    interval: 86400
+
+  cron-sync-artifacts:
+    url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
     interval: 86400
