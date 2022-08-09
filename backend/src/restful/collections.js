@@ -1,5 +1,5 @@
 import { deleteByName, findByName, updateByName } from '@/utils/database';
-import { COLLECTIONS_KEY } from '@/constants';
+import { COLLECTIONS_KEY, ARTIFACTS_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
 import { RequestInvalidError, ResourceNotFoundError } from '@/restful/errors';
@@ -67,6 +67,21 @@ function updateCollection(req, res) {
             ...collection,
         };
         $.info(`正在更新组合订阅：${name}...`);
+
+        if (name !== newCol.name) {
+            // update all artifacts referring this collection
+            const allArtifacts = $.read(ARTIFACTS_KEY) || [];
+            for (const artifact of allArtifacts) {
+                if (
+                    artifact.type === 'collection' &&
+                    artifact.source === oldCol.name
+                ) {
+                    artifact.source = newCol.name;
+                }
+            }
+            $.write(allArtifacts, ARTIFACTS_KEY);
+        }
+
         updateByName(allCols, name, newCol);
         $.write(allCols, COLLECTIONS_KEY);
         success(res, newCol);

@@ -5,7 +5,7 @@ import {
     RequestInvalidError,
 } from './errors';
 import { deleteByName, findByName, updateByName } from '@/utils/database';
-import { SUBS_KEY, COLLECTIONS_KEY } from '@/constants';
+import { SUBS_KEY, COLLECTIONS_KEY, ARTIFACTS_KEY } from '@/constants';
 import { getFlowHeaders } from '@/utils/flow';
 import { success, failed } from './response';
 import $ from '@/core/app';
@@ -137,14 +137,28 @@ function updateSubscription(req, res) {
         $.info(`正在更新订阅： ${name}`);
         // allow users to update the subscription name
         if (name !== sub.name) {
-            // we need to find out all collections refer to this name
-            const allCols = $.read(COLLECTIONS_KEY);
+            // update all collections refer to this name
+            const allCols = $.read(COLLECTIONS_KEY) || [];
             for (const collection of allCols) {
                 const idx = collection.subscriptions.indexOf(name);
                 if (idx !== -1) {
                     collection.subscriptions[idx] = sub.name;
                 }
             }
+
+            // update all artifacts referring this subscription
+            const allArtifacts = $.read(ARTIFACTS_KEY) || [];
+            for (const artifact of allArtifacts) {
+                if (
+                    artifact.type === 'subscription' &&
+                    artifact.source == name
+                ) {
+                    artifact.source = sub.name;
+                }
+            }
+
+            $.write(allCols, COLLECTIONS_KEY);
+            $.write(allArtifacts, ARTIFACTS_KEY);
         }
         updateByName(allSubs, name, newSub);
         $.write(allSubs, SUBS_KEY);
