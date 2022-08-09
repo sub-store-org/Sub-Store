@@ -81,7 +81,8 @@ function doMigrationV2() {
                 useless: 'DEFAULT',
             },
         };
-        processes.forEach((p) => {
+        for (const p of processes) {
+            if (!p.type) continue;
             if (p.type === 'Useless Filter') {
                 quickSettingOperator.args.useless = 'ENABLED';
             } else if (p.type === 'Set Property Operator') {
@@ -120,7 +121,7 @@ function doMigrationV2() {
             } else {
                 newProcesses.push(p);
             }
-        });
+        }
         newProcesses.unshift(quickSettingOperator);
         item.process = newProcesses;
     }
