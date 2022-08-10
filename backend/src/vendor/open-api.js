@@ -253,6 +253,17 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
 
         events.onRequest(method, options);
 
+        if (options.node) {
+            // Surge & Loon allow connecting to a server using a specified proxy node
+            if (isSurge) {
+                const build = $environment['surge-build'];
+                if (build && parseInt(build) >= 2407) {
+                    options['policy-descriptor'] = options.node;
+                    delete options.node;
+                }
+            }
+        }
+
         let worker;
         if (isQX) {
             worker = $task.fetch({
