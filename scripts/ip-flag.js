@@ -117,7 +117,14 @@ async function queryIpApi(proxy) {
             resolve(cached);
         }
         const url = `http://ip-api.com/json`;
-        const node = ProxyUtils.produce([proxy], target);
+        let node = ProxyUtils.produce([proxy], target);
+
+        // Loon 需要去掉节点名字
+        if (isLoon) {
+            const s = node.indexOf("=");
+            node = node.substring(s + 1);
+        }
+
         $.http.get({
             url,
             headers,
