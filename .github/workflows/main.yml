@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - publish
     paths:
       - 'backend/package.json'
   pull_request:
@@ -81,7 +80,7 @@ jobs:
         run: |
           cd backend
           mv sub-store.min.js ./dist
-          node publish.js
+          sed -i 's/sub-store/my-sub-store/g' package.json
           cd dist
           npm publish
         env:
