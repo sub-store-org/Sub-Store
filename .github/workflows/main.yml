@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - publish
     paths:
       - 'backend/package.json'
   pull_request:
@@ -24,7 +25,8 @@ jobs:
         with:
           node-version: 14
 
-      - name: Install pnpm
+      - uses: pnpm/action-setup@v2.0.1
+        name: Install pnpm
         id: pnpm-install
         with:
           version: 7
@@ -63,7 +65,7 @@ jobs:
           cd backend
           SUBSTORE_RELEASE=`node --eval="process.stdout.write(require('./package.json').version)"`
           echo "::set-output name=release_tag::$SUBSTORE_RELEASE"
-      
+
       - name: Release
         uses: softprops/action-gh-release@v1
         env:
