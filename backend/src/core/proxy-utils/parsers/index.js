@@ -2,6 +2,8 @@ import { getIfNotBlank, isPresent, isNotBlank, getIfPresent } from '@/utils';
 import getSurgeParser from './peggy/surge';
 import getLoonParser from './peggy/loon';
 import getQXParser from './peggy/qx';
+import getTrojanURIParser from './peggy/trojan-uri';
+
 import { Base64 } from 'js-base64';
 
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
@@ -240,39 +242,9 @@ function URI_Trojan() {
     };
 
     const parse = (line) => {
-        line = line.split('trojan://')[1];
-        const [server, port] = line.split('@')[1].split('?')[0].split(':');
-        const name = decodeURIComponent(line.split('#')[1].trim());
-        let paramArr = line.split('?');
-        let scert = null;
-        const params = new Map();
-        if (paramArr.length > 1) {
-            paramArr = paramArr[1].split('#')[0].split('&');
-            for (const pair of paramArr) {
-                let [key, val] = pair.split('=');
-                // skip empty values
-                val = val.trim();
-                if (val.length > 0) {
-                    params.set(key, val);
-                }
-            }
-            if (
-                params.get('allowInsecure') === '1' ||
-                params.get('allowInsecure') === 'true'
-            ) {
-                scert = true;
-            }
-        }
-
-        return {
-            name: name || `[Trojan] ${server}`, // trojan uri may have no server tag!
-            type: 'trojan',
-            server,
-            port,
-            password: line.split('@')[0],
-            sni: getIfPresent(params.get('sni')),
-            'skip-cert-verify': getIfPresent(scert),
-        };
+        const parser = getTrojanURIParser();
+        const proxy = parser.parse(line);
+        return proxy;
     };
     return { name, test, parse };
 }
