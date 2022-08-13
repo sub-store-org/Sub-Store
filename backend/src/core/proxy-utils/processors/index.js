@@ -5,7 +5,7 @@ import { getFlag } from '@/utils/geo';
 import lodash from 'lodash';
 import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
-import {ProxyUtils} from '@/core/proxy-utils';
+import { ProxyUtils } from '@/core/proxy-utils';
 
 /**
  The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed as follows:
@@ -644,7 +644,7 @@ function createDynamicFunction(name, script, $arguments) {
             $httpClient,
             // eslint-disable-next-line no-undef
             $notification,
-            ProxyUtils
+            ProxyUtils,
         );
     } else {
         return new Function(
