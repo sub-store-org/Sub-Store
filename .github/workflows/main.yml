@@ -1,5 +1,5 @@
 name: build
-on: 
+on:
   push:
     branches:
       - master
@@ -18,28 +18,52 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: 'master'
-      - name: Set up Node.js
+
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "14"
+          node-version: 14
+
+      - name: Install pnpm
+        id: pnpm-install
+        with:
+          version: 7
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: |
+          echo "::set-output name=pnpm_cache_dir::$(pnpm store path)"
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.pnpm_cache_dir }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
         run: |
-          npm install -g pnpm
           cd backend && pnpm i
+
       - name: Test
         run: |
           cd backend
           pnpm test
+
       - name: Build
         run: |
           cd backend
           pnpm run build
+
       - id: tag
         name: Generate release tag
         run: |
           cd backend
           SUBSTORE_RELEASE=`node --eval="process.stdout.write(require('./package.json').version)"`
           echo "::set-output name=release_tag::$SUBSTORE_RELEASE"
+      
       - name: Release
         uses: softprops/action-gh-release@v1
         env:
@@ -50,3 +74,13 @@ jobs:
             ./backend/sub-store.min.js
             ./backend/dist/cron-sync-artifacts.min.js
             ./backend/dist/sub-store-parser.loon.min.js
+
+      - name: Release to NPM
+        run: |
+          cd backend
+          mv sub-store.min.js ./dist
+          node publish.js
+          cd dist
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
