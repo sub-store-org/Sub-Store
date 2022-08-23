@@ -12,3 +12,4 @@ services:
     volumes:
       - ./data/sub-store.json:/release/sub-store.json
       - ./data/root.json:/release/root.json
+      - ./data/crontab.txt:/var/spool/cron/crontabs/root

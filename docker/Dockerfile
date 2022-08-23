@@ -12,7 +12,9 @@ FROM alpine:latest
 WORKDIR /release
 RUN sed -i "s/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g" /etc/apk/repositories && \
   apk update && \ 
-  apk add --no-cache nginx nodejs npm supervisor && \
+  apk add --no-cache nginx nodejs npm supervisor curl tzdata && \
+  cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+  apk del tzdata && \
   wget -qO- https://get.pnpm.io/v6.16.js | node - add --global pnpm
 
 COPY --from=web-builder /app/dist /usr/share/nginx/html
