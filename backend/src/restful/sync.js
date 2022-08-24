@@ -201,12 +201,14 @@ async function syncAllArtifacts(_, res) {
         const body = JSON.parse(resp.body);
 
         for (const artifact of allArtifacts) {
-            artifact.updated = new Date().getTime();
-            // extract real url from gist
-            artifact.url = body.files[artifact.name].raw_url.replace(
-                /\/raw\/[^/]*\/(.*)/,
-                '/raw/$1',
-            );
+            if (artifact.sync) {
+                artifact.updated = new Date().getTime();
+                // extract real url from gist
+                artifact.url = body.files[artifact.name].raw_url.replace(
+                    /\/raw\/[^/]*\/(.*)/,
+                    '/raw/$1',
+                );
+            }
         }
 
         $.write(allArtifacts, ARTIFACTS_KEY);
