@@ -1,7 +1,8 @@
-import { syncToGist, produceArtifact } from '@/restful/artifacts';
 import { version } from '../../package.json';
 import { SETTINGS_KEY, ARTIFACTS_KEY } from '@/constants';
 import $ from '@/core/app';
+import { produceArtifact } from '@/restful/sync';
+import { syncToGist } from '@/restful/artifacts';
 
 !(async function () {
     const settings = $.read(SETTINGS_KEY);
