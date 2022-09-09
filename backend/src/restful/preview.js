@@ -92,7 +92,7 @@ async function compareCollection(req, res) {
     // merge proxies with the original order
     const original = Array.prototype.concat.apply(
         [],
-        subnames.map((name) => results[name]),
+        subnames.map((name) => results[name] || []),
     );
 
     original.forEach((proxy, i) => {
