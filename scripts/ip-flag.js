@@ -74,7 +74,7 @@ async function operator(proxies) {
         let i = 0;
         while (i < proxies.length) {
             const batch = proxies.slice(i, i + BATCH_SIZE);
-            await Promise.all(proxies.map(async proxy => {
+            await Promise.all(batch.map(async proxy => {
                 try {
                     // remove the original flag
                     let proxyName = removeFlag(proxy.name);
