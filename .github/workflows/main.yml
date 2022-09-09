@@ -51,3 +51,4 @@ jobs:
             ./backend/dist/sub-store-0.min.js
             ./backend/dist/sub-store-1.min.js
             ./backend/dist/sub-store-parser.loon.min.js
+            ./backend/dist/cron-sync-artifacts.js
