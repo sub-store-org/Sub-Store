@@ -22,7 +22,7 @@
     "requests": "^0.3.0",
     "semver": "^7.3.7",
     "static-js-yaml": "^1.0.0",
-    "uuid": "^8.3.2"
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.18.0",
