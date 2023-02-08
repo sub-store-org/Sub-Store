@@ -17,8 +17,13 @@ class ResourceCache {
         let clear = false;
         Object.entries(this.resourceCache).forEach((entry) => {
             const [id, updated] = entry;
-            if (new Date().getTime() - updated > this.expires) {
+            if (!updated.time) {
+                // clear old version cache
+                delete this.resourceCache[id];
                 $.delete(`#${id}`);
+                clear = true;
+            }
+            if (new Date().getTime() - updated.time > this.expires) {
                 delete this.resourceCache[id];
                 clear = true;
             }
@@ -27,9 +32,6 @@ class ResourceCache {
     }
 
     revokeAll() {
-        Object.keys(this.resourceCache).forEach((id) => {
-            $.delete(`#${id}`);
-        });
         this.resourceCache = {};
         this._persist();
     }
@@ -39,17 +41,16 @@ class ResourceCache {
     }
 
     get(id) {
-        const updated = this.resourceCache[id];
+        const updated = this.resourceCache[id] && this.resourceCache[id].time;
         if (updated && new Date().getTime() - updated <= this.expires) {
-            return $.read(`#${id}`);
+            return this.resourceCache[id].data;
         }
         return null;
     }
 
     set(id, value) {
-        this.resourceCache[id] = new Date().getTime();
+        this.resourceCache[id] = { time: new Date().getTime(), data: value }
         this._persist();
-        $.write(value, `#${id}`);
     }
 }
 
