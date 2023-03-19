@@ -55,6 +55,10 @@ function shadowsocks(proxy) {
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
     return result.toString();
 }
 
@@ -87,6 +91,10 @@ function trojan(proxy) {
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
     return result.toString();
 }
 
@@ -127,6 +135,9 @@ function vmess(proxy) {
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
     return result.toString();
 }
 
@@ -155,6 +166,10 @@ function http(proxy) {
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
     return result.toString();
 }
 
@@ -185,6 +200,10 @@ function socks5(proxy) {
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
     return result.toString();
 }
 
@@ -210,6 +229,10 @@ function snell(proxy) {
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
     return result.toString();
 }
 
