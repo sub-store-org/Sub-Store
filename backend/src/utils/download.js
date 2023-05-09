@@ -1,13 +1,14 @@
-import { HTTP } from '@/vendor/open-api';
+import { HTTP, ENV } from '@/vendor/open-api';
 import { hex_md5 } from '@/vendor/md5';
 import resourceCache from '@/utils/resource-cache';
 
 const tasks = new Map();
 
 export default async function download(url, ua) {
+    const { isNode } = ENV();
     ua = ua || 'Quantumult%20X/1.0.29 (iPhone14,5; iOS 15.4.1)';
     const id = hex_md5(ua + url);
-    if (tasks.has(id)) {
+    if (!isNode && tasks.has(id)) {
         return tasks.get(id);
     }
 
@@ -39,6 +40,8 @@ export default async function download(url, ua) {
         }
     });
 
-    tasks.set(id, result);
+    if (!isNode) {
+        tasks.set(id, result);
+    }
     return result;
 }
