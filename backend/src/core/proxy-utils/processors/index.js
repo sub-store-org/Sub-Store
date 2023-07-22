@@ -1,4 +1,5 @@
 import resourceCache from '@/utils/resource-cache';
+import scriptResourceCache from '@/utils/script-resource-cache';
 import { isIPv4, isIPv6 } from '@/utils';
 import { FULL } from '@/utils/logical';
 import { getFlag } from '@/utils/geo';
@@ -633,6 +634,7 @@ function createDynamicFunction(name, script, $arguments) {
             '$httpClient',
             '$notification',
             'ProxyUtils',
+            'scriptResourceCache',
             `${script}\n return ${name}`,
         )(
             $arguments,
@@ -645,6 +647,7 @@ function createDynamicFunction(name, script, $arguments) {
             // eslint-disable-next-line no-undef
             $notification,
             ProxyUtils,
+            scriptResourceCache,
         );
     } else {
         return new Function(
@@ -652,7 +655,8 @@ function createDynamicFunction(name, script, $arguments) {
             '$substore',
             'lodash',
             'ProxyUtils',
+            'scriptResourceCache',
             `${script}\n return ${name}`,
-        )($arguments, $, lodash, ProxyUtils);
+        )($arguments, $, lodash, ProxyUtils, scriptResourceCache);
     }
 }
