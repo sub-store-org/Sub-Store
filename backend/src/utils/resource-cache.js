@@ -48,7 +48,7 @@ class ResourceCache {
     }
 
     set(id, value) {
-        this.resourceCache[id] = { time: new Date().getTime(), data: value }
+        this.resourceCache[id] = { time: new Date().getTime(), data: value };
         this._persist();
     }
 }
