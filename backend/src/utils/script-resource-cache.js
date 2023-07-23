@@ -65,7 +65,7 @@ class ResourceCache {
 }
 
 function getExpiredTime() {
-    console.log($.read(CSR_EXPIRATION_TIME_KEY));
+    // console.log($.read(CSR_EXPIRATION_TIME_KEY));
     if (!$.read(CSR_EXPIRATION_TIME_KEY)) {
         $.write('1728e5', CSR_EXPIRATION_TIME_KEY); // 48 * 3600 * 1000
     }
@@ -88,7 +88,7 @@ function getExpiredTime() {
             '\u53c2\u6570\u4f20\u5165': 'readcachets', // "参数输入"
         };
         let intimed = $.read('#\u8282\u70b9\u7f13\u5b58\u6709\u6548\u671f'); // Loon #节点缓存有效期
-        console.log(intimed);
+        // console.log(intimed);
         if (intimed in loont) {
             expiration = loont[intimed];
             if (expiration === 'readcachets') {
