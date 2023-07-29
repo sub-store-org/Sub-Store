@@ -2,10 +2,10 @@ import { getPlatformFromHeaders } from '@/utils/platform';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { getFlowHeaders } from '@/utils/flow';
-import { produceArtifact } from './artifacts';
 import $ from '@/core/app';
 import { failed } from '@/restful/response';
 import { InternalServerError, ResourceNotFoundError } from '@/restful/errors';
+import { produceArtifact } from '@/restful/sync';
 
 export default function register($app) {
     $app.get('/download/collection/:name', downloadCollection);

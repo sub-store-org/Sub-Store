@@ -206,7 +206,10 @@ function vmess(proxy) {
         } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
-        appendIfPresent(`,obfs-uri=${proxy['ws-opts'].path}`, 'ws-opts.path');
+        appendIfPresent(
+            `,obfs-uri=${proxy[`${proxy.network}-opts`].path}`,
+            `${proxy.network}-opts.path`,
+        );
         appendIfPresent(
             `,obfs-host=${proxy[`${proxy.network}-opts`].headers.Host}`,
             `${proxy.network}-opts.headers.Host`,

@@ -128,7 +128,7 @@ ip = & {
 
 port = digits:[0-9]+ { 
     const port = parseInt(digits.join(""), 10); 
-    if (port >= 80 && port <= 65535) {
+    if (port >= 0 && port <= 65535) {
     	return port;
     }
 }

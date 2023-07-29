@@ -1,7 +1,8 @@
-import { syncToGist, produceArtifact } from '@/restful/artifacts';
 import { version } from '../../package.json';
 import { SETTINGS_KEY, ARTIFACTS_KEY } from '@/constants';
 import $ from '@/core/app';
+import { produceArtifact } from '@/restful/sync';
+import { syncToGist } from '@/restful/artifacts';
 
 !(async function () {
     const settings = $.read(SETTINGS_KEY);
@@ -50,12 +51,14 @@ async function doSync() {
         const body = JSON.parse(resp.body);
 
         for (const artifact of allArtifacts) {
-            artifact.updated = new Date().getTime();
-            // extract real url from gist
-            artifact.url = body.files[artifact.name].raw_url.replace(
-                /\/raw\/[^/]*\/(.*)/,
-                '/raw/$1',
-            );
+            if (artifact.sync) {
+                artifact.updated = new Date().getTime();
+                // extract real url from gist
+                artifact.url = body.files[artifact.name].raw_url.replace(
+                    /\/raw\/[^/]*\/(.*)/,
+                    '/raw/$1',
+                );
+            }
         }
 
         $.write(allArtifacts, ARTIFACTS_KEY);

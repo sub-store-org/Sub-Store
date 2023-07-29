@@ -5,8 +5,13 @@ http:
   mitm:
     - sub.store
   script:
+    - match: ^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info)))
+      name: sub-store-1
+      type: request
+      require-body: true
+      timeout: 120
     - match: ^https?:\/\/sub\.store
-      name: sub-store
+      name: sub-store-0
       type: request
       require-body: true
       timeout: 120
@@ -18,8 +23,12 @@ cron:
       timeout: 120
 
 script-providers:
-  sub-store:
-    url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store.min.js
+  sub-store-0:
+    url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js
+    interval: 86400
+
+  sub-store-1:
+    url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js
     interval: 86400
 
   cron-sync-artifacts:

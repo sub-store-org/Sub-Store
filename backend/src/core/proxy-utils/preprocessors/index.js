@@ -95,22 +95,10 @@ function FullConfig() {
         return /^(\[server_local\]|\[Proxy\])/gm.test(raw);
     };
     const parse = function (raw) {
-        const regex = /^\[server_local]|\[Proxy]/gm;
-        const match = regex.exec(raw);
-        const results = [];
-
-        let first = true;
-        if (match) {
-            raw = raw.substring(match.index);
-            for (const line of raw.split('\n')) {
-                if (!first && !line.test(/^\s*\[/)) {
-                    results.push(line);
-                }
-                // skip the first line
-                first = false;
-            }
-            return results.join('\n');
-        }
+        const match = raw.match(
+            /^\[server_local|Proxy\]([\s\S]+?)^\[.+?\](\r?\n|$)/im,
+        )?.[1];
+        return match || raw;
     };
     return { name, test, parse };
 }
