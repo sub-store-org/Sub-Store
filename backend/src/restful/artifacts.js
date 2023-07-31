@@ -131,7 +131,12 @@ async function deleteArtifact(req, res) {
             files[encodeURIComponent(artifact.name)] = {
                 content: '',
             };
-            await syncToGist(files);
+            // 当别的Sub 删了同步订阅 或 gist里面删了 当前设备没有删除 时 无法删除的bug 
+            try {
+                await syncToGist(files);
+            } catch (i) {
+                $.error(`Function syncToGist: ${name} : ${i}`);
+            }
         }
         // delete local cache
         deleteByName(allArtifacts, name);
