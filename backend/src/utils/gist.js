@@ -40,6 +40,10 @@ export default class Gist {
     }
 
     async upload(files) {
+        if (Object.keys(files).length === 0) {
+            return Promise.reject('未提供需上传的文件');
+        }
+
         const id = await this.locate();
 
         if (id === -1) {
