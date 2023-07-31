@@ -3,6 +3,7 @@ import Clash_Producer from './clash';
 import Stash_Producer from './stash';
 import Loon_Producer from './loon';
 import URI_Producer from './uri';
+import V2Ray_Producer from './v2ray';
 import QX_Producer from './qx';
 
 function JSON_Producer() {
@@ -17,6 +18,7 @@ export default {
     Loon: Loon_Producer(),
     Clash: Clash_Producer(),
     URI: URI_Producer(),
+    V2Ray: V2Ray_Producer(),
     JSON: JSON_Producer(),
     Stash: Stash_Producer(),
 };
