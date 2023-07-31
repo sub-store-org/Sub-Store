@@ -215,15 +215,15 @@ function snell(proxy) {
 
     // obfs
     result.appendIfPresent(
-        `,obfs=${proxy['obfs-opts'].mode}`,
+        `,obfs=${proxy['obfs-opts']?.mode}`,
         'obfs-opts.mode',
     );
     result.appendIfPresent(
-        `,obfs-host=${proxy['obfs-opts'].host}`,
+        `,obfs-host=${proxy['obfs-opts']?.host}`,
         'obfs-opts.host',
     );
     result.appendIfPresent(
-        `,obfs-uri=${proxy['obfs-opts'].path}`,
+        `,obfs-uri=${proxy['obfs-opts']?.path}`,
         'obfs-opts.path',
     );
 
@@ -232,6 +232,9 @@ function snell(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    // reuse
+    result.appendIfPresent(`,reuse=${proxy['reuse']}`, 'reuse');
 
     return result.toString();
 }
