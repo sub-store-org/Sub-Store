@@ -6,6 +6,15 @@ export default function Stash_Producer() {
         return (
             'proxies:\n' +
             proxies
+                .filter((proxy) => {
+                    if (
+                        proxy.type === 'snell' &&
+                        String(proxy.version) === '4'
+                    ) {
+                        return false;
+                    }
+                    return true;
+                })
                 .map((proxy) => {
                     if (proxy.type === 'vmess') {
                         // handle vmess aead
@@ -18,6 +27,14 @@ export default function Stash_Producer() {
                         if (isPresent(proxy, 'sni')) {
                             proxy.servername = proxy.sni;
                             delete proxy.sni;
+                        }
+                    } else if (proxy.type === 'tuic') {
+                        if (isPresent(proxy, 'alpn')) {
+                            proxy.alpn = Array.isArray(proxy.alpn)
+                                ? proxy.alpn
+                                : [proxy.alpn];
+                        } else {
+                            proxy.alpn = ['h3'];
                         }
                     }
 
