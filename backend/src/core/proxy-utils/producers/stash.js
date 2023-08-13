@@ -36,6 +36,13 @@ export default function Stash_Producer() {
                         } else {
                             proxy.alpn = ['h3'];
                         }
+                        // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/adapter/outbound/tuic.go#L197
+                        if (
+                            (!proxy.token || proxy.token.length === 0) &&
+                            !isPresent(proxy, 'version')
+                        ) {
+                            proxy.version = 5;
+                        }
                     }
 
                     delete proxy['tls-fingerprint'];
