@@ -29,7 +29,7 @@ const grammars = String.raw`
     }
 }
 
-start = (shadowsocks/vmess/trojan/https/http/snell/socks5/socks5_tls) {
+start = (shadowsocks/vmess/trojan/https/http/snell/socks5/socks5_tls/tuic/tuic_v5) {
     return proxy;
 }
 
@@ -72,6 +72,13 @@ snell = tag equals "snell" address (snell_version/snell_psk/obfs/obfs_host/obfs_
         $set(proxy, "obfs-opts.host", obfs.host);
         $set(proxy, "obfs-opts.path", obfs.path);
     }
+}
+tuic = tag equals "tuic" address (alpn/token/ip_version/tls_verification/sni/fast_open/tfo/others)* {
+    proxy.type = "tuic";
+}
+tuic_v5 = tag equals "tuic-v5" address (alpn/passwordk/uuidk/ip_version/tls_verification/sni/fast_open/tfo/others)* {
+    proxy.type = "tuic";
+    proxy.version = 5;
 }
 socks5 = tag equals "socks5" address (username password)? (fast_open/others)* {
     proxy.type = "socks5";
@@ -175,6 +182,11 @@ uri = $[^,]+
 
 udp_relay = comma "udp" equals flag:bool { proxy.udp = flag; }
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
+tfo = comma "tfo" equals flag:bool { proxy.tfo = flag; }
+ip_version = comma "ip-version" equals match:[^,]+ { proxy["ip-version"] = match.join(""); }
+token = comma "token" equals match:[^,]+ { proxy.token = match.join(""); }
+alpn = comma "alpn" equals match:[^,]+ { proxy.alpn = match.join(""); }
+uuidk = comma "uuid" equals match:[^,]+ { proxy.uuid = match.join(""); }
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
 comma = _ "," _

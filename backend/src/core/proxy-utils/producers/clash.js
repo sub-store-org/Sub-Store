@@ -4,11 +4,27 @@ export default function Clash_Producer() {
     const type = 'ALL';
     const produce = (proxies) => {
         // filter unsupported proxies
-        proxies = proxies.filter((proxy) =>
-            ['ss', 'ssr', 'vmess', 'socks', 'http', 'snell', 'trojan'].includes(
-                proxy.type,
-            ),
-        );
+        proxies = proxies.filter((proxy) => {
+            if (
+                ![
+                    'ss',
+                    'ssr',
+                    'vmess',
+                    'socks',
+                    'http',
+                    'snell',
+                    'trojan',
+                ].includes(proxy.type)
+            ) {
+                return false;
+            } else if (
+                proxy.type === 'snell' &&
+                String(proxy.version) === '4'
+            ) {
+                return false;
+            }
+            return true;
+        });
         return (
             'proxies:\n' +
             proxies
