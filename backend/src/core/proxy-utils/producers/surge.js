@@ -251,8 +251,9 @@ function snell(proxy) {
 
 function tuic(proxy) {
     const result = new Result(proxy);
+    // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/adapter/outbound/tuic.go#L197
     let type = proxy.type;
-    if (proxy.password && proxy.uuid) {
+    if (!proxy.token || proxy.token.length === 0) {
         type = 'tuic-v5';
     }
     result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
