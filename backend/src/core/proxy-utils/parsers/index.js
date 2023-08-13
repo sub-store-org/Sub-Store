@@ -270,6 +270,7 @@ function Clash_All() {
                 'http',
                 'snell',
                 'trojan',
+                'tuic',
             ].includes(proxy.type)
         ) {
             throw new Error(
@@ -474,6 +475,15 @@ function Surge_Snell() {
     return { name, test, parse };
 }
 
+function Surge_Tuic() {
+    const name = 'Surge Tuic Parser';
+    const test = (line) => {
+        return /^.*=\s*tuic(-v5)??/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
+
 export default [
     URI_SS(),
     URI_SSR(),
@@ -485,6 +495,7 @@ export default [
     Surge_Trojan(),
     Surge_Http(),
     Surge_Snell(),
+    Surge_Tuic(),
     Surge_Socks5(),
     Loon_SS(),
     Loon_SSR(),

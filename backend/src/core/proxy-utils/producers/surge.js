@@ -4,6 +4,14 @@ import $ from '@/core/app';
 
 const targetPlatform = 'Surge';
 
+const ipVersions = {
+    dual: 'dual',
+    ipv4: 'v4-only',
+    ipv6: 'v6-only',
+    'ipv4-prefer': 'prefer-v4',
+    'ipv6-prefer': 'prefer-v6',
+};
+
 export default function Surge_Producer() {
     const produce = (proxy) => {
         switch (proxy.type) {
@@ -19,6 +27,8 @@ export default function Surge_Producer() {
                 return socks5(proxy);
             case 'snell':
                 return snell(proxy);
+            case 'tuic':
+                return tuic(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -235,6 +245,45 @@ function snell(proxy) {
 
     // reuse
     result.appendIfPresent(`,reuse=${proxy['reuse']}`, 'reuse');
+
+    return result.toString();
+}
+
+function tuic(proxy) {
+    const result = new Result(proxy);
+    let type = proxy.type;
+    if (proxy.password && proxy.uuid) {
+        type = 'tuic-v5';
+    }
+    result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
+
+    result.appendIfPresent(`,uuid=${proxy.uuid}`, 'uuid');
+    result.appendIfPresent(`,password=${proxy.password}`, 'password');
+    result.appendIfPresent(`,token=${proxy.token}`, 'token');
+
+    result.appendIfPresent(
+        `,alpn=${Array.isArray(proxy.alpn) ? proxy.alpn[0] : proxy.alpn}`,
+        'alpn',
+    );
+
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    // tls verification
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'fast-open');
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
     return result.toString();
 }
