@@ -28,6 +28,19 @@ export default function Stash_Producer() {
                             proxy.servername = proxy.sni;
                             delete proxy.sni;
                         }
+                        // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L400
+                        // https://stash.wiki/proxy-protocols/proxy-types#vmess
+                        if (
+                            isPresent(proxy, 'cipher') &&
+                            ![
+                                'auto',
+                                'aes-128-gcm',
+                                'chacha20-poly1305',
+                                'none',
+                            ].includes(proxy.cipher)
+                        ) {
+                            proxy.cipher = 'auto';
+                        }
                     } else if (proxy.type === 'tuic') {
                         if (isPresent(proxy, 'alpn')) {
                             proxy.alpn = Array.isArray(proxy.alpn)
