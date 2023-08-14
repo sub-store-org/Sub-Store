@@ -23,12 +23,19 @@ function URI_SS() {
         };
         content = content.split('#')[0]; // strip proxy name
         // handle IPV4 and IPV6
-        const serverAndPort = content.match(/@([^/]*)(\/|$)/)[1];
+        let serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
+        let userInfoStr = Base64.decode(content.split('@')[0]);
+        if (!serverAndPortArray) {
+            content = Base64.decode(content);
+            userInfoStr = content.split('@')[0];
+            serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
+        }
+        const serverAndPort = serverAndPortArray[1];
         const portIdx = serverAndPort.lastIndexOf(':');
         proxy.server = serverAndPort.substring(0, portIdx);
         proxy.port = serverAndPort.substring(portIdx + 1);
 
-        const userInfo = Base64.decode(content.split('@')[0]).split(':');
+        const userInfo = userInfoStr.split(':');
         proxy.cipher = userInfo[0];
         proxy.password = userInfo[1];
 
