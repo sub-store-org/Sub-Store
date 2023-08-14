@@ -41,6 +41,18 @@ export default function Clash_Producer() {
                             proxy.servername = proxy.sni;
                             delete proxy.sni;
                         }
+                        // https://dreamacro.github.io/clash/configuration/outbound.html#vmess
+                        if (
+                            isPresent(proxy, 'cipher') &&
+                            ![
+                                'auto',
+                                'aes-128-gcm',
+                                'chacha20-poly1305',
+                                'none',
+                            ].includes(proxy.cipher)
+                        ) {
+                            proxy.cipher = 'auto';
+                        }
                     }
 
                     delete proxy['tls-fingerprint'];
