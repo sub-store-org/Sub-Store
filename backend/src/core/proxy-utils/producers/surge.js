@@ -280,7 +280,7 @@ function tuic(proxy) {
     );
 
     // tfo
-    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'fast-open');
+    result.appendIfPresent(`,tfo=${proxy['fast-open']}`, 'fast-open');
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
 
     // test-url
