@@ -20,7 +20,10 @@ export default function register($app) {
         .patch(updateSubscription)
         .delete(deleteSubscription);
 
-    $app.route('/api/subs').get(getAllSubscriptions).post(createSubscription);
+    $app.route('/api/subs')
+        .get(getAllSubscriptions)
+        .post(createSubscription)
+        .put(replaceSubscriptions);
 }
 
 // subscriptions API
@@ -66,10 +69,10 @@ async function getFlowInfo(req, res) {
         }
 
         // unit is KB
-        const uploadMatch = flowHeaders.match(/upload=(-?)(\d+)/)
+        const uploadMatch = flowHeaders.match(/upload=(-?)(\d+)/);
         const upload = Number(uploadMatch[1] + uploadMatch[2]);
 
-        const downloadMatch = flowHeaders.match(/download=(-?)(\d+)/)
+        const downloadMatch = flowHeaders.match(/download=(-?)(\d+)/);
         const download = Number(downloadMatch[1] + downloadMatch[2]);
 
         const total = Number(flowHeaders.match(/total=(\d+)/)[1]);
@@ -201,4 +204,10 @@ function deleteSubscription(req, res) {
 function getAllSubscriptions(req, res) {
     const allSubs = $.read(SUBS_KEY);
     success(res, allSubs);
+}
+
+function replaceSubscriptions(req, res) {
+    const allSubs = req.body;
+    $.write(allSubs, SUBS_KEY);
+    success(res);
 }

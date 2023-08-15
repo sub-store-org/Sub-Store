@@ -14,7 +14,8 @@ export default function register($app) {
 
     $app.route('/api/collections')
         .get(getAllCollections)
-        .post(createCollection);
+        .post(createCollection)
+        .put(replaceCollection);
 }
 
 // collection API
@@ -110,4 +111,10 @@ function deleteCollection(req, res) {
 function getAllCollections(req, res) {
     const allCols = $.read(COLLECTIONS_KEY);
     success(res, allCols);
+}
+
+function replaceCollection(req, res) {
+    const allCols = req.body;
+    $.write(allCols, COLLECTIONS_KEY);
+    success(res);
 }
