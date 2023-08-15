@@ -216,7 +216,7 @@ function URI_VMess() {
                 type: 'vmess',
                 server: params.add,
                 port: params.port,
-                cipher: 'auto', // V2rayN has no default cipher! use aes-128-gcm as default.
+                cipher: getIfPresent(params.scy, 'auto'),
                 uuid: params.id,
                 alterId: getIfPresent(params.aid, 0),
                 tls: params.tls === 'tls' || params.tls === true,
