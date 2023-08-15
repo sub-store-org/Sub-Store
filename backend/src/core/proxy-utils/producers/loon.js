@@ -127,9 +127,7 @@ function trojan(proxy) {
 function vmess(proxy) {
     const result = new Result(proxy);
     result.append(
-        `${proxy.name}=vmess,${proxy.server},${proxy.port},${
-            proxy.cipher === 'auto' ? 'none' : proxy.cipher
-        },"${proxy.uuid}"`,
+        `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.uuid}"`,
     );
 
     // transport
