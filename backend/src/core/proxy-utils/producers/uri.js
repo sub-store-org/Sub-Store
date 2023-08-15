@@ -75,6 +75,8 @@ export default function URI_Producer() {
             case 'trojan':
                 result = `trojan://${proxy.password}@${proxy.server}:${
                     proxy.port
+                }?sni=${encodeURIComponent(proxy.sni || proxy.server)}${
+                    proxy['skip-cert-verify'] ? '&allowInsecure=1' : ''
                 }#${encodeURIComponent(proxy.name)}`;
                 break;
         }
