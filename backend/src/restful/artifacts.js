@@ -19,7 +19,10 @@ export default function register($app) {
     if (!$.read(ARTIFACTS_KEY)) $.write({}, ARTIFACTS_KEY);
 
     // RESTful APIs
-    $app.route('/api/artifacts').get(getAllArtifacts).post(createArtifact);
+    $app.route('/api/artifacts')
+        .get(getAllArtifacts)
+        .post(createArtifact)
+        .put(replaceArtifact);
 
     $app.route('/api/artifact/:name')
         .get(getArtifact)
@@ -30,6 +33,12 @@ export default function register($app) {
 function getAllArtifacts(req, res) {
     const allArtifacts = $.read(ARTIFACTS_KEY);
     success(res, allArtifacts);
+}
+
+function replaceArtifact(req, res) {
+    const allArtifacts = req.body;
+    $.write(allArtifacts, ARTIFACTS_KEY);
+    success(res);
 }
 
 async function getArtifact(req, res) {
@@ -131,7 +140,7 @@ async function deleteArtifact(req, res) {
             files[encodeURIComponent(artifact.name)] = {
                 content: '',
             };
-            // 当别的Sub 删了同步订阅 或 gist里面删了 当前设备没有删除 时 无法删除的bug 
+            // 当别的Sub 删了同步订阅 或 gist里面删了 当前设备没有删除 时 无法删除的bug
             try {
                 await syncToGist(files);
             } catch (i) {
