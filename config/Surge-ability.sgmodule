@@ -1,0 +1,11 @@
+#!name=Sub-Store
+#!desc=高级订阅管理工具 @Peng-YM  带 ability 参数版本, 可能会爆内存, 如果不需要使用指定节点功能 例如[加国旗脚本或者cname脚本] 可以用不带 ability 参数版本
+
+[MITM]
+hostname = %APPEND% sub.store
+
+[Script]
+Sub-Store Core=type=http-request,pattern=^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))),script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js,requires-body=true,timeout=120,ability=http-client-policy
+Sub-Store Simple=type=http-request,pattern=^https?:\/\/sub\.store,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js,requires-body=true
+
+Sub-Store Sync=type=cron,cronexp=0 0 * * *,wake-system=1,timeout=120,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
