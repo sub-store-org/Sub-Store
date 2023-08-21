@@ -206,12 +206,14 @@ function vmess(proxy) {
         } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
+        let httpPath = proxy[`${proxy.network}-opts`]?.path;
+        let httpHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
         appendIfPresent(
-            `,obfs-uri=${proxy[`${proxy.network}-opts`].path}`,
+            `,obfs-uri=${Array.isArray(httpPath) ? httpPath[0] : httpPath}`,
             `${proxy.network}-opts.path`,
         );
         appendIfPresent(
-            `,obfs-host=${proxy[`${proxy.network}-opts`].headers.Host}`,
+            `,obfs-host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
             `${proxy.network}-opts.headers.Host`,
         );
     } else {
