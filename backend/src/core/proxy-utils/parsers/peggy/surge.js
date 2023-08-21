@@ -25,6 +25,9 @@ const grammars = String.raw`
             proxy.network = "ws";
             $set(proxy, "ws-opts.path", obfs.path);
             $set(proxy, "ws-opts.headers", obfs['ws-headers']);
+            if (proxy['ws-opts'] && proxy['ws-opts']['headers'] && proxy['ws-opts']['headers'].Host) {
+                proxy['ws-opts']['headers'].Host = proxy['ws-opts']['headers'].Host.replace(/^"(.*)"$/, '$1')
+            }
         }
     }
 }

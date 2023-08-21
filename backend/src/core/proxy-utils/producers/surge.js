@@ -301,7 +301,13 @@ function handleTransport(result, proxy) {
                 if (isPresent(proxy, 'ws-opts.headers')) {
                     const headers = proxy['ws-opts'].headers;
                     const value = Object.keys(headers)
-                        .map((k) => `${k}:${headers[k]}`)
+                        .map((k) => {
+                            let v = headers[k];
+                            if (['Host'].includes(k)) {
+                                v = `"${v}"`;
+                            }
+                            return `${k}:${v}`;
+                        })
                         .join('|');
                     if (isNotBlank(value)) {
                         result.append(`,ws-headers=${value}`);
