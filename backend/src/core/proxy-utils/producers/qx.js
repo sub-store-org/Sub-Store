@@ -62,18 +62,20 @@ function shadowsocks(proxy) {
         );
     }
 
-    // tls fingerprint
-    appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
+    if (needTls(proxy)) {
+        // tls fingerprint
+        appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
 
-    // tls verification
-    appendIfPresent(
-        `,tls-verification=${!proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+        // tls verification
+        appendIfPresent(
+            `,tls-verification=${!proxy['skip-cert-verify']}`,
+            'skip-cert-verify',
+        );
+        appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+    }
 
     // tfo
     appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
@@ -150,18 +152,20 @@ function trojan(proxy) {
         append(`,over-tls=true`);
     }
 
-    // tls fingerprint
-    appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
+    if (needTls(proxy)) {
+        // tls fingerprint
+        appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
 
-    // tls verification
-    appendIfPresent(
-        `,tls-verification=${!proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+        // tls verification
+        appendIfPresent(
+            `,tls-verification=${!proxy['skip-cert-verify']}`,
+            'skip-cert-verify',
+        );
+        appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+    }
 
     // tfo
     appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
@@ -221,18 +225,20 @@ function vmess(proxy) {
         if (proxy.tls) append(`,obfs=over-tls`);
     }
 
-    // tls fingerprint
-    appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
+    if (needTls(proxy)) {
+        // tls fingerprint
+        appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
 
-    // tls verification
-    appendIfPresent(
-        `,tls-verification=${!proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+        // tls verification
+        appendIfPresent(
+            `,tls-verification=${!proxy['skip-cert-verify']}`,
+            'skip-cert-verify',
+        );
+        appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+    }
 
     // AEAD
     if (isPresent(proxy, 'aead')) {
@@ -268,18 +274,20 @@ function http(proxy) {
     }
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
 
-    // tls fingerprint
-    appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
+    if (needTls(proxy)) {
+        // tls fingerprint
+        appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
 
-    // tls verification
-    appendIfPresent(
-        `,tls-verification=${!proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+        // tls verification
+        appendIfPresent(
+            `,tls-verification=${!proxy['skip-cert-verify']}`,
+            'skip-cert-verify',
+        );
+        appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+    }
 
     // tfo
     appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
@@ -308,18 +316,20 @@ function socks5(proxy) {
     }
     appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
 
-    // tls fingerprint
-    appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
+    if (needTls(proxy)) {
+        // tls fingerprint
+        appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
 
-    // tls verification
-    appendIfPresent(
-        `,tls-verification=${!proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+        // tls verification
+        appendIfPresent(
+            `,tls-verification=${!proxy['skip-cert-verify']}`,
+            'skip-cert-verify',
+        );
+        appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+    }
 
     // tfo
     appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
