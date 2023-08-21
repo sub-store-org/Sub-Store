@@ -334,11 +334,5 @@ function socks5(proxy) {
 }
 
 function needTls(proxy) {
-    return (
-        proxy.tls ||
-        proxy.sni ||
-        typeof proxy['skip-cert-verify'] !== 'undefined' ||
-        typeof proxy['tls-fingerprint'] !== 'undefined' ||
-        typeof proxy['tls-host'] !== 'undefined'
-    );
+    return proxy.tls;
 }
