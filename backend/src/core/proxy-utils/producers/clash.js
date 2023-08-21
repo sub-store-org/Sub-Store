@@ -55,6 +55,26 @@ export default function Clash_Producer() {
                         }
                     }
 
+                    if (
+                        ['vmess', 'vless'].includes(proxy.type) &&
+                        proxy.network === 'http'
+                    ) {
+                        let httpPath = proxy['http-opts']?.path;
+                        if (
+                            isPresent(proxy, 'http-opts.path') &&
+                            !Array.isArray(httpPath)
+                        ) {
+                            proxy['http-opts'].path = [httpPath];
+                        }
+                        let httpHost = proxy['http-opts']?.headers?.Host;
+                        if (
+                            isPresent(proxy, 'http-opts.headers.Host') &&
+                            !Array.isArray(httpHost)
+                        ) {
+                            proxy['http-opts'].headers.Host = [httpHost];
+                        }
+                    }
+
                     delete proxy['tls-fingerprint'];
                     return '  - ' + JSON.stringify(proxy) + '\n';
                 })
