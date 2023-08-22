@@ -218,7 +218,7 @@ function URI_VMess() {
                 port: params.port,
                 cipher: getIfPresent(params.scy, 'auto'),
                 uuid: params.id,
-                alterId: getIfPresent(params.aid, 0),
+                alterId: parseInt(getIfPresent(params.aid, 0)),
                 tls: params.tls === 'tls' || params.tls === true,
                 'skip-cert-verify': isPresent(params.verify_cert)
                     ? !params.verify_cert
