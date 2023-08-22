@@ -295,6 +295,16 @@ function Clash_All() {
         if (proxy.type === 'vmess') {
             proxy.sni = proxy.servername;
             delete proxy.servername;
+            if (proxy.tls && !proxy.sni) {
+                if (proxy.network === 'ws') {
+                    proxy.sni = proxy['ws-opts']?.headers?.Host;
+                } else if (proxy.network === 'http') {
+                    let httpHost = proxy['http-opts']?.headers?.Host;
+                    proxy.sni = Array.isArray(httpHost)
+                        ? httpHost[0]
+                        : httpHost;
+                }
+            }
         }
 
         return proxy;
