@@ -65,10 +65,15 @@ export default function URI_Producer() {
                     net: proxy.network || 'tcp',
                     tls: proxy.tls ? 'tls' : '',
                 };
+                if (proxy.tls && proxy.sni) {
+                    result.sni = proxy.sni;
+                }
                 // obfs
                 if (proxy.network === 'ws') {
                     result.path = proxy['ws-opts'].path || '/';
-                    result.host = proxy['ws-opts'].headers.Host || proxy.server;
+                    if (proxy['ws-opts'].headers.Host) {
+                        result.host = proxy['ws-opts'].headers.Host;
+                    }
                 }
                 result = 'vmess://' + Base64.encode(JSON.stringify(result));
                 break;

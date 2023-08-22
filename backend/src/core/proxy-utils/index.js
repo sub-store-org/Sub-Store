@@ -1,5 +1,5 @@
 import download from '@/utils/download';
-
+import { isIPv4, isIPv6 } from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
@@ -36,6 +36,10 @@ function parse(raw) {
         if (lastParser) {
             const [proxy, error] = tryParse(lastParser, line);
             if (!error) {
+                // 前面已经处理过普通情况下的 SNI, 这里显式设置 SNI, 防止之后解析成 IP 后丢失域名 SNI
+                if (proxy.tls && !proxy.sni && !isIP(proxy.server)) {
+                    proxy.sni = proxy.server;
+                }
                 proxies.push(proxy);
                 success = true;
             }
@@ -181,4 +185,8 @@ function safeMatch(parser, line) {
     } catch (err) {
         return false;
     }
+}
+
+function isIP(ip) {
+    return isIPv4(ip) || isIPv6(ip);
 }
