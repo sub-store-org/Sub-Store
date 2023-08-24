@@ -185,6 +185,9 @@ function safeMatch(parser, line) {
 
 function lastParse(proxy) {
     if (proxy.type === 'trojan') {
+        if (proxy.network === 'tcp') {
+            delete proxy.network;
+        }
         proxy.tls = true;
     }
     if (proxy.tls && !proxy.sni) {
