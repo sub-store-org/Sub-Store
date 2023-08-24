@@ -103,7 +103,7 @@ params = "/"? "?" head:param tail:("&"@param)* {
 
 param = kv/single;
 
-kv = key:$[a-z]i+ "=" value:$[^&#]i+ {
+kv = key:$[a-z]i+ "=" value:$[^&#]i* {
   params[key] = value;
 }
 
