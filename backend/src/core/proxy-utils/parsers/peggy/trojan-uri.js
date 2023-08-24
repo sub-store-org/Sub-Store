@@ -87,6 +87,7 @@ params = "/"? "?" head:param tail:("&"@param)* {
     proxy.network = "ws";
     $set(proxy, "ws-opts.path", params["wspath"]);
   }
+  
   if (params["type"]) {
     proxy.network = params["type"]
     if (params["path"]) {

@@ -157,7 +157,7 @@ function URI_VMess() {
     };
     const parse = (line) => {
         line = line.split('vmess://')[1];
-        const content = Base64.decode(line);
+        let content = Base64.decode(line);
         if (/=\s*vmess/.test(content)) {
             // Quantumult VMess URI format
             const partitions = content.split(',').map((p) => p.trim());
@@ -209,17 +209,49 @@ function URI_VMess() {
             }
             return proxy;
         } else {
-            // V2rayN URI format
-            const params = JSON.parse(content);
+            let params = {};
+
+            try {
+                // V2rayN URI format
+                params = JSON.parse(content);
+            } catch (e) {
+                // console.error(e);
+                // Shadowrocket URI format
+                let [_, base64Line, qs] = /(^[^?]+?)\/?\?(.*)$/.exec(line);
+                content = Base64.decode(base64Line);
+
+                for (const addon of qs.split('&')) {
+                    const [key, valueRaw] = addon.split('=');
+                    let value = valueRaw;
+                    value = decodeURIComponent(valueRaw);
+                    if (value.indexOf(',') === -1) {
+                        params[key] = value;
+                    } else {
+                        params[key] = value.split(',');
+                    }
+                }
+                console.log(`content`, content);
+                console.log(`params`, params);
+                let [__, cipher, uuid, server, port] =
+                    /(^[^:]+?):([^:]+?)@(.*):(\d+)$/.exec(content);
+
+                params.scy = cipher;
+                params.id = uuid;
+                params.port = port;
+                params.add = server;
+            }
             const proxy = {
-                name: params.ps,
+                name: params.ps ?? params.remark,
                 type: 'vmess',
                 server: params.add,
-                port: params.port,
+                port: parseInt(getIfPresent(params.port), 10),
                 cipher: getIfPresent(params.scy, 'auto'),
                 uuid: params.id,
-                alterId: parseInt(getIfPresent(params.aid, 0)),
-                tls: params.tls === 'tls' || params.tls === true,
+                alterId: parseInt(
+                    getIfPresent(params.aid ?? params.alterId, 0),
+                    10,
+                ),
+                tls: ['tls', true, 1, '1'].includes(params.tls),
                 'skip-cert-verify': isPresent(params.verify_cert)
                     ? !params.verify_cert
                     : undefined,
@@ -229,16 +261,40 @@ function URI_VMess() {
                 proxy.sni = params.sni;
             }
             // handle obfs
-            if (params.net === 'ws') {
+            if (params.net === 'ws' || params.obfs === 'websocket') {
                 proxy.network = 'ws';
-                proxy['ws-opts'] = {
-                    path: getIfNotBlank(params.path),
-                    headers: { Host: getIfNotBlank(params.host) },
-                };
+            } else if (params.net === 'tcp' || params.obfs === 'http') {
+                proxy.network = 'http';
+            }
+            if (proxy.network) {
+                let transportHost = params.host ?? params.obfsParam;
+                let transportPath = params.path;
+
+                if (proxy.network === 'http') {
+                    if (transportHost) {
+                        transportHost = Array.isArray(transportHost)
+                            ? transportHost[0]
+                            : transportHost;
+                    }
+                    if (transportPath) {
+                        transportPath = Array.isArray(transportPath)
+                            ? transportPath[0]
+                            : transportPath;
+                    }
+                }
+                if (transportPath || transportHost) {
+                    proxy[`${proxy.network}-opts`] = {
+                        path: getIfNotBlank(transportPath),
+                        headers: { Host: getIfNotBlank(transportHost) },
+                    };
+                } else {
+                    delete proxy.network;
+                }
+
                 // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L413
                 // sni 优先级应高于 host
-                if (proxy.tls && !proxy.sni && params.host) {
-                    proxy.sni = params.host;
+                if (proxy.tls && !proxy.sni && transportHost) {
+                    proxy.sni = transportHost;
                 }
             }
             return proxy;
