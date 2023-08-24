@@ -217,7 +217,8 @@ function URI_VMess() {
             } catch (e) {
                 // console.error(e);
                 // Shadowrocket URI format
-                let [_, base64Line, qs] = /(^[^?]+?)\/?\?(.*)$/.exec(line);
+                // eslint-disable-next-line no-unused-vars
+                let [__, base64Line, qs] = /(^[^?]+?)\/?\?(.*)$/.exec(line);
                 content = Base64.decode(base64Line);
 
                 for (const addon of qs.split('&')) {
@@ -230,9 +231,8 @@ function URI_VMess() {
                         params[key] = value.split(',');
                     }
                 }
-                console.log(`content`, content);
-                console.log(`params`, params);
-                let [__, cipher, uuid, server, port] =
+                // eslint-disable-next-line no-unused-vars
+                let [___, cipher, uuid, server, port] =
                     /(^[^:]+?):([^:]+?)@(.*):(\d+)$/.exec(content);
 
                 params.scy = cipher;
@@ -263,7 +263,10 @@ function URI_VMess() {
             // handle obfs
             if (params.net === 'ws' || params.obfs === 'websocket') {
                 proxy.network = 'ws';
-            } else if (params.net === 'tcp' || params.obfs === 'http') {
+            } else if (
+                ['tcp', 'http'].includes(params.net) ||
+                params.obfs === 'http'
+            ) {
                 proxy.network = 'http';
             }
             if (proxy.network) {
@@ -340,6 +343,7 @@ function Clash_All() {
                 'snell',
                 'trojan',
                 'tuic',
+                'vless',
             ].includes(proxy.type)
         ) {
             throw new Error(
@@ -348,7 +352,7 @@ function Clash_All() {
         }
 
         // handle vmess sni
-        if (proxy.type === 'vmess') {
+        if (['vmess', 'vless'].includes(proxy.type)) {
             proxy.sni = proxy.servername;
             delete proxy.servername;
             if (proxy.tls && !proxy.sni) {
