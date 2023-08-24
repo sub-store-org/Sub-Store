@@ -189,6 +189,9 @@ function vmess(proxy) {
 }
 
 function vless(proxy) {
+    if (proxy['reality-opts']) {
+        throw new Error(`reality is unsupported`);
+    }
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=vless,${proxy.server},${proxy.port},"${proxy.uuid}"`,

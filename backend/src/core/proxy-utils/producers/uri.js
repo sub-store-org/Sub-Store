@@ -55,47 +55,65 @@ export default function URI_Producer() {
                 break;
             case 'vmess':
                 // V2RayN URI format
+                let type = '';
+                let net = proxy.network || 'tcp';
+                if (proxy.network === 'http') {
+                    net = 'tcp';
+                    type = 'http';
+                }
                 result = {
+                    v: '2',
                     ps: proxy.name,
                     add: proxy.server,
                     port: proxy.port,
                     id: proxy.uuid,
-                    type: '',
+                    type,
                     aid: 0,
-                    net: proxy.network || 'tcp',
+                    net,
                     tls: proxy.tls ? 'tls' : '',
                 };
                 if (proxy.tls && proxy.sni) {
                     result.sni = proxy.sni;
                 }
                 // obfs
-                if (proxy.network === 'ws') {
-                    result.path = proxy['ws-opts'].path || '/';
-                    if (proxy['ws-opts'].headers.Host) {
-                        result.host = proxy['ws-opts'].headers.Host;
+                if (proxy.network) {
+                    let vmessTransportPath =
+                        proxy[`${proxy.network}-opts`]?.path;
+                    let vmessTransportHost =
+                        proxy[`${proxy.network}-opts`]?.headers?.Host;
+                    if (vmessTransportPath) {
+                        result.path = Array.isArray(vmessTransportPath)
+                            ? vmessTransportPath[0]
+                            : vmessTransportPath;
+                    }
+                    if (vmessTransportHost) {
+                        result.host = Array.isArray(vmessTransportHost)
+                            ? vmessTransportHost[0]
+                            : vmessTransportHost;
                     }
                 }
                 result = 'vmess://' + Base64.encode(JSON.stringify(result));
                 break;
             case 'trojan':
-                let transport = '';
+                let trojanTransport = '';
                 if (proxy.network) {
-                    transport = `&type=${proxy.network}`;
-                    let transportPath = proxy[`${proxy.network}-opts`]?.path;
-                    let transportHost =
+                    trojanTransport = `&type=${proxy.network}`;
+                    let trojanTransportPath =
+                        proxy[`${proxy.network}-opts`]?.path;
+                    let trojanTransportHost =
                         proxy[`${proxy.network}-opts`]?.headers?.Host;
-                    if (transportPath) {
-                        transport += `&path=${encodeURIComponent(
-                            Array.isArray(transportPath)
-                                ? transportPath[0]
-                                : transportPath,
+                    if (trojanTransportPath) {
+                        trojanTransport += `&path=${encodeURIComponent(
+                            Array.isArray(trojanTransportPath)
+                                ? trojanTransportPath[0]
+                                : trojanTransportPath,
                         )}`;
                     }
-                    if (transportHost) {
-                        transport += `&host=${encodeURIComponent(
-                            Array.isArray(transportHost)
-                                ? transportHost[0]
-                                : transportHost,
+                    if (trojanTransportHost) {
+                        trojanTransport += `&host=${encodeURIComponent(
+                            Array.isArray(trojanTransportHost)
+                                ? trojanTransportHost[0]
+                                : trojanTransportHost,
                         )}`;
                     }
                 }
@@ -103,7 +121,7 @@ export default function URI_Producer() {
                     proxy.port
                 }?sni=${encodeURIComponent(proxy.sni || proxy.server)}${
                     proxy['skip-cert-verify'] ? '&allowInsecure=1' : ''
-                }${transport}#${encodeURIComponent(proxy.name)}`;
+                }${trojanTransport}#${encodeURIComponent(proxy.name)}`;
                 break;
         }
         return result;

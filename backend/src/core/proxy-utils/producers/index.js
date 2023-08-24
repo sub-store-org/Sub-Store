@@ -5,6 +5,7 @@ import Loon_Producer from './loon';
 import URI_Producer from './uri';
 import V2Ray_Producer from './v2ray';
 import QX_Producer from './qx';
+import ShadowRocket_Producer from './shadowrocket';
 
 function JSON_Producer() {
     const type = 'ALL';
@@ -21,4 +22,5 @@ export default {
     V2Ray: V2Ray_Producer(),
     JSON: JSON_Producer(),
     Stash: Stash_Producer(),
+    ShadowRocket: ShadowRocket_Producer(),
 };

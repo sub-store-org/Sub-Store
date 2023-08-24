@@ -8,20 +8,8 @@ export default function Stash_Producer() {
             proxies
                 .filter((proxy) => {
                     if (
-                        ![
-                            'ss',
-                            'ssr',
-                            'vmess',
-                            'socks',
-                            'http',
-                            'snell',
-                            'trojan',
-                            'tuic',
-                            'vless',
-                        ].includes(proxy.type) ||
-                        (proxy.type === 'snell' &&
-                            String(proxy.version) === '4') ||
-                        (proxy.type === 'vless' && proxy['reality-opts'])
+                        proxy.type === 'snell' &&
+                        String(proxy.version) === '4'
                     ) {
                         return false;
                     }
