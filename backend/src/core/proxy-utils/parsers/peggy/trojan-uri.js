@@ -79,13 +79,22 @@ port = digits:[0-9]+ {
   }
 }
 
-params = "?" head:param tail:("&"@param)* {
+params = "/"? "?" head:param tail:("&"@param)* {
   proxy["skip-cert-verify"] = toBool(params["allowInsecure"]);
   proxy.sni = params["sni"] || params["peer"];
 
   if (toBool(params["ws"])) {
     proxy.network = "ws";
     $set(proxy, "ws-opts.path", params["wspath"]);
+  }
+  if (params["type"]) {
+    proxy.network = params["type"]
+    if (params["path"]) {
+      $set(proxy, proxy.network+"-opts.path", decodeURIComponent(params["path"]));  
+    }
+    if (params["host"]) {
+      $set(proxy, proxy.network+"-opts.headers.Host", decodeURIComponent(params["host"])); 
+    }
   }
 
   proxy.udp = toBool(params["udp"]);
