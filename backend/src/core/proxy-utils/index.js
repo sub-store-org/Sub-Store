@@ -36,11 +36,7 @@ function parse(raw) {
         if (lastParser) {
             const [proxy, error] = tryParse(lastParser, line);
             if (!error) {
-                // 前面已经处理过普通情况下的 SNI, 这里显式设置 SNI, 防止之后解析成 IP 后丢失域名 SNI
-                if (proxy.tls && !proxy.sni && !isIP(proxy.server)) {
-                    proxy.sni = proxy.server;
-                }
-                proxies.push(proxy);
+                proxies.push(lastParse(proxy));
                 success = true;
             }
         }
@@ -50,7 +46,7 @@ function parse(raw) {
             for (const parser of PROXY_PARSERS) {
                 const [proxy, error] = tryParse(parser, line);
                 if (!error) {
-                    proxies.push(proxy);
+                    proxies.push(lastParse(proxy));
                     lastParser = parser;
                     success = true;
                     $.info(`${parser.name} is activated`);
@@ -185,6 +181,27 @@ function safeMatch(parser, line) {
     } catch (err) {
         return false;
     }
+}
+
+function lastParse(proxy) {
+    if (proxy.type === 'trojan') {
+        proxy.tls = true;
+    }
+    if (proxy.tls && !proxy.sni) {
+        if (proxy.network) {
+            let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
+            transportHost = Array.isArray(transportHost)
+                ? transportHost[0]
+                : transportHost;
+            if (transportHost) {
+                proxy.sni = transportHost;
+            }
+        }
+        if (!proxy.sni && !isIP(proxy.server)) {
+            proxy.sni = proxy.server;
+        }
+    }
+    return proxy;
 }
 
 function isIP(ip) {

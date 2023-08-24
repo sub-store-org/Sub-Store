@@ -78,11 +78,32 @@ export default function URI_Producer() {
                 result = 'vmess://' + Base64.encode(JSON.stringify(result));
                 break;
             case 'trojan':
+                let transport = '';
+                if (proxy.network) {
+                    transport = `&type=${proxy.network}`;
+                    let transportPath = proxy[`${proxy.network}-opts`]?.path;
+                    let transportHost =
+                        proxy[`${proxy.network}-opts`]?.headers?.Host;
+                    if (transportPath) {
+                        transport += `&path=${encodeURIComponent(
+                            Array.isArray(transportPath)
+                                ? transportPath[0]
+                                : transportPath,
+                        )}`;
+                    }
+                    if (transportHost) {
+                        transport += `&host=${encodeURIComponent(
+                            Array.isArray(transportHost)
+                                ? transportHost[0]
+                                : transportHost,
+                        )}`;
+                    }
+                }
                 result = `trojan://${proxy.password}@${proxy.server}:${
                     proxy.port
                 }?sni=${encodeURIComponent(proxy.sni || proxy.server)}${
                     proxy['skip-cert-verify'] ? '&allowInsecure=1' : ''
-                }#${encodeURIComponent(proxy.name)}`;
+                }${transport}#${encodeURIComponent(proxy.name)}`;
                 break;
         }
         return result;
