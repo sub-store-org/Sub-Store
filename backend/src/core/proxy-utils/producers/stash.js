@@ -91,6 +91,9 @@ export default function Stash_Producer() {
                         proxy.keepalive =
                             proxy.keepalive ?? proxy['persistent-keepalive'];
                         proxy['persistent-keepalive'] = proxy.keepalive;
+                        proxy['preshared-key'] =
+                            proxy['preshared-key'] ?? proxy['pre-shared-key'];
+                        proxy['pre-shared-key'] = proxy['preshared-key'];
                     }
 
                     if (
