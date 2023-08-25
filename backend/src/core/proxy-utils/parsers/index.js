@@ -503,6 +503,114 @@ function Loon_Http() {
     return { name, test, parse };
 }
 
+function Loon_WireGuard() {
+    const name = 'Loon WireGuard Parser';
+    const test = (line) => {
+        return /^.*=\s*wireguard/i.test(line.split(',')[0]);
+    };
+
+    const parse = (line) => {
+        const name = line.match(
+            /(^.*?)\s*?=\s*?wireguard\s*?,.+?\s*?=\s*?.+?/i,
+        )?.[1];
+        line = line.replace(name, '').replace(/^\s*?=\s*?wireguard\s*/i, '');
+        let peers = line.match(
+            /,\s*?peers\s*?=\s*?\[\s*?\{\s*?(.+?)\s*?\}\s*?\]/i,
+        )?.[1];
+        let serverPort = peers.match(
+            /(,|^)\s*?endpoint\s*?=\s*?"?(.+?):(\d+)"?\s*?(,|$)/i,
+        );
+        let server = serverPort?.[2];
+        let port = parseInt(serverPort?.[3], 10);
+        let mtu = line.match(/(,|^)\s*?mtu\s*?=\s*?"?(\d+?)"?\s*?(,|$)/i)?.[2];
+        if (mtu) {
+            mtu = parseInt(mtu, 10);
+        }
+        let keepalive = line.match(
+            /(,|^)\s*?keepalive\s*?=\s*?"?(\d+?)"?\s*?(,|$)/i,
+        )?.[2];
+        if (keepalive) {
+            keepalive = parseInt(keepalive, 10);
+        }
+        let reserved = peers.match(
+            /(,|^)\s*?reserved\s*?=\s*?"?(\[\s*?.+?\s*?\])"?\s*?(,|$)/i,
+        )?.[2];
+        if (reserved) {
+            reserved = JSON.parse(reserved);
+        }
+
+        let dns;
+        let dnsv4 = line.match(/(,|^)\s*?dns\s*?=\s*?"?(.+?)"?\s*?(,|$)/i)?.[2];
+        let dnsv6 = line.match(
+            /(,|^)\s*?dnsv6\s*?=\s*?"?(.+?)"?\s*?(,|$)/i,
+        )?.[2];
+        if (dnsv4 || dnsv6) {
+            dns = [];
+            if (dnsv4) {
+                dns.push(dnsv4);
+            }
+            if (dnsv6) {
+                dns.push(dnsv6);
+            }
+        }
+        let allowedIps = peers
+            .match(/(,|^)\s*?allowed-ips\s*?=\s*?"(.+?)"\s*?(,|$)/i)?.[2]
+            ?.split(',')
+            .map((i) => i.trim());
+        let preSharedKey = peers.match(
+            /(,|^)\s*?preshared-key\s*?=\s*?"?(.+?)"?\s*?(,|$)/i,
+        )?.[2];
+        let ip = line.match(
+            /(,|^)\s*?interface-ip\s*?=\s*?"?(.+?)"?\s*?(,|$)/i,
+        )?.[2];
+        let ipv6 = line.match(
+            /(,|^)\s*?interface-ipv6\s*?=\s*?"?(.+?)"?\s*?(,|$)/i,
+        )?.[2];
+        let publicKey = peers.match(
+            /(,|^)\s*?public-key\s*?=\s*?"?(.+?)"?\s*?(,|$)/i,
+        )?.[2];
+        const proxy = {
+            type: 'wireguard',
+            name,
+            server,
+            port,
+            ip,
+            ipv6,
+            'private-key': line.match(
+                /(,|^)\s*?private-key\s*?=\s*?"?(.+?)"?\s*?(,|$)/i,
+            )?.[2],
+            'public-key': publicKey,
+            mtu,
+            keepalive,
+            reserved,
+            'allowed-ips': allowedIps,
+            'preshared-key': preSharedKey,
+            dns,
+            udp: true,
+            peers: [
+                {
+                    server,
+                    port,
+                    ip,
+                    ipv6,
+                    'public-key': publicKey,
+                    'pre-shared-key': preSharedKey,
+                    allowed_ips: allowedIps,
+                    reserved,
+                },
+            ],
+        };
+        // WARP+=wireguard,interface-ip=172.16.0.2,interface-ipv6=fd01:5ca1:ab1e:80fa:ab85:6eea:213f:f4a5,private-key=4PYTxwziqAnnrlRDFAkwfkCxjG6FBKdU03vV3t3c5kk=,mtu=1280,dns=162.159.36.1,dnsv6=2606:4700:4700::1111,keepalive=45,peers=[{public-key="Cr8hWlKvtDt7nrvf+f0brNQQzabAqrjfBvas9pmowjo=",allowed-ips="0.0.0.0/0",endpoint=162.159.192.1:2480,reserved=[209,98,59],preshared-key="31aIhAPwktDGpH4JDhA8GNvjFXEf/a6+UaQRyOAiyfM="}}]
+
+        proxy;
+        if (Array.isArray(proxy.dns) && proxy.dns.length > 0) {
+            proxy['remote-dns-resolve'] = true;
+        }
+        return proxy;
+    };
+    return { name, test, parse };
+}
+
 function Surge_SS() {
     const name = 'Surge SS Parser';
     const test = (line) => {
@@ -588,6 +696,7 @@ export default [
     Loon_Vless(),
     Loon_Trojan(),
     Loon_Http(),
+    Loon_WireGuard(),
     QX_SS(),
     QX_SSR(),
     QX_VMess(),
