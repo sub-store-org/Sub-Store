@@ -282,7 +282,7 @@ function wireguard(proxy) {
         proxy.ip = proxy.peers[0].ip;
         proxy.ipv6 = proxy.peers[0].ipv6;
         proxy['public-key'] = proxy.peers[0]['public-key'];
-        proxy['pre-shared-key'] = proxy.peers[0]['pre-shared-key'];
+        proxy['preshared-key'] = proxy.peers[0]['pre-shared-key'];
         proxy['allowed-ips'] = proxy.peers[0]['allowed_ips'];
         proxy.reserved = proxy.peers[0].reserved;
     }
@@ -320,13 +320,13 @@ function wireguard(proxy) {
     if (reserved) {
         reserved = `,reserved=[${reserved}]`;
     }
-    let presharedKey = proxy['pre-shared-key'];
+    let presharedKey = proxy['preshared-key'] ?? proxy['pre-shared-key'];
     if (presharedKey) {
         presharedKey = `,preshared-key="${presharedKey}"`;
     }
     result.append(
         `,peers=[{public-key="${proxy['public-key']}",allowed-ips="${
-            allowedIps || '0.0.0.0/0,::/0'
+            allowedIps ?? '0.0.0.0/0,::/0'
         }",endpoint=${proxy.server}:${proxy.port}${reserved ?? ''}${
             presharedKey ?? ''
         }}]`,
