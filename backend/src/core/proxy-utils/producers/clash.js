@@ -74,7 +74,9 @@ export default function Clash_Producer() {
                             proxy['http-opts'].headers.Host = [httpHost];
                         }
                     }
-
+                    if (['trojan', 'tuic', 'hysteria'].includes(proxy.type)) {
+                        delete proxy.tls;
+                    }
                     delete proxy['tls-fingerprint'];
                     return '  - ' + JSON.stringify(proxy) + '\n';
                 })
