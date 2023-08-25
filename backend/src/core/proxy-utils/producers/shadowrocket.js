@@ -74,6 +74,10 @@ export default function Stash_Producer() {
                         ) {
                             proxy['fast-open'] = proxy.tfo;
                         }
+                    } else if (proxy.type === 'wireguard') {
+                        proxy.keepalive =
+                            proxy.keepalive ?? proxy['persistent-keepalive'];
+                        proxy['persistent-keepalive'] = proxy.keepalive;
                     }
 
                     if (
