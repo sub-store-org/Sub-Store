@@ -188,6 +188,8 @@ function lastParse(proxy) {
         if (proxy.network === 'tcp') {
             delete proxy.network;
         }
+    }
+    if (['trojan', 'tuic', 'hysteria'].includes(proxy.type)) {
         proxy.tls = true;
     }
     if (proxy.tls && !proxy.sni) {

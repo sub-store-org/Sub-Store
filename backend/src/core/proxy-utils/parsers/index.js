@@ -344,6 +344,7 @@ function Clash_All() {
                 'trojan',
                 'tuic',
                 'vless',
+                'hysteria',
             ].includes(proxy.type)
         ) {
             throw new Error(

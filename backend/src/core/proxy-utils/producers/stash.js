@@ -61,12 +61,30 @@ export default function Stash_Producer() {
                         } else {
                             proxy.alpn = ['h3'];
                         }
+                        if (
+                            isPresent(proxy, 'tfo') &&
+                            !isPresent(proxy, 'fast-open')
+                        ) {
+                            proxy['fast-open'] = proxy.tfo;
+                        }
                         // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/adapter/outbound/tuic.go#L197
                         if (
                             (!proxy.token || proxy.token.length === 0) &&
                             !isPresent(proxy, 'version')
                         ) {
                             proxy.version = 5;
+                        }
+                    } else if (proxy.type === 'hysteria') {
+                        if (isPresent(proxy, 'alpn')) {
+                            proxy.alpn = Array.isArray(proxy.alpn)
+                                ? proxy.alpn
+                                : [proxy.alpn];
+                        }
+                        if (
+                            isPresent(proxy, 'tfo') &&
+                            !isPresent(proxy, 'fast-open')
+                        ) {
+                            proxy['fast-open'] = proxy.tfo;
                         }
                     }
 
@@ -89,7 +107,9 @@ export default function Stash_Producer() {
                             proxy['http-opts'].headers.Host = [httpHost];
                         }
                     }
-
+                    if (['trojan', 'tuic', 'hysteria'].includes(proxy.type)) {
+                        delete proxy.tls;
+                    }
                     delete proxy['tls-fingerprint'];
                     return '  - ' + JSON.stringify(proxy) + '\n';
                 })
