@@ -345,6 +345,7 @@ function Clash_All() {
                 'tuic',
                 'vless',
                 'hysteria',
+                'wireguard',
             ].includes(proxy.type)
         ) {
             throw new Error(

@@ -14,6 +14,7 @@ export default function Clash_Producer() {
                     'http',
                     'snell',
                     'trojan',
+                    'wireguard',
                 ].includes(proxy.type)
             ) {
                 return false;
@@ -53,6 +54,10 @@ export default function Clash_Producer() {
                         ) {
                             proxy.cipher = 'auto';
                         }
+                    } else if (proxy.type === 'wireguard') {
+                        proxy.keepalive =
+                            proxy.keepalive ?? proxy['persistent-keepalive'];
+                        proxy['persistent-keepalive'] = proxy.keepalive;
                     }
 
                     if (
