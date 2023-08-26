@@ -94,6 +94,89 @@ export default function URI_Producer() {
                 }
                 result = 'vmess://' + Base64.encode(JSON.stringify(result));
                 break;
+            case 'vless':
+                let security = 'none';
+                const isReality = proxy['reality-opts'];
+                let sid = '';
+                let pbk = '';
+                if (isReality) {
+                    security = 'reality';
+                    const publicKey = proxy['reality-opts']?.['public-key'];
+                    if (publicKey) {
+                        pbk = `&pbk=${encodeURIComponent(publicKey)}`;
+                    }
+                    const shortId = proxy['reality-opts']?.['short-id'];
+                    if (shortId) {
+                        sid = `&sid=${encodeURIComponent(shortId)}`;
+                    }
+                } else if (proxy.tls) {
+                    security = 'tls';
+                }
+                let alpn = '';
+                if (proxy.alpn) {
+                    alpn = `&alpn=${encodeURIComponent(
+                        Array.isArray(proxy.alpn)
+                            ? proxy.alpn
+                            : proxy.alpn.join(','),
+                    )}`;
+                }
+                let allowInsecure = '';
+                if (proxy['skip-cert-verify']) {
+                    allowInsecure = `&allowInsecure=1`;
+                }
+                let sni = '';
+                if (proxy.sni) {
+                    sni = `&sni=${encodeURIComponent(proxy.sni)}`;
+                }
+                let fp = '';
+                if (proxy['client-fingerprint']) {
+                    fp = `&fp=${encodeURIComponent(
+                        proxy['client-fingerprint'],
+                    )}`;
+                }
+                let flow = '';
+                if (proxy.flow) {
+                    flow = `&flow=${encodeURIComponent(proxy.flow)}`;
+                }
+                let vlessTransport = `&type=${encodeURIComponent(
+                    proxy.network,
+                )}`;
+
+                let vlessTransportServiceName =
+                    proxy[`${proxy.network}-opts`]?.[
+                        `${proxy.network}-service-name`
+                    ];
+                let vlessTransportPath = proxy[`${proxy.network}-opts`]?.path;
+                let vlessTransportHost =
+                    proxy[`${proxy.network}-opts`]?.headers?.Host;
+                if (vlessTransportPath) {
+                    vlessTransport += `&path=${encodeURIComponent(
+                        Array.isArray(vlessTransportPath)
+                            ? vlessTransportPath[0]
+                            : vlessTransportPath,
+                    )}`;
+                }
+                if (vlessTransportHost) {
+                    vlessTransport += `&host=${encodeURIComponent(
+                        Array.isArray(vlessTransportHost)
+                            ? vlessTransportHost[0]
+                            : vlessTransportHost,
+                    )}`;
+                }
+                if (vlessTransportServiceName) {
+                    vlessTransport += `&serviceName=${encodeURIComponent(
+                        vlessTransportServiceName,
+                    )}`;
+                }
+
+                result = `vless://${proxy.uuid}@${proxy.server}:${
+                    proxy.port
+                }?${vlessTransport}&security=${encodeURIComponent(
+                    security,
+                )}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${pbk}#${encodeURIComponent(
+                    proxy.name,
+                )}`;
+                break;
             case 'trojan':
                 let trojanTransport = '';
                 if (proxy.network) {

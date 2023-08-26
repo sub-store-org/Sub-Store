@@ -306,6 +306,85 @@ function URI_VMess() {
     return { name, test, parse };
 }
 
+function URI_VLESS() {
+    const name = 'URI VLESS Parser';
+    const test = (line) => {
+        return /^vless:\/\//.test(line);
+    };
+    const parse = (line) => {
+        line = line.split('vless://')[1];
+        // eslint-disable-next-line no-unused-vars
+        let [__, uuid, server, port, addons, name] =
+            /^(.*?)@(.*?):(\d+)\/?\?(.*?)(?:#(.*?))$/.exec(line);
+        port = parseInt(`${port}`, 10);
+        uuid = decodeURIComponent(uuid);
+        name = decodeURIComponent(name) ?? `VLESS ${server}:${port}`;
+        const proxy = {
+            type: 'vless',
+            name,
+            server,
+            port,
+            uuid,
+        };
+        const params = {};
+        for (const addon of addons.split('&')) {
+            const [key, valueRaw] = addon.split('=');
+            let value = valueRaw;
+            value = decodeURIComponent(valueRaw);
+            params[key] = value;
+        }
+
+        proxy.tls = params.security && params.security !== 'none';
+        proxy.sni = params.sni;
+        proxy.flow = params.flow;
+        proxy['client-fingerprint'] = params.fp;
+        proxy.alpn = params.alpn ? params.alpn.split(',') : undefined;
+        proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.allowInsecure);
+
+        if (['reality'].includes(params.security)) {
+            const opts = {};
+            if (params.pbk) {
+                opts['public-key'] = params.pbk;
+            }
+            if (params.sid) {
+                opts['short-id'] = params.sid;
+            }
+            if (Object.keys(opts).length > 0) {
+                proxy[`${params.security}-opts`] = opts;
+            }
+        }
+
+        proxy.network = params.type;
+        if (proxy.network && !['tcp', 'none'].includes(proxy.network)) {
+            const opts = {};
+            if (params.path) {
+                opts.path = params.path;
+            }
+            if (params.host) {
+                opts.headers = { Host: params.host };
+            }
+            if (params.serviceName) {
+                opts[`${proxy.network}-service-name`] = params.serviceName;
+            }
+            if (Object.keys(opts).length > 0) {
+                proxy[`${proxy.network}-opts`] = opts;
+            }
+        }
+
+        if (proxy.tls && !proxy.sni) {
+            if (proxy.network === 'ws') {
+                proxy.sni = proxy['ws-opts']?.headers?.Host;
+            } else if (proxy.network === 'http') {
+                let httpHost = proxy['http-opts']?.headers?.Host;
+                proxy.sni = Array.isArray(httpHost) ? httpHost[0] : httpHost;
+            }
+        }
+
+        return proxy;
+    };
+    return { name, test, parse };
+}
+
 // Trojan URI format
 function URI_Trojan() {
     const name = 'URI Trojan Parser';
@@ -680,6 +759,7 @@ export default [
     URI_SS(),
     URI_SSR(),
     URI_VMess(),
+    URI_VLESS(),
     URI_Trojan(),
     Clash_All(),
     Surge_SS(),
