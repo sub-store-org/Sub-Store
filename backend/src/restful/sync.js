@@ -42,6 +42,9 @@ async function produceArtifact({ type, name, platform }) {
             sub.process || [],
             platform,
         );
+        if (proxies.length === 0) {
+            throw new Error(`订阅 ${name} 中不含有效节点`);
+        }
         // check duplicate
         const exist = {};
         for (const proxy of proxies) {
@@ -67,6 +70,7 @@ async function produceArtifact({ type, name, platform }) {
         const collection = findByName(allCols, name);
         const subnames = collection.subscriptions;
         const results = {};
+        const errors = {};
         let processed = 0;
 
         await Promise.all(
@@ -97,6 +101,7 @@ async function produceArtifact({ type, name, platform }) {
                     );
                 } catch (err) {
                     processed++;
+                    errors[name] = err;
                     $.error(
                         `❌ 处理组合订阅中的子订阅: ${
                             sub.name
@@ -108,10 +113,18 @@ async function produceArtifact({ type, name, platform }) {
             }),
         );
 
+        if (Object.keys(errors).length > 0) {
+            throw new Error(
+                `组合订阅 ${name} 中的子订阅 ${Object.keys(errors).join(
+                    ', ',
+                )} 发生错误, 请查看日志`,
+            );
+        }
+
         // merge proxies with the original order
         let proxies = Array.prototype.concat.apply(
             [],
-            subnames.map((name) => results[name]),
+            subnames.map((name) => results[name] || []),
         );
 
         // apply own processors
@@ -121,7 +134,7 @@ async function produceArtifact({ type, name, platform }) {
             platform,
         );
         if (proxies.length === 0) {
-            throw new Error(`组合订阅中不含有效节点！`);
+            throw new Error(`组合订阅 ${name} 中不含有效节点`);
         }
         // check duplicate
         const exist = {};
