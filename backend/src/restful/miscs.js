@@ -136,7 +136,7 @@ async function gistBackup(req, res) {
                 new InternalServerError(
                     'BACKUP_FAILED',
                     `Failed to ${action} data to gist!`,
-                    `Reason: ${JSON.stringify(err)}`,
+                    `Reason: ${err.message ?? err}`,
                 ),
             );
         }
