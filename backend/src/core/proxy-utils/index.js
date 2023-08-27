@@ -205,6 +205,17 @@ function lastParse(proxy) {
             proxy.sni = proxy.server;
         }
     }
+    // 非 tls, 有 ws/http 传输层, 使用域名的节点, 将设置传输层 Host 防止之后域名解析后丢失域名
+    if (
+        !proxy.tls &&
+        ['ws', 'http'].includes(proxy.network) &&
+        !isIP(proxy.server)
+    ) {
+        proxy[`${proxy.network}-opts`] = proxy[`${proxy.network}-opts`] || {};
+        proxy[`${proxy.network}-opts`].headers =
+            proxy[`${proxy.network}-opts`].headers || {};
+        proxy[`${proxy.network}-opts`].headers.Host = proxy.server;
+    }
     return proxy;
 }
 
