@@ -101,7 +101,7 @@ function trojan(proxy) {
                 'ws-opts.path',
             );
             result.appendIfPresent(
-                `,host=${proxy['ws-opts'].headers.Host}`,
+                `,host=${proxy['ws-opts']?.headers?.Host}`,
                 'ws-opts.headers.Host',
             );
         } else {
@@ -138,11 +138,11 @@ function vmess(proxy) {
         if (proxy.network === 'ws') {
             result.append(`,transport=ws`);
             result.appendIfPresent(
-                `,path=${proxy['ws-opts'].path}`,
+                `,path=${proxy['ws-opts']?.path}`,
                 'ws-opts.path',
             );
             result.appendIfPresent(
-                `,host=${proxy['ws-opts'].headers.Host}`,
+                `,host=${proxy['ws-opts']?.headers?.Host}`,
                 'ws-opts.headers.Host',
             );
         } else if (proxy.network === 'http') {
@@ -205,11 +205,11 @@ function vless(proxy) {
         if (proxy.network === 'ws') {
             result.append(`,transport=ws`);
             result.appendIfPresent(
-                `,path=${proxy['ws-opts'].path}`,
+                `,path=${proxy['ws-opts']?.path}`,
                 'ws-opts.path',
             );
             result.appendIfPresent(
-                `,host=${proxy['ws-opts'].headers.Host}`,
+                `,host=${proxy['ws-opts']?.headers?.Host}`,
                 'ws-opts.headers.Host',
             );
         } else if (proxy.network === 'http') {
