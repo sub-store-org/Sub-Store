@@ -378,6 +378,47 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
+    Ali: async function (domain) {
+        const id = hex_md5(`ALI:${domain}`);
+        const cached = resourceCache.get(id);
+        if (cached) return cached;
+        const resp = await $.http.get({
+            url: `http://223.6.6.6/resolve?name=${encodeURIComponent(
+                domain,
+            )}&type=A&short=1`,
+            headers: {
+                accept: 'application/dns-json',
+            },
+        });
+        const answers = JSON.parse(resp.body);
+        if (answers.length === 0) {
+            throw new Error('No answers');
+        }
+        const result = answers[answers.length - 1];
+        resourceCache.set(id, result);
+        return result;
+    },
+    Tencent: async function (domain) {
+        const id = hex_md5(`ALI:${domain}`);
+        const cached = resourceCache.get(id);
+        if (cached) return cached;
+        const resp = await $.http.get({
+            url: `http://119.28.28.28/d?type=A&dn=${encodeURIComponent(
+                domain,
+            )}`,
+            headers: {
+                accept: 'application/dns-json',
+            },
+        });
+        const answers = resp.body.split(';').map((i) => i.split(',')[0]);
+        console.log(`answers`, answers);
+        if (answers.length === 0) {
+            throw new Error('No answers');
+        }
+        const result = answers[answers.length - 1];
+        resourceCache.set(id, result);
+        return result;
+    },
 };
 
 function ResolveDomainOperator({ provider }) {
@@ -566,7 +607,8 @@ async function ApplyFilter(filter, objs) {
         selected = await filter.func(objs);
     } catch (err) {
         // print log and skip this filter
-        $.log(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
+        $.error(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
+        throw new Error(`脚本过滤失败 ${err.message ?? err}`);
     }
     return objs.filter((_, i) => selected[i]);
 }
@@ -578,7 +620,8 @@ async function ApplyOperator(operator, objs) {
         if (output_) output = output_;
     } catch (err) {
         // print log and skip this operator
-        $.log(`Cannot apply operator ${operator.name}! Reason: ${err}`);
+        $.error(`Cannot apply operator ${operator.name}! Reason: ${err}`);
+        throw new Error(`脚本操作失败 ${err.message ?? err}`);
     }
     return output;
 }

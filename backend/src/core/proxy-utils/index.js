@@ -90,8 +90,7 @@ async function process(proxies, operators = [], targetPlatform) {
                     $.error(
                         `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`,
                     );
-                    // skip the script if download failed.
-                    continue;
+                    throw new Error(`无法下载脚本: ${url}`);
                 }
             } else {
                 script = content;
