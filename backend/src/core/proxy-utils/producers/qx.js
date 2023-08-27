@@ -135,11 +135,11 @@ function trojan(proxy) {
             if (needTls(proxy)) append(`,obfs=wss`);
             else append(`,obfs=ws`);
             appendIfPresent(
-                `,obfs-uri=${proxy['ws-opts'].path}`,
+                `,obfs-uri=${proxy['ws-opts']?.path}`,
                 'ws-opts.path',
             );
             appendIfPresent(
-                `,obfs-host=${proxy['ws-opts'].headers.Host}`,
+                `,obfs-host=${proxy['ws-opts']?.headers?.Host}`,
                 'ws-opts.headers.Host',
             );
         } else {
