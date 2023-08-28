@@ -45,11 +45,17 @@ jobs:
           cd backend
           SUBSTORE_RELEASE=`node --eval="process.stdout.write(require('./package.json').version)"`
           echo "::set-output name=release_tag::$SUBSTORE_RELEASE"
+      - name: Prepare release
+        run: |
+          cd backend
+          pnpm i -D conventional-changelog-cli
+          pnpm run changelog
       - name: Release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          body_path: ./backend/CHANGELOG.md
           tag_name: ${{ steps.tag.outputs.release_tag }}
           files: |
             ./backend/sub-store.min.js
