@@ -61,6 +61,11 @@ export default function Clash_Producer() {
                         proxy['preshared-key'] =
                             proxy['preshared-key'] ?? proxy['pre-shared-key'];
                         proxy['pre-shared-key'] = proxy['preshared-key'];
+                    } else if (proxy.type === 'vless') {
+                        if (isPresent(proxy, 'sni')) {
+                            proxy.servername = proxy.sni;
+                            delete proxy.sni;
+                        }
                     }
 
                     if (
