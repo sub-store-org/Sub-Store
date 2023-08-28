@@ -133,3 +133,5 @@ out
 backend/dist/*
 !backend/dist/.gitkeep
 backend/sub-store.min.js
+
+CHANGELOG.md
