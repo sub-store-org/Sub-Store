@@ -216,7 +216,9 @@ function lastParse(proxy) {
         proxy[`${proxy.network}-opts`].headers =
             proxy[`${proxy.network}-opts`].headers || {};
         proxy[`${proxy.network}-opts`].headers.Host =
-            proxy.network === 'http' ? [proxy.server] : proxy.server;
+            ['vmess', 'vless'].includes(proxy.type) && proxy.network === 'http'
+                ? [proxy.server]
+                : proxy.server;
     }
     return proxy;
 }
