@@ -220,6 +220,17 @@ function lastParse(proxy) {
                 ? [proxy.server]
                 : proxy.server;
     }
+    // 统一将 VMess 和 VLESS 的 http 传输层的 path 和 Host 处理为数组
+    if (['vmess', 'vless'].includes(proxy.type) && proxy.network === 'http') {
+        let transportPath = proxy[`${proxy.network}-opts`]?.path;
+        let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
+        if (transportHost && !Array.isArray(transportHost)) {
+            proxy[`${proxy.network}-opts`].headers.Host = [transportHost];
+        }
+        if (transportPath && !Array.isArray(transportPath)) {
+            proxy[`${proxy.network}-opts`].path = [transportPath];
+        }
+    }
     return proxy;
 }
 
