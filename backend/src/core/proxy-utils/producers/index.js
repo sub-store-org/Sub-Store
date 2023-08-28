@@ -1,5 +1,6 @@
 import Surge_Producer from './surge';
 import Clash_Producer from './clash';
+import ClashMeta_Producer from './clashmeta';
 import Stash_Producer from './stash';
 import Loon_Producer from './loon';
 import URI_Producer from './uri';
@@ -18,6 +19,7 @@ export default {
     Surge: Surge_Producer(),
     Loon: Loon_Producer(),
     Clash: Clash_Producer(),
+    ClashMeta: ClashMeta_Producer(),
     URI: URI_Producer(),
     V2Ray: V2Ray_Producer(),
     JSON: JSON_Producer(),
