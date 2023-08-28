@@ -1,6 +1,6 @@
 import { isPresent } from '@/core/proxy-utils/producers/utils';
 
-export default function ShadowRocket_Producer() {
+export default function ClashMeta_Producer() {
     const type = 'ALL';
     const produce = (proxies) => {
         return (

@@ -1,9 +1,11 @@
 export function getPlatformFromHeaders(headers) {
     const keys = Object.keys(headers);
     let UA = '';
+    let ua = '';
     for (let k of keys) {
         if (/USER-AGENT/i.test(k)) {
             UA = headers[k];
+            ua = UA.toLowerCase();
             break;
         }
     }
@@ -17,6 +19,15 @@ export function getPlatformFromHeaders(headers) {
         return 'ShadowRocket';
     } else if (UA.indexOf('Stash') !== -1) {
         return 'Stash';
+    } else if (
+        ua === 'meta' ||
+        (ua.indexOf('clash') !== -1 && ua.indexOf('meta') !== -1)
+    ) {
+        return 'ClashMeta';
+    } else if (ua.indexOf('clash') !== -1) {
+        return 'Clash';
+    } else if (ua.indexOf('v2ray') !== -1) {
+        return 'V2Ray';
     } else {
         return 'JSON';
     }
