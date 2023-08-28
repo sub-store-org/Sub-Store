@@ -1,4 +1,5 @@
 import Surge_Producer from './surge';
+import SurgeMac_Producer from './surgemac';
 import Clash_Producer from './clash';
 import ClashMeta_Producer from './clashmeta';
 import Stash_Producer from './stash';
@@ -17,6 +18,7 @@ function JSON_Producer() {
 export default {
     QX: QX_Producer(),
     Surge: Surge_Producer(),
+    SurgeMac: SurgeMac_Producer(),
     Loon: Loon_Producer(),
     Clash: Clash_Producer(),
     ClashMeta: ClashMeta_Producer(),
