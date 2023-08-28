@@ -127,6 +127,7 @@ async function gistBackup(req, res) {
                     }
                     // perform migration after restoring from gist
                     migrate();
+                    $.info(`还原备份完成`);
                     break;
             }
             success(res);
