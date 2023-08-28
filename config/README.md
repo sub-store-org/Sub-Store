@@ -1,5 +1,11 @@
 # Sub-Store 配置指南
 
+## 查看更新说明:
+
+[Sub-Store Releases](https://github.com/sub-store-org/Sub-Store/releases)
+
+[Telegram 频道](https://t.me/cool_scripts)
+
 ## 脚本配置：
 
 ### 1. Loon

@@ -32,7 +32,7 @@ Core functionalities:
 - [x] V2RayN URI
 - [x] QX (SS, SSR, VMess, Trojan, HTTP)
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP, WireGuard, VLESS)
-- [x] Surge (SS, VMess, Trojan, HTTP, TUIC, Snell)
+- [x] Surge (SS, VMess, Trojan, HTTP, TUIC, Snell, SSR(external, only for macOS))
 - [x] ShadowRocket (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria)
 - [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria)
 - [x] Stash (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria)
