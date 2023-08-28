@@ -1,15 +1,15 @@
 name: build
-on: 
+on:
   push:
     branches:
       - master
     paths:
-      - 'backend/package.json'
+      - "backend/package.json"
   pull_request:
     branches:
       - master
     paths:
-      - 'backend/package.json'
+      - "backend/package.json"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,7 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: 'master'
+          ref: "master"
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -34,6 +34,11 @@ jobs:
         run: |
           cd backend
           pnpm run build
+      - name: Bundle
+        run: |
+          cd backend
+          pnpm i -D estrella
+          pnpm run bundle
       - id: tag
         name: Generate release tag
         run: |
@@ -52,3 +57,4 @@ jobs:
             ./backend/dist/sub-store-1.min.js
             ./backend/dist/sub-store-parser.loon.min.js
             ./backend/dist/cron-sync-artifacts.min.js
+            ./backend/dist/sub-store.bundle.js
