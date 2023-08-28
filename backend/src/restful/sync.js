@@ -255,20 +255,20 @@ async function syncArtifact(req, res) {
         return;
     }
 
-    const output = await produceArtifact({
-        type: artifact.type,
-        name: artifact.source,
-        platform: artifact.platform,
-    });
-
-    $.info(
-        `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
-            artifact,
-            null,
-            2,
-        )}`,
-    );
     try {
+        const output = await produceArtifact({
+            type: artifact.type,
+            name: artifact.source,
+            platform: artifact.platform,
+        });
+
+        $.info(
+            `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
+                artifact,
+                null,
+                2,
+            )}`,
+        );
         const resp = await syncToGist({
             [encodeURIComponent(artifact.name)]: {
                 content: output,
