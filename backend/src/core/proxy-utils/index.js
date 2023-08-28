@@ -136,10 +136,21 @@ function produce(proxies, targetPlatform) {
 
     $.info(`Producing proxies for target: ${targetPlatform}`);
     if (typeof producer.type === 'undefined' || producer.type === 'SINGLE') {
+        let localPort = 10000;
         return proxies
             .map((proxy) => {
                 try {
-                    return producer.produce(proxy);
+                    let line = producer.produce(proxy);
+                    if (
+                        line.length > 0 &&
+                        line.includes('__SubStoreLocalPort__')
+                    ) {
+                        line = line.replace(
+                            /__SubStoreLocalPort__/g,
+                            localPort++,
+                        );
+                    }
+                    return line;
                 } catch (err) {
                     $.error(
                         `Cannot produce proxy: ${JSON.stringify(

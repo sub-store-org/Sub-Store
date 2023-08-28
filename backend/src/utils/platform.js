@@ -11,6 +11,8 @@ export function getPlatformFromHeaders(headers) {
     }
     if (UA.indexOf('Quantumult%20X') !== -1) {
         return 'QX';
+    } else if (UA.indexOf('Surge Mac') !== -1) {
+        return 'SurgeMac';
     } else if (UA.indexOf('Surge') !== -1) {
         return 'Surge';
     } else if (UA.indexOf('Decar') !== -1 || UA.indexOf('Loon') !== -1) {
