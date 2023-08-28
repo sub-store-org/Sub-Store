@@ -130,4 +130,6 @@ out
 *.sw?
 
 # Dist files
-backend/dist
+backend/dist/*
+!backend/dist/.gitkeep
+backend/sub-store.min.js
