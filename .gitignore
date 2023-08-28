@@ -128,3 +128,6 @@ out
 *.njsproj
 *.sln
 *.sw?
+
+# Dist files
+backend/dist
