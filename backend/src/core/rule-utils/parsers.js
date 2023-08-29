@@ -47,7 +47,7 @@ function AllRuleParser() {
                 }
                 if (!matched) throw new Error('Invalid rule type: ' + rawType);
             } catch (e) {
-                console.error(`Failed to parse line: ${line}\n Reason: ${e}`);
+                console.log(`Failed to parse line: ${line}\n Reason: ${e}`);
             }
         }
         return result;

@@ -125,8 +125,9 @@ async function gistBackup(req, res) {
                         $.cache = content;
                         $.persistCache();
                     }
-                    // perform migration after restoring from gist
+                    $.info(`perform migration after restoring from gist...`);
                     migrate();
+                    $.info(`migration completed`);
                     $.info(`还原备份完成`);
                     break;
             }
