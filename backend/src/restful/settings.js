@@ -44,8 +44,12 @@ export async function updateGitHubAvatar() {
                 .then((resp) => JSON.parse(resp.body));
             settings.avatarUrl = data['avatar_url'];
             $.write(settings, SETTINGS_KEY);
-        } catch (e) {
-            $.error('Failed to fetch GitHub avatar for User: ' + username);
+        } catch (err) {
+            $.error(
+                `Failed to fetch GitHub avatar for User: ${username}. Reason: ${
+                    err.message ?? err
+                }`,
+            );
         }
     }
 }
@@ -67,7 +71,11 @@ export async function updateArtifactStore() {
                 $.write(settings, SETTINGS_KEY);
             }
         } catch (err) {
-            $.error('Failed to fetch artifact store for User: ' + githubUser);
+            $.error(
+                `Failed to fetch artifact store for User: ${githubUser}. Reason: ${
+                    err.message ?? err
+                }`,
+            );
         }
     }
 }

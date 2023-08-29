@@ -215,7 +215,6 @@ function URI_VMess() {
                 // V2rayN URI format
                 params = JSON.parse(content);
             } catch (e) {
-                // console.error(e);
                 // Shadowrocket URI format
                 // eslint-disable-next-line no-unused-vars
                 let [__, base64Line, qs] = /(^[^?]+?)\/?\?(.*)$/.exec(line);

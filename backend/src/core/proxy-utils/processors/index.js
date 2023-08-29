@@ -411,7 +411,6 @@ const DOMAIN_RESOLVERS = {
             },
         });
         const answers = resp.body.split(';').map((i) => i.split(',')[0]);
-        console.log(`answers`, answers);
         if (answers.length === 0) {
             throw new Error('No answers');
         }
