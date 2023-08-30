@@ -2,7 +2,7 @@
 #!desc=高级订阅管理工具
 #!openUrl=https://sub.store
 #!author=Peng-YM
-#!homepage=https://github.com/Peng-YM/Sub-Store
+#!homepage=https://github.com/sub-store-org/Sub-Store
 #!icon=https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png
 #!select = 节点缓存有效期,1分钟,5分钟,10分钟,30分钟,1小时,2小时,3小时,6小时,12小时,24小时,48小时,72小时,参数传入
 
