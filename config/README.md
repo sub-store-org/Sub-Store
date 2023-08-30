@@ -2,25 +2,31 @@
 
 ## 查看更新说明:
 
-[Sub-Store Releases](https://github.com/sub-store-org/Sub-Store/releases)
+Sub-Store Releases: [`https://github.com/sub-store-org/Sub-Store/releases`](https://github.com/sub-store-org/Sub-Store/releases)
 
-[Telegram 频道](https://t.me/cool_scripts)
+Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 
 ## 脚本配置：
 
 ### 1. Loon
-安装使用[插件](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Loon.plugin)即可。
+安装使用 插件 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin) 即可。
+
 ### 2. Surge
-安装使用[模块](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Surge.sgmodule)即可。
+1. 官方默认版模块(目前不带 ability 参数, 不保证以后不会改动): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule)
+
+2. 固定带 ability 参数版本,可能会爆内存, 如果需要使用指定节点功能 例如[加国旗脚本或者cname脚本] 请使用此带 ability 参数版本: [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule)
+
+3. 固定不带 ability 参数版本： [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule)
+
 
 ### 3. QX
-订阅[重写](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/QX.snippet)即可
+订阅 重写 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/QX.snippet`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/QX.snippet) 即可。
 
 ### 4. Stash
-安装使用[ Stash 覆写](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Stash.stoverride)即可。
+安装使用 覆写 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Stash.stoverride`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Stash.stoverride) 即可。
 
 ### 5. Shadowrocket
-安装使用[模块](https://raw.githubusercontent.com/Peng-YM/Sub-Store/master/config/Surge.sgmodule)即可。
+安装使用 模块 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule) 即可。
 
 ## 使用 Sub-Store
 1. 使用 Safari 打开这个 https://sub.store 如网页正常打开并且未弹出任何错误提示，说明 Sub-Store 已经配置成功。

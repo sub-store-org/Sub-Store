@@ -10,7 +10,7 @@
 Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket.
 </p>
 
-[![Build](https://github.com/Peng-YM/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/Peng-YM/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/Peng-YM/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/Peng-YM/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Lines of code](https://img.shields.io/tokei/lines/github/Peng-YM/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/Peng-YM/Sub-Store) 
+[![Build](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/sub-store-org/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/sub-store-org/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Lines of code](https://img.shields.io/tokei/lines/github/sub-store-org/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/sub-store-org/Sub-Store) 
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/PengYM)
    
