@@ -64,3 +64,8 @@ jobs:
             ./backend/dist/sub-store-parser.loon.min.js
             ./backend/dist/cron-sync-artifacts.min.js
             ./backend/dist/sub-store.bundle.js
+      - name: Sync to GitLab
+        env:
+          GITLAB_PIPELINE_TOKEN: ${{ secrets.GITLAB_PIPELINE_TOKEN }}
+        run: |
+          curl -X POST --fail -F token=$GITLAB_PIPELINE_TOKEN -F ref=master https://gitlab.com/api/v4/projects/48891296/trigger/pipeline
