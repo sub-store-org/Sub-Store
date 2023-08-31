@@ -29,6 +29,8 @@ export default function Surge_Producer() {
                 return snell(proxy);
             case 'tuic':
                 return tuic(proxy);
+            case 'wireguard-surge':
+                return wireguard(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -282,6 +284,34 @@ function tuic(proxy) {
     // tfo
     result.appendIfPresent(`,tfo=${proxy['fast-open']}`, 'fast-open');
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    return result.toString();
+}
+
+function wireguard(proxy) {
+    const result = new Result(proxy);
+
+    result.append(`${proxy.name}=wireguard`);
+
+    result.appendIfPresent(
+        `,section-name=${proxy['section-name']}`,
+        'section-name',
+    );
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');

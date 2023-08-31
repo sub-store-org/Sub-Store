@@ -739,7 +739,7 @@ function Surge_Socks5() {
 function Surge_Snell() {
     const name = 'Surge Snell Parser';
     const test = (line) => {
-        return /^.*=\s*snell?/.test(line.split(',')[0]);
+        return /^.*=\s*snell/.test(line.split(',')[0]);
     };
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
@@ -748,7 +748,15 @@ function Surge_Snell() {
 function Surge_Tuic() {
     const name = 'Surge Tuic Parser';
     const test = (line) => {
-        return /^.*=\s*tuic(-v5)??/.test(line.split(',')[0]);
+        return /^.*=\s*tuic(-v5)?/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
+function Surge_WireGuard() {
+    const name = 'Surge WireGuard Parser';
+    const test = (line) => {
+        return /^.*=\s*wireguard/.test(line.split(',')[0]);
     };
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
@@ -767,6 +775,7 @@ export default [
     Surge_Http(),
     Surge_Snell(),
     Surge_Tuic(),
+    Surge_WireGuard(),
     Surge_Socks5(),
     Loon_SS(),
     Loon_SSR(),
