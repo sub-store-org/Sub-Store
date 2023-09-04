@@ -11,7 +11,7 @@ export default function register($app) {
 function sortSubs(req, res) {
     const orders = req.body;
     const allSubs = $.read(SUBS_KEY);
-    allSubs.sort((a, b) => orders.indexOf(a) - orders.indexOf(b));
+    allSubs.sort((a, b) => orders.indexOf(a.name) - orders.indexOf(b.name));
     $.write(allSubs, SUBS_KEY);
     success(res, allSubs);
 }
@@ -19,7 +19,7 @@ function sortSubs(req, res) {
 function sortCollections(req, res) {
     const orders = req.body;
     const allCols = $.read(COLLECTIONS_KEY);
-    allCols.sort((a, b) => orders.indexOf(a) - orders.indexOf(b));
+    allCols.sort((a, b) => orders.indexOf(a.name) - orders.indexOf(b.name));
     $.write(allCols, COLLECTIONS_KEY);
     success(res, allCols);
 }
@@ -27,7 +27,9 @@ function sortCollections(req, res) {
 function sortArtifacts(req, res) {
     const orders = req.body;
     const allArtifacts = $.read(ARTIFACTS_KEY);
-    allArtifacts.sort((a, b) => orders.indexOf(a) - orders.indexOf(b));
+    allArtifacts.sort(
+        (a, b) => orders.indexOf(a.name) - orders.indexOf(b.name),
+    );
     $.write(allArtifacts, ARTIFACTS_KEY);
     success(res, allArtifacts);
 }
