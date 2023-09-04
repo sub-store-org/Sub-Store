@@ -49,18 +49,23 @@ export class OpenAPI {
 
         if (isNode) {
             // create a json for root cache
-            let fpath = 'root.json';
-            if (!this.node.fs.existsSync(fpath)) {
-                this.node.fs.writeFileSync(fpath, JSON.stringify({}), {
+            const basePath =
+                eval('process.env.SUB_STORE_DATA_BASE_PATH') || '.';
+            let rootPath = `${basePath}/root.json`;
+
+            this.log(`Root path: ${rootPath}`);
+            if (!this.node.fs.existsSync(rootPath)) {
+                this.node.fs.writeFileSync(rootPath, JSON.stringify({}), {
                     flag: 'wx',
                 });
                 this.root = {};
             } else {
-                this.root = JSON.parse(this.node.fs.readFileSync(`${fpath}`));
+                this.root = JSON.parse(this.node.fs.readFileSync(`${rootPath}`));
             }
 
             // create a json file with the given name if not exists
-            fpath = `${this.name}.json`;
+            let fpath = `${basePath}/${this.name}.json`;
+            this.log(`Data path: ${fpath}`);
             if (!this.node.fs.existsSync(fpath)) {
                 this.node.fs.writeFileSync(fpath, JSON.stringify({}), {
                     flag: 'wx',
@@ -68,7 +73,7 @@ export class OpenAPI {
                 this.cache = {};
             } else {
                 this.cache = JSON.parse(
-                    this.node.fs.readFileSync(`${this.name}.json`),
+                    this.node.fs.readFileSync(`${fpath}`),
                 );
             }
         }
@@ -80,14 +85,17 @@ export class OpenAPI {
         if (isQX) $prefs.setValueForKey(data, this.name);
         if (isLoon || isSurge) $persistentStore.write(data, this.name);
         if (isNode) {
+            const basePath =
+                eval('process.env.SUB_STORE_DATA_BASE_PATH') || '.';
+
             this.node.fs.writeFileSync(
-                `${this.name}.json`,
+                `${basePath}/${this.name}.json`,
                 data,
                 { flag: 'w' },
                 (err) => console.log(err),
             );
             this.node.fs.writeFileSync(
-                'root.json',
+                `${basePath}/root.json`,
                 JSON.stringify(this.root, null, 2),
                 { flag: 'w' },
                 (err) => console.log(err),
