@@ -118,6 +118,23 @@ async function gistBackup(req, res) {
                 case 'download':
                     $.info(`还原备份中...`);
                     content = await gist.download(GIST_BACKUP_FILE_NAME);
+                    try {
+                        if (
+                            Object.keys(JSON.parse(content).settings).length ===
+                            0
+                        ) {
+                            throw new Error(
+                                '备份文件应该至少包含 settings 字段',
+                            );
+                        }
+                    } catch (err) {
+                        $.error(
+                            `Gist 备份文件校验失败, 无法还原\nReason: ${
+                                err.message ?? err
+                            }`,
+                        );
+                        throw new Error('Gist 备份文件校验失败, 无法还原');
+                    }
                     // restore settings
                     $.write(content, '#sub-store');
                     if ($.env.isNode) {
