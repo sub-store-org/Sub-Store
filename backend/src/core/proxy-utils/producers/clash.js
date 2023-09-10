@@ -3,6 +3,9 @@ import { isPresent } from '@/core/proxy-utils/producers/utils';
 export default function Clash_Producer() {
     const type = 'ALL';
     const produce = (proxies) => {
+        // VLESS XTLS is not supported by Clash
+        // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L532
+        // github.com/Dreamacro/clash/pull/2891/files
         // filter unsupported proxies
         proxies = proxies.filter((proxy) => {
             if (
@@ -10,17 +13,17 @@ export default function Clash_Producer() {
                     'ss',
                     'ssr',
                     'vmess',
+                    'vless',
                     'socks',
                     'http',
                     'snell',
                     'trojan',
                     'wireguard',
-                ].includes(proxy.type)
-            ) {
-                return false;
-            } else if (
-                proxy.type === 'snell' &&
-                String(proxy.version) === '4'
+                ].includes(proxy.type) ||
+                (proxy.type === 'snell' && String(proxy.version) === '4') ||
+                (proxy.type === 'vless' &&
+                    (typeof proxy.flow !== 'undefined' ||
+                        proxy['reality-opts']))
             ) {
                 return false;
             }
