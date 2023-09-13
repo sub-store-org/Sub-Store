@@ -1,10 +1,28 @@
+import { FILES_KEY } from '@/constants';
+import { findByName } from '@/utils/database';
 import { HTTP, ENV } from '@/vendor/open-api';
 import { hex_md5 } from '@/vendor/md5';
 import resourceCache from '@/utils/resource-cache';
+import $ from '@/core/app';
 
 const tasks = new Map();
 
 export default async function download(url, ua) {
+    const downloadUrlMatch = url.match(/^\/api\/file\/(.+)/);
+    if (downloadUrlMatch) {
+        let fileName = downloadUrlMatch?.[1];
+        if (fileName == null) {
+            throw new Error(`本地文件 URL 无效: ${url}`);
+        }
+        fileName = decodeURIComponent(fileName);
+        const allFiles = $.read(FILES_KEY);
+        const file = findByName(allFiles, fileName);
+        if (!file) {
+            throw new Error(`找不到本地文件: ${fileName}`);
+        }
+        return file.content;
+    }
+
     const { isNode } = ENV();
     ua = ua || 'Quantumult%20X/1.0.29 (iPhone14,5; iOS 15.4.1)';
     const id = hex_md5(ua + url);
