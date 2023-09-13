@@ -1,5 +1,6 @@
 import download from '@/utils/download';
 import { isIPv4, isIPv6 } from '@/utils';
+import { FILES_KEY } from '@/constants';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
@@ -84,7 +85,29 @@ async function process(proxies, operators = [], targetPlatform) {
 
                 // if this is a remote script, download it
                 try {
-                    script = await download(url.split('#')[0]);
+                    const downloadUrl = url.split('#')[0];
+                    const downloadUrlMatch =
+                        downloadUrl.match(/^\/api\/file\/(.+)/);
+                    if (downloadUrlMatch) {
+                        let fileName = downloadUrlMatch?.[1];
+                        if (fileName == null) {
+                            throw new Error(`本地脚本 URL 无效: ${url}`);
+                        }
+                        fileName = decodeURIComponent(fileName);
+                        const allFiles = $.read(FILES_KEY);
+                        const file = allFiles.find(
+                            (i) => i.name === fileName && i.type === item.type,
+                        );
+                        if (!file) {
+                            throw new Error(
+                                `找不到类型为 ${item.type} 的本地脚本: ${fileName}`,
+                            );
+                        }
+                        script = file.content;
+                    } else {
+                        script = await download(downloadUrl);
+                    }
+
                     // $.info(`Script loaded: >>>\n ${script}`);
                 } catch (err) {
                     $.error(
