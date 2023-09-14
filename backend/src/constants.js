@@ -3,6 +3,7 @@ export const SETTINGS_KEY = 'settings';
 export const SUBS_KEY = 'subs';
 export const COLLECTIONS_KEY = 'collections';
 export const FILES_KEY = 'files';
+export const MODULES_KEY = 'modules';
 export const ARTIFACTS_KEY = 'artifacts';
 export const RULES_KEY = 'rules';
 export const GIST_BACKUP_KEY = 'Auto Generated Sub-Store Backup';
