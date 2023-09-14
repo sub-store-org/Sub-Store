@@ -40,7 +40,7 @@ function getFile(req, res) {
     const allFiles = $.read(FILES_KEY);
     const file = findByName(allFiles, name);
     if (file) {
-        success(res, file);
+        res.status(200).json(file.content);
     } else {
         failed(
             res,
@@ -93,7 +93,10 @@ function deleteFile(req, res) {
 
 function getAllFiles(req, res) {
     const allFiles = $.read(FILES_KEY);
-    success(res, allFiles);
+    success(
+        res, // eslint-disable-next-line no-unused-vars
+        allFiles.map(({ content, ...rest }) => rest),
+    );
 }
 
 function replaceFile(req, res) {
