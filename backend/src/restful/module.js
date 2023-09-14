@@ -45,7 +45,7 @@ function getModule(req, res) {
     const allModules = $.read(MODULES_KEY);
     const module = findByName(allModules, name);
     if (module) {
-        success(res, module);
+        res.status(200).json(module.content);
     } else {
         failed(
             res,
