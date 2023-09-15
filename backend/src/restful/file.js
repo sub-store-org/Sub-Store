@@ -18,14 +18,17 @@ export default function register($app) {
 // file API
 function createFile(req, res) {
     const file = req.body;
+    file.name = `${file.name ?? Date.now()}`;
     $.info(`正在创建文件：${file.name}`);
     const allFiles = $.read(FILES_KEY);
     if (findByName(allFiles, file.name)) {
-        failed(
+        return failed(
             res,
             new RequestInvalidError(
                 'DUPLICATE_KEY',
-                `File ${file.name} already exists.`,
+                req.body.name
+                    ? `已存在 name 为 ${file.name} 的文件`
+                    : `无法同时创建相同的文件 可稍后重试`,
             ),
         );
     }

@@ -22,15 +22,17 @@ export default function register($app) {
 // module API
 function createModule(req, res) {
     const module = req.body;
-    module.name = module.name ?? hex_md5(JSON.stringify(module));
+    module.name = `${module.name ?? hex_md5(JSON.stringify(module))}`;
     $.info(`正在创建模块：${module.name}`);
     const allModules = $.read(MODULES_KEY);
     if (findByName(allModules, module.name)) {
-        failed(
+        return failed(
             res,
             new RequestInvalidError(
                 'DUPLICATE_KEY',
-                `已存在相同的模块 请勿重复添加`,
+                req.body.name
+                    ? `已存在 name 为 ${module.name} 的模块`
+                    : `已存在相同的模块 请勿重复添加`,
             ),
         );
     }
