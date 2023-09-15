@@ -20,8 +20,8 @@ import registerArtifactRoutes from '@/restful/artifacts';
 import registerSettingRoutes from '@/restful/settings';
 import registerMiscRoutes from '@/restful/miscs';
 import registerSortRoutes from '@/restful/sort';
-import registerFileRoutes from './file';
-import registerModuleRoutes from './module';
+import registerFileRoutes from '@/restful/file';
+import registerModuleRoutes from '@/restful/module';
 
 migrate();
 serve();
