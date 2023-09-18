@@ -316,7 +316,9 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
         return (
             timer
                 ? Promise.race([timer, worker]).then((res) => {
-                      clearTimeout(timeoutid);
+                      if (typeof clearTimeout !== 'undefined') {
+                          clearTimeout(timeoutid);
+                      }
                       return res;
                   })
                 : worker
