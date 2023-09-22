@@ -208,7 +208,7 @@ function lastParse(proxy) {
             delete proxy.network;
         }
     }
-    if (['trojan', 'tuic', 'hysteria'].includes(proxy.type)) {
+    if (['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(proxy.type)) {
         proxy.tls = true;
     }
     if (proxy.tls && !proxy.sni) {
