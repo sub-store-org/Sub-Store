@@ -423,6 +423,7 @@ function Clash_All() {
                 'tuic',
                 'vless',
                 'hysteria',
+                'hysteria2',
                 'wireguard',
             ].includes(proxy.type)
         ) {
