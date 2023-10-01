@@ -128,6 +128,12 @@ export default function Stash_Producer() {
                         delete proxy.tls;
                     }
                     delete proxy['tls-fingerprint'];
+                    if (
+                        ['grpc'].includes(proxy.network) &&
+                        proxy[`${proxy.network}-opts`]
+                    ) {
+                        delete proxy[`${proxy.network}-opts`]['_grpc-type'];
+                    }
                     return '  - ' + JSON.stringify(proxy) + '\n';
                 })
                 .join('')
