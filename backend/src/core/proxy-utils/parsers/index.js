@@ -267,6 +267,8 @@ function URI_VMess() {
                 params.obfs === 'http'
             ) {
                 proxy.network = 'http';
+            } else if (['grpc'].includes(params.net)) {
+                proxy.network = 'grpc';
             }
             if (proxy.network) {
                 let transportHost = params.host ?? params.obfsParam;
@@ -285,10 +287,17 @@ function URI_VMess() {
                     }
                 }
                 if (transportPath || transportHost) {
-                    proxy[`${proxy.network}-opts`] = {
-                        path: getIfNotBlank(transportPath),
-                        headers: { Host: getIfNotBlank(transportHost) },
-                    };
+                    if (['grpc'].includes(proxy.network)) {
+                        proxy[`${proxy.network}-opts`] = {
+                            'grpc-service-name': getIfNotBlank(transportPath),
+                            '_grpc-type': getIfNotBlank(params.type),
+                        };
+                    } else {
+                        proxy[`${proxy.network}-opts`] = {
+                            path: getIfNotBlank(transportPath),
+                            headers: { Host: getIfNotBlank(transportHost) },
+                        };
+                    }
                 } else {
                     delete proxy.network;
                 }
@@ -364,6 +373,10 @@ function URI_VLESS() {
             }
             if (params.serviceName) {
                 opts[`${proxy.network}-service-name`] = params.serviceName;
+            }
+            // https://github.com/XTLS/Xray-core/issues/91
+            if (['grpc'].includes(proxy.network)) {
+                opts['_grpc-type'] = params.mode || 'gun';
             }
             if (Object.keys(opts).length > 0) {
                 proxy[`${proxy.network}-opts`] = opts;

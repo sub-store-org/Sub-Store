@@ -91,6 +91,16 @@ export default function URI_Producer() {
                             ? vmessTransportHost[0]
                             : vmessTransportHost;
                     }
+                    if (['grpc'].includes(proxy.network)) {
+                        result.path =
+                            proxy[`${proxy.network}-opts`]?.[
+                                'grpc-service-name'
+                            ];
+                        // https://github.com/XTLS/Xray-core/issues/91
+                        result.type =
+                            proxy[`${proxy.network}-opts`]?.['_grpc-type'] ||
+                            'gun';
+                    }
                 }
                 result = 'vmess://' + Base64.encode(JSON.stringify(result));
                 break;
@@ -141,6 +151,12 @@ export default function URI_Producer() {
                 let vlessTransport = `&type=${encodeURIComponent(
                     proxy.network,
                 )}`;
+                if (['grpc'].includes(proxy.network)) {
+                    // https://github.com/XTLS/Xray-core/issues/91
+                    vlessTransport += `&mode=${encodeURIComponent(
+                        proxy[`${proxy.network}-opts`]?.['_grpc-type'] || 'gun',
+                    )}`;
+                }
 
                 let vlessTransportServiceName =
                     proxy[`${proxy.network}-opts`]?.[

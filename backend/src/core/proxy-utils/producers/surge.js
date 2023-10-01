@@ -71,6 +71,12 @@ function shadowsocks(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+
     return result.toString();
 }
 
@@ -106,6 +112,12 @@ function trojan(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
 
     return result.toString();
 }
@@ -150,6 +162,12 @@ function vmess(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+
     return result.toString();
 }
 
@@ -181,6 +199,12 @@ function http(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
 
     return result.toString();
 }
@@ -216,6 +240,12 @@ function socks5(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+
     return result.toString();
 }
 
@@ -244,6 +274,12 @@ function snell(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
 
     // reuse
     result.appendIfPresent(`,reuse=${proxy['reuse']}`, 'reuse');
@@ -288,6 +324,12 @@ function tuic(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+
     return result.toString();
 }
 
@@ -304,10 +346,7 @@ function wireguard(proxy) {
         `,no-error-alert=${proxy['no-error-alert']}`,
         'no-error-alert',
     );
-    result.appendIfPresent(
-        `,underlying-proxy=${proxy['underlying-proxy']}`,
-        'underlying-proxy',
-    );
+
     result.appendIfPresent(
         `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
         'ip-version',
@@ -315,6 +354,12 @@ function wireguard(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
 
     return result.toString();
 }
