@@ -51,7 +51,7 @@ async function produceArtifact({ type, name, platform }) {
             if (exist[proxy.name]) {
                 $.notify(
                     '🌍 Sub-Store',
-                    '⚠️ 订阅包含重复节点！',
+                    `⚠️ 订阅 ${name} 包含重复节点 ${proxy.name}！`,
                     '请仔细检测配置！',
                     {
                         'media-url':
@@ -142,7 +142,7 @@ async function produceArtifact({ type, name, platform }) {
             if (exist[proxy.name]) {
                 $.notify(
                     '🌍 Sub-Store',
-                    '⚠️ 订阅包含重复节点！',
+                    `⚠️ 组合订阅 ${name} 包含重复节点 ${proxy.name}！`,
                     '请仔细检测配置！',
                     {
                         'media-url':
