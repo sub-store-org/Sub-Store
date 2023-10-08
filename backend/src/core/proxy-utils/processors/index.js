@@ -7,6 +7,7 @@ import lodash from 'lodash';
 import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
 import { ProxyUtils } from '@/core/proxy-utils';
+import env from '@/utils/env';
 
 /**
  The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed as follows:
@@ -294,7 +295,7 @@ function RegexDeleteOperator(regex) {
  1. This function name should be `operator`!
  2. Always declare variables before using them!
  */
-function ScriptOperator(script, targetPlatform, $arguments) {
+function ScriptOperator(script, targetPlatform, $arguments, source) {
     return {
         name: 'Script Operator',
         func: async (proxies) => {
@@ -305,7 +306,7 @@ function ScriptOperator(script, targetPlatform, $arguments) {
                     script,
                     $arguments,
                 );
-                output = operator(proxies, targetPlatform);
+                output = operator(proxies, targetPlatform, { source, ...env });
             })();
             return output;
         },
@@ -562,7 +563,7 @@ function TypeFilter(types) {
  1. This function name should be `filter`!
  2. Always declare variables before using them!
  */
-function ScriptFilter(script, targetPlatform, $arguments) {
+function ScriptFilter(script, targetPlatform, $arguments, source) {
     return {
         name: 'Script Filter',
         func: async (proxies) => {
@@ -573,7 +574,7 @@ function ScriptFilter(script, targetPlatform, $arguments) {
                     script,
                     $arguments,
                 );
-                output = filter(proxies, targetPlatform);
+                output = filter(proxies, targetPlatform, { source, ...env });
             })();
             return output;
         },

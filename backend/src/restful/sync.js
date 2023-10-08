@@ -36,11 +36,15 @@ async function produceArtifact({ type, name, platform }) {
         }
         // parse proxies
         let proxies = ProxyUtils.parse(raw);
+        proxies.forEach((proxy) => {
+            proxy.subName = sub.name;
+        });
         // apply processors
         proxies = await ProxyUtils.process(
             proxies,
             sub.process || [],
             platform,
+            { [sub.name]: sub },
         );
         if (proxies.length === 0) {
             throw new Error(`订阅 ${name} 中不含有效节点`);
@@ -86,11 +90,18 @@ async function produceArtifact({ type, name, platform }) {
                     }
                     // parse proxies
                     let currentProxies = ProxyUtils.parse(raw);
+
+                    currentProxies.forEach((proxy) => {
+                        proxy.subName = sub.name;
+                        proxy.collectionName = collection.name;
+                    });
+
                     // apply processors
                     currentProxies = await ProxyUtils.process(
                         currentProxies,
                         sub.process || [],
                         platform,
+                        { [sub.name]: sub, _collection: collection },
                     );
                     results[name] = currentProxies;
                     processed++;
@@ -127,11 +138,16 @@ async function produceArtifact({ type, name, platform }) {
             subnames.map((name) => results[name] || []),
         );
 
+        proxies.forEach((proxy) => {
+            proxy.collectionName = collection.name;
+        });
+
         // apply own processors
         proxies = await ProxyUtils.process(
             proxies,
             collection.process || [],
             platform,
+            { _collection: collection },
         );
         if (proxies.length === 0) {
             throw new Error(`组合订阅 ${name} 中不含有效节点`);
