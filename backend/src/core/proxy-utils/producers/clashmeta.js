@@ -117,6 +117,8 @@ export default function ClashMeta_Producer() {
                     }
 
                     delete proxy['tls-fingerprint'];
+                    delete proxy.subName;
+                    delete proxy.collectionName;
                     if (
                         ['grpc'].includes(proxy.network) &&
                         proxy[`${proxy.network}-opts`]

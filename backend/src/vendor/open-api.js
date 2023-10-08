@@ -60,7 +60,9 @@ export class OpenAPI {
                 });
                 this.root = {};
             } else {
-                this.root = JSON.parse(this.node.fs.readFileSync(`${rootPath}`));
+                this.root = JSON.parse(
+                    this.node.fs.readFileSync(`${rootPath}`),
+                );
             }
 
             // create a json file with the given name if not exists
@@ -72,9 +74,7 @@ export class OpenAPI {
                 });
                 this.cache = {};
             } else {
-                this.cache = JSON.parse(
-                    this.node.fs.readFileSync(`${fpath}`),
-                );
+                this.cache = JSON.parse(this.node.fs.readFileSync(`${fpath}`));
             }
         }
     }

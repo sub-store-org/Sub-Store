@@ -39,6 +39,7 @@ async function compareSub(req, res) {
         // add id
         original.forEach((proxy, i) => {
             proxy.id = i;
+            proxy.subName = sub.name;
         });
 
         // apply processors
@@ -46,6 +47,7 @@ async function compareSub(req, res) {
             original,
             sub.process || [],
             target,
+            { [sub.name]: sub },
         );
 
         // produce
@@ -82,11 +84,18 @@ async function compareCollection(req, res) {
                     }
                     // parse proxies
                     let currentProxies = ProxyUtils.parse(raw);
+
+                    currentProxies.forEach((proxy) => {
+                        proxy.subName = sub.name;
+                        proxy.collectionName = collection.name;
+                    });
+
                     // apply processors
                     currentProxies = await ProxyUtils.process(
                         currentProxies,
                         sub.process || [],
                         'JSON',
+                        { [sub.name]: sub, _collection: collection },
                     );
                     results[name] = currentProxies;
                 } catch (err) {
@@ -110,12 +119,14 @@ async function compareCollection(req, res) {
 
         original.forEach((proxy, i) => {
             proxy.id = i;
+            proxy.collectionName = collection.name;
         });
 
         const processed = await ProxyUtils.process(
             original,
             collection.process || [],
             'JSON',
+            { _collection: collection },
         );
 
         success(res, { original, processed });
