@@ -784,6 +784,15 @@ function Surge_WireGuard() {
     return { name, test, parse };
 }
 
+function Surge_Hysteria2() {
+    const name = 'Surge Hysteria2 Parser';
+    const test = (line) => {
+        return /^.*=\s*hysteria2/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
+
 export default [
     URI_SS(),
     URI_SSR(),
@@ -798,6 +807,7 @@ export default [
     Surge_Snell(),
     Surge_Tuic(),
     Surge_WireGuard(),
+    Surge_Hysteria2(),
     Surge_Socks5(),
     Loon_SS(),
     Loon_SSR(),

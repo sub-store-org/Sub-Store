@@ -31,6 +31,8 @@ export default function Surge_Producer() {
                 return tuic(proxy);
             case 'wireguard-surge':
                 return wireguard(proxy);
+            case 'hysteria2':
+                return hysteria2(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -351,6 +353,45 @@ function wireguard(proxy) {
         `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
         'ip-version',
     );
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+
+    return result.toString();
+}
+
+function hysteria2(proxy) {
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=hysteria2,${proxy.server},${proxy.port}`);
+
+    result.appendIfPresent(`,password=${proxy.password}`, 'password');
+
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
+
+    // tls verification
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy['fast-open']}`, 'fast-open');
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');

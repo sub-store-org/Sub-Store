@@ -32,7 +32,7 @@ const grammars = String.raw`
     }
 }
 
-start = (shadowsocks/vmess/trojan/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard) {
+start = (shadowsocks/vmess/trojan/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard/hysteria2) {
     return proxy;
 }
 
@@ -85,6 +85,9 @@ tuic_v5 = tag equals "tuic-v5" address (alpn/passwordk/uuidk/ip_version/tls_veri
 }
 wireguard = tag equals "wireguard" (section_name/no_error_alert/ip_version/underlying_proxy/test_url/others)* {
     proxy.type = "wireguard-surge";
+}
+hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying_proxy/test_url/sni/tls_verification/passwordk/download_bandwidth/others)* {
+    proxy.type = "hysteria2";
 }
 socks5 = tag equals "socks5" address (username password)? (fast_open/others)* {
     proxy.type = "socks5";
@@ -194,6 +197,7 @@ ip_version = comma "ip-version" equals match:[^,]+ { proxy["ip-version"] = match
 section_name = comma "section-name" equals match:[^,]+ { proxy["section-name"] = match.join(""); }
 no_error_alert = comma "no-error-alert" equals match:[^,]+ { proxy["no-error-alert"] = match.join(""); }
 underlying_proxy = comma "underlying-proxy" equals match:[^,]+ { proxy["underlying-proxy"] = match.join(""); }
+download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down = match.join(""); }
 test_url = comma "test-url" equals match:[^,]+ { proxy["test-url"] = match.join(""); }
 token = comma "token" equals match:[^,]+ { proxy.token = match.join(""); }
 alpn = comma "alpn" equals match:[^,]+ { proxy.alpn = match.join(""); }
