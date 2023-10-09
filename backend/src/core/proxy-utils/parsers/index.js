@@ -240,7 +240,7 @@ function URI_VMess() {
                 params.add = server;
             }
             const proxy = {
-                name: params.ps ?? params.remark,
+                name: params.ps ?? params.remarks,
                 type: 'vmess',
                 server: params.add,
                 port: parseInt(getIfPresent(params.port), 10),
@@ -272,6 +272,14 @@ function URI_VMess() {
             }
             if (proxy.network) {
                 let transportHost = params.host ?? params.obfsParam;
+                try {
+                    const parsedObfs = JSON.parse(transportHost);
+                    const parsedHost = parsedObfs?.Host;
+                    if (parsedHost) {
+                        transportHost = parsedHost;
+                    }
+                    // eslint-disable-next-line no-empty
+                } catch (e) {}
                 let transportPath = params.path;
 
                 if (proxy.network === 'http') {
