@@ -367,6 +367,9 @@ function wireguard(proxy) {
 }
 
 function hysteria2(proxy) {
+    if (proxy.obfs || proxy['obfs-password']) {
+        throw new Error(`obfs is unsupported`);
+    }
     const result = new Result(proxy);
     result.append(`${proxy.name}=hysteria2,${proxy.server},${proxy.port}`);
 
@@ -387,6 +390,10 @@ function hysteria2(proxy) {
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
+    );
+    result.appendIfPresent(
+        `,server-cert-fingerprint-sha256=${proxy.fingerprint}`,
+        'fingerprint',
     );
 
     // tfo

@@ -404,6 +404,53 @@ function URI_VLESS() {
     };
     return { name, test, parse };
 }
+function URI_Hysteria2() {
+    const name = 'URI Hysteria2 Parser';
+    const test = (line) => {
+        return /^hysteria2:\/\//.test(line);
+    };
+    const parse = (line) => {
+        line = line.split('hysteria2://')[1];
+        // eslint-disable-next-line no-unused-vars
+        let [__, password, server, ___, port, addons, name] =
+            /^(.*?)@(.*?)(:(\d+))?\/?\?(.*?)(?:#(.*?))$/.exec(line);
+        port = parseInt(`${port}`, 10);
+        if (isNaN(port)) {
+            port = 443;
+        }
+        password = decodeURIComponent(password);
+        name = decodeURIComponent(name) ?? `Hysteria2 ${server}:${port}`;
+
+        const proxy = {
+            type: 'hysteria2',
+            name,
+            server,
+            port,
+            password,
+        };
+
+        const params = {};
+        for (const addon of addons.split('&')) {
+            const [key, valueRaw] = addon.split('=');
+            let value = valueRaw;
+            value = decodeURIComponent(valueRaw);
+            params[key] = value;
+        }
+
+        proxy.sni = params.sni;
+        if (!proxy.sni && params.peer) {
+            proxy.sni = params.peer;
+        }
+        proxy.obfs = params.obfs;
+        proxy['obfs-password'] = params['obfs-password'];
+        proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.insecure);
+        proxy.tfo = /(TRUE)|1/i.test(params.fastopen);
+        proxy.fingerprint = params.pinSHA256;
+
+        return proxy;
+    };
+    return { name, test, parse };
+}
 
 // Trojan URI format
 function URI_Trojan() {
@@ -798,6 +845,7 @@ export default [
     URI_SSR(),
     URI_VMess(),
     URI_VLESS(),
+    URI_Hysteria2(),
     URI_Trojan(),
     Clash_All(),
     Surge_SS(),
