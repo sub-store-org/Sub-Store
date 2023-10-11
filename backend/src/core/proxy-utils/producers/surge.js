@@ -409,6 +409,12 @@ function hysteria2(proxy) {
         'underlying-proxy',
     );
 
+    // download-bandwidth
+    result.appendIfPresent(
+        `,download-bandwidth=${`${proxy['down']}`.match(/\d+/)?.[0] || 0}`,
+        'down',
+    );
+
     return result.toString();
 }
 
