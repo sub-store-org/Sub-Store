@@ -332,6 +332,8 @@ function tuic(proxy) {
         'underlying-proxy',
     );
 
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
+
     return result.toString();
 }
 
