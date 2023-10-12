@@ -417,6 +417,8 @@ function hysteria2(proxy) {
         'down',
     );
 
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
+
     return result.toString();
 }
 
