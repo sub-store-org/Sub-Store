@@ -86,7 +86,7 @@ tuic_v5 = tag equals "tuic-v5" address (alpn/passwordk/uuidk/ip_version/tls_veri
 wireguard = tag equals "wireguard" (section_name/no_error_alert/ip_version/underlying_proxy/test_url/others)* {
     proxy.type = "wireguard-surge";
 }
-hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying_proxy/test_url/sni/tls_verification/passwordk/download_bandwidth/others)* {
+hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying_proxy/test_url/sni/tls_verification/passwordk/download_bandwidth/ecn/others)* {
     proxy.type = "hysteria2";
 }
 socks5 = tag equals "socks5" address (username password)? (fast_open/others)* {
