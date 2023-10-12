@@ -76,10 +76,10 @@ snell = tag equals "snell" address (snell_version/snell_psk/obfs/obfs_host/obfs_
         $set(proxy, "obfs-opts.path", obfs.path);
     }
 }
-tuic = tag equals "tuic" address (alpn/token/ip_version/tls_verification/sni/fast_open/tfo/others)* {
+tuic = tag equals "tuic" address (alpn/token/ip_version/tls_verification/sni/fast_open/tfo/ecn/others)* {
     proxy.type = "tuic";
 }
-tuic_v5 = tag equals "tuic-v5" address (alpn/passwordk/uuidk/ip_version/tls_verification/sni/fast_open/tfo/others)* {
+tuic_v5 = tag equals "tuic-v5" address (alpn/passwordk/uuidk/ip_version/tls_verification/sni/fast_open/tfo/ecn/others)* {
     proxy.type = "tuic";
     proxy.version = 5;
 }
@@ -192,6 +192,7 @@ uri = $[^,]+
 udp_relay = comma "udp" equals flag:bool { proxy.udp = flag; }
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 reuse = comma "reuse" equals flag:bool { proxy.reuse = flag; }
+ecn = comma "ecn" equals flag:bool { proxy.ecn = flag; }
 tfo = comma "tfo" equals flag:bool { proxy.tfo = flag; }
 ip_version = comma "ip-version" equals match:[^,]+ { proxy["ip-version"] = match.join(""); }
 section_name = comma "section-name" equals match:[^,]+ { proxy["section-name"] = match.join(""); }
