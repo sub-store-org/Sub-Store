@@ -19,6 +19,8 @@ export default function Stash_Producer() {
                             'tuic',
                             'vless',
                             'wireguard',
+                            'hysteria',
+                            'hysteria2',
                         ].includes(proxy.type) ||
                         (proxy.type === 'snell' &&
                             String(proxy.version) === '4') ||
@@ -67,6 +69,7 @@ export default function Stash_Producer() {
                             !isPresent(proxy, 'fast-open')
                         ) {
                             proxy['fast-open'] = proxy.tfo;
+                            delete proxy.tfo;
                         }
                         // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/adapter/outbound/tuic.go#L197
                         if (
@@ -86,6 +89,50 @@ export default function Stash_Producer() {
                             !isPresent(proxy, 'fast-open')
                         ) {
                             proxy['fast-open'] = proxy.tfo;
+                            delete proxy.tfo;
+                        }
+                        if (
+                            isPresent(proxy, 'down') &&
+                            !isPresent(proxy, 'down-speed')
+                        ) {
+                            proxy['down-speed'] = proxy.down;
+                            delete proxy.down;
+                        }
+                        if (
+                            isPresent(proxy, 'up') &&
+                            !isPresent(proxy, 'up-speed')
+                        ) {
+                            proxy['up-speed'] = proxy.up;
+                            delete proxy.up;
+                        }
+                    } else if (proxy.type === 'hysteria2') {
+                        if (
+                            isPresent(proxy, 'password') &&
+                            !isPresent(proxy, 'auth')
+                        ) {
+                            proxy.auth = proxy.password;
+                            delete proxy.password;
+                        }
+                        if (
+                            isPresent(proxy, 'tfo') &&
+                            !isPresent(proxy, 'fast-open')
+                        ) {
+                            proxy['fast-open'] = proxy.tfo;
+                            delete proxy.tfo;
+                        }
+                        if (
+                            isPresent(proxy, 'down') &&
+                            !isPresent(proxy, 'down-speed')
+                        ) {
+                            proxy['down-speed'] = proxy.down;
+                            delete proxy.down;
+                        }
+                        if (
+                            isPresent(proxy, 'up') &&
+                            !isPresent(proxy, 'up-speed')
+                        ) {
+                            proxy['up-speed'] = proxy.up;
+                            delete proxy.up;
                         }
                     } else if (proxy.type === 'wireguard') {
                         proxy.keepalive =
