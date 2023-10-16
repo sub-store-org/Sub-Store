@@ -13,13 +13,15 @@ function Base64Encoded() {
     const name = 'Base64 Pre-processor';
 
     const keys = [
-        'dm1lc3M',
-        'c3NyOi8v',
-        'dHJvamFu',
-        'c3M6Ly',
-        'c3NkOi8v',
-        'c2hhZG93',
-        'aHR0c',
+        'dm1lc3M', // vmess
+        'c3NyOi8v', // ssr://
+        'dHJvamFu', // trojan
+        'c3M6Ly', // ss:/
+        'c3NkOi8v', // ssd://
+        'c2hhZG93', // shadow
+        'aHR0c', // htt
+        'dmxlc3M=', // vless
+        'aHlzdGVyaWEy', // hysteria2
     ];
 
     const test = function (raw) {
