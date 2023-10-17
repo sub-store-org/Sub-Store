@@ -320,8 +320,11 @@ function tuic(proxy) {
     );
 
     // tfo
-    result.appendIfPresent(`,tfo=${proxy['fast-open']}`, 'fast-open');
-    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+    if (isPresent(proxy, 'tfo')) {
+        result.append(`,tfo=${proxy['tfo']}`);
+    } else if (isPresent(proxy, 'fast-open')) {
+        result.append(`,tfo=${proxy['fast-open']}`);
+    }
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
@@ -399,8 +402,11 @@ function hysteria2(proxy) {
     );
 
     // tfo
-    result.appendIfPresent(`,tfo=${proxy['fast-open']}`, 'fast-open');
-    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+    if (isPresent(proxy, 'tfo')) {
+        result.append(`,tfo=${proxy['tfo']}`);
+    } else if (isPresent(proxy, 'fast-open')) {
+        result.append(`,tfo=${proxy['fast-open']}`);
+    }
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
