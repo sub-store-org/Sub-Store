@@ -30,13 +30,14 @@ Core functionalities:
 - [x] SSR URI
 - [x] SSD URI
 - [x] V2RayN URI
+- [x] Hysteria2 URI
 - [x] QX (SS, SSR, VMess, Trojan, HTTP)
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP, WireGuard, VLESS)
-- [x] Surge (SS, VMess, Trojan, HTTP, TUIC, Snell, SSR(external, only for macOS), WireGuard(Surge to Surge))
-- [x] ShadowRocket (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria)
-- [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria)
+- [x] Surge (SS, VMess, Trojan, HTTP, TUIC, Snell, Hysteria2, SSR(external, only for macOS), WireGuard(Surge to Surge))
+- [x] ShadowRocket (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, Hysteria2)
+- [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria, Hysteria2)
 - [x] Stash (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria)
-- [x] Clash (SS, SSR, VMess, Trojan, HTTP, Snell)
+- [x] Clash (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard)
 
 ### Supported Target Platforms
 

@@ -441,7 +441,10 @@ function URI_Hysteria2() {
         if (!proxy.sni && params.peer) {
             proxy.sni = params.peer;
         }
-        proxy.obfs = params.obfs;
+        if (params.obfs && params.obfs !== 'none') {
+            proxy.obfs = params.obfs;
+        }
+
         proxy['obfs-password'] = params['obfs-password'];
         proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.insecure);
         proxy.tfo = /(TRUE)|1/i.test(params.fastopen);
