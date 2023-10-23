@@ -73,7 +73,22 @@ function shadowsocks(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -115,7 +130,22 @@ function trojan(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -164,7 +194,22 @@ function vmess(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -202,7 +247,22 @@ function http(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -242,7 +302,22 @@ function socks5(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -277,7 +352,22 @@ function snell(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -319,6 +409,12 @@ function tuic(proxy) {
         'skip-cert-verify',
     );
 
+    // tls fingerprint
+    result.appendIfPresent(
+        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+
     // tfo
     if (isPresent(proxy, 'tfo')) {
         result.append(`,tfo=${proxy['tfo']}`);
@@ -329,7 +425,22 @@ function tuic(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -362,7 +473,22 @@ function wireguard(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -397,8 +523,8 @@ function hysteria2(proxy) {
         'skip-cert-verify',
     );
     result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy.fingerprint}`,
-        'fingerprint',
+        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
     );
 
     // tfo
@@ -411,7 +537,22 @@ function hysteria2(proxy) {
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
 
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
     // underlying-proxy
+
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',

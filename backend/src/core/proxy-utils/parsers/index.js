@@ -448,7 +448,7 @@ function URI_Hysteria2() {
         proxy['obfs-password'] = params['obfs-password'];
         proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.insecure);
         proxy.tfo = /(TRUE)|1/i.test(params.fastopen);
-        proxy.fingerprint = params.pinSHA256;
+        proxy['tls-fingerprint'] = params.pinSHA256;
 
         return proxy;
     };

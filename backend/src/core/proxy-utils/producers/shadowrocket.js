@@ -116,6 +116,9 @@ export default function ShadowRocket_Producer() {
                         delete proxy.tls;
                     }
 
+                    if (proxy['tls-fingerprint']) {
+                        proxy.fingerprint = proxy['tls-fingerprint'];
+                    }
                     delete proxy['tls-fingerprint'];
                     delete proxy.subName;
                     delete proxy.collectionName;
