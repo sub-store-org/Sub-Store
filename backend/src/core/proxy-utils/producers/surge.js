@@ -87,8 +87,10 @@ function shadowsocks(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -144,8 +146,10 @@ function trojan(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -208,8 +212,10 @@ function vmess(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -261,8 +267,10 @@ function http(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -316,8 +324,10 @@ function socks5(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -366,8 +376,10 @@ function snell(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -439,8 +451,10 @@ function tuic(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -487,8 +501,10 @@ function wireguard(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -551,8 +567,10 @@ function hysteria2(proxy) {
         );
     }
 
-    // underlying-proxy
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
+    // underlying-proxy
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
