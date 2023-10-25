@@ -1,0 +1,7 @@
+{
+    "name":"Sub-Store",
+    "description":"",
+    "task":[
+      "0 0 * * * https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js, tag=Sub-Store Sync, img-url=https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png"
+    ]
+}
