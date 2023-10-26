@@ -8,6 +8,25 @@ import $ from '@/core/app';
 const tasks = new Map();
 
 export default async function download(url, ua) {
+    let $arguments = {};
+    const rawArgs = url.split('#');
+    if (rawArgs.length > 1) {
+        try {
+            // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
+            $arguments = JSON.parse(decodeURIComponent(rawArgs[1]));
+        } catch (e) {
+            for (const pair of rawArgs[1].split('&')) {
+                const key = pair.split('=')[0];
+                const value = pair.split('=')[1];
+                // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
+                $arguments[key] =
+                    value == null || value === ''
+                        ? true
+                        : decodeURIComponent(value);
+            }
+        }
+    }
+
     const downloadUrlMatch = url.match(/^\/api\/(file|module)\/(.+)/);
     if (downloadUrlMatch) {
         let type = downloadUrlMatch?.[1];
@@ -41,7 +60,7 @@ export default async function download(url, ua) {
     const result = new Promise((resolve, reject) => {
         // try to find in app cache
         const cached = resourceCache.get(id);
-        if (cached) {
+        if (!$arguments?.noCache && cached) {
             resolve(cached);
         } else {
             http.get(url)
