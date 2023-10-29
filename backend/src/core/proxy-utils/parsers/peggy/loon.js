@@ -35,7 +35,7 @@ const grammars = String.raw`
     }
 }
 
-start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http) {
+start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/hysteria2) {
     return proxy;
 }
 
@@ -67,6 +67,9 @@ vless = tag equals "vless"i address uuid (transport/transport_host/transport_pat
 trojan = tag equals "trojan"i address password (transport/transport_host/transport_path/over_tls/tls_host/tls_verification/fast_open/udp_relay/others)* {
     proxy.type = "trojan";
     handleTransport();
+}
+hysteria2 = tag equals "hysteria2"i address password (tls_host/tls_verification/udp_relay/download_bandwidth/ecn/others)* {
+    proxy.type = "hysteria2";
 }
 https = tag equals "https"i address (username password)? (tls_host/tls_verification/fast_open/udp_relay/others)* {
     proxy.type = "http";
@@ -166,6 +169,9 @@ tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-
 
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 udp_relay = comma "udp" equals flag:bool { proxy.udp = flag; }
+
+ecn = comma "ecn" equals flag:bool { proxy.ecn = flag; }
+download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down = match.join(""); }
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
 comma = _ "," _

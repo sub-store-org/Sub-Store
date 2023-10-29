@@ -20,6 +20,8 @@ export default function Loon_Producer() {
                 return http(proxy);
             case 'wireguard':
                 return wireguard(proxy);
+            case 'hysteria2':
+                return hysteria2(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -331,6 +333,36 @@ function wireguard(proxy) {
             presharedKey ?? ''
         }}]`,
     );
+
+    return result.toString();
+}
+
+function hysteria2(proxy) {
+    if (proxy.obfs || proxy['obfs-password']) {
+        throw new Error(`obfs is unsupported`);
+    }
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=Hysteria2,${proxy.server},${proxy.port}`);
+
+    result.appendIfPresent(`,"${proxy.password}"`, 'password');
+
+    // sni
+    result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // udp
+    result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
+
+    // download-bandwidth
+    result.appendIfPresent(
+        `,download-bandwidth=${`${proxy['down']}`.match(/\d+/)?.[0] || 0}`,
+        'down',
+    );
+
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     return result.toString();
 }
