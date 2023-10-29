@@ -96,6 +96,16 @@ async function getFlowInfo(req, res) {
 function createSubscription(req, res) {
     const sub = req.body;
     $.info(`正在创建订阅： ${sub.name}`);
+    if (/\//.test(sub.name)) {
+        failed(
+            res,
+            new RequestInvalidError(
+                'INVALID_NAME',
+                `Subscription ${sub.name} is invalid`,
+            ),
+        );
+        return;
+    }
     const allSubs = $.read(SUBS_KEY);
     if (findByName(allSubs, sub.name)) {
         failed(
@@ -105,6 +115,7 @@ function createSubscription(req, res) {
                 `Subscription ${sub.name} already exists.`,
             ),
         );
+        return;
     }
     allSubs.push(sub);
     $.write(allSubs, SUBS_KEY);

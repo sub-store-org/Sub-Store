@@ -22,6 +22,16 @@ export default function register($app) {
 function createCollection(req, res) {
     const collection = req.body;
     $.info(`正在创建组合订阅：${collection.name}`);
+    if (/\//.test(collection.name)) {
+        failed(
+            res,
+            new RequestInvalidError(
+                'INVALID_NAME',
+                `Collection ${collection.name} is invalid`,
+            ),
+        );
+        return;
+    }
     const allCols = $.read(COLLECTIONS_KEY);
     if (findByName(allCols, collection.name)) {
         failed(
@@ -31,6 +41,7 @@ function createCollection(req, res) {
                 `Collection ${collection.name} already exists.`,
             ),
         );
+        return;
     }
     allCols.push(collection);
     $.write(allCols, COLLECTIONS_KEY);
