@@ -487,7 +487,7 @@ function Clash_All() {
                 'ss',
                 'ssr',
                 'vmess',
-                'socks',
+                'socks5',
                 'http',
                 'snell',
                 'trojan',

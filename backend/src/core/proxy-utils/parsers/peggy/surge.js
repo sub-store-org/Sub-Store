@@ -60,11 +60,11 @@ trojan = tag equals "trojan" address (passwordk/ws/ws_path/ws_headers/tls/sni/tl
     proxy.type = "trojan";
     handleWebsocket();
 }
-https = tag equals "https" address (username password)? (sni/tls_fingerprint/tls_verification/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+https = tag equals "https" address (username password)? (usernamek passwordk)? (sni/tls_fingerprint/tls_verification/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "http";
     proxy.tls = true;
 }
-http = tag equals "http" address (username password)? (fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+http = tag equals "http" address (username password)? (usernamek passwordk)? (fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "http";
 }
 snell = tag equals "snell" address (snell_version/snell_psk/obfs/obfs_host/obfs_uri/fast_open/udp_relay/reuse/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
@@ -89,10 +89,10 @@ wireguard = tag equals "wireguard" (section_name/no_error_alert/ip_version/under
 hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying_proxy/test_url/sni/tls_verification/passwordk/tls_fingerprint/download_bandwidth/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "hysteria2";
 }
-socks5 = tag equals "socks5" address (username password)? (fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+socks5 = tag equals "socks5" address (username password)? (usernamek passwordk)? (fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "socks5";
 }
-socks5_tls = tag equals "socks5-tls" address (username password)? (sni/tls_fingerprint/tls_verification/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+socks5_tls = tag equals "socks5-tls" address (username password)? (usernamek passwordk)? (sni/tls_fingerprint/tls_verification/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "socks5";
     proxy.tls = true;
 }
@@ -163,6 +163,7 @@ tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:
 snell_psk = comma "psk" equals match:[^,]+ { proxy.psk = match.join(""); }
 snell_version = comma "version" equals match:$[0-9]+ { proxy.version = parseInt(match.trim()); }
 
+usernamek = comma "username" equals match:[^,]+ { proxy.username = match.join(""); }
 passwordk = comma "password" equals match:[^,]+ { proxy.password = match.join(""); }
 vmess_uuid = comma "username" equals match:[^,]+ { proxy.uuid = match.join(""); }
 vmess_aead = comma "vmess-aead" equals flag:bool { proxy.aead = flag; }
