@@ -12,7 +12,7 @@ export default function Stash_Producer() {
                             'ss',
                             'ssr',
                             'vmess',
-                            'socks',
+                            'socks5',
                             'http',
                             'snell',
                             'trojan',

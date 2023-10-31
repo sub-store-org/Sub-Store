@@ -14,7 +14,7 @@ export default function Clash_Producer() {
                     'ssr',
                     'vmess',
                     'vless',
-                    'socks',
+                    'socks5',
                     'http',
                     'snell',
                     'trojan',
