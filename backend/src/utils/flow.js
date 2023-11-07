@@ -13,3 +13,28 @@ export async function getFlowHeaders(url) {
     )[0];
     return headers[subkey];
 }
+export function parseFlowHeaders(flowHeaders) {
+    if (!flowHeaders) return;
+    // unit is KB
+    const uploadMatch = flowHeaders.match(/upload=(-?)(\d+)/);
+    const upload = Number(uploadMatch[1] + uploadMatch[2]);
+
+    const downloadMatch = flowHeaders.match(/download=(-?)(\d+)/);
+    const download = Number(downloadMatch[1] + downloadMatch[2]);
+
+    const total = Number(flowHeaders.match(/total=(\d+)/)[1]);
+
+    // optional expire timestamp
+    const match = flowHeaders.match(/expire=(\d+)/);
+    const expires = match ? Number(match[1]) : undefined;
+
+    return { expires, total, usage: { upload, download } };
+}
+export function flowTransfer(flow, unit = 'B') {
+    const unitList = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
+    let unitIndex = unitList.indexOf(unit);
+
+    return flow < 1024
+        ? { value: flow.toFixed(1), unit: unit }
+        : flowTransfer(flow / 1024, unitList[++unitIndex]);
+}

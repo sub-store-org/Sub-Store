@@ -8,6 +8,7 @@ import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
 import { ProxyUtils } from '@/core/proxy-utils';
 import env from '@/utils/env';
+import { getFlowHeaders, parseFlowHeaders, flowTransfer } from '@/utils/flow';
 
 /**
  The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed as follows:
@@ -668,6 +669,7 @@ function removeFlag(str) {
 }
 
 function createDynamicFunction(name, script, $arguments) {
+    const flowUtils = { getFlowHeaders, parseFlowHeaders, flowTransfer };
     if ($.env.isLoon) {
         return new Function(
             '$arguments',
@@ -678,6 +680,7 @@ function createDynamicFunction(name, script, $arguments) {
             '$notification',
             'ProxyUtils',
             'scriptResourceCache',
+            'flowUtils',
             `${script}\n return ${name}`,
         )(
             $arguments,
@@ -691,6 +694,7 @@ function createDynamicFunction(name, script, $arguments) {
             $notification,
             ProxyUtils,
             scriptResourceCache,
+            flowUtils,
         );
     } else {
         return new Function(
@@ -699,7 +703,9 @@ function createDynamicFunction(name, script, $arguments) {
             'lodash',
             'ProxyUtils',
             'scriptResourceCache',
+            'flowUtils',
+
             `${script}\n return ${name}`,
-        )($arguments, $, lodash, ProxyUtils, scriptResourceCache);
+        )($arguments, $, lodash, ProxyUtils, scriptResourceCache, flowUtils);
     }
 }
