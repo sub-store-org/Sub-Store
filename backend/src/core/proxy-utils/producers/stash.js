@@ -79,6 +79,13 @@ export default function Stash_Producer() {
                             proxy.version = 5;
                         }
                     } else if (proxy.type === 'hysteria') {
+                        // auth_str 将会在未来某个时候删除 但是有的机场不规范
+                        if (
+                            isPresent(proxy, 'auth_str') &&
+                            !isPresent(proxy, 'auth-str')
+                        ) {
+                            proxy['auth-str'] = proxy['auth_str'];
+                        }
                         if (isPresent(proxy, 'alpn')) {
                             proxy.alpn = Array.isArray(proxy.alpn)
                                 ? proxy.alpn
