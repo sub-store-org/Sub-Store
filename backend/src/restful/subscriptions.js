@@ -6,7 +6,7 @@ import {
 } from './errors';
 import { deleteByName, findByName, updateByName } from '@/utils/database';
 import { SUBS_KEY, COLLECTIONS_KEY, ARTIFACTS_KEY } from '@/constants';
-import { getFlowHeaders } from '@/utils/flow';
+import { getFlowHeaders, parseFlowHeaders } from '@/utils/flow';
 import { success, failed } from './response';
 import $ from '@/core/app';
 
@@ -68,20 +68,7 @@ async function getFlowInfo(req, res) {
             return;
         }
 
-        // unit is KB
-        const uploadMatch = flowHeaders.match(/upload=(-?)(\d+)/);
-        const upload = Number(uploadMatch[1] + uploadMatch[2]);
-
-        const downloadMatch = flowHeaders.match(/download=(-?)(\d+)/);
-        const download = Number(downloadMatch[1] + downloadMatch[2]);
-
-        const total = Number(flowHeaders.match(/total=(\d+)/)[1]);
-
-        // optional expire timestamp
-        const match = flowHeaders.match(/expire=(\d+)/);
-        const expires = match ? Number(match[1]) : undefined;
-
-        success(res, { expires, total, usage: { upload, download } });
+        success(res, parseFlowHeaders(flowHeaders));
     } catch (err) {
         failed(
             res,
