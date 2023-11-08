@@ -212,6 +212,14 @@ function lastParse(proxy) {
     if (['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(proxy.type)) {
         proxy.tls = true;
     }
+    if (proxy.network) {
+        let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
+        let transporthost = proxy[`${proxy.network}-opts`]?.headers?.host;
+        if (transporthost && !transportHost) {
+            proxy[`${proxy.network}-opts`].headers.Host = transporthost;
+            delete proxy[`${proxy.network}-opts`].headers.host;
+        }
+    }
     if (proxy.tls && !proxy.sni) {
         if (proxy.network) {
             let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
