@@ -463,8 +463,16 @@ function URI_Trojan() {
     };
 
     const parse = (line) => {
+        let [newLine, name] = line.split(/#(.+)/, 2);
         const parser = getTrojanURIParser();
-        const proxy = parser.parse(line);
+        const proxy = parser.parse(newLine);
+        if (isNotBlank(name)) {
+            try {
+                proxy.name = decodeURIComponent(name);
+            } catch (e) {
+                console.log(e);
+            }
+        }
         return proxy;
     };
     return { name, test, parse };
