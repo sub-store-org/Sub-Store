@@ -183,6 +183,9 @@ export const ProxyUtils = {
     parse,
     process,
     produce,
+    isIPv4,
+    isIPv6,
+    isIP,
 };
 
 function tryParse(parser, line) {
