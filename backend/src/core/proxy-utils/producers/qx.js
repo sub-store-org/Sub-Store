@@ -83,6 +83,12 @@ function shadowsocks(proxy) {
     // udp
     appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
+    // server_check_url
+    result.appendIfPresent(
+        `,server_check_url=${proxy['test-url']}`,
+        'test-url',
+    );
+
     // tag
     append(`,tag=${proxy.name}`);
 
@@ -114,6 +120,12 @@ function shadowsocksr(proxy) {
 
     // udp
     appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // server_check_url
+    result.appendIfPresent(
+        `,server_check_url=${proxy['test-url']}`,
+        'test-url',
+    );
 
     // tag
     append(`,tag=${proxy.name}`);
@@ -172,6 +184,12 @@ function trojan(proxy) {
 
     // udp
     appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // server_check_url
+    result.appendIfPresent(
+        `,server_check_url=${proxy['test-url']}`,
+        'test-url',
+    );
 
     // tag
     append(`,tag=${proxy.name}`);
@@ -257,6 +275,12 @@ function vmess(proxy) {
     // udp
     appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
+    // server_check_url
+    result.appendIfPresent(
+        `,server_check_url=${proxy['test-url']}`,
+        'test-url',
+    );
+
     // tag
     append(`,tag=${proxy.name}`);
 
@@ -299,6 +323,12 @@ function http(proxy) {
     // udp
     appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
+    // server_check_url
+    result.appendIfPresent(
+        `,server_check_url=${proxy['test-url']}`,
+        'test-url',
+    );
+
     // tag
     append(`,tag=${proxy.name}`);
 
@@ -340,6 +370,12 @@ function socks5(proxy) {
 
     // udp
     appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // server_check_url
+    result.appendIfPresent(
+        `,server_check_url=${proxy['test-url']}`,
+        'test-url',
+    );
 
     // tag
     append(`,tag=${proxy.name}`);

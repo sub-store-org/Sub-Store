@@ -519,6 +519,10 @@ function Clash_All() {
             }
         }
 
+        if (proxy['benchmark-url']) {
+            proxy['test-url'] = proxy['benchmark-url'];
+        }
+
         return proxy;
     };
     return { name, test, parse };
