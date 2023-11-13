@@ -43,13 +43,13 @@ start = (trojan/shadowsocks/vmess/http/socks5) {
 }
 
 trojan = "trojan" equals address
-    (password/over_tls/tls_host/tls_fingerprint/tls_verification/obfs/obfs_host/obfs_uri/tag/udp_relay/udp_over_tcp/fast_open/others)* {
+    (password/over_tls/tls_host/tls_fingerprint/tls_verification/obfs/obfs_host/obfs_uri/tag/udp_relay/udp_over_tcp/fast_open/server_check_url/others)* {
     proxy.type = "trojan";
     handleObfs();
 }
 
 shadowsocks = "shadowsocks" equals address
-    (password/method/obfs_ssr/obfs_ss/obfs_host/obfs_uri/ssr_protocol/ssr_protocol_param/tls_fingerprint/tls_verification/udp_relay/udp_over_tcp/fast_open/tag/others)* {
+    (password/method/obfs_ssr/obfs_ss/obfs_host/obfs_uri/ssr_protocol/ssr_protocol_param/tls_fingerprint/tls_verification/udp_relay/udp_over_tcp/fast_open/tag/server_check_url/others)* {
     if (proxy.protocol) {
         proxy.type = "ssr";
         // handle ssr obfs
@@ -80,7 +80,7 @@ shadowsocks = "shadowsocks" equals address
 }
 
 vmess = "vmess" equals address
-    (uuid/method/over_tls/tls_host/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/others)* {
+    (uuid/method/over_tls/tls_host/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "none";
     if (proxy.aead) {
@@ -92,12 +92,12 @@ vmess = "vmess" equals address
 }
 
 http = "http" equals address 
-    (username/password/over_tls/tls_host/tls_fingerprint/tls_verification/tag/fast_open/udp_relay/udp_over_tcp/others)*{
+    (username/password/over_tls/tls_host/tls_fingerprint/tls_verification/tag/fast_open/udp_relay/udp_over_tcp/server_check_url/others)*{
     proxy.type = "http";
 }
 
 socks5 = "socks5" equals address
-    (username/password/password/over_tls/tls_host/tls_fingerprint/tls_verification/tag/fast_open/udp_relay/udp_over_tcp/others)* {
+    (username/password/password/over_tls/tls_host/tls_fingerprint/tls_verification/tag/fast_open/udp_relay/udp_over_tcp/server_check_url/others)* {
     proxy.type = "socks5";
 }
     
@@ -165,6 +165,8 @@ obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = uri; }
 
 ssr_protocol = comma "ssr-protocol" equals protocol:("origin"/"auth_sha1_v4"/"auth_aes128_md5"/"auth_aes128_sha1"/"auth_chain_a"/"auth_chain_b") { proxy.protocol = protocol; return protocol; }
 ssr_protocol_param = comma "ssr-protocol-param" equals param:$[^=,]+ { proxy["protocol-param"] = param; }
+
+server_check_url = comma "server_check_url" equals param:$[^=,]+ { proxy["test-url"] = param; }
 
 uri = $[^,]+
 
