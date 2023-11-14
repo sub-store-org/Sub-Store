@@ -71,7 +71,12 @@ async function process(proxies, operators = [], targetPlatform, source) {
         if (item.type.indexOf('Script') !== -1) {
             const { mode, content } = item.args;
             if (mode === 'link') {
-                const url = content;
+                let noCache;
+                let url = content;
+                if (url.endsWith('#noCache')) {
+                    url = url.replace(/#noCache$/, '');
+                    noCache = true;
+                }
                 // extract link arguments
                 const rawArgs = url.split('#');
                 if (rawArgs.length > 1) {
@@ -93,7 +98,9 @@ async function process(proxies, operators = [], targetPlatform, source) {
 
                 // if this is a remote script, download it
                 try {
-                    script = await download(url.split('#')[0]);
+                    script = await download(
+                        `${url.split('#')[0]}${noCache ? '#noCache' : ''}`,
+                    );
                     // $.info(`Script loaded: >>>\n ${script}`);
                 } catch (err) {
                     $.error(
