@@ -22,14 +22,18 @@ export default function register($app) {
     $app.get('/api/sync/artifact/:name', syncArtifact);
 }
 
-async function produceArtifact({ type, name, platform }) {
+async function produceArtifact({ type, name, platform, url, ua, content }) {
     platform = platform || 'JSON';
 
     if (type === 'subscription') {
         const allSubs = $.read(SUBS_KEY);
         const sub = findByName(allSubs, name);
         let raw;
-        if (sub.source === 'local') {
+        if (url) {
+            raw = await download(url, ua);
+        } else if (content) {
+            raw = content;
+        } else if (sub.source === 'local') {
             raw = sub.content;
         } else {
             raw = await download(sub.url, sub.ua);
