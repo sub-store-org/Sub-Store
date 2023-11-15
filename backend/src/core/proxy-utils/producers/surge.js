@@ -47,6 +47,16 @@ function shadowsocks(proxy) {
     result.append(`,encrypt-method=${proxy.cipher}`);
     result.appendIfPresent(`,password=${proxy.password}`, 'password');
 
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
+
     // obfs
     if (isPresent(proxy, 'plugin')) {
         if (proxy.plugin === 'obfs') {
@@ -103,6 +113,16 @@ function trojan(proxy) {
     const result = new Result(proxy);
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,password=${proxy.password}`, 'password');
+
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
 
     // transport
     handleTransport(result, proxy);
@@ -162,6 +182,16 @@ function vmess(proxy) {
     const result = new Result(proxy);
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,username=${proxy.uuid}`, 'uuid');
+
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
 
     // transport
     handleTransport(result, proxy);
@@ -231,6 +261,16 @@ function http(proxy) {
     result.appendIfPresent(`,${proxy.username}`, 'username');
     result.appendIfPresent(`,${proxy.password}`, 'password');
 
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
+
     // tls fingerprint
     result.appendIfPresent(
         `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
@@ -285,6 +325,16 @@ function socks5(proxy) {
     result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,${proxy.username}`, 'username');
     result.appendIfPresent(`,${proxy.password}`, 'password');
+
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
 
     // tls fingerprint
     result.appendIfPresent(
@@ -341,6 +391,16 @@ function snell(proxy) {
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,version=${proxy.version}`, 'version');
     result.appendIfPresent(`,psk=${proxy.psk}`, 'psk');
+
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
 
     // obfs
     result.appendIfPresent(
@@ -412,6 +472,11 @@ function tuic(proxy) {
     result.appendIfPresent(
         `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
         'ip-version',
+    );
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
     );
 
     // tls verification
