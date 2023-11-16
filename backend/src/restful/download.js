@@ -20,14 +20,17 @@ async function downloadSubscription(req, res) {
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
     $.info(`正在下载订阅：${name}`);
-    const { url, ua, content } = req.query;
+    let { url, ua, content } = req.query;
     if (url) {
+        url = decodeURIComponent(url);
         $.info(`指定 url: ${url}`);
     }
     if (ua) {
+        ua = decodeURIComponent(ua);
         $.info(`指定 ua: ${ua}`);
     }
     if (content) {
+        content = decodeURIComponent(content);
         $.info(`指定 content: ${content}`);
     }
 
