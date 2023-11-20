@@ -141,6 +141,14 @@ export default function Stash_Producer() {
                             proxy['up-speed'] = proxy.up;
                             delete proxy.up;
                         }
+                        if (isPresent(proxy, 'down-speed')) {
+                            proxy['down-speed'] =
+                                `${proxy['down-speed']}`.match(/\d+/)?.[0] || 0;
+                        }
+                        if (isPresent(proxy, 'up-speed')) {
+                            proxy['up-speed'] =
+                                `${proxy['up-speed']}`.match(/\d+/)?.[0] || 0;
+                        }
                     } else if (proxy.type === 'wireguard') {
                         proxy.keepalive =
                             proxy.keepalive ?? proxy['persistent-keepalive'];
