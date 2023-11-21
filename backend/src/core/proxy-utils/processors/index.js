@@ -451,7 +451,9 @@ function ResolveDomainOperator({ provider }) {
             const limit = 15; // more than 20 concurrency may result in surge TCP connection shortage.
             const totalDomain = [
                 ...new Set(
-                    proxies.filter((p) => !isIP(p.server)).map((c) => c.server),
+                    proxies
+                        .filter((p) => !isIP(p.server) && !p['no-resolve'])
+                        .map((c) => c.server),
                 ),
             ];
             const totalBatch = Math.ceil(totalDomain.length / limit);
@@ -475,8 +477,15 @@ function ResolveDomainOperator({ provider }) {
                 }
                 await Promise.all(currentBatch);
             }
-            proxies.forEach((proxy) => {
-                proxy.server = results[proxy.server] || proxy.server;
+            proxies.forEach((p) => {
+                if (!p['no-resolve']) {
+                    if (results[p.server]) {
+                        p.server = results[p.server];
+                        p.resolved = true;
+                    } else {
+                        p.resolved = false;
+                    }
+                }
             });
 
             return proxies;
