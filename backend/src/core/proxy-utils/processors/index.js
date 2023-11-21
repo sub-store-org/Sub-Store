@@ -451,7 +451,9 @@ function ResolveDomainOperator({ provider }) {
             const limit = 15; // more than 20 concurrency may result in surge TCP connection shortage.
             const totalDomain = [
                 ...new Set(
-                    proxies.filter((p) => !isIP(p.server)).map((c) => c.server),
+                    proxies
+                        .filter((p) => !isIP(p.server) && !p['no-resolve'])
+                        .map((c) => c.server),
                 ),
             ];
             const totalBatch = Math.ceil(totalDomain.length / limit);
