@@ -15,8 +15,13 @@ import registerMiscRoutes from './miscs';
 import registerNodeInfoRoutes from './node-info';
 
 export default function serve() {
-    const $app = express({ substore: $ });
-
+    let port;
+    let host;
+    if ($.env.isNode) {
+        port = eval('process.env.SUB_STORE_BACKEND_API_PORT');
+        host = eval('process.env.SUB_STORE_BACKEND_API_HOST');
+    }
+    const $app = express({ substore: $, port, host });
     // register routes
     registerCollectionRoutes($app);
     registerSubscriptionRoutes($app);
