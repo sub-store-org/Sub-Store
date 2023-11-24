@@ -1,4 +1,4 @@
-import { FILES_KEY, MODULES_KEY } from '@/constants';
+import { FILES_KEY, MODULES_KEY, SETTINGS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { HTTP, ENV } from '@/vendor/open-api';
 import { hex_md5 } from '@/vendor/md5';
@@ -45,7 +45,8 @@ export default async function download(url, ua) {
     }
 
     const { isNode } = ENV();
-    ua = ua || 'Quantumult%20X/1.0.29 (iPhone14,5; iOS 15.4.1)';
+    const { defaultUserAgent } = $.read(SETTINGS_KEY);
+    ua = ua || defaultUserAgent || 'clash.meta';
     const id = hex_md5(ua + url);
     if (!isNode && tasks.has(id)) {
         return tasks.get(id);
@@ -63,6 +64,7 @@ export default async function download(url, ua) {
         if (!$arguments?.noCache && cached) {
             resolve(cached);
         } else {
+            $.info(`Downloading...\nUser-Agent: ${ua}\nURL: ${url}`);
             http.get(url)
                 .then((resp) => {
                     const body = resp.body;
