@@ -22,14 +22,24 @@ export default function register($app) {
     $app.get('/api/sync/artifact/:name', syncArtifact);
 }
 
-async function produceArtifact({ type, name, platform, url, ua, content }) {
+async function produceArtifact({
+    type,
+    name,
+    platform,
+    url,
+    ua,
+    content,
+    mergeSources,
+}) {
     platform = platform || 'JSON';
 
     if (type === 'subscription') {
         const allSubs = $.read(SUBS_KEY);
         const sub = findByName(allSubs, name);
         let raw;
-        if (url) {
+        if (content && !['localFirst', 'remoteFirst'].includes(mergeSources)) {
+            raw = content;
+        } else if (url) {
             raw = await Promise.all(
                 url
                     .split(/[\r\n]+/)
@@ -37,9 +47,15 @@ async function produceArtifact({ type, name, platform, url, ua, content }) {
                     .filter((i) => i.length)
                     .map((url) => download(url, ua)),
             );
-        } else if (content) {
-            raw = content;
-        } else if (sub.source === 'local') {
+            if (mergeSources === 'localFirst') {
+                raw.unshift(content);
+            } else if (mergeSources === 'remoteFirst') {
+                raw.push(content);
+            }
+        } else if (
+            sub.source === 'local' &&
+            !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
+        ) {
             raw = sub.content;
         } else {
             raw = await Promise.all(
@@ -49,6 +65,11 @@ async function produceArtifact({ type, name, platform, url, ua, content }) {
                     .filter((i) => i.length)
                     .map((url) => download(url, sub.ua)),
             );
+            if (sub.mergeSources === 'localFirst') {
+                raw.unshift(sub.content);
+            } else if (sub.mergeSources === 'remoteFirst') {
+                raw.push(sub.content);
+            }
         }
         // parse proxies
         let proxies = (Array.isArray(raw) ? raw : [raw])
@@ -102,7 +123,12 @@ async function produceArtifact({ type, name, platform, url, ua, content }) {
                 try {
                     $.info(`正在处理子订阅：${sub.name}...`);
                     let raw;
-                    if (sub.source === 'local') {
+                    if (
+                        sub.source === 'local' &&
+                        !['localFirst', 'remoteFirst'].includes(
+                            sub.mergeSources,
+                        )
+                    ) {
                         raw = sub.content;
                     } else {
                         raw = await await Promise.all(
@@ -112,6 +138,11 @@ async function produceArtifact({ type, name, platform, url, ua, content }) {
                                 .filter((i) => i.length)
                                 .map((url) => download(url, sub.ua)),
                         );
+                        if (sub.mergeSources === 'localFirst') {
+                            raw.unshift(sub.content);
+                        } else if (sub.mergeSources === 'remoteFirst') {
+                            raw.push(sub.content);
+                        }
                     }
                     // parse proxies
                     let currentProxies = (Array.isArray(raw) ? raw : [raw])
