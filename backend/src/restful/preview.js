@@ -20,7 +20,13 @@ async function compareSub(req, res) {
             content = sub.content;
         } else {
             try {
-                content = await download(sub.url, sub.ua);
+                content = await Promise.all(
+                    sub.url
+                        .split(/[\r\n]+/)
+                        .map((i) => i.trim())
+                        .filter((i) => i.length)
+                        .map((url) => download(url, sub.ua)),
+                );
             } catch (err) {
                 failed(
                     res,
@@ -34,7 +40,9 @@ async function compareSub(req, res) {
             }
         }
         // parse proxies
-        const original = ProxyUtils.parse(content);
+        const original = (Array.isArray(content) ? content : [content])
+            .map((i) => ProxyUtils.parse(i))
+            .flat();
 
         // add id
         original.forEach((proxy, i) => {
@@ -80,10 +88,18 @@ async function compareCollection(req, res) {
                     if (sub.source === 'local') {
                         raw = sub.content;
                     } else {
-                        raw = await download(sub.url, sub.ua);
+                        raw = await Promise.all(
+                            sub.url
+                                .split(/[\r\n]+/)
+                                .map((i) => i.trim())
+                                .filter((i) => i.length)
+                                .map((url) => download(url, sub.ua)),
+                        );
                     }
                     // parse proxies
-                    let currentProxies = ProxyUtils.parse(raw);
+                    let currentProxies = (Array.isArray(raw) ? raw : [raw])
+                        .map((i) => ProxyUtils.parse(i))
+                        .flat();
 
                     currentProxies.forEach((proxy) => {
                         proxy.subName = sub.name;

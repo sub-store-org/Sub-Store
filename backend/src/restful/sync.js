@@ -30,16 +30,31 @@ async function produceArtifact({ type, name, platform, url, ua, content }) {
         const sub = findByName(allSubs, name);
         let raw;
         if (url) {
-            raw = await download(url, ua);
+            raw = await Promise.all(
+                url
+                    .split(/[\r\n]+/)
+                    .map((i) => i.trim())
+                    .filter((i) => i.length)
+                    .map((url) => download(url, ua)),
+            );
         } else if (content) {
             raw = content;
         } else if (sub.source === 'local') {
             raw = sub.content;
         } else {
-            raw = await download(sub.url, sub.ua);
+            raw = await Promise.all(
+                sub.url
+                    .split(/[\r\n]+/)
+                    .map((i) => i.trim())
+                    .filter((i) => i.length)
+                    .map((url) => download(url, sub.ua)),
+            );
         }
         // parse proxies
-        let proxies = ProxyUtils.parse(raw);
+        let proxies = (Array.isArray(raw) ? raw : [raw])
+            .map((i) => ProxyUtils.parse(i))
+            .flat();
+
         proxies.forEach((proxy) => {
             proxy.subName = sub.name;
         });
@@ -90,10 +105,18 @@ async function produceArtifact({ type, name, platform, url, ua, content }) {
                     if (sub.source === 'local') {
                         raw = sub.content;
                     } else {
-                        raw = await download(sub.url, sub.ua);
+                        raw = await await Promise.all(
+                            sub.url
+                                .split(/[\r\n]+/)
+                                .map((i) => i.trim())
+                                .filter((i) => i.length)
+                                .map((url) => download(url, sub.ua)),
+                        );
                     }
                     // parse proxies
-                    let currentProxies = ProxyUtils.parse(raw);
+                    let currentProxies = (Array.isArray(raw) ? raw : [raw])
+                        .map((i) => ProxyUtils.parse(i))
+                        .flat();
 
                     currentProxies.forEach((proxy) => {
                         proxy.subName = sub.name;
