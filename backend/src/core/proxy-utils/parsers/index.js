@@ -33,7 +33,9 @@ function URI_SS() {
         const serverAndPort = serverAndPortArray[1];
         const portIdx = serverAndPort.lastIndexOf(':');
         proxy.server = serverAndPort.substring(0, portIdx);
-        proxy.port = serverAndPort.substring(portIdx + 1);
+        proxy.port = `${serverAndPort.substring(portIdx + 1)}`.match(
+            /\d+/,
+        )?.[0];
 
         const userInfo = userInfoStr.split(':');
         proxy.cipher = userInfo[0];
