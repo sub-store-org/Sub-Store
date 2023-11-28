@@ -44,7 +44,7 @@ jobs:
         run: |
           cd backend
           SUBSTORE_RELEASE=`node --eval="process.stdout.write(require('./package.json').version)"`
-          echo "::set-output name=release_tag::$SUBSTORE_RELEASE"
+          echo "release_tag=$SUBSTORE_RELEASE" >> $GITHUB_OUTPUT
       - name: Prepare release
         run: |
           cd backend

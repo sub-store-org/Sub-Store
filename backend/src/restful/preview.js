@@ -16,7 +16,10 @@ async function compareSub(req, res) {
         const sub = req.body;
         const target = req.query.target || 'JSON';
         let content;
-        if (sub.source === 'local') {
+        if (
+            sub.source === 'local' &&
+            !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
+        ) {
             content = sub.content;
         } else {
             try {
@@ -37,6 +40,11 @@ async function compareSub(req, res) {
                     ),
                 );
                 return;
+            }
+            if (sub.mergeSources === 'localFirst') {
+                content.unshift(sub.content);
+            } else if (sub.mergeSources === 'remoteFirst') {
+                content.push(sub.content);
             }
         }
         // parse proxies
@@ -85,7 +93,12 @@ async function compareCollection(req, res) {
                 const sub = findByName(allSubs, name);
                 try {
                     let raw;
-                    if (sub.source === 'local') {
+                    if (
+                        sub.source === 'local' &&
+                        !['localFirst', 'remoteFirst'].includes(
+                            sub.mergeSources,
+                        )
+                    ) {
                         raw = sub.content;
                     } else {
                         raw = await Promise.all(
@@ -95,6 +108,11 @@ async function compareCollection(req, res) {
                                 .filter((i) => i.length)
                                 .map((url) => download(url, sub.ua)),
                         );
+                        if (sub.mergeSources === 'localFirst') {
+                            raw.unshift(sub.content);
+                        } else if (sub.mergeSources === 'remoteFirst') {
+                            raw.push(sub.content);
+                        }
                     }
                     // parse proxies
                     let currentProxies = (Array.isArray(raw) ? raw : [raw])

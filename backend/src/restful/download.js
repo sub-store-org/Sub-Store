@@ -20,18 +20,22 @@ async function downloadSubscription(req, res) {
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
     $.info(`正在下载订阅：${name}`);
-    let { url, ua, content } = req.query;
+    let { url, ua, content, mergeSources } = req.query;
     if (url) {
         url = decodeURIComponent(url);
-        $.info(`指定 url: ${url}`);
+        $.info(`指定远程订阅 URL: ${url}`);
     }
     if (ua) {
         ua = decodeURIComponent(ua);
-        $.info(`指定 ua: ${ua}`);
+        $.info(`指定远程订阅 User-Agent: ${ua}`);
     }
     if (content) {
         content = decodeURIComponent(content);
-        $.info(`指定 content: ${content}`);
+        $.info(`指定本地订阅: ${content}`);
+    }
+    if (mergeSources) {
+        mergeSources = decodeURIComponent(mergeSources);
+        $.info(`指定合并来源: ${mergeSources}`);
     }
 
     const allSubs = $.read(SUBS_KEY);
@@ -45,6 +49,7 @@ async function downloadSubscription(req, res) {
                 url,
                 ua,
                 content,
+                mergeSources,
             });
 
             if (sub.source !== 'local' || url) {
