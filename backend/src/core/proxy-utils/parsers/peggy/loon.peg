@@ -42,7 +42,7 @@ shadowsocksr = tag equals "shadowsocksr"i address method password (ssr_protocol/
     // handle ssr obfs
     proxy.obfs = obfs.type;
 }
-shadowsocks = tag equals "shadowsocks"i address method password (obfs_ss/obfs_host/obfs_uri/fast_open/udp_relay/others)* {
+shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs_hostv)? (obfs_ss/obfs_host/obfs_uri/fast_open/udp_relay/others)* {
     proxy.type = "ss";
     // handle ss obfs
     if (obfs.type == "http" || obfs.type === "tls") {
@@ -142,6 +142,9 @@ username = & {
 } { proxy.username = $.username; }
 password = comma '"' match:[^"]* '"' { proxy.password = match.join(""); }
 uuid = comma '"' match:[^"]+ '"' { proxy.uuid = match.join(""); }
+
+obfs_typev = comma type:("http"/"tls") { obfs.type = type; }
+obfs_hostv = comma match:[^,]+ { obfs.host = match.join(""); }
 
 obfs_ss = comma "obfs-name" equals type:("http"/"tls") { obfs.type = type; }
 
