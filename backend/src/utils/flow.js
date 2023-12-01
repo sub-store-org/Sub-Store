@@ -3,7 +3,10 @@ import { HTTP } from '@/vendor/open-api';
 export async function getFlowHeaders(url) {
     const http = HTTP();
     const { headers } = await http.get({
-        url,
+        url: url
+            .split(/[\r\n]+/)
+            .map((i) => i.trim())
+            .filter((i) => i.length)[0],
         headers: {
             'User-Agent': 'Quantumult%20X/1.0.30 (iPhone14,2; iOS 15.6)',
         },
