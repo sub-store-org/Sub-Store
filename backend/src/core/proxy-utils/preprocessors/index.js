@@ -25,7 +25,10 @@ function Base64Encoded() {
     ];
 
     const test = function (raw) {
-        return keys.some((k) => raw.indexOf(k) !== -1);
+        return (
+            !/^\w+:\/\/\w+/im.test(raw) &&
+            keys.some((k) => raw.indexOf(k) !== -1)
+        );
     };
     const parse = function (raw) {
         raw = Base64.decode(raw);
