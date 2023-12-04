@@ -22,12 +22,26 @@ export default function register($app) {
     // Storage management
     $app.route('/api/storage')
         .get((req, res) => {
-            res.json($.read('#sub-store'));
+            res.set('content-type', 'application/json')
+                .set(
+                    'content-disposition',
+                    'attachment; filename="sub-store.json"',
+                )
+                .send(
+                    $.env.isNode
+                        ? JSON.stringify($.cache)
+                        : $.read('#sub-store'),
+                );
         })
         .post((req, res) => {
-            const data = req.body;
-            $.write(JSON.stringify(data), '#sub-store');
-            res.end();
+            const { content } = req.body;
+            $.write(content, '#sub-store');
+            if ($.env.isNode) {
+                $.cache = JSON.parse(content);
+                $.persistCache();
+            }
+            migrate();
+            success(res);
         });
 
     // Redirect sub.store to vercel webpage

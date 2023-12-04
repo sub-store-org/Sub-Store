@@ -10,7 +10,12 @@ export default function register($app) {
 }
 
 async function getSettings(req, res) {
-    const settings = $.read(SETTINGS_KEY);
+    let settings = $.read(SETTINGS_KEY);
+    if (!settings) {
+        settings = {};
+        $.write(settings, SETTINGS_KEY);
+    }
+
     if (!settings.avatarUrl) await updateGitHubAvatar();
     if (!settings.artifactStore) await updateArtifactStore();
     success(res, settings);
