@@ -40,7 +40,9 @@ function Base64Encoded() {
 function Clash() {
     const name = 'Clash Pre-processor';
     const test = function (raw) {
-        return /proxies/.test(raw);
+        if (!/proxies/.test(raw)) return false;
+        const content = safeLoad(raw);
+        return content.proxies && Array.isArray(content.proxies);
     };
     const parse = function (raw) {
         // Clash YAML format
@@ -108,4 +110,4 @@ function FullConfig() {
     return { name, test, parse };
 }
 
-export default [HTML(), Base64Encoded(), Clash(), SSD(), FullConfig()];
+export default [HTML(), Clash(), Base64Encoded(), SSD(), FullConfig()];
