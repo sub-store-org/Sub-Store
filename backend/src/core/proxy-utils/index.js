@@ -139,7 +139,7 @@ async function process(proxies, operators = [], targetPlatform, source) {
     return proxies;
 }
 
-function produce(proxies, targetPlatform) {
+function produce(proxies, targetPlatform, type) {
     const producer = PROXY_PRODUCERS[targetPlatform];
     if (!producer) {
         throw new Error(`Target platform: ${targetPlatform} is not supported!`);
@@ -157,7 +157,7 @@ function produce(proxies, targetPlatform) {
         return proxies
             .map((proxy) => {
                 try {
-                    let line = producer.produce(proxy);
+                    let line = producer.produce(proxy, type);
                     if (
                         line.length > 0 &&
                         line.includes('__SubStoreLocalPort__')
@@ -182,7 +182,7 @@ function produce(proxies, targetPlatform) {
             .filter((line) => line.length > 0)
             .join('\n');
     } else if (producer.type === 'ALL') {
-        return producer.produce(proxies);
+        return producer.produce(proxies, type);
     }
 }
 
