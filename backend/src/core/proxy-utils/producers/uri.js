@@ -222,6 +222,39 @@ export default function URI_Producer() {
                     proxy['skip-cert-verify'] ? '&allowInsecure=1' : ''
                 }${trojanTransport}#${encodeURIComponent(proxy.name)}`;
                 break;
+            case 'hysteria2':
+                let hysteria2params = [];
+                if (proxy['skip-cert-verify']) {
+                    hysteria2params.push(`insecure=1`);
+                }
+                if (proxy.obfs) {
+                    hysteria2params.push(
+                        `obfs=${encodeURIComponent(proxy.obfs)}`,
+                    );
+                    if (proxy['obfs-password']) {
+                        hysteria2params.push(
+                            `obfs-password=${encodeURIComponent(
+                                proxy['obfs-password'],
+                            )}`,
+                        );
+                    }
+                }
+                if (proxy.sni) {
+                    hysteria2params.push(
+                        `sni=${encodeURIComponent(proxy.sni)}`,
+                    );
+                }
+                if (proxy.fingerprint) {
+                    hysteria2params.push(
+                        `pinSHA256=${encodeURIComponent(proxy.fingerprint)}`,
+                    );
+                }
+                result = `hysteria2://${proxy.password}@${proxy.server}:${
+                    proxy.port
+                }?${hysteria2params.join('&')}#${encodeURIComponent(
+                    proxy.name,
+                )}`;
+                break;
         }
         return result;
     };
