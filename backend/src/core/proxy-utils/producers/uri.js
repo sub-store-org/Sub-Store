@@ -244,9 +244,9 @@ export default function URI_Producer() {
                         `sni=${encodeURIComponent(proxy.sni)}`,
                     );
                 }
-                if (proxy.fingerprint) {
+                if (proxy['tls-fingerprint']) {
                     hysteria2params.push(
-                        `pinSHA256=${encodeURIComponent(proxy.fingerprint)}`,
+                        `pinSHA256=${encodeURIComponent(proxy['tls-fingerprint'])}`,
                     );
                 }
                 result = `hysteria2://${proxy.password}@${proxy.server}:${
