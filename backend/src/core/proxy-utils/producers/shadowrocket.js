@@ -84,7 +84,8 @@ export default function ShadowRocket_Producer() {
                     } else if (proxy.type === 'hysteria2') {
                         if (
                             proxy['obfs-password'] &&
-                            proxy.obfs == 'salamander') {
+                            proxy.obfs == 'salamander'
+                        ) {
                             proxy.obfs = proxy['obfs-password'];
                             delete proxy['obfs-password'];
                         }
