@@ -87,64 +87,69 @@ async function compareCollection(req, res) {
         const collection = req.body;
         const subnames = collection.subscriptions;
         const results = {};
-
+        let hasError;
         await Promise.all(
             subnames.map(async (name) => {
-                const sub = findByName(allSubs, name);
-                try {
-                    let raw;
-                    if (
-                        sub.source === 'local' &&
-                        !['localFirst', 'remoteFirst'].includes(
-                            sub.mergeSources,
-                        )
-                    ) {
-                        raw = sub.content;
-                    } else {
-                        raw = await Promise.all(
-                            sub.url
-                                .split(/[\r\n]+/)
-                                .map((i) => i.trim())
-                                .filter((i) => i.length)
-                                .map((url) => download(url, sub.ua)),
+                if (!hasError) {
+                    const sub = findByName(allSubs, name);
+                    try {
+                        let raw;
+                        if (
+                            sub.source === 'local' &&
+                            !['localFirst', 'remoteFirst'].includes(
+                                sub.mergeSources,
+                            )
+                        ) {
+                            raw = sub.content;
+                        } else {
+                            raw = await Promise.all(
+                                sub.url
+                                    .split(/[\r\n]+/)
+                                    .map((i) => i.trim())
+                                    .filter((i) => i.length)
+                                    .map((url) => download(url, sub.ua)),
+                            );
+                            if (sub.mergeSources === 'localFirst') {
+                                raw.unshift(sub.content);
+                            } else if (sub.mergeSources === 'remoteFirst') {
+                                raw.push(sub.content);
+                            }
+                        }
+                        // parse proxies
+                        let currentProxies = (Array.isArray(raw) ? raw : [raw])
+                            .map((i) => ProxyUtils.parse(i))
+                            .flat();
+
+                        currentProxies.forEach((proxy) => {
+                            proxy.subName = sub.name;
+                            proxy.collectionName = collection.name;
+                        });
+
+                        // apply processors
+                        currentProxies = await ProxyUtils.process(
+                            currentProxies,
+                            sub.process || [],
+                            'JSON',
+                            { [sub.name]: sub, _collection: collection },
                         );
-                        if (sub.mergeSources === 'localFirst') {
-                            raw.unshift(sub.content);
-                        } else if (sub.mergeSources === 'remoteFirst') {
-                            raw.push(sub.content);
+                        results[name] = currentProxies;
+                    } catch (err) {
+                        if (!hasError) {
+                            hasError = true;
+                            failed(
+                                res,
+                                new InternalServerError(
+                                    'PROCESS_FAILED',
+                                    `处理子订阅 ${name} 失败`,
+                                    `Reason: ${err}`,
+                                ),
+                            );
                         }
                     }
-                    // parse proxies
-                    let currentProxies = (Array.isArray(raw) ? raw : [raw])
-                        .map((i) => ProxyUtils.parse(i))
-                        .flat();
-
-                    currentProxies.forEach((proxy) => {
-                        proxy.subName = sub.name;
-                        proxy.collectionName = collection.name;
-                    });
-
-                    // apply processors
-                    currentProxies = await ProxyUtils.process(
-                        currentProxies,
-                        sub.process || [],
-                        'JSON',
-                        { [sub.name]: sub, _collection: collection },
-                    );
-                    results[name] = currentProxies;
-                } catch (err) {
-                    failed(
-                        res,
-                        new InternalServerError(
-                            'PROCESS_FAILED',
-                            `处理子订阅 ${name} 失败`,
-                            `Reason: ${err}`,
-                        ),
-                    );
                 }
             }),
         );
-
+        if (hasError) return;
         // merge proxies with the original order
         const original = Array.prototype.concat.apply(
             [],
