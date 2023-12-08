@@ -1,10 +1,14 @@
 /* eslint-disable no-case-declarations */
 import { Base64 } from 'js-base64';
+import { isIPv6 } from '@/utils';
 
 export default function URI_Producer() {
     const type = 'SINGLE';
     const produce = (proxy) => {
         let result = '';
+        if (proxy.server && isIPv6(proxy.server)) {
+            proxy.server = `[${proxy.server}]`;
+        }
         switch (proxy.type) {
             case 'ss':
                 const userinfo = `${proxy.cipher}:${proxy.password}`;
@@ -246,7 +250,9 @@ export default function URI_Producer() {
                 }
                 if (proxy['tls-fingerprint']) {
                     hysteria2params.push(
-                        `pinSHA256=${encodeURIComponent(proxy['tls-fingerprint'])}`,
+                        `pinSHA256=${encodeURIComponent(
+                            proxy['tls-fingerprint'],
+                        )}`,
                     );
                 }
                 if (proxy.tfo) {

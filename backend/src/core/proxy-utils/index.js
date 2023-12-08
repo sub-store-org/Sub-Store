@@ -214,6 +214,12 @@ function safeMatch(parser, line) {
 }
 
 function lastParse(proxy) {
+    if (proxy.server) {
+        proxy.server = proxy.server
+            .trim()
+            .replace(/^\[/, '')
+            .replace(/\]$/, '');
+    }
     if (proxy.type === 'trojan') {
         if (proxy.network === 'tcp') {
             delete proxy.network;
