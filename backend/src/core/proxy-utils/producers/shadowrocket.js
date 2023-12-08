@@ -81,6 +81,24 @@ export default function ShadowRocket_Producer() {
                         ) {
                             proxy['fast-open'] = proxy.tfo;
                         }
+                    } else if (proxy.type === 'hysteria2') {
+                        if (
+                            proxy['obfs-password'] &&
+                            proxy.obfs == 'salamander') {
+                            proxy.obfs = proxy['obfs-password'];
+                            delete proxy['obfs-password'];
+                        }
+                        if (isPresent(proxy, 'alpn')) {
+                            proxy.alpn = Array.isArray(proxy.alpn)
+                                ? proxy.alpn
+                                : [proxy.alpn];
+                        }
+                        if (
+                            isPresent(proxy, 'tfo') &&
+                            !isPresent(proxy, 'fast-open')
+                        ) {
+                            proxy['fast-open'] = proxy.tfo;
+                        }
                     } else if (proxy.type === 'wireguard') {
                         proxy.keepalive =
                             proxy.keepalive ?? proxy['persistent-keepalive'];
