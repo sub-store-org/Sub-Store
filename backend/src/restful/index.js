@@ -37,4 +37,46 @@ export default function serve() {
     registerMiscRoutes($app);
 
     $app.start();
+
+    if ($.env.isNode) {
+        const path = eval(`require("path")`);
+        const fs = eval(`require("fs")`);
+        const fe_port = eval('process.env.SUB_STORE_FRONTEND_PORT') || 3001;
+        const fe_host =
+            eval('process.env.SUB_STORE_FRONTEND_HOST') || host || '::';
+        const fe_path = eval('process.env.SUB_STORE_FRONTEND_PATH');
+        const fe_abs_path = path.resolve(
+            fe_path || path.join(__dirname, 'frontend'),
+        );
+        if (fe_path) {
+            try {
+                fs.accessSync(path.join(fe_abs_path, 'index.html'));
+            } catch (e) {
+                throw new Error(
+                    `[FRONTEND] index.html file not found in ${fe_abs_path}`,
+                );
+            }
+
+            const express_ = eval(`require("express")`);
+            const history = eval(`require("connect-history-api-fallback")`);
+
+            const app = express_();
+
+            const staticFileMiddleware = express_.static(fe_path);
+
+            app.use(staticFileMiddleware);
+            app.use(
+                history({
+                    disableDotRule: true,
+                    verbose: true,
+                }),
+            );
+            app.use(staticFileMiddleware);
+
+            const listener = app.listen(fe_port, fe_host, () => {
+                const { address, port } = listener.address();
+                $.info(`[FRONTEND] ${address}:${port}`);
+            });
+        }
+    }
 }
