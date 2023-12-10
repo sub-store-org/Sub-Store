@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs');
-
 const path = require('path');
+const { build } = require('esbuild');
 
 let content = fs.readFileSync(path.join(__dirname, 'sub-store.min.js'), {
     encoding: 'utf8',
@@ -14,10 +14,12 @@ fs.writeFileSync(path.join(__dirname, 'dist/sub-store.no-bundle.js'), content, {
     encoding: 'utf8',
 });
 
-const { build } = require('estrella');
 build({
-    entry: 'dist/sub-store.no-bundle.js',
-    outfile: 'dist/sub-store.bundle.js',
+    entryPoints: ['dist/sub-store.no-bundle.js'],
     bundle: true,
+    minify: true,
+    sourcemap: true,
     platform: 'node',
+    format: 'cjs',
+    outfile: 'dist/sub-store.bundle.js',
 });
