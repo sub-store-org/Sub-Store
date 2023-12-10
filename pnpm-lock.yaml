@@ -1,0 +1,19 @@
+lockfileVersion: '6.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+dependencies:
+  connect-history-api-fallback:
+    specifier: ^2.0.0
+    version: registry.npmmirror.com/connect-history-api-fallback@2.0.0
+
+packages:
+
+  registry.npmmirror.com/connect-history-api-fallback@2.0.0:
+    resolution: {integrity: sha512-U73+6lQFmfiNPrYbXqr6kZ1i1wiRqXnp2nhMsINseWXO8lDau0LGEffJ8kQi4EjLZympVgRdvqjAgiZ1tgzDDA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/connect-history-api-fallback/-/connect-history-api-fallback-2.0.0.tgz}
+    name: connect-history-api-fallback
+    version: 2.0.0
+    engines: {node: '>=0.8'}
+    dev: false

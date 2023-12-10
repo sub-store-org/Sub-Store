@@ -32,7 +32,7 @@ export default function express({ substore: $, port, host }) {
         app.start = () => {
             const listener = app.listen(port, host, () => {
                 const { address, port } = listener.address();
-                $.info(`Express started on ${address}:${port}`);
+                $.info(`[BACKEND] ${address}:${port}`);
             });
         };
         return app;
