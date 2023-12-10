@@ -11,6 +11,9 @@ dependencies:
   body-parser:
     specifier: ^1.19.0
     version: registry.npmmirror.com/body-parser@1.19.0
+  connect-history-api-fallback:
+    specifier: ^2.0.0
+    version: registry.npmmirror.com/connect-history-api-fallback@2.0.0
   express:
     specifier: ^4.17.1
     version: registry.npmmirror.com/express@4.17.1
@@ -3542,6 +3545,13 @@ packages:
       write-file-atomic: registry.npmmirror.com/write-file-atomic@3.0.3
       xdg-basedir: registry.npmmirror.com/xdg-basedir@4.0.0
     dev: true
+
+  registry.npmmirror.com/connect-history-api-fallback@2.0.0:
+    resolution: {integrity: sha512-U73+6lQFmfiNPrYbXqr6kZ1i1wiRqXnp2nhMsINseWXO8lDau0LGEffJ8kQi4EjLZympVgRdvqjAgiZ1tgzDDA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/connect-history-api-fallback/-/connect-history-api-fallback-2.0.0.tgz}
+    name: connect-history-api-fallback
+    version: 2.0.0
+    engines: {node: '>=0.8'}
+    dev: false
 
   registry.npmmirror.com/console-browserify@1.2.0:
     resolution: {integrity: sha512-ZMkYO/LkF17QvCPqM0gxw8yUzigAOZOSWSHg91FH6orS7vcEj5dVZTidN2fQ14yBSdg97RqhSNwLUXInd52OTA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/console-browserify/-/console-browserify-1.2.0.tgz}
