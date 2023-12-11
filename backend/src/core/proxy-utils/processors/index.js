@@ -605,6 +605,22 @@ function ScriptFilter(script, targetPlatform, $arguments, source) {
             })();
             return output;
         },
+        nodeFunc: async (proxies) => {
+            let output = FULL(proxies.length, true);
+            await (async function () {
+                const filter = createDynamicFunction(
+                    'filter',
+                    `async function filter(proxies = []) {
+                        return proxies.filter(($server = {}) => {
+                          ${script}
+                        })
+                      }`,
+                    $arguments,
+                );
+                output = filter(proxies, targetPlatform, { source, ...env });
+            })();
+            return output;
+        },
     };
 }
 
@@ -635,7 +651,29 @@ async function ApplyFilter(filter, objs) {
     } catch (err) {
         // print log and skip this filter
         $.error(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
-        throw new Error(`脚本过滤失败 ${err.message ?? err}`);
+        let funcErr = '';
+        let funcErrMsg = `${err.message ?? err}`;
+        if (funcErrMsg.includes('$server is not defined')) {
+            funcErr = '';
+        } else {
+            funcErr = `执行 function filter 失败 ${funcErrMsg}; `;
+        }
+        try {
+            selected = await filter.nodeFunc(objs);
+        } catch (err) {
+            $.error(
+                `Cannot apply filter ${filter.name}(node script)! Reason: ${err}`,
+            );
+            let nodeErr = '';
+            let nodeErrMsg = `${err.message ?? err}`;
+            if (funcErr && nodeErrMsg === funcErrMsg) {
+                nodeErr = '';
+                funcErr = `执行失败 ${funcErrMsg}`;
+            } else {
+                nodeErr = `执行节点快捷过滤脚本 失败 ${nodeErr}`;
+            }
+            throw new Error(`脚本过滤 ${funcErr}${nodeErr}`);
+        }
     }
     return objs.filter((_, i) => selected[i]);
 }
