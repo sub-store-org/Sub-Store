@@ -68,23 +68,42 @@ export default function serve() {
 
             const staticFileMiddleware = express_.static(fe_path);
 
-            let be_rewrite = '';
+            let be_api_rewrite = '';
+            let be_download_rewrite = '';
             let be_api = '/api/';
+            let be_download = '/download/';
             if (fe_be_path) {
                 if (!fe_be_path.startsWith('/')) {
                     throw new Error(
                         'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
                     );
                 }
-                be_rewrite = `${fe_be_path === '/' ? '' : fe_be_path}${be_api}`;
+                be_api_rewrite = `${
+                    fe_be_path === '/' ? '' : fe_be_path
+                }${be_api}`;
+                be_download_rewrite = `${
+                    fe_be_path === '/' ? '' : fe_be_path
+                }${be_download}`;
                 app.use(
-                    be_rewrite,
+                    be_api_rewrite,
                     createProxyMiddleware({
                         target: `http://127.0.0.1:${port}`,
                         changeOrigin: true,
                         pathRewrite: (path) => {
-                            return path.startsWith(be_rewrite)
-                                ? path.replace(be_rewrite, be_api)
+                            return path.startsWith(be_api_rewrite)
+                                ? path.replace(be_api_rewrite, be_api)
+                                : path;
+                        },
+                    }),
+                );
+                app.use(
+                    be_download_rewrite,
+                    createProxyMiddleware({
+                        target: `http://127.0.0.1:${port}`,
+                        changeOrigin: true,
+                        pathRewrite: (path) => {
+                            return path.startsWith(be_download_rewrite)
+                                ? path.replace(be_download_rewrite, be_download)
                                 : path;
                         },
                     }),
@@ -106,7 +125,10 @@ export default function serve() {
                 $.info(`[FRONTEND] ${fe_address}:${fe_port}`);
                 if (fe_be_path) {
                     $.info(
-                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_rewrite} -> http://127.0.0.1:${port}${be_api}`,
+                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_api_rewrite} -> http://127.0.0.1:${port}${be_api}`,
+                    );
+                    $.info(
+                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_download_rewrite} -> http://127.0.0.1:${port}${be_download}`,
                     );
                 }
             });
