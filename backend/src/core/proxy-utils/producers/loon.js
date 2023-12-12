@@ -99,7 +99,7 @@ function trojan(proxy) {
         if (proxy.network === 'ws') {
             result.append(`,transport=ws`);
             result.appendIfPresent(
-                `,path=${proxy['ws-opts'].path}`,
+                `,path=${proxy['ws-opts']?.path}`,
                 'ws-opts.path',
             );
             result.appendIfPresent(
