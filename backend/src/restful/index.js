@@ -68,7 +68,10 @@ export default function serve() {
 
             const staticFileMiddleware = express_.static(fe_path);
 
+            let be_rewrite = '';
+            let be_api = '/api/';
             if (fe_be_path) {
+                be_rewrite = `${fe_be_path}/api/`;
                 app.use(
                     fe_be_path,
                     createProxyMiddleware({
@@ -76,7 +79,7 @@ export default function serve() {
                         changeOrigin: true,
                         ws: true,
                         pathRewrite: {
-                            [`^${fe_be_path}/api/`]: '/api/',
+                            [`^${be_rewrite}`]: be_api,
                         },
                     }),
                 );
@@ -97,7 +100,7 @@ export default function serve() {
                 $.info(`[FRONTEND] ${fe_address}:${fe_port}`);
                 if (fe_be_path) {
                     $.info(
-                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${fe_be_path}/api/ -> http://127.0.0.1:${port}/api/`,
+                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_rewrite} -> http://127.0.0.1:${port}${be_api}`,
                     );
                 }
             });
