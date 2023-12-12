@@ -18,8 +18,8 @@ export default function serve() {
     let port;
     let host;
     if ($.env.isNode) {
-        port = eval('process.env.SUB_STORE_BACKEND_API_PORT');
-        host = eval('process.env.SUB_STORE_BACKEND_API_HOST');
+        port = eval('process.env.SUB_STORE_BACKEND_API_PORT') || 3000;
+        host = eval('process.env.SUB_STORE_BACKEND_API_HOST') || '::';
     }
     const $app = express({ substore: $, port, host });
     // register routes
@@ -59,11 +59,15 @@ export default function serve() {
 
             const express_ = eval(`require("express")`);
             const history = eval(`require("connect-history-api-fallback")`);
+            const { createProxyMiddleware } = eval(
+                `require("http-proxy-middleware")`,
+            );
 
             const app = express_();
 
             const staticFileMiddleware = express_.static(fe_path);
 
+            app.use('/api', createProxyMiddleware(`http://127.0.0.1:${port}`));
             app.use(staticFileMiddleware);
             app.use(
                 history({
