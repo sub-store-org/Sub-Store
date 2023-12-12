@@ -41,6 +41,7 @@ export default function serve() {
     if ($.env.isNode) {
         const path = eval(`require("path")`);
         const fs = eval(`require("fs")`);
+        const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
         const fe_port = eval('process.env.SUB_STORE_FRONTEND_PORT') || 3001;
         const fe_host =
             eval('process.env.SUB_STORE_FRONTEND_HOST') || host || '::';
@@ -67,19 +68,38 @@ export default function serve() {
 
             const staticFileMiddleware = express_.static(fe_path);
 
-            app.use('/api', createProxyMiddleware(`http://127.0.0.1:${port}`));
+            if (fe_be_path) {
+                app.use(
+                    fe_be_path,
+                    createProxyMiddleware({
+                        target: `http://127.0.0.1:${port}`,
+                        changeOrigin: true,
+                        ws: true,
+                        pathRewrite: {
+                            [`^${fe_be_path}/api/`]: '/api/',
+                        },
+                    }),
+                );
+            }
+
             app.use(staticFileMiddleware);
             app.use(
                 history({
                     disableDotRule: true,
-                    verbose: true,
+                    verbose: false,
                 }),
             );
             app.use(staticFileMiddleware);
 
             const listener = app.listen(fe_port, fe_host, () => {
-                const { address, port } = listener.address();
-                $.info(`[FRONTEND] ${address}:${port}`);
+                const { address: fe_address, port: fe_port } =
+                    listener.address();
+                $.info(`[FRONTEND] ${fe_address}:${fe_port}`);
+                if (fe_be_path) {
+                    $.info(
+                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${fe_be_path}/api/ -> http://127.0.0.1:${port}/api/`,
+                    );
+                }
             });
         }
     }
