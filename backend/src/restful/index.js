@@ -71,15 +71,21 @@ export default function serve() {
             let be_rewrite = '';
             let be_api = '/api/';
             if (fe_be_path) {
-                be_rewrite = `${fe_be_path}/api/`;
+                if (!fe_be_path.startsWith('/')) {
+                    throw new Error(
+                        'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
+                    );
+                }
+                be_rewrite = `${fe_be_path === '/' ? '' : fe_be_path}${be_api}`;
                 app.use(
-                    fe_be_path,
+                    be_rewrite,
                     createProxyMiddleware({
                         target: `http://127.0.0.1:${port}`,
                         changeOrigin: true,
-                        ws: true,
-                        pathRewrite: {
-                            [`^${be_rewrite}`]: be_api,
+                        pathRewrite: (path) => {
+                            return path.startsWith(be_rewrite)
+                                ? path.replace(be_rewrite, be_api)
+                                : path;
                         },
                     }),
                 );
