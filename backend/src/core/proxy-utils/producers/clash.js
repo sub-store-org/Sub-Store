@@ -7,6 +7,7 @@ export default function Clash_Producer() {
         // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L532
         // github.com/Dreamacro/clash/pull/2891/files
         // filter unsupported proxies
+        // https://clash.wiki/configuration/outbound.html#shadowsocks
         proxies = proxies.filter((proxy) => {
             if (
                 ![
@@ -20,6 +21,23 @@ export default function Clash_Producer() {
                     'trojan',
                     'wireguard',
                 ].includes(proxy.type) ||
+                (proxy.type === 'ss' &&
+                    ![
+                        'aes-128-gcm',
+                        'aes-192-gcm',
+                        'aes-256-gcm',
+                        'aes-128-cfb',
+                        'aes-192-cfb',
+                        'aes-256-cfb',
+                        'aes-128-ctr',
+                        'aes-192-ctr',
+                        'aes-256-ctr',
+                        'rc4-md5',
+                        'chacha20-ietf',
+                        'xchacha20',
+                        'chacha20-ietf-poly1305',
+                        'xchacha20-ietf-poly1305',
+                    ].includes(proxy.cipher)) ||
                 (proxy.type === 'snell' && String(proxy.version) === '4') ||
                 (proxy.type === 'vless' &&
                     (typeof proxy.flow !== 'undefined' ||
