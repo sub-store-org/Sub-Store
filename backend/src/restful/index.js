@@ -1,5 +1,7 @@
 import express from '@/vendor/express';
 import $ from '@/core/app';
+import migrate from '@/utils/migration';
+import download from '@/utils/download';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
@@ -41,6 +43,7 @@ export default function serve() {
     if ($.env.isNode) {
         const path = eval(`require("path")`);
         const fs = eval(`require("fs")`);
+        const data_url = eval('process.env.SUB_STORE_DATA_URL');
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
         const fe_port = eval('process.env.SUB_STORE_FRONTEND_PORT') || 3001;
         const fe_host =
@@ -132,6 +135,24 @@ export default function serve() {
                     );
                 }
             });
+        }
+        if (data_url) {
+            $.info(`[BACKEND] downloading data from ${data_url}`);
+            download(data_url)
+                .then((content) => {
+                    $.write(content, '#sub-store');
+
+                    $.cache = JSON.parse(content);
+                    $.persistCache();
+
+                    migrate();
+                    $.info(`[BACKEND] restored data from ${data_url}`);
+                })
+                .catch((e) => {
+                    $.error(`[BACKEND] restore data failed`);
+                    console.error(e);
+                    throw e;
+                });
         }
     }
 }
