@@ -3,6 +3,7 @@ import { isPresent } from '@/core/proxy-utils/producers/utils';
 export default function Stash_Producer() {
     const type = 'ALL';
     const produce = (proxies) => {
+        // https://stash.wiki/proxy-protocols/proxy-types#shadowsocks
         return (
             'proxies:\n' +
             proxies
@@ -22,6 +23,23 @@ export default function Stash_Producer() {
                             'hysteria',
                             'hysteria2',
                         ].includes(proxy.type) ||
+                        (proxy.type === 'ss' &&
+                            ![
+                                'aes-128-gcm',
+                                'aes-192-gcm',
+                                'aes-256-gcm',
+                                'aes-128-cfb',
+                                'aes-192-cfb',
+                                'aes-256-cfb',
+                                'aes-128-ctr',
+                                'aes-192-ctr',
+                                'aes-256-ctr',
+                                'rc4-md5',
+                                'chacha20-ietf',
+                                'xchacha20',
+                                'chacha20-ietf-poly1305',
+                                'xchacha20-ietf-poly1305',
+                            ].includes(proxy.cipher)) ||
                         (proxy.type === 'snell' &&
                             String(proxy.version) === '4') ||
                         (proxy.type === 'vless' && proxy['reality-opts'])
