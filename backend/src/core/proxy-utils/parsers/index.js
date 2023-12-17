@@ -409,10 +409,10 @@ function URI_VLESS() {
 function URI_Hysteria2() {
     const name = 'URI Hysteria2 Parser';
     const test = (line) => {
-        return /^hysteria2:\/\//.test(line);
+        return /^(hysteria2|hy2):\/\//.test(line);
     };
     const parse = (line) => {
-        line = line.split('hysteria2://')[1];
+        line = line.split(/(hysteria2|hy2):\/\//)[2];
         // eslint-disable-next-line no-unused-vars
         let [__, password, server, ___, port, addons, name] =
             /^(.*?)@(.*?)(:(\d+))?\/?\?(.*?)(?:#(.*?))$/.exec(line);
