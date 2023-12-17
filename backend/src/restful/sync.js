@@ -30,6 +30,7 @@ async function produceArtifact({
     ua,
     content,
     mergeSources,
+    ignoreFailedRemoteSub,
 }) {
     platform = platform || 'JSON';
 
@@ -40,13 +41,35 @@ async function produceArtifact({
         if (content && !['localFirst', 'remoteFirst'].includes(mergeSources)) {
             raw = content;
         } else if (url) {
+            const errors = {};
             raw = await Promise.all(
                 url
                     .split(/[\r\n]+/)
                     .map((i) => i.trim())
                     .filter((i) => i.length)
-                    .map((url) => download(url, ua)),
+                    .map(async (url) => {
+                        try {
+                            return await download(url, ua || sub.ua);
+                        } catch (err) {
+                            errors[url] = err;
+                            $.error(
+                                `订阅 ${sub.name} 的远程订阅 ${url} 发生错误: ${err}`,
+                            );
+                            return '';
+                        }
+                    }),
             );
+            let subIgnoreFailedRemoteSub = sub.ignoreFailedRemoteSub;
+            if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
+                subIgnoreFailedRemoteSub = ignoreFailedRemoteSub;
+            }
+            if (!subIgnoreFailedRemoteSub && Object.keys(errors).length > 0) {
+                throw new Error(
+                    `订阅 ${sub.name} 的远程订阅 ${Object.keys(errors).join(
+                        ', ',
+                    )} 发生错误, 请查看日志`,
+                );
+            }
             if (mergeSources === 'localFirst') {
                 raw.unshift(content);
             } else if (mergeSources === 'remoteFirst') {
@@ -58,13 +81,35 @@ async function produceArtifact({
         ) {
             raw = sub.content;
         } else {
+            const errors = {};
             raw = await Promise.all(
                 sub.url
                     .split(/[\r\n]+/)
                     .map((i) => i.trim())
                     .filter((i) => i.length)
-                    .map((url) => download(url, sub.ua)),
+                    .map(async (url) => {
+                        try {
+                            return await download(url, ua || sub.ua);
+                        } catch (err) {
+                            errors[url] = err;
+                            $.error(
+                                `订阅 ${sub.name} 的远程订阅 ${url} 发生错误: ${err}`,
+                            );
+                            return '';
+                        }
+                    }),
             );
+            let subIgnoreFailedRemoteSub = sub.ignoreFailedRemoteSub;
+            if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
+                subIgnoreFailedRemoteSub = ignoreFailedRemoteSub;
+            }
+            if (!subIgnoreFailedRemoteSub && Object.keys(errors).length > 0) {
+                throw new Error(
+                    `订阅 ${sub.name} 的远程订阅 ${Object.keys(errors).join(
+                        ', ',
+                    )} 发生错误, 请查看日志`,
+                );
+            }
             if (sub.mergeSources === 'localFirst') {
                 raw.unshift(sub.content);
             } else if (sub.mergeSources === 'remoteFirst') {
@@ -131,13 +176,34 @@ async function produceArtifact({
                     ) {
                         raw = sub.content;
                     } else {
+                        const errors = {};
                         raw = await await Promise.all(
                             sub.url
                                 .split(/[\r\n]+/)
                                 .map((i) => i.trim())
                                 .filter((i) => i.length)
-                                .map((url) => download(url, sub.ua)),
+                                .map(async (url) => {
+                                    try {
+                                        return await download(url, sub.ua);
+                                    } catch (err) {
+                                        errors[url] = err;
+                                        $.error(
+                                            `订阅 ${sub.name} 的远程订阅 ${url} 发生错误: ${err}`,
+                                        );
+                                        return '';
+                                    }
+                                }),
                         );
+                        if (
+                            !sub.ignoreFailedRemoteSub &&
+                            Object.keys(errors).length > 0
+                        ) {
+                            throw new Error(
+                                `订阅 ${sub.name} 的远程订阅 ${Object.keys(
+                                    errors,
+                                ).join(', ')} 发生错误, 请查看日志`,
+                            );
+                        }
                         if (sub.mergeSources === 'localFirst') {
                             raw.unshift(sub.content);
                         } else if (sub.mergeSources === 'remoteFirst') {
@@ -174,15 +240,21 @@ async function produceArtifact({
                     $.error(
                         `❌ 处理组合订阅中的子订阅: ${
                             sub.name
-                        }时出现错误：${err}，该订阅已被跳过！进度--${
+                        }时出现错误：${err}！进度--${
                             100 * (processed / subnames.length).toFixed(1)
                         }%`,
                     );
                 }
             }),
         );
-
-        if (Object.keys(errors).length > 0) {
+        let collectionIgnoreFailedRemoteSub = collection.ignoreFailedRemoteSub;
+        if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
+            collectionIgnoreFailedRemoteSub = ignoreFailedRemoteSub;
+        }
+        if (
+            !collectionIgnoreFailedRemoteSub &&
+            Object.keys(errors).length > 0
+        ) {
             throw new Error(
                 `组合订阅 ${name} 中的子订阅 ${Object.keys(errors).join(
                     ', ',

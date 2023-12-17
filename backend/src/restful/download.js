@@ -20,7 +20,7 @@ async function downloadSubscription(req, res) {
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
     $.info(`正在下载订阅：${name}`);
-    let { url, ua, content, mergeSources } = req.query;
+    let { url, ua, content, mergeSources, ignoreFailedRemoteSub } = req.query;
     if (url) {
         url = decodeURIComponent(url);
         $.info(`指定远程订阅 URL: ${url}`);
@@ -37,6 +37,10 @@ async function downloadSubscription(req, res) {
         mergeSources = decodeURIComponent(mergeSources);
         $.info(`指定合并来源: ${mergeSources}`);
     }
+    if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
+        ignoreFailedRemoteSub = decodeURIComponent(ignoreFailedRemoteSub);
+        $.info(`指定忽略失败的远程订阅: ${ignoreFailedRemoteSub}`);
+    }
 
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
@@ -50,6 +54,7 @@ async function downloadSubscription(req, res) {
                 ua,
                 content,
                 mergeSources,
+                ignoreFailedRemoteSub,
             });
 
             if (sub.source !== 'local' || url) {
@@ -116,12 +121,20 @@ async function downloadCollection(req, res) {
 
     $.info(`正在下载组合订阅：${name}`);
 
+    let { ignoreFailedRemoteSub } = req.query;
+
+    if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
+        ignoreFailedRemoteSub = decodeURIComponent(ignoreFailedRemoteSub);
+        $.info(`指定忽略失败的远程订阅: ${ignoreFailedRemoteSub}`);
+    }
+
     if (collection) {
         try {
             const output = await produceArtifact({
                 type: 'collection',
                 name,
                 platform,
+                ignoreFailedRemoteSub,
             });
 
             // forward flow header from the first subscription in this collection
