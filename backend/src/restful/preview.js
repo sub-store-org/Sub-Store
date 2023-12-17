@@ -1,4 +1,4 @@
-import { InternalServerError, NetworkError } from './errors';
+import { InternalServerError } from './errors';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { findByName } from '@/utils/database';
 import { success, failed } from './response';
