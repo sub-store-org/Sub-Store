@@ -1,5 +1,5 @@
 import download from '@/utils/download';
-import { isIPv4, isIPv6 } from '@/utils';
+import { isIPv4, isIPv6, isValidPortNumber } from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
@@ -214,6 +214,9 @@ function safeMatch(parser, line) {
 }
 
 function lastParse(proxy) {
+    if (isValidPortNumber(proxy.port)) {
+        proxy.port = parseInt(proxy.port, 10);
+    }
     if (proxy.server) {
         proxy.server = proxy.server
             .trim()

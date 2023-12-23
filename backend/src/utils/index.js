@@ -13,6 +13,12 @@ function isIPv6(ip) {
     return IPV6_REGEX.test(ip);
 }
 
+function isValidPortNumber(port) {
+    return /^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0-9]{1,4}))$/.test(
+        port,
+    );
+}
+
 function isNotBlank(str) {
     return typeof str === 'string' && str.trim().length > 0;
 }
@@ -29,4 +35,12 @@ function getIfPresent(obj, defaultValue) {
     return isPresent(obj) ? obj : defaultValue;
 }
 
-export { isIPv4, isIPv6, isNotBlank, getIfNotBlank, isPresent, getIfPresent };
+export {
+    isIPv4,
+    isIPv6,
+    isValidPortNumber,
+    isNotBlank,
+    getIfNotBlank,
+    isPresent,
+    getIfPresent,
+};
