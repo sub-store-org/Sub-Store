@@ -7,7 +7,7 @@
 </div>
 
 <p align="center" color="#6a737d">
-Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket.
+Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.
 </p>
 
 [![Build](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/sub-store-org/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/sub-store-org/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Lines of code](https://img.shields.io/tokei/lines/github/sub-store-org/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/sub-store-org/Sub-Store) 
@@ -31,23 +31,25 @@ Core functionalities:
 - [x] SSD URI
 - [x] V2RayN URI
 - [x] Hysteria2 URI
-- [x] QX (SS, SSR, VMess, Trojan, HTTP)
-- [x] Loon (SS, SSR, VMess, Trojan, HTTP, WireGuard, VLESS, Hysteria2)
-- [x] Surge (SS, VMess, Trojan, HTTP, TUIC, Snell, Hysteria2, SSR(external, only for macOS), WireGuard(Surge to Surge))
-- [x] ShadowRocket (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, Hysteria2)
-- [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria, Hysteria2)
-- [x] Stash (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard, Hysteria)
-- [x] Clash (SS, SSR, VMess, Trojan, HTTP, Snell, VLESS, WireGuard)
+- [x] QX (SS, SSR, VMess, Trojan, HTTP, SOCKS5)
+- [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, WireGuard, VLESS, Hysteria2)
+- [x] Surge (SS, VMess, Trojan, HTTP, SOCKS5, TUIC, Snell, Hysteria2, SSR(external, only for macOS), WireGuard(Surge to Surge))
+- [x] Surfboard (SS, VMess, Trojan, HTTP, SOCKS5, WireGuard(Surfboard to Surfboard))
+- [x] Shadowrocket (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria2, TUIC)
+- [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria2, TUIC)
+- [x] Stash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, TUIC)
+- [x] Clash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard)
 
 ### Supported Target Platforms
 
 - [x] QX
 - [x] Loon
 - [x] Surge
+- [x] Surfboard
 - [x] Stash
 - [x] Clash.Meta
 - [x] Clash
-- [x] ShadowRocket
+- [x] Shadowrocket
 - [x] V2Ray
 - [x] V2Ray URI
 - [x] Plain JSON

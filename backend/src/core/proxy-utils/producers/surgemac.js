@@ -1,7 +1,7 @@
 import { Result } from './utils';
 import Surge_Producer from './surge';
 
-const targetPlatform = 'SurgeMac';
+// const targetPlatform = 'SurgeMac';
 
 const surge_Producer = Surge_Producer();
 
@@ -10,24 +10,9 @@ export default function SurgeMac_Producer() {
         switch (proxy.type) {
             case 'ssr':
                 return shadowsocksr(proxy);
-            case 'ss':
-                return surge_Producer.produce(proxy);
-            case 'trojan':
-                return surge_Producer.produce(proxy);
-            case 'vmess':
-                return surge_Producer.produce(proxy);
-            case 'http':
-                return surge_Producer.produce(proxy);
-            case 'socks5':
-                return surge_Producer.produce(proxy);
-            case 'snell':
-                return surge_Producer.produce(proxy);
-            case 'tuic':
+            default:
                 return surge_Producer.produce(proxy);
         }
-        throw new Error(
-            `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
-        );
     };
     return { produce };
 }

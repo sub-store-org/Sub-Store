@@ -8,6 +8,7 @@ import URI_Producer from './uri';
 import V2Ray_Producer from './v2ray';
 import QX_Producer from './qx';
 import ShadowRocket_Producer from './shadowrocket';
+import Surfboard_Producer from './surfboard';
 
 function JSON_Producer() {
     const type = 'ALL';
@@ -27,4 +28,5 @@ export default {
     JSON: JSON_Producer(),
     Stash: Stash_Producer(),
     ShadowRocket: ShadowRocket_Producer(),
+    Surfboard: Surfboard_Producer(),
 };
