@@ -22,6 +22,8 @@ Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 ### 3. QX
 订阅 重写 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/QX.snippet`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/QX.snippet) 即可。
 
+定时任务: [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/QX-Task.json`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/QX-Task.json)
+
 ### 4. Stash
 安装使用 覆写 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Stash.stoverride`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Stash.stoverride) 即可。
 
