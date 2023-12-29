@@ -88,11 +88,18 @@ params = "/"? "?" head:param tail:("&"@param)* {
   
   if (params["type"]) {
     proxy.network = params["type"]
-    if (params["path"]) {
-      $set(proxy, proxy.network+"-opts.path", decodeURIComponent(params["path"]));  
-    }
-    if (params["host"]) {
-      $set(proxy, proxy.network+"-opts.headers.Host", decodeURIComponent(params["host"])); 
+    if (['grpc'].includes(proxy.network)) {
+        proxy[proxy.network + '-opts'] = {
+            'grpc-service-name': params["serviceName"],
+            '_grpc-type': params["mode"],
+        };
+    } else {
+      if (params["path"]) {
+        $set(proxy, proxy.network+"-opts.path", decodeURIComponent(params["path"]));  
+      }
+      if (params["host"]) {
+        $set(proxy, proxy.network+"-opts.headers.Host", decodeURIComponent(params["host"])); 
+      }
     }
   }
 
