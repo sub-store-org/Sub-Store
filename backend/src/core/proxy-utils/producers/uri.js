@@ -201,6 +201,21 @@ export default function URI_Producer() {
                 let trojanTransport = '';
                 if (proxy.network) {
                     trojanTransport = `&type=${proxy.network}`;
+                    if (['grpc'].includes(proxy.network)) {
+                        let trojanTransportServiceName =
+                            proxy[`${proxy.network}-opts`]?.[
+                                `${proxy.network}-service-name`
+                            ];
+                        if (trojanTransportServiceName) {
+                            trojanTransport += `&serviceName=${encodeURIComponent(
+                                trojanTransportServiceName,
+                            )}`;
+                        }
+                        trojanTransport += `&mode=${encodeURIComponent(
+                            proxy[`${proxy.network}-opts`]?.['_grpc-type'] ||
+                                'gun',
+                        )}`;
+                    }
                     let trojanTransportPath =
                         proxy[`${proxy.network}-opts`]?.path;
                     let trojanTransportHost =
