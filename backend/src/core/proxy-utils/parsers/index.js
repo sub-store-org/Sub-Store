@@ -742,6 +742,7 @@ function Loon_WireGuard() {
         let publicKey = peers.match(
             /(,|^)\s*?public-key\s*?=\s*?"?(.+?)"?\s*?(,|$)/i,
         )?.[2];
+        // https://github.com/MetaCubeX/mihomo/blob/0404e35be8736b695eae018a08debb175c1f96e6/docs/config.yaml#L717
         const proxy = {
             type: 'wireguard',
             name,
@@ -768,7 +769,7 @@ function Loon_WireGuard() {
                     ipv6,
                     'public-key': publicKey,
                     'pre-shared-key': preSharedKey,
-                    allowed_ips: allowedIps,
+                    'allowed-ips': allowedIps,
                     reserved,
                 },
             ],
