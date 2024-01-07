@@ -386,10 +386,12 @@ async function syncAllArtifacts(_, res) {
 async function syncArtifact(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
+    $.info(`开始同步远程配置 ${name}...`);
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const artifact = findByName(allArtifacts, name);
 
     if (!artifact) {
+        $.error(`找不到远程配置 ${name}`);
         failed(
             res,
             new ResourceNotFoundError(
@@ -428,6 +430,7 @@ async function syncArtifact(req, res) {
         $.write(allArtifacts, ARTIFACTS_KEY);
         success(res, artifact);
     } catch (err) {
+        $.error(`远程配置 ${artifact.name} 发生错误: ${err}`);
         failed(
             res,
             new InternalServerError(
