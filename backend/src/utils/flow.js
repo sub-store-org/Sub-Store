@@ -1,6 +1,14 @@
+import { SETTINGS_KEY } from '@/constants';
 import { HTTP } from '@/vendor/open-api';
+import $ from '@/core/app';
 
-export async function getFlowHeaders(url) {
+export async function getFlowHeaders(url, ua, timeout) {
+    const { defaultFlowUserAgent, defaultTimeout } = $.read(SETTINGS_KEY);
+    const userAgent =
+        ua ||
+        defaultFlowUserAgent ||
+        'Quantumult%20X/1.0.30 (iPhone14,2; iOS 15.6)';
+    const requestTimeout = timeout || defaultTimeout;
     const http = HTTP();
     const { headers } = await http.get({
         url: url
@@ -8,8 +16,9 @@ export async function getFlowHeaders(url) {
             .map((i) => i.trim())
             .filter((i) => i.length)[0],
         headers: {
-            'User-Agent': 'Quantumult%20X/1.0.30 (iPhone14,2; iOS 15.6)',
+            'User-Agent': userAgent,
         },
+        timeout: requestTimeout,
     });
     const subkey = Object.keys(headers).filter((k) =>
         /SUBSCRIPTION-USERINFO/i.test(k),

@@ -7,7 +7,7 @@ import $ from '@/core/app';
 
 const tasks = new Map();
 
-export default async function download(url, ua) {
+export default async function download(url, ua, timeout) {
     let $arguments = {};
     const rawArgs = url.split('#');
     if (rawArgs.length > 1) {
@@ -45,17 +45,19 @@ export default async function download(url, ua) {
     }
 
     const { isNode } = ENV();
-    const { defaultUserAgent } = $.read(SETTINGS_KEY);
-    ua = ua || defaultUserAgent || 'clash.meta';
-    const id = hex_md5(ua + url);
+    const { defaultUserAgent, defaultTimeout } = $.read(SETTINGS_KEY);
+    const userAgent = ua || defaultUserAgent || 'clash.meta';
+    const requestTimeout = timeout || defaultTimeout;
+    const id = hex_md5(userAgent + url);
     if (!isNode && tasks.has(id)) {
         return tasks.get(id);
     }
 
     const http = HTTP({
         headers: {
-            'User-Agent': ua,
+            'User-Agent': userAgent,
         },
+        timeout: requestTimeout,
     });
 
     const result = new Promise((resolve, reject) => {
@@ -64,7 +66,9 @@ export default async function download(url, ua) {
         if (!$arguments?.noCache && cached) {
             resolve(cached);
         } else {
-            $.info(`Downloading...\nUser-Agent: ${ua}\nURL: ${url}`);
+            $.info(
+                `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nURL: ${url}`,
+            );
             http.get(url)
                 .then((resp) => {
                     const body = resp.body;
