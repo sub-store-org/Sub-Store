@@ -332,8 +332,8 @@ function URI_VLESS() {
     const parse = (line) => {
         line = line.split('vless://')[1];
         // eslint-disable-next-line no-unused-vars
-        let [__, uuid, server, port, addons, name] =
-            /^(.*?)@(.*?):(\d+)\/?\?(.*?)(?:#(.*?))$/.exec(line);
+        let [__, uuid, server, port, ___, addons = '', name] =
+            /^(.*?)@(.*?):(\d+)\/?(\?(.*?))?(?:#(.*?))$/.exec(line);
         port = parseInt(`${port}`, 10);
         uuid = decodeURIComponent(uuid);
         name = decodeURIComponent(name) ?? `VLESS ${server}:${port}`;
@@ -414,8 +414,8 @@ function URI_Hysteria2() {
     const parse = (line) => {
         line = line.split(/(hysteria2|hy2):\/\//)[2];
         // eslint-disable-next-line no-unused-vars
-        let [__, password, server, ___, port, addons, name] =
-            /^(.*?)@(.*?)(:(\d+))?\/?\?(.*?)(?:#(.*?))$/.exec(line);
+        let [__, password, server, ___, port, ____, addons = '', name] =
+            /^(.*?)@(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))$/.exec(line);
         port = parseInt(`${port}`, 10);
         if (isNaN(port)) {
             port = 443;
