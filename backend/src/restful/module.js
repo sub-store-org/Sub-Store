@@ -47,7 +47,9 @@ function getModule(req, res) {
     const allModules = $.read(MODULES_KEY);
     const module = findByName(allModules, name);
     if (module) {
-        res.status(200).json(module.content);
+        res.set('Content-Type', 'text/plain; charset=utf-8').send(
+            module.content,
+        );
     } else {
         failed(
             res,
