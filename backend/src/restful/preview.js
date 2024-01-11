@@ -14,12 +14,63 @@ export default function register($app) {
 
 async function previewFile(req, res) {
     try {
-        let { content = '', process = [] } = req.body;
+        const file = req.body;
+        let content;
+        if (
+            file.source === 'local' &&
+            !['localFirst', 'remoteFirst'].includes(file.mergeSources)
+        ) {
+            content = file.content;
+        } else {
+            const errors = {};
+            content = await Promise.all(
+                file.url
+                    .split(/[\r\n]+/)
+                    .map((i) => i.trim())
+                    .filter((i) => i.length)
+                    .map(async (url) => {
+                        try {
+                            return await download(url, file.ua);
+                        } catch (err) {
+                            errors[url] = err;
+                            $.error(
+                                `文件 ${file.name} 的远程文件 ${url} 发生错误: ${err}`,
+                            );
+                            return '';
+                        }
+                    }),
+            );
 
-        const processed = await ProxyUtils.process(content, process || []);
+            if (
+                !file.ignoreFailedRemoteFile &&
+                Object.keys(errors).length > 0
+            ) {
+                throw new Error(
+                    `文件 ${file.name} 的远程文件 ${Object.keys(errors).join(
+                        ', ',
+                    )} 发生错误, 请查看日志`,
+                );
+            }
+            if (file.mergeSources === 'localFirst') {
+                content.unshift(file.content);
+            } else if (file.mergeSources === 'remoteFirst') {
+                content.push(file.content);
+            }
+        }
+        // parse proxies
+        const original = (Array.isArray(content) ? content : [content])
+            .flat()
+            .filter((i) => i != null && i !== '')
+            .join('\n');
+
+        // apply processors
+        const processed = await ProxyUtils.process(
+            original,
+            file.process || [],
+        );
 
         // produce
-        success(res, { original: content, processed });
+        success(res, { original, processed });
     } catch (err) {
         $.error(err.message ?? err);
         failed(
