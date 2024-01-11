@@ -4,6 +4,7 @@ import {
     COLLECTIONS_KEY,
     RULES_KEY,
     SUBS_KEY,
+    FILES_KEY,
 } from '@/constants';
 import { failed, success } from '@/restful/response';
 import { InternalServerError, ResourceNotFoundError } from '@/restful/errors';
@@ -327,6 +328,10 @@ async function produceArtifact({
         ]);
         // produce output
         return RuleUtils.produce(rules, platform);
+    } else if (type === 'file') {
+        const allFiles = $.read(FILES_KEY);
+        const file = findByName(allFiles, name);
+        return file?.content ?? '';
     }
 }
 
