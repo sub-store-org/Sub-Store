@@ -316,11 +316,20 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
             await (async function () {
                 const operator = createDynamicFunction(
                     'operator',
-                    `async function operator(proxies = []) {
-                        return proxies.map(($server = {}) => {
-                          ${script}
-                          return $server
-                        })
+                    `async function operator(input = []) {
+                        let proxies
+                        if (Array.isArray(input)) {
+                            proxies = input
+                            return proxies.map(($server = {}) => {
+                                ${script}
+                                return $server
+                            })
+                        } else {
+                            let $content = input
+                            ${script}
+                            return $content
+                        }
+                        
                       }`,
                     $arguments,
                 );
@@ -689,7 +698,10 @@ async function ApplyOperator(operator, objs) {
         );
         let funcErr = '';
         let funcErrMsg = `${err.message ?? err}`;
-        if (funcErrMsg.includes('$server is not defined')) {
+        if (
+            funcErrMsg.includes('$server is not defined') ||
+            funcErrMsg.includes('$content is not defined')
+        ) {
             funcErr = '';
         } else {
             funcErr = `执行 function operator 失败 ${funcErrMsg}; `;
