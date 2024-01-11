@@ -9,6 +9,28 @@ import $ from '@/core/app';
 export default function register($app) {
     $app.post('/api/preview/sub', compareSub);
     $app.post('/api/preview/collection', compareCollection);
+    $app.post('/api/preview/file', previewFile);
+}
+
+async function previewFile(req, res) {
+    try {
+        let { content = '', process = [] } = req.body;
+
+        const processed = await ProxyUtils.process(content, process || []);
+
+        // produce
+        success(res, { original: content, processed });
+    } catch (err) {
+        $.error(err.message ?? err);
+        failed(
+            res,
+            new InternalServerError(
+                `INTERNAL_SERVER_ERROR`,
+                `Failed to preview file`,
+                `Reason: ${err.message ?? err}`,
+            ),
+        );
+    }
 }
 
 async function compareSub(req, res) {

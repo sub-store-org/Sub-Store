@@ -3,6 +3,7 @@ import { FILES_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
 import { RequestInvalidError, ResourceNotFoundError } from '@/restful/errors';
+import { ProxyUtils } from '@/core/proxy-utils';
 
 export default function register($app) {
     if (!$.read(FILES_KEY)) $.write([], FILES_KEY);
@@ -40,13 +41,17 @@ function createFile(req, res) {
     success(res, file, 201);
 }
 
-function getFile(req, res) {
+async function getFile(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
     const allFiles = $.read(FILES_KEY);
     const file = findByName(allFiles, name);
     if (file) {
-        res.set('Content-Type', 'text/plain; charset=utf-8').send(file.content);
+        let content = file.content ?? '';
+        content = await ProxyUtils.process(content, file.process || []);
+        res.set('Content-Type', 'text/plain; charset=utf-8').send(
+            content ?? '',
+        );
     } else {
         failed(
             res,

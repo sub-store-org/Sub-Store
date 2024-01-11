@@ -331,7 +331,10 @@ async function produceArtifact({
     } else if (type === 'file') {
         const allFiles = $.read(FILES_KEY);
         const file = findByName(allFiles, name);
-        return file?.content ?? '';
+        if (!file) throw new Error(`找不到文件 ${name}`);
+        let content = file.content ?? '';
+        content = await ProxyUtils.process(content, file.process || []);
+        return content ?? '';
     }
 }
 
