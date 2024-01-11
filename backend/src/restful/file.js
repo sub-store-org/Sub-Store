@@ -12,7 +12,10 @@ export default function register($app) {
         .patch(updateFile)
         .delete(deleteFile);
 
+    $app.route('/api/wholeFile/:name').get(getWholeFile);
+
     $app.route('/api/files').get(getAllFiles).post(createFile).put(replaceFile);
+    $app.route('/api/wholeFiles').get(getAllWholeFiles);
 }
 
 // file API
@@ -43,7 +46,25 @@ function getFile(req, res) {
     const allFiles = $.read(FILES_KEY);
     const file = findByName(allFiles, name);
     if (file) {
-        res.status(200).json(file.content);
+        res.set('Content-Type', 'text/plain; charset=utf-8').send(file.content);
+    } else {
+        failed(
+            res,
+            new ResourceNotFoundError(
+                `FILE_NOT_FOUND`,
+                `File ${name} does not exist`,
+                404,
+            ),
+        );
+    }
+}
+function getWholeFile(req, res) {
+    let { name } = req.params;
+    name = decodeURIComponent(name);
+    const allFiles = $.read(FILES_KEY);
+    const file = findByName(allFiles, name);
+    if (file) {
+        success(res, file);
     } else {
         failed(
             res,
@@ -100,6 +121,11 @@ function getAllFiles(req, res) {
         res, // eslint-disable-next-line no-unused-vars
         allFiles.map(({ content, ...rest }) => rest),
     );
+}
+
+function getAllWholeFiles(req, res) {
+    const allFiles = $.read(FILES_KEY);
+    success(res, allFiles);
 }
 
 function replaceFile(req, res) {
