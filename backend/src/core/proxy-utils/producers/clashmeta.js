@@ -2,9 +2,10 @@ import { isPresent } from '@/core/proxy-utils/producers/utils';
 
 export default function ClashMeta_Producer() {
     const type = 'ALL';
-    const produce = (proxies, type) => {
+    const produce = (proxies, type, opts = {}) => {
         const list = proxies
             .filter((proxy) => {
+                if (opts['include-unsupported-proxy']) return true;
                 if (proxy.type === 'snell' && String(proxy.version) === '4') {
                     return false;
                 }

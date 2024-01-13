@@ -325,9 +325,9 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                                 return $server
                             })
                         } else {
-                            let $content = input
+                            let { $content, $files } = input
                             ${script}
-                            return $content
+                            return { $content, $files }
                         }
                         
                       }`,
@@ -658,13 +658,14 @@ async function ApplyFilter(filter, objs) {
     try {
         selected = await filter.func(objs);
     } catch (err) {
-        // print log and skip this filter
-        $.error(`Cannot apply filter ${filter.name}\n Reason: ${err}`);
         let funcErr = '';
         let funcErrMsg = `${err.message ?? err}`;
         if (funcErrMsg.includes('$server is not defined')) {
             funcErr = '';
         } else {
+            $.error(
+                `Cannot apply filter ${filter.name}(function filter)! Reason: ${err}`,
+            );
             funcErr = `执行 function filter 失败 ${funcErrMsg}; `;
         }
         try {
@@ -693,17 +694,18 @@ async function ApplyOperator(operator, objs) {
         const output_ = await operator.func(output);
         if (output_) output = output_;
     } catch (err) {
-        $.error(
-            `Cannot apply operator ${operator.name}(function operator)! Reason: ${err}`,
-        );
         let funcErr = '';
         let funcErrMsg = `${err.message ?? err}`;
         if (
             funcErrMsg.includes('$server is not defined') ||
-            funcErrMsg.includes('$content is not defined')
+            funcErrMsg.includes('$content is not defined') ||
+            funcErrMsg.includes('$files is not defined')
         ) {
             funcErr = '';
         } else {
+            $.error(
+                `Cannot apply operator ${operator.name}(function operator)! Reason: ${err}`,
+            );
             funcErr = `执行 function operator 失败 ${funcErrMsg}; `;
         }
         try {
