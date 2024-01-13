@@ -9,6 +9,7 @@ import V2Ray_Producer from './v2ray';
 import QX_Producer from './qx';
 import ShadowRocket_Producer from './shadowrocket';
 import Surfboard_Producer from './surfboard';
+import singbox_Producer from './sing-box';
 
 function JSON_Producer() {
     const type = 'ALL';
@@ -29,4 +30,5 @@ export default {
     Stash: Stash_Producer(),
     ShadowRocket: ShadowRocket_Producer(),
     Surfboard: Surfboard_Producer(),
+    'sing-box': singbox_Producer(),
 };

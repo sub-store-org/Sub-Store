@@ -1,3 +1,4 @@
+import YAML from 'static-js-yaml';
 import download from '@/utils/download';
 import { isIPv4, isIPv6, isValidPortNumber } from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
@@ -59,7 +60,6 @@ function parse(raw) {
             $.error(`Failed to parse line: ${line}`);
         }
     }
-
     return proxies;
 }
 
@@ -193,6 +193,7 @@ export const ProxyUtils = {
     isIPv4,
     isIPv6,
     isIP,
+    yaml: YAML,
 };
 
 function tryParse(parser, line) {
@@ -218,7 +219,7 @@ function lastParse(proxy) {
         proxy.port = parseInt(proxy.port, 10);
     }
     if (proxy.server) {
-        proxy.server = proxy.server
+        proxy.server = `${proxy.server}`
             .trim()
             .replace(/^\[/, '')
             .replace(/\]$/, '');

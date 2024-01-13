@@ -418,12 +418,20 @@ async function produceArtifact({
                 raw.push(file.content);
             }
         }
-        let content = (Array.isArray(raw) ? raw : [raw])
-            .flat()
+        const files = (Array.isArray(raw) ? raw : [raw]).flat();
+        const filesContent = files
             .filter((i) => i != null && i !== '')
             .join('\n');
-        content = await ProxyUtils.process(content, file.process || []);
-        return content ?? '';
+
+        // apply processors
+        const processed =
+            Array.isArray(file.process) && file.process.length > 0
+                ? await ProxyUtils.process(
+                      { $files: files, $content: filesContent },
+                      file.process,
+                  )
+                : filesContent;
+        return processed?.$content ?? '';
     }
 }
 

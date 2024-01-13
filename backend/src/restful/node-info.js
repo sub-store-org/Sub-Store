@@ -22,10 +22,10 @@ async function getNodeInfo(req, res) {
         const info = await $http
             .get({
                 url: `http://ip-api.com/json/${encodeURIComponent(
-                    proxy.server
+                    `${proxy.server}`
                         .trim()
                         .replace(/^\[/, '')
-                        .replace(/\]$/, '')
+                        .replace(/\]$/, ''),
                 )}?lang=${lang}`,
                 headers: {
                     'User-Agent':

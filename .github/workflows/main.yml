@@ -37,7 +37,6 @@ jobs:
       - name: Bundle
         run: |
           cd backend
-          pnpm i -D estrella
           pnpm run bundle
       - id: tag
         name: Generate release tag

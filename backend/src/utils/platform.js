@@ -32,6 +32,8 @@ export function getPlatformFromHeaders(headers) {
         return 'Clash';
     } else if (ua.indexOf('v2ray') !== -1) {
         return 'V2Ray';
+    } else if (ua.indexOf('sing-box') !== -1) {
+        return 'sing-box';
     } else {
         return 'JSON';
     }

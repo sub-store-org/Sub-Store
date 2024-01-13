@@ -58,19 +58,25 @@ async function previewFile(req, res) {
             }
         }
         // parse proxies
-        const original = (Array.isArray(content) ? content : [content])
-            .flat()
+        const files = (Array.isArray(content) ? content : [content]).flat();
+        const filesContent = files
             .filter((i) => i != null && i !== '')
             .join('\n');
 
         // apply processors
-        const processed = await ProxyUtils.process(
-            original,
-            file.process || [],
-        );
+        const processed =
+            Array.isArray(file.process) && file.process.length > 0
+                ? await ProxyUtils.process(
+                      { $files: files, $content: filesContent },
+                      file.process,
+                  )
+                : filesContent;
 
         // produce
-        success(res, { original, processed });
+        success(res, {
+            original: filesContent,
+            processed: processed?.$content ?? '',
+        });
     } catch (err) {
         $.error(err.message ?? err);
         failed(
