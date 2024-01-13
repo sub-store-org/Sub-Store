@@ -70,7 +70,7 @@ async function previewFile(req, res) {
                       { $files: files, $content: filesContent },
                       file.process,
                   )
-                : filesContent;
+                : { $content: filesContent, $files: files };
 
         // produce
         success(res, {
