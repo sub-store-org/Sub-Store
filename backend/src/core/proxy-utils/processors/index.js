@@ -319,10 +319,10 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                 const operator = createDynamicFunction(
                     'operator',
                     `async function operator(input = []) {
-                        let proxies
                         if (Array.isArray(input)) {
+                            let proxies = input
                             let list = []
-                            for await (let $server of input) {
+                            for await (let $server of proxies) {
                                 ${script}
                                 list.push($server)
                             }
@@ -622,10 +622,16 @@ function ScriptFilter(script, targetPlatform, $arguments, source) {
             await (async function () {
                 const filter = createDynamicFunction(
                     'filter',
-                    `async function filter(proxies = []) {
-                        return proxies.filter(($server = {}) => {
-                          ${script}
-                        })
+                    `async function filter(input = []) {
+                        let proxies = input
+                        let list = []
+                        const fn = async ($server) => {
+                            ${script}
+                        }
+                        for await (let $server of proxies) {
+                            list.push(await fn($server))
+                        }
+                        return list
                       }`,
                     $arguments,
                 );
