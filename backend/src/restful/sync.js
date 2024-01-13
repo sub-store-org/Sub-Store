@@ -430,7 +430,8 @@ async function produceArtifact({
                       { $files: files, $content: filesContent },
                       file.process,
                   )
-                : filesContent;
+                : { $content: filesContent, $files: files };
+
         return processed?.$content ?? '';
     }
 }
