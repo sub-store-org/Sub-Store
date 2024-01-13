@@ -7,6 +7,8 @@ import lodash from 'lodash';
 import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
 import { ProxyUtils } from '@/core/proxy-utils';
+import { produceArtifact } from '@/restful/sync';
+
 import env from '@/utils/env';
 import { getFlowHeaders, parseFlowHeaders, flowTransfer } from '@/utils/flow';
 
@@ -319,11 +321,12 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                     `async function operator(input = []) {
                         let proxies
                         if (Array.isArray(input)) {
-                            proxies = input
-                            return proxies.map(($server = {}) => {
+                            let list = []
+                            for await (let $server of input) {
                                 ${script}
-                                return $server
-                            })
+                                list.push($server)
+                            }
+                            return list
                         } else {
                             let { $content, $files } = input
                             ${script}
@@ -783,6 +786,7 @@ function createDynamicFunction(name, script, $arguments) {
             'ProxyUtils',
             'scriptResourceCache',
             'flowUtils',
+            'produceArtifact',
             `${script}\n return ${name}`,
         )(
             $arguments,
@@ -797,6 +801,7 @@ function createDynamicFunction(name, script, $arguments) {
             ProxyUtils,
             scriptResourceCache,
             flowUtils,
+            produceArtifact,
         );
     } else {
         return new Function(
@@ -806,8 +811,17 @@ function createDynamicFunction(name, script, $arguments) {
             'ProxyUtils',
             'scriptResourceCache',
             'flowUtils',
+            'produceArtifact',
 
             `${script}\n return ${name}`,
-        )($arguments, $, lodash, ProxyUtils, scriptResourceCache, flowUtils);
+        )(
+            $arguments,
+            $,
+            lodash,
+            ProxyUtils,
+            scriptResourceCache,
+            flowUtils,
+            produceArtifact,
+        );
     }
 }
