@@ -416,6 +416,9 @@ function snell(proxy) {
         'obfs-opts.path',
     );
 
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
