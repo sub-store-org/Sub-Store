@@ -33,7 +33,7 @@
     "@babel/preset-env": "^7.18.0",
     "@babel/register": "^7.17.7",
     "@types/gulp": "^4.0.9",
-    "axios": "^0.21.2",
+    "axios": "^1.6.0",
     "babel-plugin-relative-path-import": "^2.0.1",
     "babelify": "^10.0.0",
     "browser-pack-flat": "^3.4.2",
