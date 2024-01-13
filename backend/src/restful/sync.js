@@ -19,14 +19,8 @@ export default function register($app) {
     if (!$.read(ARTIFACTS_KEY)) $.write({}, ARTIFACTS_KEY);
 
     // sync all artifacts
-    $app.get('/api/sync/artifacts', syncAllArtifacts).post(
-        '/api/sync/artifacts',
-        syncAllArtifacts,
-    );
-    $app.get('/api/sync/artifact/:name', syncArtifact).post(
-        '/api/sync/artifact/:name',
-        syncArtifact,
-    );
+    $app.get('/api/sync/artifacts', syncAllArtifacts);
+    $app.get('/api/sync/artifact/:name', syncArtifact);
 }
 
 async function produceArtifact({
