@@ -13,7 +13,6 @@ import download from '@/utils/download';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { RuleUtils } from '@/core/rule-utils';
 import { syncToGist } from '@/restful/artifacts';
-import { render } from '@/utils/tpl';
 
 export default function register($app) {
     // Initialization
@@ -426,9 +425,6 @@ async function produceArtifact({
             .filter((i) => i != null && i !== '')
             .join('\n');
 
-        if (file.isTpl) {
-            filesContent = await render(filesContent);
-        }
         // apply processors
         const processed =
             Array.isArray(file.process) && file.process.length > 0
