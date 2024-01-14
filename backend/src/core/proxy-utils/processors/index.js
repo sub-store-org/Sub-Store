@@ -10,7 +10,12 @@ import { ProxyUtils } from '@/core/proxy-utils';
 import { produceArtifact } from '@/restful/sync';
 
 import env from '@/utils/env';
-import { getFlowHeaders, parseFlowHeaders, flowTransfer } from '@/utils/flow';
+import {
+    getFlowField,
+    getFlowHeaders,
+    parseFlowHeaders,
+    flowTransfer,
+} from '@/utils/flow';
 
 /**
  The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed as follows:
@@ -781,7 +786,12 @@ function removeFlag(str) {
 }
 
 function createDynamicFunction(name, script, $arguments) {
-    const flowUtils = { getFlowHeaders, parseFlowHeaders, flowTransfer };
+    const flowUtils = {
+        getFlowField,
+        getFlowHeaders,
+        parseFlowHeaders,
+        flowTransfer,
+    };
     if ($.env.isLoon) {
         return new Function(
             '$arguments',
