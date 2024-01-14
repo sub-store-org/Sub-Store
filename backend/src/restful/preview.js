@@ -3,6 +3,7 @@ import { ProxyUtils } from '@/core/proxy-utils';
 import { findByName } from '@/utils/database';
 import { success, failed } from './response';
 import download from '@/utils/download';
+import { render } from '@/utils/tpl';
 import { SUBS_KEY } from '@/constants';
 import $ from '@/core/app';
 
@@ -59,9 +60,13 @@ async function previewFile(req, res) {
         }
         // parse proxies
         const files = (Array.isArray(content) ? content : [content]).flat();
-        const filesContent = files
+        let filesContent = files
             .filter((i) => i != null && i !== '')
             .join('\n');
+
+        if (file.isTpl) {
+            filesContent = await render(filesContent);
+        }
 
         // apply processors
         const processed =
