@@ -441,7 +441,7 @@ async function produceArtifact({
     }
 }
 
-async function syncAllArtifacts(_, res) {
+async function syncArtifacts() {
     $.info('开始同步所有远程配置...');
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const files = {};
@@ -480,6 +480,15 @@ async function syncAllArtifacts(_, res) {
 
         $.write(allArtifacts, ARTIFACTS_KEY);
         $.info('全部订阅同步成功！');
+    } catch (e) {
+        $.error(`同步订阅失败，原因：${e.message ?? e}`);
+        throw e;
+    }
+}
+async function syncAllArtifacts(_, res) {
+    $.info('开始同步所有远程配置...');
+    try {
+        await syncArtifacts();
         success(res);
     } catch (err) {
         failed(
@@ -553,4 +562,4 @@ async function syncArtifact(req, res) {
     }
 }
 
-export { produceArtifact };
+export { produceArtifact, syncArtifacts };

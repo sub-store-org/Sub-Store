@@ -2,6 +2,7 @@ import express from '@/vendor/express';
 import $ from '@/core/app';
 import migrate from '@/utils/migration';
 import download from '@/utils/download';
+import { syncArtifacts } from '@/restful/sync';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
@@ -41,6 +42,28 @@ export default function serve() {
     $app.start();
 
     if ($.env.isNode) {
+        const backend_cron = eval('process.env.SUB_STORE_BACKEND_CRON');
+        if (backend_cron) {
+            $.info(`[CRON] ${backend_cron} enabled`);
+            const { CronJob } = eval(`require("cron")`);
+            new CronJob(
+                backend_cron,
+                async function () {
+                    try {
+                        $.info(`[CRON] ${backend_cron} started`);
+                        await syncArtifacts();
+                        $.info(`[CRON] ${backend_cron} finished`);
+                    } catch (e) {
+                        $.error(
+                            `[CRON] ${backend_cron} error: ${e.message ?? e}`,
+                        );
+                    }
+                }, // onTick
+                null, // onComplete
+                true, // start
+                // 'Asia/Shanghai' // timeZone
+            );
+        }
         const path = eval(`require("path")`);
         const fs = eval(`require("fs")`);
         const data_url = eval('process.env.SUB_STORE_DATA_URL');
