@@ -3,6 +3,8 @@ import { findByName } from '@/utils/database';
 import { HTTP, ENV } from '@/vendor/open-api';
 import { hex_md5 } from '@/vendor/md5';
 import resourceCache from '@/utils/resource-cache';
+import headersResourceCache from '@/utils/headers-resource-cache';
+import { getFlowField } from '@/utils/flow';
 import $ from '@/core/app';
 
 const tasks = new Map();
@@ -71,7 +73,13 @@ export default async function download(url, ua, timeout) {
             );
             http.get(url)
                 .then((resp) => {
-                    const body = resp.body;
+                    const { body, headers } = resp;
+                    if (headers) {
+                        const flowInfo = getFlowField(headers);
+                        if (flowInfo) {
+                            headersResourceCache.set(url, flowInfo);
+                        }
+                    }
                     if (body.replace(/\s/g, '').length === 0)
                         reject(new Error('远程资源内容为空！'));
                     else {
