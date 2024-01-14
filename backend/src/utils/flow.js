@@ -73,10 +73,11 @@ export async function getFlowHeaders(url, ua, timeout) {
             });
             flowInfo = getFlowField(headers);
         }
+        if (flowInfo) {
+            headersResourceCache.set(url, flowInfo);
+        }
     }
-    if (flowInfo) {
-        headersResourceCache.set(url, flowInfo);
-    }
+
     return flowInfo;
 }
 export function parseFlowHeaders(flowHeaders) {
