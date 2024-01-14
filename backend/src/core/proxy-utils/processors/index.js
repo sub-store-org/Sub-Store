@@ -680,7 +680,7 @@ async function ApplyFilter(filter, objs) {
             selected = await filter.nodeFunc(objs);
         } catch (err) {
             $.error(
-                `Cannot apply filter ${filter.name}(node script)! Reason: ${err}`,
+                `Cannot apply filter ${filter.name}(shortcut script)! Reason: ${err}`,
             );
             let nodeErr = '';
             let nodeErrMsg = `${err.message ?? err}`;
@@ -688,7 +688,7 @@ async function ApplyFilter(filter, objs) {
                 nodeErr = '';
                 funcErr = `执行失败 ${funcErrMsg}`;
             } else {
-                nodeErr = `执行节点快捷过滤脚本 失败 ${nodeErrMsg}`;
+                nodeErr = `执行快捷过滤脚本 失败 ${nodeErrMsg}`;
             }
             throw new Error(`脚本过滤 ${funcErr}${nodeErr}`);
         }
@@ -723,7 +723,7 @@ async function ApplyOperator(operator, objs) {
             if (output_) output = output_;
         } catch (err) {
             $.error(
-                `Cannot apply operator ${operator.name}(node script)! Reason: ${err}`,
+                `Cannot apply operator ${operator.name}(shortcut script)! Reason: ${err}`,
             );
             let nodeErr = '';
             let nodeErrMsg = `${err.message ?? err}`;
@@ -731,7 +731,7 @@ async function ApplyOperator(operator, objs) {
                 nodeErr = '';
                 funcErr = `执行失败 ${funcErrMsg}`;
             } else {
-                nodeErr = `执行节点快捷脚本 失败 ${nodeErrMsg}`;
+                nodeErr = `执行快捷脚本 失败 ${nodeErrMsg}`;
             }
             throw new Error(`脚本操作 ${funcErr}${nodeErr}`);
         }
