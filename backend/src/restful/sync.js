@@ -13,6 +13,7 @@ import download from '@/utils/download';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { RuleUtils } from '@/core/rule-utils';
 import { syncToGist } from '@/restful/artifacts';
+import { render } from '@/utils/tpl';
 
 export default function register($app) {
     // Initialization
@@ -33,6 +34,8 @@ async function produceArtifact({
     mergeSources,
     ignoreFailedRemoteSub,
     ignoreFailedRemoteFile,
+    produceType,
+    produceOpts = {},
 }) {
     platform = platform || 'JSON';
 
@@ -154,7 +157,7 @@ async function produceArtifact({
             exist[proxy.name] = true;
         }
         // produce
-        return ProxyUtils.produce(proxies, platform);
+        return ProxyUtils.produce(proxies, platform, produceType, produceOpts);
     } else if (type === 'collection') {
         const allSubs = $.read(SUBS_KEY);
         const allCols = $.read(COLLECTIONS_KEY);
@@ -301,7 +304,7 @@ async function produceArtifact({
             }
             exist[proxy.name] = true;
         }
-        return ProxyUtils.produce(proxies, platform);
+        return ProxyUtils.produce(proxies, platform, produceType, produceOpts);
     } else if (type === 'rule') {
         const allRules = $.read(RULES_KEY);
         const rule = findByName(allRules, name);
@@ -419,10 +422,13 @@ async function produceArtifact({
             }
         }
         const files = (Array.isArray(raw) ? raw : [raw]).flat();
-        const filesContent = files
+        let filesContent = files
             .filter((i) => i != null && i !== '')
             .join('\n');
 
+        if (file.isTpl) {
+            filesContent = await render(filesContent);
+        }
         // apply processors
         const processed =
             Array.isArray(file.process) && file.process.length > 0

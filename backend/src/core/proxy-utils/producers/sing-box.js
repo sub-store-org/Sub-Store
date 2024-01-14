@@ -582,7 +582,7 @@ const wireguardParser = (proxy = {}) => {
 
 export default function singbox_Producer() {
     const type = 'ALL';
-    const produce = (proxies, type) => {
+    const produce = (proxies, type, opts = {}) => {
         const list = [];
         ClashMeta_Producer()
             .produce(proxies, 'internal', { 'include-unsupported-proxy': true })
@@ -610,9 +610,15 @@ export default function singbox_Producer() {
                                 list.push(ssParser(proxy));
                             }
                             break;
-                        // case 'ssr':
-                        //     list.push(ssrParser(proxy));
-                        //     break;
+                        case 'ssr':
+                            if (opts['include-unsupported-proxy']) {
+                                list.push(ssrParser(proxy));
+                            } else {
+                                throw new Error(
+                                    `Platform sing-box does not support proxy type: ${proxy.type}`,
+                                );
+                            }
+                            break;
                         case 'vmess':
                             if (
                                 !proxy.network ||

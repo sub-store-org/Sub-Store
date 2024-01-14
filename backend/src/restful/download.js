@@ -20,7 +20,15 @@ async function downloadSubscription(req, res) {
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
     $.info(`正在下载订阅：${name}`);
-    let { url, ua, content, mergeSources, ignoreFailedRemoteSub } = req.query;
+    let {
+        url,
+        ua,
+        content,
+        mergeSources,
+        ignoreFailedRemoteSub,
+        produceType,
+        includeUnsupportedProxy,
+    } = req.query;
     if (url) {
         url = decodeURIComponent(url);
         $.info(`指定远程订阅 URL: ${url}`);
@@ -41,6 +49,14 @@ async function downloadSubscription(req, res) {
         ignoreFailedRemoteSub = decodeURIComponent(ignoreFailedRemoteSub);
         $.info(`指定忽略失败的远程订阅: ${ignoreFailedRemoteSub}`);
     }
+    if (produceType) {
+        produceType = decodeURIComponent(produceType);
+        $.info(`指定生产类型: ${produceType}`);
+    }
+    if (includeUnsupportedProxy) {
+        includeUnsupportedProxy = decodeURIComponent(includeUnsupportedProxy);
+        $.info(`包含不支持的节点: ${includeUnsupportedProxy}`);
+    }
 
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
@@ -55,6 +71,10 @@ async function downloadSubscription(req, res) {
                 content,
                 mergeSources,
                 ignoreFailedRemoteSub,
+                produceType,
+                produceOpts: {
+                    'include-unsupported-proxy': includeUnsupportedProxy,
+                },
             });
 
             if (sub.source !== 'local' || url) {
@@ -121,11 +141,21 @@ async function downloadCollection(req, res) {
 
     $.info(`正在下载组合订阅：${name}`);
 
-    let { ignoreFailedRemoteSub } = req.query;
+    let { ignoreFailedRemoteSub, produceType, includeUnsupportedProxy } =
+        req.query;
 
     if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
         ignoreFailedRemoteSub = decodeURIComponent(ignoreFailedRemoteSub);
         $.info(`指定忽略失败的远程订阅: ${ignoreFailedRemoteSub}`);
+    }
+    if (produceType) {
+        produceType = decodeURIComponent(produceType);
+        $.info(`指定生产类型: ${produceType}`);
+    }
+
+    if (includeUnsupportedProxy) {
+        includeUnsupportedProxy = decodeURIComponent(includeUnsupportedProxy);
+        $.info(`包含不支持的节点: ${includeUnsupportedProxy}`);
     }
 
     if (collection) {
@@ -135,6 +165,10 @@ async function downloadCollection(req, res) {
                 name,
                 platform,
                 ignoreFailedRemoteSub,
+                produceType,
+                produceOpts: {
+                    'include-unsupported-proxy': includeUnsupportedProxy,
+                },
             });
 
             // forward flow header from the first subscription in this collection

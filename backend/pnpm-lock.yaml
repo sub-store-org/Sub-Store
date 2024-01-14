@@ -26,6 +26,9 @@ dependencies:
   lodash:
     specifier: ^4.17.21
     version: registry.npmmirror.com/lodash@4.17.21
+  nunjucks:
+    specifier: ^3.2.4
+    version: registry.npmmirror.com/nunjucks@3.2.4
   request:
     specifier: ^2.88.2
     version: registry.npmmirror.com/request@2.88.2
@@ -161,11 +164,6 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
-
-  /source-map@0.6.1:
-    resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
-    engines: {node: '>=0.10.0'}
-    dev: true
 
   registry.npmmirror.com/@ampproject/remapping@2.2.0:
     resolution: {integrity: sha512-qRmjj8nj9qmLTQXXmaR1cck3UXSRMPrbsLJAasZpF+t3riI71BXed5ebIOYwQntykeZuhjsdweEc9BxH5Jc26w==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@ampproject/remapping/-/remapping-2.2.0.tgz}
@@ -2126,6 +2124,12 @@ packages:
       through: registry.npmmirror.com/through@2.3.8
     dev: true
 
+  registry.npmmirror.com/a-sync-waterfall@1.0.1:
+    resolution: {integrity: sha512-RYTOHHdWipFUliRFMCS4X2Yn2X8M87V/OpSqWzKKOGhzqyUxzyVmhHDH9sAvG+ZuQf/TAOFsLCpMw09I1ufUnA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/a-sync-waterfall/-/a-sync-waterfall-1.0.1.tgz}
+    name: a-sync-waterfall
+    version: 1.0.1
+    dev: false
+
   registry.npmmirror.com/abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/abbrev/-/abbrev-1.1.1.tgz}
     name: abbrev
@@ -2463,6 +2467,12 @@ packages:
       es-array-method-boxes-properly: registry.npmmirror.com/es-array-method-boxes-properly@1.0.0
       is-string: registry.npmmirror.com/is-string@1.0.7
     dev: true
+
+  registry.npmmirror.com/asap@2.0.6:
+    resolution: {integrity: sha512-BSHWgDSAiKs50o2Re8ppvp3seVHXSRM44cdSsT9FfNEUUZLOGWVCsiWaRPWM1Znn+mqZ1OfVZ3z3DWEzSp7hRA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/asap/-/asap-2.0.6.tgz}
+    name: asap
+    version: 2.0.6
+    dev: false
 
   registry.npmmirror.com/asn1.js@5.4.1:
     resolution: {integrity: sha512-+I//4cYPccV8LdmBLiX8CYvf9Sp3vQsrqu2QNXRcrbiWvcx/UdlFiqUJJzxRQxgsZmvhXhn4cSKeSmoFjVdupA==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/asn1.js/-/asn1.js-5.4.1.tgz}
@@ -3470,6 +3480,13 @@ packages:
     version: 4.1.1
     engines: {node: '>= 6'}
     dev: true
+
+  registry.npmmirror.com/commander@5.1.0:
+    resolution: {integrity: sha512-P0CysNDQ7rtVw4QIQtm+MRxV66vKFSvlsQvGYXZWR3qFU0jlMKHZZZgw8e+8DSah4UDKMqnknRDQz+xuQXQ/Zg==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/commander/-/commander-5.1.0.tgz}
+    name: commander
+    version: 5.1.0
+    engines: {node: '>= 6'}
+    dev: false
 
   registry.npmmirror.com/commander@9.3.0:
     resolution: {integrity: sha512-hv95iU5uXPbK83mjrJKuZyFM/LBAoCV/XhVGkS5Je6tl7sxr6A0ITMw5WoRV46/UaJ46Nllm3Xt7IaJhXTIkzw==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/commander/-/commander-9.3.0.tgz}
@@ -7379,6 +7396,23 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
+  registry.npmmirror.com/nunjucks@3.2.4:
+    resolution: {integrity: sha512-26XRV6BhkgK0VOxfbU5cQI+ICFUtMLixv1noZn1tGU38kQH5A5nmmbk/O45xdyBhD1esk47nKrY0mvQpZIhRjQ==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/nunjucks/-/nunjucks-3.2.4.tgz}
+    name: nunjucks
+    version: 3.2.4
+    engines: {node: '>= 6.9.0'}
+    hasBin: true
+    peerDependencies:
+      chokidar: ^3.3.0
+    peerDependenciesMeta:
+      chokidar:
+        optional: true
+    dependencies:
+      a-sync-waterfall: registry.npmmirror.com/a-sync-waterfall@1.0.1
+      asap: registry.npmmirror.com/asap@2.0.6
+      commander: registry.npmmirror.com/commander@5.1.0
+    dev: false
+
   registry.npmmirror.com/oauth-sign@0.9.0:
     resolution: {integrity: sha512-fexhUFFPTGV8ybAtSIGbV6gOkSv8UtRbDBnAyLQw4QPKkgNlsH2ByPGtMUqdWkos6YCRmAqViwgZrJc/mRDzZQ==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/oauth-sign/-/oauth-sign-0.9.0.tgz}
     name: oauth-sign
@@ -9320,7 +9354,7 @@ packages:
     dependencies:
       acorn: registry.npmmirror.com/acorn@8.7.1
       commander: registry.npmmirror.com/commander@2.20.3
-      source-map: 0.6.1
+      source-map: registry.npmmirror.com/source-map@0.6.1
       source-map-support: registry.npmmirror.com/source-map-support@0.5.21
     dev: true
 
