@@ -41,6 +41,7 @@ async function produceArtifact({
     if (type === 'subscription') {
         const allSubs = $.read(SUBS_KEY);
         const sub = findByName(allSubs, name);
+        if (!sub) throw new Error(`找不到订阅 ${name}`);
         let raw;
         if (content && !['localFirst', 'remoteFirst'].includes(mergeSources)) {
             raw = content;
@@ -161,6 +162,7 @@ async function produceArtifact({
         const allSubs = $.read(SUBS_KEY);
         const allCols = $.read(COLLECTIONS_KEY);
         const collection = findByName(allCols, name);
+        if (!collection) throw new Error(`找不到组合订阅 ${name}`);
         const subnames = collection.subscriptions;
         const results = {};
         const errors = {};
@@ -307,6 +309,7 @@ async function produceArtifact({
     } else if (type === 'rule') {
         const allRules = $.read(RULES_KEY);
         const rule = findByName(allRules, name);
+        if (!rule) throw new Error(`找不到规则 ${name}`);
         let rules = [];
         for (let i = 0; i < rule.urls.length; i++) {
             const url = rule.urls[i];

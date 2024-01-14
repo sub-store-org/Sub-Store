@@ -319,7 +319,11 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                 const operator = createDynamicFunction(
                     'operator',
                     `async function operator(input = []) {
-                        if (Array.isArray(input)) {
+                        if (input?.$files || input?.$content) {
+                            let { $content, $files } = input
+                            ${script}
+                            return { $content, $files }
+                        } else {
                             let proxies = input
                             let list = []
                             for await (let $server of proxies) {
@@ -327,12 +331,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                                 list.push($server)
                             }
                             return list
-                        } else {
-                            let { $content, $files } = input
-                            ${script}
-                            return { $content, $files }
                         }
-                        
                       }`,
                     $arguments,
                 );
@@ -689,7 +688,7 @@ async function ApplyFilter(filter, objs) {
                 nodeErr = '';
                 funcErr = `执行失败 ${funcErrMsg}`;
             } else {
-                nodeErr = `执行节点快捷过滤脚本 失败 ${nodeErr}`;
+                nodeErr = `执行节点快捷过滤脚本 失败 ${nodeErrMsg}`;
             }
             throw new Error(`脚本过滤 ${funcErr}${nodeErr}`);
         }
@@ -708,7 +707,9 @@ async function ApplyOperator(operator, objs) {
         if (
             funcErrMsg.includes('$server is not defined') ||
             funcErrMsg.includes('$content is not defined') ||
-            funcErrMsg.includes('$files is not defined')
+            funcErrMsg.includes('$files is not defined') ||
+            output?.$files ||
+            output?.$content
         ) {
             funcErr = '';
         } else {
@@ -730,7 +731,7 @@ async function ApplyOperator(operator, objs) {
                 nodeErr = '';
                 funcErr = `执行失败 ${funcErrMsg}`;
             } else {
-                nodeErr = `执行节点快捷脚本 失败 ${nodeErr}`;
+                nodeErr = `执行节点快捷脚本 失败 ${nodeErrMsg}`;
             }
             throw new Error(`脚本操作 ${funcErr}${nodeErr}`);
         }
