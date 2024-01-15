@@ -537,12 +537,16 @@ const tuic5Parser = (proxy = {}) => {
 };
 
 const wireguardParser = (proxy = {}) => {
+    const local_address = ['ip', 'ipv6']
+        .map((i) => proxy[i])
+        .filter((i) => i)
+        .map((i) => (/\\/.test(i) ? i : `${i}/32`));
     const parsedProxy = {
         tag: proxy.name,
         type: 'wireguard',
         server: proxy.server,
         server_port: parseInt(`${proxy.port}`, 10),
-        local_address: [proxy.ip, proxy.ipv6],
+        local_address,
         private_key: proxy['private-key'],
         peer_public_key: proxy['public-key'],
         pre_shared_key: proxy['pre-shared-key'],
@@ -563,7 +567,7 @@ const wireguardParser = (proxy = {}) => {
                 server: p.server,
                 server_port: parseInt(`${p.port}`, 10),
                 public_key: p['public-key'],
-                allowed_ips: p.allowed_ips,
+                allowed_ips: p['allowed-ips'] || p.allowed_ips,
                 reserved: [],
             };
             if (typeof p.reserved === 'string') {
