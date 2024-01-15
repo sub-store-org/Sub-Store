@@ -331,15 +331,27 @@ function URI_VLESS() {
     };
     const parse = (line) => {
         line = line.split('vless://')[1];
+        let isShadowrocket;
+        let parsed = /^(.*?)@(.*?):(\d+)\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
+        if (!parsed) {
+            // eslint-disable-next-line no-unused-vars
+            let [_, base64, other] = /^(.*?)(\?.*?$)/.exec(line);
+            line = `${Base64.decode(base64)}${other}`;
+            parsed = /^(.*?)@(.*?):(\d+)\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
+            isShadowrocket = true;
+        }
         // eslint-disable-next-line no-unused-vars
-        let [__, uuid, server, port, ___, addons = '', name] =
-            /^(.*?)@(.*?):(\d+)\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
+        let [__, uuid, server, port, ___, addons = '', name] = parsed;
+        if (isShadowrocket) {
+            uuid = uuid.replace(/^.*?:/g, '');
+        }
+
         port = parseInt(`${port}`, 10);
         uuid = decodeURIComponent(uuid);
         if (name != null) {
             name = decodeURIComponent(name);
         }
-        name = name ?? `VLESS ${server}:${port}`;
+
         const proxy = {
             type: 'vless',
             name,
@@ -355,9 +367,29 @@ function URI_VLESS() {
             params[key] = value;
         }
 
+        proxy.name = name ?? params.remarks ?? `VLESS ${server}:${port}`;
+
         proxy.tls = params.security && params.security !== 'none';
-        proxy.sni = params.sni;
+        if (
+            isShadowrocket &&
+            !proxy.tls &&
+            params.tls &&
+            !/0|none|false/.test(params.tls)
+        ) {
+            proxy.tls = true;
+            params.security = params.security ?? 'reality';
+        }
+        proxy.sni = params.sni ?? params.peer;
         proxy.flow = params.flow;
+        if (!proxy.flow && isShadowrocket && params.xtls) {
+            // "none" is undefined
+            const flow = [undefined, 'xtls-rprx-direct', 'xtls-rprx-vision'][
+                params.xtls
+            ];
+            if (flow) {
+                proxy.flow = flow;
+            }
+        }
         proxy['client-fingerprint'] = params.fp;
         proxy.alpn = params.alpn ? params.alpn.split(',') : undefined;
         proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.allowInsecure);
@@ -371,11 +403,12 @@ function URI_VLESS() {
                 opts['short-id'] = params.sid;
             }
             if (Object.keys(opts).length > 0) {
+                // proxy[`${params.security}-opts`] = opts;
                 proxy[`${params.security}-opts`] = opts;
             }
         }
 
-        proxy.network = params.type;
+        proxy.network = params.type ?? params.obfs;
         if (proxy.network && !['tcp', 'none'].includes(proxy.network)) {
             const opts = {};
             if (params.path) {
@@ -386,6 +419,8 @@ function URI_VLESS() {
             }
             if (params.serviceName) {
                 opts[`${proxy.network}-service-name`] = params.serviceName;
+            } else if (isShadowrocket && params.path) {
+                opts[`${proxy.network}-service-name`] = params.path;
             }
             // https://github.com/XTLS/Xray-core/issues/91
             if (['grpc'].includes(proxy.network)) {
