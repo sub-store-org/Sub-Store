@@ -10,6 +10,9 @@ export function getFlowField(headers) {
     return headers[subkey];
 }
 export async function getFlowHeaders(url, ua, timeout) {
+    if (url.endsWith('#noFlow')) {
+        return;
+    }
     let $arguments = {};
     const rawArgs = url.split('#');
     if (rawArgs.length > 1) {
