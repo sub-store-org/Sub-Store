@@ -31,7 +31,7 @@ export async function getFlowHeaders(url, ua, timeout) {
     const cached = headersResourceCache.get(url);
     let flowInfo;
     if (!$arguments?.noCache && cached) {
-        $.info(`使用缓存的流量信息: ${url}`);
+        // $.info(`使用缓存的流量信息: ${url}`);
         flowInfo = cached;
     } else {
         const { defaultFlowUserAgent, defaultTimeout } = $.read(SETTINGS_KEY);
@@ -42,7 +42,7 @@ export async function getFlowHeaders(url, ua, timeout) {
         const requestTimeout = timeout || defaultTimeout;
         const http = HTTP();
         try {
-            $.info(`使用 HEAD 方法获取流量信息: ${url}`);
+            // $.info(`使用 HEAD 方法获取流量信息: ${url}`);
             const { headers } = await http.head({
                 url: url
                     .split(/[\r\n]+/)
