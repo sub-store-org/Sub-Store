@@ -449,7 +449,7 @@ async function syncArtifacts() {
     try {
         await Promise.all(
             allArtifacts.map(async (artifact) => {
-                if (artifact.sync) {
+                if (artifact.sync && artifact.source) {
                     $.info(`正在同步云配置：${artifact.name}...`);
                     const output = await produceArtifact({
                         type: artifact.type,
@@ -516,7 +516,20 @@ async function syncArtifact(req, res) {
             res,
             new ResourceNotFoundError(
                 'RESOURCE_NOT_FOUND',
-                `Artifact ${name} does not exist!`,
+                `找不到远程配置 ${name}`,
+            ),
+            404,
+        );
+        return;
+    }
+
+    if (!artifact.source) {
+        $.error(`远程配置 ${name} 未设置来源`);
+        failed(
+            res,
+            new ResourceNotFoundError(
+                'RESOURCE_HAS_NO_SOURCE',
+                `远程配置 ${name} 未设置来源`,
             ),
             404,
         );
