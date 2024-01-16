@@ -19,6 +19,8 @@ export default function register($app) {
     if (!$.read(ARTIFACTS_KEY)) $.write({}, ARTIFACTS_KEY);
 
     // RESTful APIs
+    $app.get('/api/artifacts/restore', restoreArtifacts);
+
     $app.route('/api/artifacts')
         .get(getAllArtifacts)
         .post(createArtifact)
@@ -28,6 +30,60 @@ export default function register($app) {
         .get(getArtifact)
         .patch(updateArtifact)
         .delete(deleteArtifact);
+}
+
+async function restoreArtifacts(_, res) {
+    $.info('开始恢复远程配置...');
+    try {
+        const { gistToken } = $.read(SETTINGS_KEY);
+        if (!gistToken) {
+            return Promise.reject('未设置 GitHub Token！');
+        }
+        const manager = new Gist({
+            token: gistToken,
+            key: ARTIFACT_REPOSITORY_KEY,
+        });
+
+        try {
+            const gist = await manager.locate();
+            if (!gist?.files) {
+                throw new Error(`找不到 Sub-Store Gist 文件列表`);
+            }
+            const allArtifacts = $.read(ARTIFACTS_KEY);
+            Object.keys(gist.files).map((key) => {
+                const filename = gist.files[key]?.filename;
+                if (filename) {
+                    const artifact = findByName(allArtifacts, filename);
+                    if (artifact) {
+                        updateByName(allArtifacts, filename, {
+                            ...artifact,
+                            url: gist.files[key]?.raw_url,
+                        });
+                    } else {
+                        allArtifacts.push({
+                            name: `${filename}`,
+                            url: gist.files[key]?.raw_url,
+                        });
+                    }
+                }
+            });
+            $.write(allArtifacts, ARTIFACTS_KEY);
+        } catch (err) {
+            $.error(`查找 Sub-Store Gist 时发生错误: ${err.message ?? err}`);
+            throw err;
+        }
+        success(res);
+    } catch (e) {
+        $.error(`恢复远程配置失败，原因：${e.message ?? e}`);
+        failed(
+            res,
+            new InternalServerError(
+                `FAILED_TO_RESTORE_ARTIFACTS`,
+                `Failed to restore artifacts`,
+                `Reason: ${e.message ?? e}`,
+            ),
+        );
+    }
 }
 
 function getAllArtifacts(req, res) {
@@ -137,7 +193,7 @@ async function deleteArtifact(req, res) {
         if (artifact.updated) {
             // delete gist
             const files = {};
-            files[encodeURIComponent(artifact.name)] = {
+            files[artifact.name] = {
                 content: '',
             };
             // 当别的Sub 删了同步订阅 或 gist里面删了 当前设备没有删除 时 无法删除的bug
@@ -171,7 +227,7 @@ function validateArtifactName(name) {
 async function syncToGist(files) {
     const { gistToken } = $.read(SETTINGS_KEY);
     if (!gistToken) {
-        return Promise.reject('未设置Gist Token！');
+        return Promise.reject('未设置 GitHub Token！');
     }
     const manager = new Gist({
         token: gistToken,
