@@ -50,6 +50,7 @@ Core functionalities:
 - [x] Clash.Meta
 - [x] Clash
 - [x] Shadowrocket
+- [x] sing-box
 - [x] V2Ray
 - [x] V2Ray URI
 - [x] Plain JSON
