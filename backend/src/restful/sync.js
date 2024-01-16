@@ -490,16 +490,16 @@ async function syncAllArtifacts(_, res) {
     try {
         await syncArtifacts();
         success(res);
-    } catch (err) {
+    } catch (e) {
+        $.error(`同步订阅失败，原因：${e.message ?? e}`);
         failed(
             res,
             new InternalServerError(
                 `FAILED_TO_SYNC_ARTIFACTS`,
                 `Failed to sync all artifacts`,
-                `Reason: ${err}`,
+                `Reason: ${e.message ?? e}`,
             ),
         );
-        $.info(`同步订阅失败，原因：${err}`);
     }
 }
 
