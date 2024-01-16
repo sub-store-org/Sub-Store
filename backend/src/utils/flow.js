@@ -9,12 +9,11 @@ export function getFlowField(headers) {
     )[0];
     return headers[subkey];
 }
-export async function getFlowHeaders(url, ua, timeout) {
-    if (url.endsWith('#noFlow')) {
-        return;
-    }
+export async function getFlowHeaders(rawUrl, ua, timeout) {
+    let url = rawUrl;
     let $arguments = {};
     const rawArgs = url.split('#');
+    url = url.split('#')[0];
     if (rawArgs.length > 1) {
         try {
             // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
@@ -30,6 +29,9 @@ export async function getFlowHeaders(url, ua, timeout) {
                         : decodeURIComponent(value);
             }
         }
+    }
+    if ($arguments?.noFlow) {
+        return;
     }
     const cached = headersResourceCache.get(url);
     let flowInfo;

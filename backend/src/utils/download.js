@@ -9,9 +9,11 @@ import $ from '@/core/app';
 
 const tasks = new Map();
 
-export default async function download(url, ua, timeout) {
+export default async function download(rawUrl, ua, timeout) {
     let $arguments = {};
+    let url = rawUrl.replace(/#noFlow$/, '');
     const rawArgs = url.split('#');
+    url = url.split('#')[0];
     if (rawArgs.length > 1) {
         try {
             // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
