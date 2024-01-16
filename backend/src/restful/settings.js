@@ -19,6 +19,7 @@ async function getSettings(req, res) {
     if (!settings.avatarUrl) await updateGitHubAvatar();
     if (!settings.artifactStore) await updateArtifactStore();
     success(res, settings);
+    // TODO: 缺错误处理 前端也缺
 }
 
 async function updateSettings(req, res) {
@@ -31,6 +32,7 @@ async function updateSettings(req, res) {
     await updateGitHubAvatar();
     await updateArtifactStore();
     success(res, newSettings);
+    // TODO: 缺错误处理 前端也缺
 }
 
 export async function updateGitHubAvatar() {
@@ -70,17 +72,20 @@ export async function updateArtifactStore() {
         });
 
         try {
-            const gistId = await manager.locate();
-            if (gistId !== -1) {
-                settings.artifactStore = `https://gist.github.com/${githubUser}/${gistId}`;
-                $.write(settings, SETTINGS_KEY);
+            const gist = await manager.locate();
+            if (gist?.html_url) {
+                $.log(`找到 Sub-Store Gist: ${gist.html_url}`);
+                // 只需要保证 token 是对的, 现在 username 错误只会导致头像错误
+                settings.artifactStore = gist.html_url;
+                settings.artifactStoreStatus = 'VALID';
+            } else {
+                $.error(`找不到 Sub-Store Gist`);
+                settings.artifactStoreStatus = 'NOT FOUND';
             }
         } catch (err) {
-            $.error(
-                `Failed to fetch artifact store for User: ${githubUser}. Reason: ${
-                    err.message ?? err
-                }`,
-            );
+            $.error(`查找 Sub-Store Gist 时发生错误: ${err.message ?? err}`);
+            settings.artifactStoreStatus = 'ERROR';
         }
+        $.write(settings, SETTINGS_KEY);
     }
 }

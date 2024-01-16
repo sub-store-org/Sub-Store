@@ -32,10 +32,10 @@ export default class Gist {
             const gists = JSON.parse(response.body);
             for (let g of gists) {
                 if (g.description === this.key) {
-                    return g.id;
+                    return g;
                 }
             }
-            return -1;
+            return;
         });
     }
 
@@ -44,9 +44,15 @@ export default class Gist {
             return Promise.reject('未提供需上传的文件');
         }
 
-        const id = await this.locate();
+        const gist = await this.locate();
 
-        if (id === -1) {
+        if (gist?.id) {
+            // update an existing gist
+            return this.http.patch({
+                url: `/gists/${gist.id}`,
+                body: JSON.stringify({ files }),
+            });
+        } else {
             // create a new gist for backup
             return this.http.post({
                 url: '/gists',
@@ -56,29 +62,23 @@ export default class Gist {
                     files,
                 }),
             });
-        } else {
-            // update an existing gist
-            return this.http.patch({
-                url: `/gists/${id}`,
-                body: JSON.stringify({ files }),
-            });
         }
     }
 
     async download(filename) {
-        const id = await this.locate();
-        if (id === -1) {
-            return Promise.reject('未找到Gist备份！');
-        } else {
+        const gist = await this.locate();
+        if (gist?.id) {
             try {
                 const { files } = await this.http
-                    .get(`/gists/${id}`)
+                    .get(`/gists/${gist.id}`)
                     .then((resp) => JSON.parse(resp.body));
                 const url = files[filename].raw_url;
                 return await this.http.get(url).then((resp) => resp.body);
             } catch (err) {
                 return Promise.reject(err);
             }
+        } else {
+            return Promise.reject('找不到 Sub-Store Gist');
         }
     }
 }
