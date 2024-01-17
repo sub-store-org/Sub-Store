@@ -31,7 +31,7 @@ Core functionalities:
 - [x] SSD URI
 - [x] V2RayN URI
 - [x] Hysteria2 URI
-- [x] QX (SS, SSR, VMess, Trojan, HTTP, SOCKS5)
+- [x] QX (SS, SSR, VMess, Trojan, HTTP, SOCKS5, VLESS)
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, WireGuard, VLESS, Hysteria2)
 - [x] Surge (SS, VMess, Trojan, HTTP, SOCKS5, TUIC, Snell, Hysteria2, SSR(external, only for macOS), WireGuard(Surge to Surge))
 - [x] Surfboard (SS, VMess, Trojan, HTTP, SOCKS5, WireGuard(Surfboard to Surfboard))

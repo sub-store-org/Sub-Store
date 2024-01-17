@@ -229,6 +229,11 @@ function lastParse(proxy) {
             delete proxy.network;
         }
     }
+    if (['vless'].includes(proxy.type)) {
+        if (!proxy.network) {
+            proxy.network = 'tcp';
+        }
+    }
     if (['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(proxy.type)) {
         proxy.tls = true;
     }
