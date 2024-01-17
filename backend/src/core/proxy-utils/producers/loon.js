@@ -106,7 +106,19 @@ function trojan(proxy) {
                 `,host=${proxy['ws-opts']?.headers?.Host}`,
                 'ws-opts.headers.Host',
             );
-        } else {
+        } else if (proxy.network === 'http') {
+            result.append(`,transport=http`);
+            let httpPath = proxy['http-opts']?.path;
+            let httpHost = proxy['http-opts']?.headers?.Host;
+            result.appendIfPresent(
+                `,path=${Array.isArray(httpPath) ? httpPath[0] : httpPath}`,
+                'http-opts.path',
+            );
+            result.appendIfPresent(
+                `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
+                'http-opts.headers.Host',
+            );
+        } else if (!['tcp'].includes(proxy.network)) {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
     }
@@ -159,7 +171,7 @@ function vmess(proxy) {
                 `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
-        } else {
+        } else if (!['tcp'].includes(proxy.network)) {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
     } else {
@@ -195,7 +207,7 @@ function vmess(proxy) {
 
 function vless(proxy) {
     if (proxy['reality-opts']) {
-        throw new Error(`reality is unsupported`);
+        throw new Error(`VLESS REALITY is unsupported`);
     }
     const result = new Result(proxy);
     result.append(
@@ -226,7 +238,7 @@ function vless(proxy) {
                 `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
-        } else {
+        } else if (!['tcp'].includes(proxy.network)) {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
     } else {
