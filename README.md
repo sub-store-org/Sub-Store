@@ -30,13 +30,13 @@ Core functionalities:
 - [x] SSR URI
 - [x] SSD URI
 - [x] V2RayN URI
-- [x] Hysteria2 URI
+- [x] Hysteria 2 URI
 - [x] QX (SS, SSR, VMess, Trojan, HTTP, SOCKS5, VLESS)
-- [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, WireGuard, VLESS, Hysteria2)
-- [x] Surge (SS, VMess, Trojan, HTTP, SOCKS5, TUIC, Snell, Hysteria2, SSR(external, only for macOS), External Proxy Program(only for macOS), WireGuard(Surge to Surge))
+- [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, WireGuard, VLESS, Hysteria 2)
+- [x] Surge (SS, VMess, Trojan, HTTP, SOCKS5, TUIC, Snell, Hysteria 2, SSR(external, only for macOS), External Proxy Program(only for macOS), WireGuard(Surge to Surge))
 - [x] Surfboard (SS, VMess, Trojan, HTTP, SOCKS5, WireGuard(Surfboard to Surfboard))
-- [x] Shadowrocket (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria2, TUIC)
-- [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria2, TUIC)
+- [x] Shadowrocket (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC)
+- [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC)
 - [x] Stash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, TUIC)
 - [x] Clash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard)
 
