@@ -50,20 +50,32 @@ async function restoreArtifacts(_, res) {
                 throw new Error(`找不到 Sub-Store Gist 文件列表`);
             }
             const allArtifacts = $.read(ARTIFACTS_KEY);
+            const failed = [];
             Object.keys(gist.files).map((key) => {
                 const filename = gist.files[key]?.filename;
                 if (filename) {
-                    const artifact = findByName(allArtifacts, filename);
-                    if (artifact) {
-                        updateByName(allArtifacts, filename, {
-                            ...artifact,
-                            url: gist.files[key]?.raw_url,
-                        });
+                    if (encodeURIComponent(filename) !== filename) {
+                        $.error(`文件名 ${filename} 未编码 不保存`);
+                        failed.push(filename);
                     } else {
-                        allArtifacts.push({
-                            name: `${filename}`,
-                            url: gist.files[key]?.raw_url,
-                        });
+                        const artifact = findByName(allArtifacts, filename);
+                        if (artifact) {
+                            updateByName(allArtifacts, filename, {
+                                ...artifact,
+                                url: gist.files[key]?.raw_url.replace(
+                                    /\/raw\/[^/]*\/(.*)/,
+                                    '/raw/$1',
+                                ),
+                            });
+                        } else {
+                            allArtifacts.push({
+                                name: `${filename}`,
+                                url: gist.files[key]?.raw_url.replace(
+                                    /\/raw\/[^/]*\/(.*)/,
+                                    '/raw/$1',
+                                ),
+                            });
+                        }
                     }
                 }
             });
@@ -193,9 +205,15 @@ async function deleteArtifact(req, res) {
         if (artifact.updated) {
             // delete gist
             const files = {};
-            files[artifact.name] = {
+            files[encodeURIComponent(artifact.name)] = {
                 content: '',
             };
+            if (encodeURIComponent(artifact.name) !== artifact.name) {
+                files[artifact.name] = {
+                    content: '',
+                };
+            }
+
             // 当别的Sub 删了同步订阅 或 gist里面删了 当前设备没有删除 时 无法删除的bug
             try {
                 await syncToGist(files);

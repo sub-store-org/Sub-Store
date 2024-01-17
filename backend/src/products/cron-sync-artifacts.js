@@ -40,7 +40,7 @@ async function doSync() {
                         platform: artifact.platform,
                     });
 
-                    files[artifact.name] = {
+                    files[encodeURIComponent(artifact.name)] = {
                         content: output,
                     };
                 }
@@ -54,10 +54,9 @@ async function doSync() {
             if (artifact.sync) {
                 artifact.updated = new Date().getTime();
                 // extract real url from gist
-                artifact.url = body.files[artifact.name].raw_url.replace(
-                    /\/raw\/[^/]*\/(.*)/,
-                    '/raw/$1',
-                );
+                artifact.url = body.files[
+                    encodeURIComponent(artifact.name)
+                ]?.raw_url.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
             }
         }
 
