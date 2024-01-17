@@ -409,8 +409,10 @@ function URI_VLESS() {
                 proxy[`${params.security}-opts`] = opts;
             }
         }
-
         proxy.network = params.type;
+        if (proxy.network === 'tcp' && params.headerType === 'http') {
+            proxy.network = 'http';
+        }
         if (!proxy.network && isShadowrocket && params.obfs) {
             proxy.network = params.obfs;
         }
@@ -915,7 +917,8 @@ function Surge_External() {
                 line,
             )?.[2];
         }
-
+        // args = "-m", args = "rc4-md5"
+        // args = -m, args = rc4-md5
         const argsRegex = /(,|^)\s*?args\s*?=\s*("(.*?)"|(.*?))(?=\s*?(,|$))/g;
         let argsMatch;
         const args = [];
@@ -926,6 +929,8 @@ function Surge_External() {
                 args.push(argsMatch[4]);
             }
         }
+        // addresses = "[ipv6]",,addresses = "ipv6", addresses = "ipv4"
+        // addresses = [ipv6], addresses = ipv6, addresses = ipv4
         const addressesRegex =
             /(,|^)\s*?addresses\s*?=\s*("(.*?)"|(.*?))(?=\s*?(,|$))/g;
         let addressesMatch;
