@@ -108,18 +108,6 @@ function trojan(proxy) {
                 `,host=${proxy['ws-opts']?.headers?.Host}`,
                 'ws-opts.headers.Host',
             );
-        } else if (proxy.network === 'http') {
-            result.append(`,transport=http`);
-            let httpPath = proxy['http-opts']?.path;
-            let httpHost = proxy['http-opts']?.headers?.Host;
-            result.appendIfPresent(
-                `,path=${Array.isArray(httpPath) ? httpPath[0] : httpPath}`,
-                'http-opts.path',
-            );
-            result.appendIfPresent(
-                `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
-                'http-opts.headers.Host',
-            );
         } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
