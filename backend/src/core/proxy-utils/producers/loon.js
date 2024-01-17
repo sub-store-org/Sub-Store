@@ -93,7 +93,9 @@ function trojan(proxy) {
     result.append(
         `${proxy.name}=trojan,${proxy.server},${proxy.port},"${proxy.password}"`,
     );
-
+    if (proxy.network === 'tcp') {
+        delete proxy.network;
+    }
     // transport
     if (isPresent(proxy, 'network')) {
         if (proxy.network === 'ws') {
@@ -118,7 +120,7 @@ function trojan(proxy) {
                 `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
-        } else if (!['tcp'].includes(proxy.network)) {
+        } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
     }
@@ -146,7 +148,9 @@ function vmess(proxy) {
     result.append(
         `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.uuid}"`,
     );
-
+    if (proxy.network === 'tcp') {
+        delete proxy.network;
+    }
     // transport
     if (isPresent(proxy, 'network')) {
         if (proxy.network === 'ws') {
@@ -171,7 +175,7 @@ function vmess(proxy) {
                 `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
-        } else if (!['tcp'].includes(proxy.network)) {
+        } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
     } else {
@@ -213,7 +217,9 @@ function vless(proxy) {
     result.append(
         `${proxy.name}=vless,${proxy.server},${proxy.port},"${proxy.uuid}"`,
     );
-
+    if (proxy.network === 'tcp') {
+        delete proxy.network;
+    }
     // transport
     if (isPresent(proxy, 'network')) {
         if (proxy.network === 'ws') {
@@ -238,7 +244,7 @@ function vless(proxy) {
                 `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
-        } else if (!['tcp'].includes(proxy.network)) {
+        } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
     } else {
