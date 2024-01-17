@@ -1,4 +1,11 @@
-import { getIfNotBlank, isPresent, isNotBlank, getIfPresent } from '@/utils';
+import {
+    isIPv4,
+    isIPv6,
+    getIfNotBlank,
+    isPresent,
+    isNotBlank,
+    getIfPresent,
+} from '@/utils';
 import getSurgeParser from './peggy/surge';
 import getLoonParser from './peggy/loon';
 import getQXParser from './peggy/qx';
@@ -872,6 +879,76 @@ function Surge_Socks5() {
     return { name, test, parse };
 }
 
+function Surge_External() {
+    const name = 'Surge External Parser';
+    const test = (line) => {
+        return /^.*=\s*external/.test(line.split(',')[0]);
+    };
+    const parse = (line) => {
+        let parsed = /^\s*(.*?)\s*?=\s*?external\s*?,\s*(.*?)\s*$/.exec(line);
+
+        // eslint-disable-next-line no-unused-vars
+        let [_, name, other] = parsed;
+        line = other;
+
+        // exec = "/usr/bin/ssh" 或 exec = /usr/bin/ssh
+        let exec = /(,|^)\s*?exec\s*?=\s*"(.*?)"\s*?(,|$)/.exec(line)?.[2];
+        if (!exec) {
+            exec = /(,|^)\s*?exec\s*?=\s*(.*?)\s*?(,|$)/.exec(line)?.[2];
+        }
+
+        // local-port = "1080" 或 local-port = 1080
+        let localPort = /(,|^)\s*?local-port\s*?=\s*"(.*?)"\s*?(,|$)/.exec(
+            line,
+        )?.[2];
+        if (!localPort) {
+            localPort = /(,|^)\s*?local-port\s*?=\s*(.*?)\s*?(,|$)/.exec(
+                line,
+            )?.[2];
+        }
+
+        const argsRegex = /(,|^)\s*?args\s*?=\s*("(.*?)"|(.*?))(?=\s*?(,|$))/g;
+        let argsMatch;
+        const args = [];
+        while ((argsMatch = argsRegex.exec(line)) !== null) {
+            if (argsMatch[3] != null) {
+                args.push(argsMatch[3]);
+            } else if (argsMatch[4] != null) {
+                args.push(argsMatch[4]);
+            }
+        }
+        const addressesRegex =
+            /(,|^)\s*?addresses\s*?=\s*("(.*?)"|(.*?))(?=\s*?(,|$))/g;
+        let addressesMatch;
+        const addresses = [];
+        while ((addressesMatch = addressesRegex.exec(line)) !== null) {
+            let ip;
+            if (addressesMatch[3] != null) {
+                ip = addressesMatch[3];
+            } else if (addressesMatch[4] != null) {
+                ip = addressesMatch[4];
+            }
+            if (ip != null) {
+                ip = `${ip}`.trim().replace(/^\[/, '').replace(/\]$/, '');
+            }
+            if (isIP(ip)) {
+                addresses.push(ip);
+            }
+        }
+
+        const proxy = {
+            type: 'external',
+            name,
+            exec,
+            'local-port': localPort,
+            args,
+            addresses,
+        };
+        return proxy;
+    };
+    return { name, test, parse };
+}
+
 function Surge_Snell() {
     const name = 'Surge Snell Parser';
     const test = (line) => {
@@ -907,6 +984,10 @@ function Surge_Hysteria2() {
     return { name, test, parse };
 }
 
+function isIP(ip) {
+    return isIPv4(ip) || isIPv6(ip);
+}
+
 export default [
     URI_SS(),
     URI_SSR(),
@@ -924,6 +1005,7 @@ export default [
     Surge_WireGuard(),
     Surge_Hysteria2(),
     Surge_Socks5(),
+    Surge_External(),
     Loon_SS(),
     Loon_SSR(),
     Loon_VMess(),
