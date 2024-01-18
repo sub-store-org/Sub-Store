@@ -46,8 +46,19 @@ function Clash() {
     };
     const parse = function (raw) {
         // Clash YAML format
-        const proxies = safeLoad(raw).proxies;
-        return proxies.map((p) => JSON.stringify(p)).join('\n');
+        const {
+            proxies,
+            'global-client-fingerprint': globalClientFingerprint,
+        } = safeLoad(raw);
+        return proxies
+            .map((p) => {
+                // https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config.yaml#L73C1-L73C26
+                if (globalClientFingerprint && !p['client-fingerprint']) {
+                    p['client-fingerprint'] = globalClientFingerprint;
+                }
+                return JSON.stringify(p);
+            })
+            .join('\n');
     };
     return { name, test, parse };
 }
