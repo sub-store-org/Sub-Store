@@ -205,6 +205,11 @@ const tlsParser = (proxy, parsedProxy) => {
             enabled: true,
             fingerprint: proxy['client-fingerprint'],
         };
+    if (proxy.fingerprint && proxy.fingerprint !== '')
+        parsedProxy.tls.utls = {
+            enabled: true,
+            fingerprint: proxy.fingerprint,
+        };
     if (proxy['reality-opts']) {
         parsedProxy.tls.reality = { enabled: true };
         if (proxy['reality-opts']['public-key'])
