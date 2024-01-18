@@ -578,6 +578,10 @@ function Clash_All() {
             }
         }
 
+        if (proxy.fingerprint) {
+            proxy['tls-fingerprint'] = proxy.fingerprint;
+        }
+
         if (proxy['benchmark-url']) {
             proxy['test-url'] = proxy['benchmark-url'];
         }
