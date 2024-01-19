@@ -224,6 +224,19 @@ function lastParse(proxy) {
             .replace(/^\[/, '')
             .replace(/\]$/, '');
     }
+    if (proxy.network === 'ws') {
+        if (!proxy['ws-opts'] && (proxy['ws-path'] || proxy['ws-headers'])) {
+            proxy['ws-opts'] = {};
+            if (proxy['ws-path']) {
+                proxy['ws-opts'].path = proxy['ws-path'];
+            }
+            if (proxy['ws-headers']) {
+                proxy['ws-opts'].headers = proxy['ws-headers'];
+            }
+        }
+        delete proxy['ws-path'];
+        delete proxy['ws-headers'];
+    }
     if (proxy.type === 'trojan') {
         if (proxy.network === 'tcp') {
             delete proxy.network;
