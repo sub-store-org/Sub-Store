@@ -35,13 +35,14 @@ export default function register($app) {
 async function restoreArtifacts(_, res) {
     $.info('开始恢复远程配置...');
     try {
-        const { gistToken } = $.read(SETTINGS_KEY);
+        const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
         if (!gistToken) {
             return Promise.reject('未设置 GitHub Token！');
         }
         const manager = new Gist({
             token: gistToken,
             key: ARTIFACT_REPOSITORY_KEY,
+            syncPlatform,
         });
 
         try {
@@ -243,13 +244,14 @@ function validateArtifactName(name) {
 }
 
 async function syncToGist(files) {
-    const { gistToken } = $.read(SETTINGS_KEY);
+    const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
     if (!gistToken) {
         return Promise.reject('未设置 GitHub Token！');
     }
     const manager = new Gist({
         token: gistToken,
         key: ARTIFACT_REPOSITORY_KEY,
+        syncPlatform,
     });
     return manager.upload(files);
 }

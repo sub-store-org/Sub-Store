@@ -314,6 +314,17 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 request[method.toLowerCase()](
                     options,
                     (err, response, body) => {
+                        // if (err) {
+                        //     console.log(err);
+                        // } else {
+                        //     console.log({
+                        //         statusCode:
+                        //             response.status || response.statusCode,
+                        //         headers: response.headers,
+                        //         body,
+                        //     });
+                        // }
+
                         if (err) reject(err);
                         else
                             resolve({
