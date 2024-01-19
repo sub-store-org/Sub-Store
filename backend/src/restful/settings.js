@@ -1,5 +1,6 @@
 import { SETTINGS_KEY, ARTIFACT_REPOSITORY_KEY } from '@/constants';
-import { success } from './response';
+import { success, failed } from './response';
+import { InternalServerError } from '@/restful/errors';
 import $ from '@/core/app';
 import Gist from '@/utils/gist';
 
@@ -10,29 +11,52 @@ export default function register($app) {
 }
 
 async function getSettings(req, res) {
-    let settings = $.read(SETTINGS_KEY);
-    if (!settings) {
-        settings = {};
-        $.write(settings, SETTINGS_KEY);
-    }
+    try {
+        let settings = $.read(SETTINGS_KEY);
+        if (!settings) {
+            settings = {};
+            $.write(settings, SETTINGS_KEY);
+        }
 
-    if (!settings.avatarUrl) await updateGitHubAvatar();
-    if (!settings.artifactStore) await updateArtifactStore();
-    success(res, settings);
-    // TODO: 缺错误处理 前端也缺
+        if (!settings.avatarUrl) await updateGitHubAvatar();
+        if (!settings.artifactStore) await updateArtifactStore();
+
+        success(res, settings);
+    } catch (e) {
+        $.error(`Failed to get settings: ${e.message ?? e}`);
+        failed(
+            res,
+            new InternalServerError(
+                `FAILED_TO_GET_SETTINGS`,
+                `Failed to get settings`,
+                `Reason: ${e.message ?? e}`,
+            ),
+        );
+    }
 }
 
 async function updateSettings(req, res) {
-    const settings = $.read(SETTINGS_KEY);
-    const newSettings = {
-        ...settings,
-        ...req.body,
-    };
-    $.write(newSettings, SETTINGS_KEY);
-    await updateGitHubAvatar();
-    await updateArtifactStore();
-    success(res, newSettings);
-    // TODO: 缺错误处理 前端也缺
+    try {
+        const settings = $.read(SETTINGS_KEY);
+        const newSettings = {
+            ...settings,
+            ...req.body,
+        };
+        $.write(newSettings, SETTINGS_KEY);
+        await updateGitHubAvatar();
+        await updateArtifactStore();
+        success(res, newSettings);
+    } catch (e) {
+        $.error(`Failed to update settings: ${e.message ?? e}`);
+        failed(
+            res,
+            new InternalServerError(
+                `FAILED_TO_UPDATE_SETTINGS`,
+                `Failed to update settings`,
+                `Reason: ${e.message ?? e}`,
+            ),
+        );
+    }
 }
 
 export async function updateGitHubAvatar() {
