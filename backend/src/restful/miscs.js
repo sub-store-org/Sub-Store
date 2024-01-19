@@ -1,7 +1,7 @@
 import $ from '@/core/app';
 import { ENV } from '@/vendor/open-api';
 import { failed, success } from '@/restful/response';
-import { updateArtifactStore, updateGitHubAvatar } from '@/restful/settings';
+import { updateArtifactStore, updateAvatar } from '@/restful/settings';
 import resourceCache from '@/utils/resource-cache';
 import {
     GIST_BACKUP_FILE_NAME,
@@ -68,7 +68,7 @@ function getEnv(req, res) {
 
 async function refresh(_, res) {
     // 1. get GitHub avatar and artifact store
-    await updateGitHubAvatar();
+    await updateAvatar();
     await updateArtifactStore();
 
     // 2. clear resource cache
@@ -79,7 +79,7 @@ async function refresh(_, res) {
 async function gistBackup(req, res) {
     const { action } = req.query;
     // read token
-    const { gistToken } = $.read(SETTINGS_KEY);
+    const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
     if (!gistToken) {
         failed(
             res,
@@ -92,6 +92,7 @@ async function gistBackup(req, res) {
         const gist = new Gist({
             token: gistToken,
             key: GIST_BACKUP_KEY,
+            syncPlatform,
         });
         try {
             let content;

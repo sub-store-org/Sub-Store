@@ -54,9 +54,18 @@ async function doSync() {
             if (artifact.sync) {
                 artifact.updated = new Date().getTime();
                 // extract real url from gist
-                artifact.url = body.files[
-                    encodeURIComponent(artifact.name)
-                ]?.raw_url.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
+                let files = body.files;
+                let isGitLab;
+                if (Array.isArray(files)) {
+                    isGitLab = true;
+                    files = Object.fromEntries(
+                        files.map((item) => [item.path, item]),
+                    );
+                }
+                const url = files[encodeURIComponent(artifact.name)]?.raw_url;
+                artifact.url = isGitLab
+                    ? url
+                    : url?.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
             }
         }
 

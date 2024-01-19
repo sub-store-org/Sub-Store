@@ -4,64 +4,216 @@ import { HTTP } from '@/vendor/open-api';
  * Gist backup
  */
 export default class Gist {
-    constructor({ token, key }) {
-        this.http = HTTP({
-            baseURL: 'https://api.github.com',
-            headers: {
+    constructor({ token, key, syncPlatform }) {
+        if (syncPlatform === 'gitlab') {
+            this.headers = {
+                'PRIVATE-TOKEN': `${token}`,
+                'User-Agent':
+                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36',
+            };
+            this.http = HTTP({
+                baseURL: 'https://gitlab.com/api/v4',
+                headers: { ...this.headers },
+                events: {
+                    onResponse: (resp) => {
+                        if (/^[45]/.test(String(resp.statusCode))) {
+                            const body = JSON.parse(resp.body);
+                            return Promise.reject(
+                                `ERROR: ${body.message?.error ?? body.message}`,
+                            );
+                        } else {
+                            return resp;
+                        }
+                    },
+                },
+            });
+        } else {
+            this.headers = {
                 Authorization: `token ${token}`,
                 'User-Agent':
                     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36',
-            },
-            events: {
-                onResponse: (resp) => {
-                    if (/^[45]/.test(String(resp.statusCode))) {
-                        return Promise.reject(
-                            `ERROR: ${JSON.parse(resp.body).message}`,
-                        );
-                    } else {
-                        return resp;
-                    }
+            };
+            this.http = HTTP({
+                baseURL: 'https://api.github.com',
+                headers: { ...this.headers },
+                events: {
+                    onResponse: (resp) => {
+                        if (/^[45]/.test(String(resp.statusCode))) {
+                            return Promise.reject(
+                                `ERROR: ${JSON.parse(resp.body).message}`,
+                            );
+                        } else {
+                            return resp;
+                        }
+                    },
                 },
-            },
-        });
+            });
+        }
+
         this.key = key;
+        this.syncPlatform = syncPlatform;
     }
 
     async locate() {
-        return this.http.get('/gists').then((response) => {
-            const gists = JSON.parse(response.body);
-            for (let g of gists) {
-                if (g.description === this.key) {
-                    return g;
+        if (this.syncPlatform === 'gitlab') {
+            return this.http.get('/snippets').then((response) => {
+                const gists = JSON.parse(response.body);
+
+                for (let g of gists) {
+                    if (g.title === this.key) {
+                        return g;
+                    }
                 }
-            }
-            return;
-        });
+                return;
+            });
+        } else {
+            return this.http.get('/gists').then((response) => {
+                const gists = JSON.parse(response.body);
+                for (let g of gists) {
+                    if (g.description === this.key) {
+                        return g;
+                    }
+                }
+                return;
+            });
+        }
     }
 
-    async upload(files) {
-        if (Object.keys(files).length === 0) {
+    async upload(input) {
+        if (Object.keys(input).length === 0) {
             return Promise.reject('未提供需上传的文件');
         }
 
         const gist = await this.locate();
 
+        let files = input;
+
         if (gist?.id) {
-            // update an existing gist
-            return this.http.patch({
-                url: `/gists/${gist.id}`,
-                body: JSON.stringify({ files }),
+            if (this.syncPlatform === 'gitlab') {
+                gist.files = gist.files.reduce((acc, item) => {
+                    acc[item.path] = item;
+                    return acc;
+                }, {});
+            }
+            // console.log(`files`, files);
+            // console.log(`gist`, gist.files);
+            let actions = [];
+            const result = { ...gist.files };
+            Object.keys(files).map((key) => {
+                if (result[key]) {
+                    if (
+                        files[key].content == null ||
+                        files[key].content === ''
+                    ) {
+                        delete result[key];
+                        actions.push({
+                            action: 'delete',
+                            file_path: key,
+                        });
+                    } else {
+                        result[key] = files[key];
+                        actions.push({
+                            action: 'update',
+                            file_path: key,
+                            content: files[key].content,
+                        });
+                    }
+                } else {
+                    if (
+                        files[key].content == null ||
+                        files[key].content === ''
+                    ) {
+                        delete result[key];
+                        delete files[key];
+                    } else {
+                        result[key] = files[key];
+                        actions.push({
+                            action: 'create',
+                            file_path: key,
+                            content: files[key].content,
+                        });
+                    }
+                }
             });
+            console.log(`result`, result);
+            console.log(`files`, files);
+            console.log(`actions`, actions);
+
+            if (this.syncPlatform === 'gitlab') {
+                if (Object.keys(result).length === 0) {
+                    return Promise.reject(
+                        '本次操作将导致所有文件的内容都为空, 无法更新 snippet',
+                    );
+                }
+                if (Object.keys(result).length > 10) {
+                    return Promise.reject(
+                        '本次操作将导致 snippet 的文件数超过 10, 无法更新 snippet',
+                    );
+                }
+                files = actions;
+                return this.http.put({
+                    headers: {
+                        ...this.headers,
+                        'Content-Type': 'application/json',
+                    },
+                    url: `/snippets/${gist.id}`,
+                    body: JSON.stringify({ files }),
+                });
+            } else {
+                if (Object.keys(result).length === 0) {
+                    return Promise.reject(
+                        '本次操作将导致所有文件的内容都为空, 无法更新 gist',
+                    );
+                }
+                return this.http.patch({
+                    url: `/gists/${gist.id}`,
+                    body: JSON.stringify({ files }),
+                });
+            }
         } else {
-            // create a new gist for backup
-            return this.http.post({
-                url: '/gists',
-                body: JSON.stringify({
-                    description: this.key,
-                    public: false,
-                    files,
-                }),
-            });
+            files = Object.entries(files).reduce((acc, [key, file]) => {
+                if (file.content !== null && file.content !== '') {
+                    acc[key] = file;
+                }
+                return acc;
+            }, {});
+            if (this.syncPlatform === 'gitlab') {
+                if (Object.keys(files).length === 0) {
+                    return Promise.reject(
+                        '所有文件的内容都为空, 无法创建 snippet',
+                    );
+                }
+                files = Object.keys(files).map((key) => ({
+                    file_path: key,
+                    content: files[key].content,
+                }));
+                return this.http.post({
+                    headers: {
+                        ...this.headers,
+                        'Content-Type': 'application/json',
+                    },
+                    url: '/snippets',
+                    body: JSON.stringify({
+                        title: this.key,
+                        visibility: 'private',
+                        files,
+                    }),
+                });
+            } else {
+                if (Object.keys(files).length === 0) {
+                    return Promise.reject(
+                        '所有文件的内容都为空, 无法创建 gist',
+                    );
+                }
+                return this.http.post({
+                    url: '/gists',
+                    body: JSON.stringify({
+                        description: this.key,
+                        public: false,
+                        files,
+                    }),
+                });
+            }
         }
     }
 
