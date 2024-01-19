@@ -348,14 +348,14 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
 }
 
 const DOMAIN_RESOLVERS = {
-    Google: async function (domain) {
-        const id = hex_md5(`GOOGLE:${domain}`);
+    Google: async function (domain, type) {
+        const id = hex_md5(`GOOGLE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (cached) return cached;
         const resp = await $.http.get({
             url: `https://8.8.4.4/resolve?name=${encodeURIComponent(
                 domain,
-            )}&type=A`,
+            )}&type=${type === 'IPv6' ? 'AAAA' : 'A'}`,
             headers: {
                 accept: 'application/dns-json',
             },
@@ -389,14 +389,14 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Cloudflare: async function (domain) {
-        const id = hex_md5(`CLOUDFLARE:${domain}`);
+    Cloudflare: async function (domain, type) {
+        const id = hex_md5(`CLOUDFLARE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (cached) return cached;
         const resp = await $.http.get({
             url: `https://1.0.0.1/dns-query?name=${encodeURIComponent(
                 domain,
-            )}&type=A`,
+            )}&type=${type === 'IPv6' ? 'AAAA' : 'A'}`,
             headers: {
                 accept: 'application/dns-json',
             },
@@ -413,14 +413,14 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Ali: async function (domain) {
-        const id = hex_md5(`ALI:${domain}`);
+    Ali: async function (domain, type) {
+        const id = hex_md5(`ALI:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (cached) return cached;
         const resp = await $.http.get({
             url: `http://223.6.6.6/resolve?name=${encodeURIComponent(
                 domain,
-            )}&type=A&short=1`,
+            )}&type=${type === 'IPv6' ? 'AAAA' : 'A'}&short=1`,
             headers: {
                 accept: 'application/dns-json',
             },
@@ -433,14 +433,14 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Tencent: async function (domain) {
-        const id = hex_md5(`ALI:${domain}`);
+    Tencent: async function (domain, type) {
+        const id = hex_md5(`ALI:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (cached) return cached;
         const resp = await $.http.get({
-            url: `http://119.28.28.28/d?type=A&dn=${encodeURIComponent(
-                domain,
-            )}`,
+            url: `http://119.28.28.28/d?type=${
+                type === 'IPv6' ? 'AAAA' : 'A'
+            }&dn=${encodeURIComponent(domain)}`,
             headers: {
                 accept: 'application/dns-json',
             },
@@ -455,10 +455,13 @@ const DOMAIN_RESOLVERS = {
     },
 };
 
-function ResolveDomainOperator({ provider }) {
+function ResolveDomainOperator({ provider, type, filter }) {
+    if (type === 'IPv6' && ['IP-API'].includes(provider)) {
+        throw new Error(`域名解析服务提供方 ${provider} 不支持 IPv6`);
+    }
     const resolver = DOMAIN_RESOLVERS[provider];
     if (!resolver) {
-        throw new Error(`Cannot find resolver: ${provider}`);
+        throw new Error(`找不到域名解析服务提供方: ${provider}`);
     }
     return {
         name: 'Resolve Domain Operator',
@@ -477,7 +480,7 @@ function ResolveDomainOperator({ provider }) {
                 const currentBatch = [];
                 for (let domain of totalDomain.splice(0, limit)) {
                     currentBatch.push(
-                        resolver(domain)
+                        resolver(domain, type)
                             .then((ip) => {
                                 results[domain] = ip;
                                 $.info(
@@ -504,7 +507,19 @@ function ResolveDomainOperator({ provider }) {
                 }
             });
 
-            return proxies;
+            return proxies.filter((p) => {
+                if (filter === 'removeFailed') {
+                    return p['no-resolve'] || p.resolved;
+                } else if (filter === 'IPOnly') {
+                    return isIP(p.server);
+                } else if (filter === 'IPv4Only') {
+                    return isIPv4(p.server);
+                } else if (filter === 'IPv6Only') {
+                    return isIPv6(p.server);
+                } else {
+                    return true;
+                }
+            });
         },
     };
 }
