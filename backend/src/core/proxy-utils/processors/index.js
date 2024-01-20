@@ -324,7 +324,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                 const operator = createDynamicFunction(
                     'operator',
                     `async function operator(input = []) {
-                        if (input?.$files || input?.$content) {
+                        if (input && (input.$files || input.$content)) {
                             let { $content, $files } = input
                             ${script}
                             return { $content, $files }
