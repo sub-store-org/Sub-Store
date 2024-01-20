@@ -88,13 +88,13 @@ export async function getFlowHeaders(rawUrl, ua, timeout) {
 export function parseFlowHeaders(flowHeaders) {
     if (!flowHeaders) return;
     // unit is KB
-    const uploadMatch = flowHeaders.match(/upload=(-?)(\d+)/);
+    const uploadMatch = flowHeaders.match(/upload=(-?)([E+.\d]+)/);
     const upload = Number(uploadMatch[1] + uploadMatch[2]);
 
-    const downloadMatch = flowHeaders.match(/download=(-?)(\d+)/);
+    const downloadMatch = flowHeaders.match(/download=(-?)([E+.\d]+)/);
     const download = Number(downloadMatch[1] + downloadMatch[2]);
 
-    const total = Number(flowHeaders.match(/total=(\d+)/)[1]);
+    const total = Number(flowHeaders.match(/total=([E+.\d]+)/)[1]);
 
     // optional expire timestamp
     const match = flowHeaders.match(/expire=(\d+)/);
