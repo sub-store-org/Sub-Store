@@ -88,17 +88,27 @@ export async function getFlowHeaders(rawUrl, ua, timeout) {
 export function parseFlowHeaders(flowHeaders) {
     if (!flowHeaders) return;
     // unit is KB
-    const uploadMatch = flowHeaders.match(/upload=(-?)([E+.\d]+)/);
+    const uploadMatch = flowHeaders.match(
+        /upload=([-+]?)([0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)/,
+    );
     const upload = Number(uploadMatch[1] + uploadMatch[2]);
 
-    const downloadMatch = flowHeaders.match(/download=(-?)([E+.\d]+)/);
+    const downloadMatch = flowHeaders.match(
+        /download=([-+]?)([0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)/,
+    );
     const download = Number(downloadMatch[1] + downloadMatch[2]);
-
-    const total = Number(flowHeaders.match(/total=([E+.\d]+)/)[1]);
+    const totalMatch = flowHeaders.match(
+        /total=([-+]?)([0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)/,
+    );
+    const total = Number(totalMatch[1] + totalMatch[2]);
 
     // optional expire timestamp
-    const match = flowHeaders.match(/expire=(\d+)/);
-    const expires = match ? Number(match[1]) : undefined;
+    const expireMatch = flowHeaders.match(
+        /expire=([-+]?)([0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)/,
+    );
+    const expires = expireMatch
+        ? Number(expireMatch[1] + expireMatch[2])
+        : undefined;
 
     return { expires, total, usage: { upload, download } };
 }
