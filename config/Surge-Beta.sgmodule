@@ -1,0 +1,14 @@
+#!name=Sub-Store(β)
+#!desc=支持最新 Surge iOS TestFlight 版本的参数设置功能. 测落地功能 ability: http-client-policy, 同步配置的定时 cronexp: 0 0 * * *
+#!category=订阅管理
+#!arguments=1️⃣ 已开启测落地能力:填写任意其他值关闭,ability:http-client-policy,2️⃣ 同步配置定时任务:默认为每天 0 点,cronexp:0 0 * * *,3️⃣ 自定义定时任务名:编辑器中方便选择,sync:"Sub-Store Sync"
+
+[MITM]
+hostname = %APPEND% sub.store
+
+[Script]
+Sub-Store Core=type=http-request,pattern=^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))),script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js,requires-body=true,timeout=120,ability={{{ability}}}
+
+Sub-Store Simple=type=http-request,pattern=^https?:\/\/sub\.store,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js,requires-body=true
+
+{{{sync}}}=type=cron,cronexp={{{cronexp}}},wake-system=1,timeout=120,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
