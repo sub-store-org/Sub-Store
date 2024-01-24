@@ -1,5 +1,5 @@
 #!name=Sub-Store
-#!desc=高级订阅管理工具
+#!desc=高级订阅管理工具. 定时任务默认为每天 0 点
 #!openUrl=https://sub.store
 #!author=Peng-YM
 #!homepage=https://github.com/sub-store-org/Sub-Store
