@@ -41,7 +41,6 @@ function URI_SS() {
             }
             content = Base64.decode(content);
             if (query) {
-                console.log(query);
                 if (/(&|\?)v2ray-plugin=/.test(query)) {
                     const parsed = query.match(/(&|\?)v2ray-plugin=(.*?)(&|$)/);
                     let v2rayPlugin = parsed[2];

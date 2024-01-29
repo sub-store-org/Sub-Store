@@ -89,6 +89,18 @@ export default function ClashMeta_Producer() {
                         proxy.servername = proxy.sni;
                         delete proxy.sni;
                     }
+                } else if (proxy.type === 'ss') {
+                    if (
+                        isPresent(proxy, 'shadow-tls-password') &&
+                        !isPresent(proxy, 'plugin')
+                    ) {
+                        proxy.plugin = 'shadow-tls';
+                        proxy['plugin-opts'] = {
+                            host: proxy['shadow-tls-sni'],
+                            password: proxy['shadow-tls-password'],
+                            version: proxy['shadow-tls-version'],
+                        };
+                    }
                 }
 
                 if (
@@ -127,6 +139,13 @@ export default function ClashMeta_Producer() {
                         !Array.isArray(host)
                     ) {
                         proxy['h2-opts'].headers.host = [host];
+                    }
+                }
+
+                if (proxy['plugin-opts']?.tls) {
+                    if (isPresent(proxy, 'skip-cert-verify')) {
+                        proxy['plugin-opts']['skip-cert-verify'] =
+                            proxy['skip-cert-verify'];
                     }
                 }
                 if (
