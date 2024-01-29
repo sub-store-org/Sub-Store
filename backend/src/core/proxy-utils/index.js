@@ -21,6 +21,27 @@ function preprocess(raw) {
     return raw;
 }
 
+function postprocess(proxies) {
+    return proxies.map((proxy) => {
+        let normalized_proxy = proxy;
+        if (proxy.type === 'vless') {
+            if (proxy["network"] === 'websocket') {
+                normalized_proxy["network"] = 'ws';
+                if (proxy["websocket-opts"]){
+                    normalized_proxy["ws-opts"] = {
+                        "path": proxy["websocket-opts"]["websocket-service-name"],
+                        "headers": {
+                            "Host": proxy["sni"],
+                        }
+                    };
+                    delete normalized_proxy["websocket-opts"];
+                }
+            }
+        }
+        return normalized_proxy;
+    })
+}
+
 function parse(raw) {
     raw = preprocess(raw);
     // parse
@@ -60,6 +81,9 @@ function parse(raw) {
             $.error(`Failed to parse line: ${line}`);
         }
     }
+
+    proxies = postprocess(proxies);
+
     return proxies;
 }
 
