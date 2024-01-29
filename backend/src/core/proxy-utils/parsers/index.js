@@ -32,8 +32,18 @@ function URI_SS() {
         // handle IPV4 and IPV6
         let serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
         let userInfoStr = Base64.decode(content.split('@')[0]);
+        let query = '';
         if (!serverAndPortArray) {
+            // 暂时先这样处理 目前够用
+            if (content.includes('?plugin=')) {
+                const parsed = content.match(/^(.*)(\?plugin=.*)$/);
+                content = parsed[1];
+                query = parsed[2];
+            }
             content = Base64.decode(content);
+            if (query) {
+                content = `${content}${query}`;
+            }
             userInfoStr = content.split('@')[0];
             serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
         }
@@ -47,7 +57,6 @@ function URI_SS() {
         const userInfo = userInfoStr.split(':');
         proxy.cipher = userInfo[0];
         proxy.password = userInfo[1];
-
         // handle obfs
         const idx = content.indexOf('?plugin=');
         if (idx !== -1) {
@@ -83,6 +92,9 @@ function URI_SS() {
                         `Unsupported plugin option: ${params.plugin}`,
                     );
             }
+        }
+        if (/(&|\?)uot=(1|true)/i.test(query)) {
+            proxy['udp-over-tcp'] = true;
         }
         return proxy;
     };
@@ -416,16 +428,31 @@ function URI_VLESS() {
         if (!proxy.network && isShadowrocket && params.obfs) {
             proxy.network = params.obfs;
         }
+        if (['websocket'].includes(proxy.network)) {
+            proxy.network = 'ws';
+        }
         if (proxy.network && !['tcp', 'none'].includes(proxy.network)) {
             const opts = {};
-            if (params.host) {
-                opts.headers = { Host: params.host };
+            const host = params.host ?? params.obfsParam;
+            if (host) {
+                if (params.obfsParam) {
+                    try {
+                        const parsed = JSON.parse(host);
+                        opts.headers = parsed;
+                    } catch (e) {
+                        opts.headers = { Host: host };
+                    }
+                } else {
+                    opts.headers = { Host: host };
+                }
             }
             if (params.serviceName) {
                 opts[`${proxy.network}-service-name`] = params.serviceName;
             } else if (isShadowrocket && params.path) {
-                opts[`${proxy.network}-service-name`] = params.path;
-                delete params.path;
+                if (!['ws', 'http'].includes(proxy.network)) {
+                    opts[`${proxy.network}-service-name`] = params.path;
+                    delete params.path;
+                }
             }
             if (params.path) {
                 opts.path = params.path;
