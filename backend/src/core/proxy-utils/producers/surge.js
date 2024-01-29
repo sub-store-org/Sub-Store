@@ -69,7 +69,7 @@ function shadowsocks(proxy) {
                 `,obfs-uri=${proxy['plugin-opts'].path}`,
                 'plugin-opts.path',
             );
-        } else {
+        } else if (!['shadow-tls'].includes(proxy.plugin)) {
             throw new Error(`plugin ${proxy.plugin} is not supported`);
         }
     }
@@ -95,6 +95,24 @@ function shadowsocks(proxy) {
             `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
             'shadow-tls-sni',
         );
+    } else if (['shadow-tls'].includes(proxy.plugin) && proxy['plugin-opts']) {
+        const password = proxy['plugin-opts'].password;
+        const host = proxy['plugin-opts'].host;
+        const version = proxy['plugin-opts'].version;
+        if (password) {
+            result.append(`,shadow-tls-password=${password}`);
+            if (host) {
+                result.append(`,shadow-tls-sni=${host}`);
+            }
+            if (version) {
+                if (version < 2) {
+                    throw new Error(
+                        `shadow-tls version ${version} is not supported`,
+                    );
+                }
+                result.append(`,shadow-tls-version=${version}`);
+            }
+        }
     }
 
     // block-quic

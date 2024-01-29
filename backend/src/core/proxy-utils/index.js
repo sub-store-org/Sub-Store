@@ -237,6 +237,7 @@ function lastParse(proxy) {
         delete proxy['ws-path'];
         delete proxy['ws-headers'];
     }
+
     if (proxy.type === 'trojan') {
         if (proxy.network === 'tcp') {
             delete proxy.network;
@@ -253,9 +254,20 @@ function lastParse(proxy) {
     if (proxy.network) {
         let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
         let transporthost = proxy[`${proxy.network}-opts`]?.headers?.host;
-        if (transporthost && !transportHost) {
+        if (proxy.network === 'h2') {
+            if (!transporthost && transportHost) {
+                proxy[`${proxy.network}-opts`].headers.host = transportHost;
+                delete proxy[`${proxy.network}-opts`].headers.Host;
+            }
+        } else if (transporthost && !transportHost) {
             proxy[`${proxy.network}-opts`].headers.Host = transporthost;
             delete proxy[`${proxy.network}-opts`].headers.host;
+        }
+    }
+    if (proxy.network === 'h2') {
+        const host = proxy['h2-opts']?.headers?.host;
+        if (host && !Array.isArray(host)) {
+            proxy['h2-opts'].headers.host = [host];
         }
     }
     if (proxy.tls && !proxy.sni) {
