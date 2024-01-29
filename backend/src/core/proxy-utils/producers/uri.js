@@ -42,6 +42,9 @@ export default function URI_Producer() {
                 if (proxy['udp-over-tcp']) {
                     result = `${result}${proxy.plugin ? '&' : '?'}uot=1`;
                 }
+                if (proxy.tfo) {
+                    result = `${result}${proxy.plugin ? '&' : '?'}tfo=1`;
+                }
                 result += `#${encodeURIComponent(proxy.name)}`;
                 break;
             case 'ssr':

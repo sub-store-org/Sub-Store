@@ -34,14 +34,24 @@ function URI_SS() {
         let userInfoStr = Base64.decode(content.split('@')[0]);
         let query = '';
         if (!serverAndPortArray) {
-            // 暂时先这样处理 目前够用
-            if (content.includes('?plugin=')) {
-                const parsed = content.match(/^(.*)(\?plugin=.*)$/);
+            if (content.includes('?')) {
+                const parsed = content.match(/^(.*)(\?.*)$/);
                 content = parsed[1];
                 query = parsed[2];
             }
             content = Base64.decode(content);
             if (query) {
+                console.log(query);
+                if (/(&|\?)v2ray-plugin=/.test(query)) {
+                    const parsed = query.match(/(&|\?)v2ray-plugin=(.*?)(&|$)/);
+                    let v2rayPlugin = parsed[2];
+                    if (v2rayPlugin) {
+                        proxy.obfs = 'v2ray-plugin';
+                        proxy['plugin-opts'] = JSON.parse(
+                            Base64.decode(v2rayPlugin),
+                        );
+                    }
+                }
                 content = `${content}${query}`;
             }
             userInfoStr = content.split('@')[0];
@@ -57,6 +67,7 @@ function URI_SS() {
         const userInfo = userInfoStr.split(':');
         proxy.cipher = userInfo[0];
         proxy.password = userInfo[1];
+
         // handle obfs
         const idx = content.indexOf('?plugin=');
         if (idx !== -1) {
@@ -95,6 +106,9 @@ function URI_SS() {
         }
         if (/(&|\?)uot=(1|true)/i.test(query)) {
             proxy['udp-over-tcp'] = true;
+        }
+        if (/(&|\?)tfo=(1|true)/i.test(query)) {
+            proxy.tfo = true;
         }
         return proxy;
     };
@@ -449,7 +463,7 @@ function URI_VLESS() {
             if (params.serviceName) {
                 opts[`${proxy.network}-service-name`] = params.serviceName;
             } else if (isShadowrocket && params.path) {
-                if (!['ws', 'http'].includes(proxy.network)) {
+                if (!['ws', 'http', 'h2'].includes(proxy.network)) {
                     opts[`${proxy.network}-service-name`] = params.path;
                     delete params.path;
                 }

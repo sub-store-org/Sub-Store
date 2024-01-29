@@ -207,6 +207,25 @@ export default function Stash_Producer() {
                     }
                 }
                 if (
+                    ['vmess', 'vless'].includes(proxy.type) &&
+                    proxy.network === 'h2'
+                ) {
+                    let path = proxy['h2-opts']?.path;
+                    if (
+                        isPresent(proxy, 'h2-opts.path') &&
+                        Array.isArray(path)
+                    ) {
+                        proxy['h2-opts'].path = path[0];
+                    }
+                    let host = proxy['h2-opts']?.headers?.host;
+                    if (
+                        isPresent(proxy, 'h2-opts.headers.Host') &&
+                        !Array.isArray(host)
+                    ) {
+                        proxy['h2-opts'].headers.host = [host];
+                    }
+                }
+                if (
                     ['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(
                         proxy.type,
                     )
