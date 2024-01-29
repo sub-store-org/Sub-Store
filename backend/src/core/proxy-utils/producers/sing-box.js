@@ -263,6 +263,37 @@ const socks5Parser = (proxy = {}) => {
     return parsedProxy;
 };
 
+const shadowTLSParser = (proxy = {}) => {
+    const ssPart = {
+        tag: proxy.name,
+        type: 'shadowsocks',
+        method: proxy.cipher,
+        password: proxy.password,
+        detour: `${proxy.name}_shadowtls`,
+    };
+    const stPart = {
+        tag: `${proxy.name}_shadowtls`,
+        type: 'shadowtls',
+        server: proxy.server,
+        server_port: parseInt(`${proxy.port}`, 10),
+        version: proxy['plugin-opts'].version,
+        password: proxy['plugin-opts'].password,
+        tls: {
+            enabled: true,
+            server_name: proxy['plugin-opts'].host,
+            utls: {
+                enabled: true,
+                fingerprint: proxy['client-fingerprint'],
+            },
+        },
+    };
+    if (stPart.server_port < 1 || stPart.server_port > 65535)
+        throw '端口值非法';
+    if (proxy['fast-open'] === true) stPart.udp_fragment = true;
+    tfoParser(proxy, stPart);
+    smuxParser(proxy.smux, ssPart);
+    return { type: 'ss-with-st', ssPart, stPart };
+};
 const ssParser = (proxy = {}) => {
     const parsedProxy = {
         tag: proxy.name,
@@ -607,9 +638,10 @@ export default function singbox_Producer() {
                             break;
                         case 'ss':
                             if (proxy.plugin === 'shadow-tls') {
-                                throw new Error(
-                                    `Platform sing-box does not support proxy type: ${proxy.type} with shadow-tls`,
-                                );
+                                const { ssPart, stPart } =
+                                    shadowTLSParser(proxy);
+                                list.push(ssPart);
+                                list.push(stPart);
                             } else {
                                 list.push(ssParser(proxy));
                             }

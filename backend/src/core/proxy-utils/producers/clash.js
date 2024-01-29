@@ -126,6 +126,12 @@ export default function Clash_Producer() {
                         proxy['h2-opts'].headers.host = [host];
                     }
                 }
+                if (proxy['plugin-opts']?.tls) {
+                    if (isPresent(proxy, 'skip-cert-verify')) {
+                        proxy['plugin-opts']['skip-cert-verify'] =
+                            proxy['skip-cert-verify'];
+                    }
+                }
                 if (
                     ['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(
                         proxy.type,
