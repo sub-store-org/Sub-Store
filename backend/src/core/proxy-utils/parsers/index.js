@@ -45,7 +45,7 @@ function URI_SS() {
                     const parsed = query.match(/(&|\?)v2ray-plugin=(.*?)(&|$)/);
                     let v2rayPlugin = parsed[2];
                     if (v2rayPlugin) {
-                        proxy.obfs = 'v2ray-plugin';
+                        proxy.plugin = 'v2ray-plugin';
                         proxy['plugin-opts'] = JSON.parse(
                             Base64.decode(v2rayPlugin),
                         );
@@ -89,7 +89,7 @@ function URI_SS() {
                     };
                     break;
                 case 'v2ray-plugin':
-                    proxy.obfs = 'v2ray-plugin';
+                    proxy.plugin = 'v2ray-plugin';
                     proxy['plugin-opts'] = {
                         mode: 'websocket',
                         host: getIfNotBlank(params['obfs-host']),
