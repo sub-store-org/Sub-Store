@@ -266,8 +266,12 @@ function lastParse(proxy) {
     }
     if (proxy.network === 'h2') {
         const host = proxy['h2-opts']?.headers?.host;
+        const path = proxy['h2-opts']?.path;
         if (host && !Array.isArray(host)) {
             proxy['h2-opts'].headers.host = [host];
+        }
+        if (Array.isArray(path)) {
+            proxy['h2-opts'].path = path[0];
         }
     }
     if (proxy.tls && !proxy.sni) {
