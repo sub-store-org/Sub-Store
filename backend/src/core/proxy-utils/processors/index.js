@@ -14,6 +14,7 @@ import {
     getFlowField,
     getFlowHeaders,
     parseFlowHeaders,
+    validCheck,
     flowTransfer,
 } from '@/utils/flow';
 
@@ -806,6 +807,7 @@ function createDynamicFunction(name, script, $arguments) {
         getFlowHeaders,
         parseFlowHeaders,
         flowTransfer,
+        validCheck,
     };
     if ($.env.isLoon) {
         return new Function(
