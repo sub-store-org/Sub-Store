@@ -160,6 +160,9 @@ export default function ClashMeta_Producer() {
                     proxy.fingerprint = proxy['tls-fingerprint'];
                 }
                 delete proxy['tls-fingerprint'];
+                if (isPresent(proxy, 'tls') && typeof proxy.tls !== 'boolean') {
+                    delete proxy.tls;
+                }
                 delete proxy.subName;
                 delete proxy.collectionName;
                 if (

@@ -242,6 +242,9 @@ export default function Stash_Producer() {
                     proxy.fingerprint = proxy['tls-fingerprint'];
                 }
                 delete proxy['tls-fingerprint'];
+                if (isPresent(proxy, 'tls') && typeof proxy.tls !== 'boolean') {
+                    delete proxy.tls;
+                }
 
                 if (proxy['test-url']) {
                     proxy['benchmark-url'] = proxy['test-url'];
