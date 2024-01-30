@@ -1,4 +1,4 @@
-import { safeLoad } from 'static-js-yaml';
+import { safeLoad } from '@/utils/yaml';
 import { Base64 } from 'js-base64';
 
 function HTML() {
