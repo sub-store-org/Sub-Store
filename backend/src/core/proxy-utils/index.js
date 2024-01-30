@@ -1,4 +1,4 @@
-import YAML from 'static-js-yaml';
+import YAML from '@/utils/yaml';
 import download from '@/utils/download';
 import { isIPv4, isIPv6, isValidPortNumber } from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
