@@ -4,7 +4,15 @@ function retry(fn, content, ...args) {
     try {
         return fn(content, ...args);
     } catch (e) {
-        return fn(content.replace(/!<str>/g, ''), ...args);
+        return fn(
+            dump(
+                fn(
+                    content.replace(/!<str>\s*/g, '__SubStoreJSYAMLString__'),
+                    ...args,
+                ),
+            ).replace(/__SubStoreJSYAMLString__/g, ''),
+            ...args,
+        );
     }
 }
 
