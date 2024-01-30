@@ -120,3 +120,26 @@ export function flowTransfer(flow, unit = 'B') {
         ? { value: flow.toFixed(1), unit: unit }
         : flowTransfer(flow / 1024, unitList[++unitIndex]);
 }
+
+export function validCheck(flow) {
+    if (!flow) {
+        throw new Error('没有流量信息');
+    }
+    if (flow?.expires && flow.expires * 1000 < Date.now()) {
+        const date = new Date(flow.expires * 1000).toLocaleDateString();
+        throw new Error(`订阅已过期: ${date}`);
+    }
+    if (flow?.total) {
+        const upload = flow.usage?.upload || 0;
+        const download = flow.usage?.download || 0;
+        if (flow.total - upload - download < 0) {
+            const current = upload + download;
+            const currT = flowTransfer(Math.abs(current));
+            currT.value = current < 0 ? '-' + currT.value : currT.value;
+            const totalT = flowTransfer(flow.total);
+            throw new Error(
+                `流量已用完: ${currT.value} ${currT.unit} / ${totalT.value} ${totalT.unit}`,
+            );
+        }
+    }
+}

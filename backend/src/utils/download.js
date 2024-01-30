@@ -4,7 +4,12 @@ import { HTTP, ENV } from '@/vendor/open-api';
 import { hex_md5 } from '@/vendor/md5';
 import resourceCache from '@/utils/resource-cache';
 import headersResourceCache from '@/utils/headers-resource-cache';
-import { getFlowField } from '@/utils/flow';
+import {
+    getFlowField,
+    getFlowHeaders,
+    parseFlowHeaders,
+    validCheck,
+} from '@/utils/flow';
 import $ from '@/core/app';
 
 const tasks = new Map();
@@ -64,36 +69,40 @@ export default async function download(rawUrl, ua, timeout) {
         timeout: requestTimeout,
     });
 
-    const result = new Promise((resolve, reject) => {
-        // try to find in app cache
-        const cached = resourceCache.get(id);
-        if (!$arguments?.noCache && cached) {
-            resolve(cached);
-        } else {
-            $.info(
-                `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nURL: ${url}`,
-            );
-            http.get(url)
-                .then((resp) => {
-                    const { body, headers } = resp;
-                    if (headers) {
-                        const flowInfo = getFlowField(headers);
-                        if (flowInfo) {
-                            headersResourceCache.set(url, flowInfo);
-                        }
-                    }
-                    if (body.replace(/\s/g, '').length === 0)
-                        reject(new Error('远程资源内容为空！'));
-                    else {
-                        resourceCache.set(id, body);
-                        resolve(body);
-                    }
-                })
-                .catch(() => {
-                    reject(new Error(`无法下载 URL：${url}`));
-                });
+    let result;
+
+    // try to find in app cache
+    const cached = resourceCache.get(id);
+    if (!$arguments?.noCache && cached) {
+        result = cached;
+    } else {
+        $.info(
+            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nURL: ${url}`,
+        );
+        try {
+            const { body, headers } = await http.get(url);
+
+            if (headers) {
+                const flowInfo = getFlowField(headers);
+                if (flowInfo) {
+                    headersResourceCache.set(url, flowInfo);
+                }
+            }
+            if (body.replace(/\s/g, '').length === 0)
+                throw new Error(new Error('远程资源内容为空'));
+
+            resourceCache.set(id, body);
+            result = body;
+        } catch (e) {
+            throw new Error(`无法下载 URL ${url}: ${e.message ?? e}`);
         }
-    });
+    }
+
+    // 检查订阅有效性
+
+    if ($arguments?.validCheck) {
+        await validCheck(parseFlowHeaders(await getFlowHeaders(url)));
+    }
 
     if (!isNode) {
         tasks.set(id, result);
