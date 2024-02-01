@@ -113,6 +113,9 @@ function operator(proxies = [], targetPlatform, context) {
   //   "version": "2.14.198"
   // }
 
+  // 参数说明
+  // 可参考 https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E
+
   console.log(JSON.stringify(context, null, 2))
 
   return proxies
