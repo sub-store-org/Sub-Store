@@ -113,7 +113,7 @@ function operator(proxies = [], targetPlatform, context) {
   //   "version": "2.14.198"
   // }
 
-  console.log(JSON.stringify(env, null, 2))
+  console.log(JSON.stringify(context, null, 2))
 
   return proxies
 }
