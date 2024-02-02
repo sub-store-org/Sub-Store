@@ -37,7 +37,36 @@ function shadowsocks(proxy) {
     const result = new Result(proxy);
     const append = result.append.bind(result);
     const appendIfPresent = result.appendIfPresent.bind(result);
-
+    if (!proxy.cipher) {
+        proxy.cipher = 'none';
+    }
+    if (
+        ![
+            'none',
+            'rc4-md5',
+            'rc4-md5-6',
+            'aes-128-cfb',
+            'aes-192-cfb',
+            'aes-256-cfb',
+            'aes-128-ctr',
+            'aes-192-ctr',
+            'aes-256-ctr',
+            'bf-cfb',
+            'cast5-cfb',
+            'des-cfb',
+            'rc2-cfb',
+            'salsa20',
+            'chacha20',
+            'chacha20-ietf',
+            'aes-128-gcm',
+            'aes-192-gcm',
+            'aes-256-gcm',
+            'chacha20-ietf-poly1305',
+            'xchacha20-ietf-poly1305',
+        ].includes(proxy.cipher)
+    ) {
+        throw new Error(`cipher ${proxy.cipher} is not supported`);
+    }
     append(`shadowsocks=${proxy.server}:${proxy.port}`);
     append(`,method=${proxy.cipher}`);
     append(`,password=${proxy.password}`);
