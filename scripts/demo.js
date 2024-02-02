@@ -25,6 +25,15 @@ function operator(proxies = [], targetPlatform, context) {
 
   // ProxyUtils 为节点处理工具
   // 可参考 https://t.me/zhetengsha/1066
+  // const ProxyUtils = {
+  //     parse, // 订阅解析
+  //     process, // 节点操作/文件操作
+  //     produce, // 输出订阅
+  //     isIPv4,
+  //     isIPv6,
+  //     isIP,
+  //     yaml, // yaml 解析和生成
+  // }
 
   // flowUtils 为机场订阅流量信息处理工具
   // 可参考 https://t.me/zhetengsha/948
