@@ -68,7 +68,7 @@ trojan = tag equals "trojan"i address password (transport/transport_host/transpo
     proxy.type = "trojan";
     handleTransport();
 }
-hysteria2 = tag equals "hysteria2"i address password (tls_host/tls_verification/udp_relay/download_bandwidth/ecn/others)* {
+hysteria2 = tag equals "hysteria2"i address password (tls_host/tls_verification/udp_relay/fast_open/download_bandwidth/ecn/others)* {
     proxy.type = "hysteria2";
 }
 https = tag equals "https"i address (username password)? (tls_host/tls_verification/fast_open/udp_relay/others)* {

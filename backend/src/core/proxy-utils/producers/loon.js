@@ -386,6 +386,9 @@ function hysteria2(proxy) {
         'skip-cert-verify',
     );
 
+    // tfo
+    result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
+
     // udp
     result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
 
