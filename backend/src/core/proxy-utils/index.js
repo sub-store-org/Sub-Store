@@ -317,6 +317,17 @@ function lastParse(proxy) {
     if (['hysteria', 'hysteria2'].includes(proxy.type) && !proxy.ports) {
         delete proxy.ports;
     }
+    if (['vless'].includes(proxy.type)) {
+        if (['http'].includes(proxy.network)) {
+            let transportPath = proxy[`${proxy.network}-opts`]?.path;
+            if (!transportPath) {
+                if (!proxy[`${proxy.network}-opts`]) {
+                    proxy[`${proxy.network}-opts`] = {};
+                }
+                proxy[`${proxy.network}-opts`].path = ['/'];
+            }
+        }
+    }
     return proxy;
 }
 
