@@ -545,6 +545,55 @@ function URI_Hysteria2() {
     };
     return { name, test, parse };
 }
+function URI_TUIC() {
+    const name = 'URI TUIC Parser';
+    const test = (line) => {
+        return /^tuic:\/\//.test(line);
+    };
+    const parse = (line) => {
+        line = line.split(/tuic:\/\//)[1];
+        console.log(line);
+        // eslint-disable-next-line no-unused-vars
+        let [__, uuid, password, server, ___, port, ____, addons = '', name] =
+            /^(.*?):(.*?)@(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
+        port = parseInt(`${port}`, 10);
+        if (isNaN(port)) {
+            port = 443;
+        }
+        password = decodeURIComponent(password);
+        if (name != null) {
+            name = decodeURIComponent(name);
+        }
+        name = name ?? `TUIC ${server}:${port}`;
+
+        const proxy = {
+            type: 'tuic',
+            name,
+            server,
+            port,
+            password,
+            uuid,
+        };
+
+        for (const addon of addons.split('&')) {
+            let [key, value] = addon.split('=');
+            key = key.replace(/_/, '-');
+            value = decodeURIComponent(value);
+            if (['alpn'].includes(key)) {
+                proxy[key] = value ? value.split(',') : undefined;
+            } else if (['allow-insecure'].includes(key)) {
+                proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
+            } else if (['disable-sni', 'reduce-rtt'].includes(key)) {
+                proxy[key] = /(TRUE)|1/i.test(value);
+            } else {
+                proxy[key] = value;
+            }
+        }
+
+        return proxy;
+    };
+    return { name, test, parse };
+}
 
 // Trojan URI format
 function URI_Trojan() {
@@ -1051,6 +1100,7 @@ export default [
     URI_SSR(),
     URI_VMess(),
     URI_VLESS(),
+    URI_TUIC(),
     URI_Hysteria2(),
     URI_Trojan(),
     Clash_All(),
