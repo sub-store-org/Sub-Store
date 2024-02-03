@@ -84,13 +84,23 @@ Install `pnpm`
 Go to `backend` directories, install node dependencies:
 
 ```
-pnpm install
+pnpm i
 ```
 
 1. In `backend`, run the backend server on http://localhost:3000
 
+babel(old school)
+
 ```
 pnpm start
+```
+
+or
+
+esbuild(experimental)
+
+```
+pnpm run --parallel "/^dev:.*/"
 ```
 
 ## LICENSE
