@@ -285,6 +285,64 @@ export default function URI_Producer() {
                     '&',
                 )}#${encodeURIComponent(proxy.name)}`;
                 break;
+            case 'tuic':
+                if (!proxy.token || proxy.token.length === 0) {
+                    let tuicParams = [];
+                    Object.keys(proxy).forEach((key) => {
+                        if (
+                            ![
+                                'name',
+                                'type',
+                                'uuid',
+                                'password',
+                                'server',
+                                'port',
+                            ].includes(key)
+                        ) {
+                            const i = key.replace(/-/, '_');
+                            if (['alpn'].includes(key)) {
+                                if (proxy[key]) {
+                                    tuicParams.push(
+                                        `${i}=${encodeURIComponent(
+                                            Array.isArray(proxy[key])
+                                                ? proxy[key][0]
+                                                : proxy[key],
+                                        )}`,
+                                    );
+                                }
+                            } else if (['skip-cert-verify'].includes(key)) {
+                                if (proxy[key]) {
+                                    tuicParams.push(`allow_insecure=1`);
+                                }
+                            } else if (['tfo', 'fast-open'].includes(key)) {
+                                if (
+                                    proxy[key] &&
+                                    !tuicParams.includes('fast_open=1')
+                                ) {
+                                    tuicParams.push(`fast_open=1`);
+                                }
+                            } else if (
+                                ['disable-sni', 'reduce-rtt'].includes(key) &&
+                                proxy[key]
+                            ) {
+                                tuicParams.push(`${i}=1`);
+                            } else if (proxy[key]) {
+                                tuicParams.push(
+                                    `${i}=${encodeURIComponent(proxy[key])}`,
+                                );
+                            }
+                        }
+                    });
+
+                    result = `tuic://${encodeURIComponent(
+                        proxy.uuid,
+                    )}:${encodeURIComponent(proxy.password)}@${proxy.server}:${
+                        proxy.port
+                    }?${tuicParams.join('&')}#${encodeURIComponent(
+                        proxy.name,
+                    )}`;
+                    break;
+                }
         }
         return result;
     };

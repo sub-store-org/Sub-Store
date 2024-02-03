@@ -637,6 +637,35 @@ export default function singbox_Producer() {
                             }
                             break;
                         case 'ss':
+                            // if (!proxy.cipher) {
+                            //     proxy.cipher = 'none';
+                            // }
+                            // if (
+                            //     ![
+                            //         '2022-blake3-aes-128-gcm',
+                            //         '2022-blake3-aes-256-gcm',
+                            //         '2022-blake3-chacha20-poly1305',
+                            //         'aes-128-cfb',
+                            //         'aes-128-ctr',
+                            //         'aes-128-gcm',
+                            //         'aes-192-cfb',
+                            //         'aes-192-ctr',
+                            //         'aes-192-gcm',
+                            //         'aes-256-cfb',
+                            //         'aes-256-ctr',
+                            //         'aes-256-gcm',
+                            //         'chacha20-ietf',
+                            //         'chacha20-ietf-poly1305',
+                            //         'none',
+                            //         'rc4-md5',
+                            //         'xchacha20',
+                            //         'xchacha20-ietf-poly1305',
+                            //     ].includes(proxy.cipher)
+                            // ) {
+                            //     throw new Error(
+                            //         `cipher ${proxy.cipher} is not supported`,
+                            //     );
+                            // }
                             if (proxy.plugin === 'shadow-tls') {
                                 const { ssPart, stPart } =
                                     shadowTLSParser(proxy);

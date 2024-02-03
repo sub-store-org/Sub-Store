@@ -93,6 +93,7 @@ function QuickSettingOperator(args) {
             return proxies.map((proxy) => {
                 proxy.udp = get(args.udp, proxy.udp);
                 proxy.tfo = get(args.tfo, proxy.tfo);
+                proxy['fast-open'] = get(args.tfo, proxy['fast-open']);
                 proxy['skip-cert-verify'] = get(
                     args.scert,
                     proxy['skip-cert-verify'],
