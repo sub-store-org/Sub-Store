@@ -545,6 +545,75 @@ function URI_Hysteria2() {
     };
     return { name, test, parse };
 }
+function URI_Hysteria() {
+    const name = 'URI Hysteria Parser';
+    const test = (line) => {
+        return /^(hysteria|hy):\/\//.test(line);
+    };
+    const parse = (line) => {
+        line = line.split(/(hysteria|hy):\/\//)[2];
+        // eslint-disable-next-line no-unused-vars
+        let [__, server, ___, port, ____, addons = '', name] =
+            /^(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
+        port = parseInt(`${port}`, 10);
+        if (isNaN(port)) {
+            port = 443;
+        }
+        if (name != null) {
+            name = decodeURIComponent(name);
+        }
+        name = name ?? `Hysteria ${server}:${port}`;
+
+        const proxy = {
+            type: 'hysteria',
+            name,
+            server,
+            port,
+        };
+        const params = {};
+        for (const addon of addons.split('&')) {
+            let [key, value] = addon.split('=');
+            key = key.replace(/_/, '-');
+            value = decodeURIComponent(value);
+            if (['alpn'].includes(key)) {
+                proxy[key] = value ? value.split(',') : undefined;
+            } else if (['insecure'].includes(key)) {
+                proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
+            } else if (['auth'].includes(key)) {
+                proxy['auth-str'] = value;
+            } else if (['mport'].includes(key)) {
+                proxy['ports'] = value;
+            } else if (['obfsParam'].includes(key)) {
+                proxy['obfs'] = value;
+            } else if (['upmbps'].includes(key)) {
+                proxy['up'] = value;
+            } else if (['downmbps'].includes(key)) {
+                proxy['down'] = value;
+            } else if (['obfs'].includes(key)) {
+                // obfs: Obfuscation mode (optional, empty or "xplus")
+                proxy['_obfs'] = value || '';
+            } else if (['fast-open', 'peer'].includes(key)) {
+                params[key] = value;
+            } else {
+                proxy[key] = value;
+            }
+        }
+
+        if (!proxy.sni && params.peer) {
+            proxy.sni = params.peer;
+        }
+        if (!proxy['fast-open'] && params.fastopen) {
+            proxy['fast-open'] = true;
+        }
+        if (!proxy.protocol) {
+            // protocol: protocol to use ("udp", "wechat-video", "faketcp") (optional, default: "udp")
+            proxy.protocol = 'udp';
+        }
+
+        return proxy;
+    };
+    return { name, test, parse };
+}
 function URI_TUIC() {
     const name = 'URI TUIC Parser';
     const test = (line) => {
@@ -552,7 +621,6 @@ function URI_TUIC() {
     };
     const parse = (line) => {
         line = line.split(/tuic:\/\//)[1];
-        console.log(line);
         // eslint-disable-next-line no-unused-vars
         let [__, uuid, password, server, ___, port, ____, addons = '', name] =
             /^(.*?):(.*?)@(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
@@ -1101,6 +1169,7 @@ export default [
     URI_VMess(),
     URI_VLESS(),
     URI_TUIC(),
+    URI_Hysteria(),
     URI_Hysteria2(),
     URI_Trojan(),
     Clash_All(),
