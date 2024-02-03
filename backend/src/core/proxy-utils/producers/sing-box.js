@@ -225,7 +225,7 @@ const httpParser = (proxy = {}) => {
         server_port: parseInt(`${proxy.port}`, 10),
         tls: { enabled: false, server_name: proxy.server, insecure: false },
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy.username) parsedProxy.username = proxy.username;
     if (proxy.password) parsedProxy.password = proxy.password;
@@ -252,7 +252,7 @@ const socks5Parser = (proxy = {}) => {
         password: proxy.password,
         version: '5',
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy.username) parsedProxy.username = proxy.username;
     if (proxy.password) parsedProxy.password = proxy.password;
@@ -287,7 +287,7 @@ const shadowTLSParser = (proxy = {}) => {
             },
         },
     };
-    if (stPart.server_port < 1 || stPart.server_port > 65535)
+    if (stPart.server_port < 0 || stPart.server_port > 65535)
         throw '端口值非法';
     if (proxy['fast-open'] === true) stPart.udp_fragment = true;
     tfoParser(proxy, stPart);
@@ -303,7 +303,7 @@ const ssParser = (proxy = {}) => {
         method: proxy.cipher,
         password: proxy.password,
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy.uot) parsedProxy.udp_over_tcp = true;
     if (proxy['udp-over-tcp']) parsedProxy.udp_over_tcp = true;
@@ -379,7 +379,7 @@ const ssrParser = (proxy = {}) => {
         obfs: proxy.obfs,
         protocol: proxy.protocol,
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy['obfs-param']) parsedProxy.obfs_param = proxy['obfs-param'];
     if (proxy['protocol-param'] && proxy['protocol-param'] !== '')
@@ -412,7 +412,7 @@ const vmessParser = (proxy = {}) => {
         ].indexOf(parsedProxy.security) === -1
     )
         parsedProxy.security = 'auto';
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy.xudp) parsedProxy.packet_encoding = 'xudp';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
@@ -436,7 +436,7 @@ const vlessParser = (proxy = {}) => {
         uuid: proxy.uuid,
         tls: { enabled: false, server_name: proxy.server, insecure: false },
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     if (proxy.flow === 'xtls-rprx-vision') parsedProxy.flow = proxy.flow;
@@ -457,7 +457,7 @@ const trojanParser = (proxy = {}) => {
         password: proxy.password,
         tls: { enabled: true, server_name: proxy.server, insecure: false },
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     if (proxy.network === 'grpc') grpcParser(proxy, parsedProxy);
@@ -477,7 +477,7 @@ const hysteriaParser = (proxy = {}) => {
         disable_mtu_discovery: false,
         tls: { enabled: true, server_name: proxy.server, insecure: false },
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy.auth_str) parsedProxy.auth_str = `${proxy.auth_str}`;
     if (proxy['auth-str']) parsedProxy.auth_str = `${proxy['auth-str']}`;
@@ -524,7 +524,7 @@ const hysteria2Parser = (proxy = {}) => {
         obfs: {},
         tls: { enabled: true, server_name: proxy.server, insecure: false },
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy.up) parsedProxy.up_mbps = parseInt(`${proxy.up}`, 10);
     if (proxy.down) parsedProxy.down_mbps = parseInt(`${proxy.down}`, 10);
@@ -547,7 +547,7 @@ const tuic5Parser = (proxy = {}) => {
         password: proxy.password,
         tls: { enabled: true, server_name: proxy.server, insecure: false },
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     if (
@@ -583,7 +583,7 @@ const wireguardParser = (proxy = {}) => {
         pre_shared_key: proxy['pre-shared-key'],
         reserved: [],
     };
-    if (parsedProxy.server_port < 1 || parsedProxy.server_port > 65535)
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     if (typeof proxy.reserved === 'string') {
