@@ -87,7 +87,9 @@ function QuickSettingOperator(args) {
             if (get(args.useless)) {
                 const filter = UselessFilter();
                 const selected = filter.func(proxies);
-                proxies.filter((_, i) => selected[i]);
+                proxies = proxies.filter(
+                    (p, i) => selected[i] && p.port > 0 && p.port <= 65535,
+                );
             }
 
             return proxies.map((proxy) => {
