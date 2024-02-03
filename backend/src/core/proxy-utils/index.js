@@ -63,7 +63,7 @@ function parse(raw) {
     return proxies;
 }
 
-async function process(proxies, operators = [], targetPlatform, source) {
+async function processFn(proxies, operators = [], targetPlatform, source) {
     for (const item of operators) {
         // process script
         let script;
@@ -188,7 +188,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
 
 export const ProxyUtils = {
     parse,
-    process,
+    process: processFn,
     produce,
     isIPv4,
     isIPv6,
