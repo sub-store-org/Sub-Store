@@ -513,7 +513,7 @@ function ResolveDomainOperator({ provider, type, filter }) {
 
             return proxies.filter((p) => {
                 if (filter === 'removeFailed') {
-                    return p['no-resolve'] || p.resolved;
+                    return isIP(p.server) || p['no-resolve'] || p.resolved;
                 } else if (filter === 'IPOnly') {
                     return isIP(p.server);
                 } else if (filter === 'IPv4Only') {
