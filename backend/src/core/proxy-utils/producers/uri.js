@@ -202,9 +202,9 @@ export default function URI_Producer() {
 
                 result = `vless://${proxy.uuid}@${proxy.server}:${
                     proxy.port
-                }?${vlessTransport}&security=${encodeURIComponent(
+                }?security=${encodeURIComponent(
                     security,
-                )}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${pbk}#${encodeURIComponent(
+                )}${vlessTransport}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${pbk}#${encodeURIComponent(
                     proxy.name,
                 )}`;
                 break;
