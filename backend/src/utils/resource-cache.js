@@ -7,7 +7,17 @@ class ResourceCache {
         if (!$.read(RESOURCE_CACHE_KEY)) {
             $.write('{}', RESOURCE_CACHE_KEY);
         }
-        this.resourceCache = JSON.parse($.read(RESOURCE_CACHE_KEY));
+        try {
+            this.resourceCache = JSON.parse($.read(RESOURCE_CACHE_KEY));
+        } catch (e) {
+            $.error(
+                `解析持久化缓存中的 ${RESOURCE_CACHE_KEY} 失败, 重置为 {}, 错误: ${
+                    e?.message ?? e
+                }`,
+            );
+            this.resourceCache = {};
+            $.write('{}', RESOURCE_CACHE_KEY);
+        }
         this._cleanup();
     }
 
