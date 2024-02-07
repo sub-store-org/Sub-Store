@@ -83,7 +83,9 @@ function shadowsocks(proxy) {
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
     // udp
-    result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
+    if (proxy.udp) {
+        result.append(`,udp=true`);
+    }
 
     return result.toString();
 }
@@ -109,7 +111,9 @@ function shadowsocksr(proxy) {
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
     // udp
-    result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
+    if (proxy.udp) {
+        result.append(`,udp=true`);
+    }
 
     return result.toString();
 }
@@ -152,7 +156,9 @@ function trojan(proxy) {
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
     // udp
-    result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
+    if (proxy.udp) {
+        result.append(`,udp=true`);
+    }
 
     return result.toString();
 }
@@ -219,7 +225,9 @@ function vmess(proxy) {
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
     // udp
-    result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
+    if (proxy.udp) {
+        result.append(`,udp=true`);
+    }
     return result.toString();
 }
 
@@ -281,7 +289,9 @@ function vless(proxy) {
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
     // udp
-    result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
+    if (proxy.udp) {
+        result.append(`,udp=true`);
+    }
     return result.toString();
 }
 
@@ -304,8 +314,6 @@ function http(proxy) {
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
 
-    // udp
-    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
     return result.toString();
 }
 
@@ -390,7 +398,9 @@ function hysteria2(proxy) {
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
     // udp
-    result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
+    if (proxy.udp) {
+        result.append(`,udp=true`);
+    }
 
     // download-bandwidth
     result.appendIfPresent(
