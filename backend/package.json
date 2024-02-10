@@ -9,7 +9,7 @@
     "serve": "node sub-store.min.js",
     "start": "nodemon -w src -w package.json --exec babel-node src/main.js",
     "dev:esbuild": "nodemon -w src -w package.json dev-esbuild.js",
-    "dev:run": "nodemon -w sub-store.json -w sub-store.min.js sub-store.min.js",
+    "dev:run": "nodemon -w sub-store.min.js sub-store.min.js",
     "build": "gulp",
     "bundle": "node bundle.js"
   },
