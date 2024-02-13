@@ -1,5 +1,5 @@
 import { Result, isPresent } from './utils';
-import { isNotBlank } from '@/utils';
+import { isNotBlank, getIfNotBlank } from '@/utils';
 import $ from '@/core/app';
 
 const targetPlatform = 'Surge';
@@ -13,7 +13,7 @@ const ipVersions = {
 };
 
 export default function Surge_Producer() {
-    const produce = (proxy) => {
+    const produce = (proxy, type, opts = {}) => {
         switch (proxy.type) {
             case 'ss':
                 return shadowsocks(proxy);
@@ -30,9 +30,13 @@ export default function Surge_Producer() {
             case 'tuic':
                 return tuic(proxy);
             case 'wireguard-surge':
-                return wireguard(proxy);
+                return wireguard_surge(proxy);
             case 'hysteria2':
                 return hysteria2(proxy);
+        }
+
+        if (opts['include-unsupported-proxy'] && proxy.type === 'wireguard') {
+            return wireguard(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -82,10 +86,8 @@ function shadowsocks(proxy) {
     result.append(`,encrypt-method=${proxy.cipher}`);
     result.appendIfPresent(`,password=${proxy.password}`, 'password');
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     result.appendIfPresent(
         `,no-error-alert=${proxy['no-error-alert']}`,
@@ -167,10 +169,8 @@ function trojan(proxy) {
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,password=${proxy.password}`, 'password');
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     result.appendIfPresent(
         `,no-error-alert=${proxy['no-error-alert']}`,
@@ -236,10 +236,8 @@ function vmess(proxy) {
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,username=${proxy.uuid}`, 'uuid');
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     result.appendIfPresent(
         `,no-error-alert=${proxy['no-error-alert']}`,
@@ -314,10 +312,8 @@ function http(proxy) {
     result.appendIfPresent(`,${proxy.username}`, 'username');
     result.appendIfPresent(`,${proxy.password}`, 'password');
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     result.appendIfPresent(
         `,no-error-alert=${proxy['no-error-alert']}`,
@@ -379,10 +375,8 @@ function socks5(proxy) {
     result.appendIfPresent(`,${proxy.username}`, 'username');
     result.appendIfPresent(`,${proxy.password}`, 'password');
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     result.appendIfPresent(
         `,no-error-alert=${proxy['no-error-alert']}`,
@@ -445,10 +439,8 @@ function snell(proxy) {
     result.appendIfPresent(`,version=${proxy.version}`, 'version');
     result.appendIfPresent(`,psk=${proxy.psk}`, 'psk');
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     result.appendIfPresent(
         `,no-error-alert=${proxy['no-error-alert']}`,
@@ -525,10 +517,8 @@ function tuic(proxy) {
         'alpn',
     );
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     result.appendIfPresent(
         `,no-error-alert=${proxy['no-error-alert']}`,
@@ -587,6 +577,107 @@ function tuic(proxy) {
 }
 
 function wireguard(proxy) {
+    if (Array.isArray(proxy.peers) && proxy.peers.length > 0) {
+        proxy.server = proxy.peers[0].server;
+        proxy.port = proxy.peers[0].port;
+        proxy.ip = proxy.peers[0].ip;
+        proxy.ipv6 = proxy.peers[0].ipv6;
+        proxy['public-key'] = proxy.peers[0]['public-key'];
+        proxy['preshared-key'] = proxy.peers[0]['pre-shared-key'];
+        // https://github.com/MetaCubeX/mihomo/blob/0404e35be8736b695eae018a08debb175c1f96e6/docs/config.yaml#L717
+        proxy['allowed-ips'] = proxy.peers[0]['allowed-ips'];
+        proxy.reserved = proxy.peers[0].reserved;
+    }
+    const result = new Result(proxy);
+
+    result.append(`# WireGuard Proxy ${proxy.name}
+${proxy.name}=wireguard`);
+
+    proxy['section-name'] = getIfNotBlank(proxy['section-name'], proxy.name);
+
+    result.appendIfPresent(
+        `,section-name=${proxy['section-name']}`,
+        'section-name',
+    );
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
+
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+    }
+
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+
+    result.append(`
+# WireGuard Section ${proxy.name}
+[WireGuard ${proxy['section-name']}]
+private-key = ${proxy['private-key']}`);
+
+    result.appendIfPresent(`\nself-ip = ${proxy.ip}`, 'ip');
+    result.appendIfPresent(`\nself-ip-v6 = ${proxy.ipv6}`, 'ipv6');
+    if (proxy.dns) {
+        if (Array.isArray(proxy.dns)) {
+            proxy.dns = proxy.dns.join(', ');
+        }
+        result.append(`\ndns-server = ${proxy.dns}`);
+    }
+    result.appendIfPresent(`\nmtu = ${proxy.mtu}`, 'mtu');
+
+    if (ip_version === 'prefer-v6') {
+        result.append(`\nprefer-ipv6 = true`);
+    }
+    const allowedIps = Array.isArray(proxy['allowed-ips'])
+        ? proxy['allowed-ips'].join(',')
+        : proxy['allowed-ips'];
+    let reserved = Array.isArray(proxy.reserved)
+        ? proxy.reserved.join('/')
+        : proxy.reserved;
+    let presharedKey = proxy['preshared-key'] ?? proxy['pre-shared-key'];
+    if (presharedKey) {
+        presharedKey = `,preshared-key="${presharedKey}"`;
+    }
+    const peer = {
+        'public-key': proxy['public-key'],
+        'allowed-ips': allowedIps,
+        endpoint: `${proxy.server}:${proxy.port}`,
+        keepalive: proxy['persistent-keepalive'] || proxy.keepalive,
+        'client-id': reserved,
+        'preshared-key': presharedKey,
+    };
+    result.append(
+        `\npeer = (${Object.keys(peer)
+            .filter((k) => peer[k] != null)
+            .map((k) => `${k} = ${peer[k]}`)
+            .join(', ')})`,
+    );
+    return result.toString();
+}
+function wireguard_surge(proxy) {
     const result = new Result(proxy);
 
     result.append(`${proxy.name}=wireguard`);
@@ -600,10 +691,8 @@ function wireguard(proxy) {
         'no-error-alert',
     );
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
@@ -643,10 +732,8 @@ function hysteria2(proxy) {
 
     result.appendIfPresent(`,password=${proxy.password}`, 'password');
 
-    result.appendIfPresent(
-        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
-        'ip-version',
-    );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
     result.appendIfPresent(
         `,no-error-alert=${proxy['no-error-alert']}`,
