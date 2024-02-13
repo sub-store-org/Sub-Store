@@ -35,6 +35,49 @@ function operator(proxies = [], targetPlatform, context) {
   //     yaml, // yaml 解析和生成
   // }
 
+  // 1. Surge 输出 WireGuard 完整配置
+
+  // let proxies = await produceArtifact({
+  //   type: 'subscription',
+  //   name: 'sub',
+  //   platform: 'Surge',
+  //   produceOpts: {
+  //     'include-unsupported-proxy': true,
+  //   }
+  // })
+  // $content = proxies
+  
+  // 2. sing-box
+
+  // 但是一般不需要这样用, 可参考 1. https://t.me/zhetengsha/1111 和 2. https://t.me/zhetengsha/1070
+
+  // let singboxProxies = await produceArtifact({
+  //     type: 'subscription', // type: 'subscription' 或 'collection'
+  //     name: 'sub', // subscription name
+  //     platform: 'sing-box', // target platform
+  //     produceType: 'internal' // 'internal' produces an Array, otherwise produces a String( JSON.parse('JSON String') )
+  // })
+
+  // // JSON
+  // $content = JSON.stringify({}, null, 2)
+
+  // 3. clash.meta
+
+  // 但是一般不需要这样用, 可参考 1. https://t.me/zhetengsha/1111 和 2. https://t.me/zhetengsha/1070
+
+  // let clashMetaProxies = await produceArtifact({
+  //     type: 'subscription',
+  //     name: 'sub',
+  //     platform: 'ClashMeta',
+  //     produceType: 'internal' // 'internal' produces an Array, otherwise produces a String( ProxyUtils.yaml.safeLoad('YAML String').proxies )
+  // }))
+
+  // // YAML
+  // $content = ProxyUtils.yaml.safeDump({})
+
+
+  // { $content, $files } will be passed to the next operator 
+  // $content is the final content of the file
   // flowUtils 为机场订阅流量信息处理工具
   // 可参考 https://t.me/zhetengsha/948
   // https://github.com/sub-store-org/Sub-Store/blob/31b6dd0507a9286d6ab834ec94ad3050f6bdc86b/backend/src/utils/download.js#L104
