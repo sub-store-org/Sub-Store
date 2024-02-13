@@ -344,7 +344,11 @@ function wireguard(proxy) {
     if (proxy.dns) {
         if (Array.isArray(proxy.dns)) {
             proxy.dnsv6 = proxy.dns.find((i) => isIPv6(i));
-            proxy.dns = proxy.dns.find((i) => isIPv4(i));
+            let dns = proxy.dns.find((i) => isIPv4(i));
+            if (!dns) {
+                dns = proxy.dns.find((i) => !isIPv4(i) && !isIPv6(i));
+            }
+            proxy.dns = dns;
         }
     }
     result.appendIfPresent(`,dns=${proxy.dns}`, 'dns');
