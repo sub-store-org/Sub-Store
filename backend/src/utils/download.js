@@ -1,5 +1,4 @@
-import { FILES_KEY, MODULES_KEY, SETTINGS_KEY } from '@/constants';
-import { findByName } from '@/utils/database';
+import { SETTINGS_KEY } from '@/constants';
 import { HTTP, ENV } from '@/vendor/open-api';
 import { hex_md5 } from '@/vendor/md5';
 import resourceCache from '@/utils/resource-cache';
@@ -36,22 +35,22 @@ export default async function download(rawUrl, ua, timeout) {
         }
     }
 
-    const downloadUrlMatch = url.match(/^\/api\/(file|module)\/(.+)/);
-    if (downloadUrlMatch) {
-        let type = downloadUrlMatch?.[1];
-        let name = downloadUrlMatch?.[2];
-        if (name == null) {
-            throw new Error(`本地 ${type} URL 无效: ${url}`);
-        }
-        name = decodeURIComponent(name);
-        const key = type === 'module' ? MODULES_KEY : FILES_KEY;
-        const item = findByName($.read(key), name);
-        if (!item) {
-            throw new Error(`找不到本地 ${type}: ${name}`);
-        }
+    // const downloadUrlMatch = url.match(/^\/api\/(file|module)\/(.+)/);
+    // if (downloadUrlMatch) {
+    //     let type = downloadUrlMatch?.[1];
+    //     let name = downloadUrlMatch?.[2];
+    //     if (name == null) {
+    //         throw new Error(`本地 ${type} URL 无效: ${url}`);
+    //     }
+    //     name = decodeURIComponent(name);
+    //     const key = type === 'module' ? MODULES_KEY : FILES_KEY;
+    //     const item = findByName($.read(key), name);
+    //     if (!item) {
+    //         throw new Error(`找不到本地 ${type}: ${name}`);
+    //     }
 
-        return item.content;
-    }
+    //     return item.content;
+    // }
 
     const { isNode } = ENV();
     const { defaultUserAgent, defaultTimeout } = $.read(SETTINGS_KEY);
