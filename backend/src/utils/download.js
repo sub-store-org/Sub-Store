@@ -74,6 +74,7 @@ export default async function download(rawUrl, ua, timeout) {
     // try to find in app cache
     const cached = resourceCache.get(id);
     if (!$arguments?.noCache && cached) {
+        $.info(`使用缓存: ${url}`);
         result = cached;
     } else {
         $.info(
