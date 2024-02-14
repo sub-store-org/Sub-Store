@@ -6,6 +6,9 @@ import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
 import PROXY_PARSERS from './parsers';
 import $ from '@/core/app';
+import { FILES_KEY, MODULES_KEY } from '@/constants';
+import { findByName } from '@/utils/database';
+import { produceArtifact } from '@/restful/sync';
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
@@ -95,18 +98,50 @@ async function processFn(proxies, operators = [], targetPlatform, source) {
                         }
                     }
                 }
+                url = `${url.split('#')[0]}${noCache ? '#noCache' : ''}`;
+                const downloadUrlMatch = url.match(
+                    /^\/api\/(file|module)\/(.+)/,
+                );
+                if (downloadUrlMatch) {
+                    let type = '';
+                    try {
+                        type = downloadUrlMatch?.[1];
+                        let name = downloadUrlMatch?.[2];
+                        if (name == null) {
+                            throw new Error(`本地 ${type} URL 无效: ${url}`);
+                        }
+                        name = decodeURIComponent(name);
+                        const key = type === 'module' ? MODULES_KEY : FILES_KEY;
+                        const item = findByName($.read(key), name);
+                        if (!item) {
+                            throw new Error(`找不到 ${type}: ${name}`);
+                        }
 
-                // if this is a remote script, download it
-                try {
-                    script = await download(
-                        `${url.split('#')[0]}${noCache ? '#noCache' : ''}`,
-                    );
-                    // $.info(`Script loaded: >>>\n ${script}`);
-                } catch (err) {
-                    $.error(
-                        `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`,
-                    );
-                    throw new Error(`无法下载脚本: ${url}`);
+                        if (type === 'module') {
+                            script = item.content;
+                        } else {
+                            script = await produceArtifact({
+                                type: 'file',
+                                name,
+                            });
+                        }
+                    } catch (err) {
+                        $.error(
+                            `Error when loading ${type}: ${item.args.content}.\n Reason: ${err}`,
+                        );
+                        throw new Error(`无法加载 ${type}: ${url}`);
+                    }
+                } else {
+                    // if this is a remote script, download it
+                    try {
+                        script = await download(url);
+                        // $.info(`Script loaded: >>>\n ${script}`);
+                    } catch (err) {
+                        $.error(
+                            `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`,
+                        );
+                        throw new Error(`无法下载脚本: ${url}`);
+                    }
                 }
             } else {
                 script = content;
