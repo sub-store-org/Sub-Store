@@ -448,6 +448,46 @@ async function syncArtifacts() {
 
     try {
         const invalid = [];
+        const allSubs = $.read(SUBS_KEY);
+        const allCols = $.read(COLLECTIONS_KEY);
+        const subNames = [];
+        allArtifacts.map((artifact) => {
+            if (artifact.sync && artifact.source) {
+                if (artifact.type === 'subscription') {
+                    const subName = artifact.source;
+                    const sub = findByName(allSubs, subName);
+                    if (sub && sub.url && !subNames.includes(subName)) {
+                        subNames.push(subName);
+                    }
+                } else if (artifact.type === 'collection') {
+                    const collection = findByName(allCols, artifact.source);
+                    if (collection && Array.isArray(collection.subscriptions)) {
+                        collection.subscriptions.map((subName) => {
+                            const sub = findByName(allSubs, subName);
+                            if (sub && sub.url && !subNames.includes(subName)) {
+                                subNames.push(subName);
+                            }
+                        });
+                    }
+                }
+            }
+        });
+
+        if (subNames.length > 0) {
+            await Promise.all(
+                subNames.map(async (subName) => {
+                    try {
+                        await produceArtifact({
+                            type: 'subscription',
+                            name: subName,
+                        });
+                    } catch (e) {
+                        // $.error(`${e.message ?? e}`);
+                    }
+                }),
+            );
+        }
+
         await Promise.all(
             allArtifacts.map(async (artifact) => {
                 try {
