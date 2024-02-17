@@ -406,7 +406,7 @@ function URI_VLESS() {
             proxy.tls = true;
             params.security = params.security ?? 'reality';
         }
-        proxy.sni = params.sni ?? params.peer;
+        proxy.sni = params.sni || params.peer;
         proxy.flow = params.flow;
         if (!proxy.flow && isShadowrocket && params.xtls) {
             // "none" is undefined
