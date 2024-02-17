@@ -33,6 +33,8 @@ export default function Surge_Producer() {
                 return wireguard_surge(proxy);
             case 'hysteria2':
                 return hysteria2(proxy);
+            case 'ssh':
+                return ssh(proxy);
         }
 
         if (opts['include-unsupported-proxy'] && proxy.type === 'wireguard') {
@@ -119,6 +121,18 @@ function shadowsocks(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -204,6 +218,18 @@ function trojan(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -278,6 +304,18 @@ function vmess(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -305,6 +343,61 @@ function vmess(proxy) {
     return result.toString();
 }
 
+function ssh(proxy) {
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=ssh,${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,${proxy.username}`, 'username');
+    result.appendIfPresent(`,${proxy.password}`, 'password');
+
+    result.appendIfPresent(
+        `,idle-timeout=${proxy['idle-timeout']}`,
+        'idle-timeout',
+    );
+    result.appendIfPresent(
+        `,server-fingerprint="${proxy['server-fingerprint']}"`,
+        'server-fingerprint',
+    );
+
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
+
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+
+    return result.toString();
+}
 function http(proxy) {
     const result = new Result(proxy);
     const type = proxy.tls ? 'https' : 'http';
@@ -341,6 +434,18 @@ function http(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -406,6 +511,18 @@ function socks5(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -469,6 +586,18 @@ function snell(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -547,6 +676,18 @@ function tuic(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -609,6 +750,18 @@ ${proxy.name}=wireguard`);
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -696,6 +849,18 @@ function wireguard_surge(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -760,6 +925,18 @@ function hysteria2(proxy) {
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {

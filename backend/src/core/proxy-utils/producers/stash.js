@@ -250,6 +250,10 @@ export default function Stash_Producer() {
                     proxy['benchmark-url'] = proxy['test-url'];
                     delete proxy['test-url'];
                 }
+                if (proxy['test-timeout']) {
+                    proxy['benchmark-timeout'] = proxy['test-timeout'];
+                    delete proxy['test-timeout'];
+                }
 
                 delete proxy.subName;
                 delete proxy.collectionName;

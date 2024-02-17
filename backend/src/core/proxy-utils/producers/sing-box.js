@@ -217,6 +217,31 @@ const tlsParser = (proxy, parsedProxy) => {
     if (!parsedProxy.tls.enabled) delete parsedProxy.tls;
 };
 
+const sshParser = (proxy = {}) => {
+    const parsedProxy = {
+        tag: proxy.name,
+        type: 'ssh',
+        server: proxy.server,
+        server_port: parseInt(`${proxy.port}`, 10),
+    };
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
+        throw 'invalid port';
+    if (proxy.username) parsedProxy.user = proxy.username;
+    if (proxy.password) parsedProxy.password = proxy.password;
+    if (proxy['server-fingerprint']) {
+        parsedProxy.host_key = [proxy['server-fingerprint']];
+        // https://manual.nssurge.com/policy/ssh.html
+        // Surge only supports curve25519-sha256 as the kex algorithm and aes128-gcm as the encryption algorithm. It means that the SSH server must use OpenSSH v7.3 or above. (It should not be a problem since OpenSSH 7.3 was released on 2016-08-01.)
+        // TODO: ?
+        parsedProxy.host_key_algorithms = [
+            proxy['server-fingerprint'].split(' ')[0],
+        ];
+    }
+    if (proxy['fast-open']) parsedProxy.udp_fragment = true;
+    tfoParser(proxy, parsedProxy);
+    return parsedProxy;
+};
+
 const httpParser = (proxy = {}) => {
     const parsedProxy = {
         tag: proxy.name,
@@ -624,6 +649,9 @@ export default function singbox_Producer() {
             .map((proxy) => {
                 try {
                     switch (proxy.type) {
+                        case 'ssh':
+                            list.push(sshParser(proxy));
+                            break;
                         case 'http':
                             list.push(httpParser(proxy));
                             break;

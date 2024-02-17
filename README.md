@@ -26,15 +26,13 @@ Core functionalities:
 
 ### Supported Input Formats
 
-- [x] SS URI
-- [x] SSR URI
-- [x] SSD URI
-- [x] V2RayN URI
-- [x] Hysteria 2 URI
+- [x] URI(SS, SSR, VMess, VLESS, Trojan, Hysteria, Hysteria 2, TUIC v5)
+- [x] Clash Proxies YAML
+- [x] Clash Proxy JSON(single line)
 - [x] QX (SS, SSR, VMess, Trojan, HTTP, SOCKS5, VLESS)
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, WireGuard, VLESS, Hysteria 2)
-- [x] Surge (SS, VMess, Trojan, HTTP, SOCKS5, TUIC, Snell, Hysteria 2, SSR(external, only for macOS), External Proxy Program(only for macOS), WireGuard(Surge to Surge))
-- [x] Surfboard (SS, VMess, Trojan, HTTP, SOCKS5, WireGuard(Surfboard to Surfboard))
+- [x] Surge (SS, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, TUIC, Snell, Hysteria 2, SSH(Password authentication only), SSR(external, only for macOS), External Proxy Program(only for macOS), WireGuard(Surge to Surge))
+- [x] Surfboard (SS, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, WireGuard(Surfboard to Surfboard))
 - [x] Shadowrocket (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC)
 - [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC)
 - [x] Stash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, TUIC)

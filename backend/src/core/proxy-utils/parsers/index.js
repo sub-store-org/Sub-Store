@@ -752,6 +752,9 @@ function Clash_All() {
         if (proxy['benchmark-url']) {
             proxy['test-url'] = proxy['benchmark-url'];
         }
+        if (proxy['benchmark-timeout']) {
+            proxy['test-timeout'] = proxy['benchmark-timeout'];
+        }
 
         return proxy;
     };
@@ -1013,6 +1016,14 @@ function Loon_WireGuard() {
     return { name, test, parse };
 }
 
+function Surge_SSH() {
+    const name = 'Surge SSH Parser';
+    const test = (line) => {
+        return /^.*=\s*ssh/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
 function Surge_SS() {
     const name = 'Surge SS Parser';
     const test = (line) => {
@@ -1183,6 +1194,7 @@ export default [
     URI_Hysteria2(),
     URI_Trojan(),
     Clash_All(),
+    Surge_SSH(),
     Surge_SS(),
     Surge_VMess(),
     Surge_Trojan(),
