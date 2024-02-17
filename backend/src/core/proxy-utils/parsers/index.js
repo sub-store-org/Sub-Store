@@ -273,11 +273,17 @@ function URI_VMess() {
                 params.port = port;
                 params.add = server;
             }
+            const server = params.add;
+            const port = parseInt(getIfPresent(params.port), 10);
             const proxy = {
-                name: params.ps ?? params.remarks,
+                name:
+                    params.ps ??
+                    params.remarks ??
+                    params.remark ??
+                    `VMess ${server}:${port}`,
                 type: 'vmess',
-                server: params.add,
-                port: parseInt(getIfPresent(params.port), 10),
+                server,
+                port,
                 cipher: getIfPresent(params.scy, 'auto'),
                 uuid: params.id,
                 alterId: parseInt(
@@ -399,7 +405,11 @@ function URI_VLESS() {
             params[key] = value;
         }
 
-        proxy.name = name ?? params.remarks ?? `VLESS ${server}:${port}`;
+        proxy.name =
+            name ??
+            params.remarks ??
+            params.remark ??
+            `VLESS ${server}:${port}`;
 
         proxy.tls = params.security && params.security !== 'none';
         if (isShadowrocket && /TRUE|1/i.test(params.tls)) {
