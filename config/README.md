@@ -17,7 +17,7 @@ Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 
 1. 官方默认版模块(目前不带 ability 参数, 不保证以后不会改动): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule)
 
-2. 固定带 ability 参数版本,可能会爆内存, 如果需要使用指定节点功能 例如[加国旗脚本或者cname脚本] 请使用此带 ability 参数版本: [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule)
+2. 固定带 ability 参数版本,可能会爆内存, 如果需要使用指定节点功能 例如[加旗帜脚本或者cname脚本] 请使用此带 ability 参数版本: [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule)
 
 3. 固定不带 ability 参数版本： [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule)
 

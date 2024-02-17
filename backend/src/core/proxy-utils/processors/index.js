@@ -121,7 +121,7 @@ function QuickSettingOperator(args) {
 }
 
 // add or remove flag for proxies
-function FlagOperator({ mode }) {
+function FlagOperator({ mode, tw }) {
     return {
         name: 'Flag Operator',
         func: (proxies) => {
@@ -135,7 +135,13 @@ function FlagOperator({ mode }) {
                     // remove old flag
                     proxy.name = removeFlag(proxy.name);
                     proxy.name = newFlag + ' ' + proxy.name;
-                    proxy.name = proxy.name.replace(/🇹🇼/g, '🇨🇳');
+                    if (tw == 'ws') {
+                        proxy.name = proxy.name.replace(/🇹🇼/g, '🇼🇸');
+                    } else if (tw == 'tw') {
+                        // 不变
+                    } else {
+                        proxy.name = proxy.name.replace(/🇹🇼/g, '🇨🇳');
+                    }
                 }
                 return proxy;
             });
