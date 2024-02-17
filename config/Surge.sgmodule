@@ -1,5 +1,5 @@
 #!name=Sub-Store
-#!desc=高级订阅管理工具 @Peng-YM  无 ability 参数版本,不会爆内存, 如果需要使用指定节点功能 例如[加国旗脚本或者cname脚本] 可以用带 ability 参数. 定时任务默认为每天 0 点
+#!desc=高级订阅管理工具 @Peng-YM  无 ability 参数版本,不会爆内存, 如果需要使用指定节点功能 例如[加旗帜脚本或者cname脚本] 可以用带 ability 参数. 定时任务默认为每天 0 点
 #!category=订阅管理
 
 [MITM]
