@@ -1,6 +1,6 @@
 import YAML from '@/utils/yaml';
 import download from '@/utils/download';
-import { isIPv4, isIPv6, isValidPortNumber } from '@/utils';
+import { isIPv4, isIPv6, isValidPortNumber, isNotBlank } from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
@@ -185,6 +185,13 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         (proxy) =>
             !(proxy.supported && proxy.supported[targetPlatform] === false),
     );
+
+    proxies = proxies.map((proxy) => {
+        if (!isNotBlank(proxy.name)) {
+            proxy.name = `${proxy.type} ${proxy.server}:${proxy.port}`;
+        }
+        return proxy;
+    });
 
     $.info(`Producing proxies for target: ${targetPlatform}`);
     if (typeof producer.type === 'undefined' || producer.type === 'SINGLE') {
