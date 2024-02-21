@@ -613,8 +613,10 @@ const wireguardParser = (proxy = {}) => {
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     if (typeof proxy.reserved === 'string') {
         parsedProxy.reserved.push(proxy.reserved);
-    } else {
+    } else if (Array.isArray(proxy.reserved)) {
         for (const r of proxy.reserved) parsedProxy.reserved.push(r);
+    } else {
+        delete parsedProxy.reserved;
     }
     if (proxy.peers && proxy.peers.length > 0) {
         parsedProxy.peers = [];
@@ -628,8 +630,10 @@ const wireguardParser = (proxy = {}) => {
             };
             if (typeof p.reserved === 'string') {
                 peer.reserved.push(p.reserved);
-            } else {
+            } else if (Array.isArray(p.reserved)) {
                 for (const r of p.reserved) peer.reserved.push(r);
+            } else {
+                delete peer.reserved;
             }
             if (p['pre-shared-key']) peer.pre_shared_key = p['pre-shared-key'];
             parsedProxy.peers.push(peer);
