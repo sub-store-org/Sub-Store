@@ -1,5 +1,5 @@
 name: Sub-Store
-desc: 高级订阅管理工具 @Peng-YM. 定时任务默认为每天 0 点
+desc: 高级订阅管理工具 @Peng-YM. 定时任务默认为每天  23 点 55 分
 icon: https://raw.githubusercontent.com/cc63/ICON/main/Sub-Store.png
 
 http:
@@ -20,7 +20,7 @@ http:
 cron:
   script:
     - name: cron-sync-artifacts
-      cron: "0 0 * * *"
+      cron: "55 23 * * *"
       timeout: 120
 
 script-providers:
