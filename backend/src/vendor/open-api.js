@@ -312,7 +312,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                     ? eval("require('request')")
                     : $httpClient;
                 request[method.toLowerCase()](
-                    options,
+                    JSON.parse(JSON.stringify(options)),
                     (err, response, body) => {
                         // if (err) {
                         //     console.log(err);
