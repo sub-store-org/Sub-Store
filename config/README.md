@@ -19,6 +19,8 @@ Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 
 2. 固定带 ability 参数版本,可能会爆内存, 如果需要使用指定节点功能 例如[加旗帜脚本或者cname脚本] 请使用此带 ability 参数版本: [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule)
 
+> 最新 Surge iOS TestFlight 版本应该没有内存问题了 可以大胆尝试带 ability 参数版本
+
 3. 固定不带 ability 参数版本： [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule)
 
 
