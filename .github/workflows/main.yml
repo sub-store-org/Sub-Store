@@ -59,6 +59,17 @@ jobs:
             ./backend/dist/sub-store-parser.loon.min.js
             ./backend/dist/cron-sync-artifacts.min.js
             ./backend/dist/sub-store.bundle.js
+      - name: Git push assets to "release" branch
+        run: |
+          cd backend || exit 1
+          git init
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b release
+          git add .
+          git commit -m "release: ${{ steps.tag.outputs.release_tag }}"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f -u origin release
       - name: Sync to GitLab
         env:
           GITLAB_PIPELINE_TOKEN: ${{ secrets.GITLAB_PIPELINE_TOKEN }}
