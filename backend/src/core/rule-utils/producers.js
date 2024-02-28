@@ -31,7 +31,7 @@ function SurgeRuleSet() {
     const func = (rule) => {
         let output = `${rule.type},${rule.content}`;
         if (rule.type === 'IP-CIDR' || rule.type === 'IP-CIDR6') {
-            output += rule.options ? `,${rule.options[0]}` : '';
+            output += rule.options ? `,${rule.options}` : '';
         }
         return output;
     };
@@ -63,7 +63,7 @@ function ClashRuleProvider() {
                     rule.content
                 }`;
                 if (rule.type === 'IP-CIDR' || rule.type === 'IP-CIDR6') {
-                    output += rule.options ? `,${rule.options[0]}` : '';
+                    output += rule.options ? `,${rule.options}` : '';
                 }
                 return output;
             }),
