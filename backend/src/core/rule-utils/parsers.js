@@ -40,7 +40,7 @@ function AllRuleParser() {
                             rule.type === 'IP-CIDR' ||
                             rule.type === 'IP-CIDR6'
                         ) {
-                            rule.options = params.slice(2).join(",");
+                            rule.options = params.slice(2);
                         }
                         result.push(rule);
                     }
