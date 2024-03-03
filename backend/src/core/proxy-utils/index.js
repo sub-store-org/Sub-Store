@@ -370,6 +370,13 @@ function lastParse(proxy) {
             }
         }
     }
+    if (proxy.name?.type === 'Buffer') {
+        try {
+            proxy.name = Buffer.from(proxy.name.data).toString('utf8');
+        } catch (e) {
+            proxy.name = `${proxy.type} ${proxy.server}:${proxy.port}`;
+        }
+    }
     return proxy;
 }
 
