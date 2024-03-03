@@ -1,6 +1,12 @@
 import YAML from '@/utils/yaml';
 import download from '@/utils/download';
-import { isIPv4, isIPv6, isValidPortNumber, isNotBlank } from '@/utils';
+import {
+    isIPv4,
+    isIPv6,
+    isValidPortNumber,
+    isNotBlank,
+    utf8ArrayToStr,
+} from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
@@ -368,6 +374,18 @@ function lastParse(proxy) {
                 }
                 proxy[`${proxy.network}-opts`].path = ['/'];
             }
+        }
+    }
+    if (typeof proxy.name !== 'string') {
+        try {
+            if (proxy.name?.data) {
+                proxy.name = Buffer.from(proxy.name.data).toString('utf8');
+            } else {
+                proxy.name = utf8ArrayToStr(proxy.name);
+            }
+        } catch (e) {
+            $.error(`proxy.name decode failed\nReason: ${e}`);
+            proxy.name = `${proxy.type} ${proxy.server}:${proxy.port}`;
         }
     }
     return proxy;
