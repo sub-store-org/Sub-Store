@@ -263,6 +263,10 @@ function safeMatch(parser, line) {
 }
 
 function lastParse(proxy) {
+    if (proxy.interface) {
+        proxy['interface-name'] = proxy.interface;
+        delete proxy.interface;
+    }
     if (isValidPortNumber(proxy.port)) {
         proxy.port = parseInt(proxy.port, 10);
     }
