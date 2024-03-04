@@ -357,11 +357,41 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
     };
 }
 
+function parseIP4P(IP4P) {
+    let server;
+    let port;
+    try {
+        if (!/^2001::[^:]+:[^:]+:[^:]+$/.test(IP4P)) {
+            throw new Error(`Invalid IP4P: ${IP4P}`);
+        }
+        let array = IP4P.split(':');
+
+        port = parseInt(array[2], 16);
+        let ipab = parseInt(array[3], 16);
+        let ipcd = parseInt(array[4], 16);
+        let ipa = ipab >> 8;
+        let ipb = ipab & 0xff;
+        let ipc = ipcd >> 8;
+        let ipd = ipcd & 0xff;
+        server = `${ipa}.${ipb}.${ipc}.${ipd}`;
+        if (port <= 0 || port > 65535) {
+            throw new Error(`Invalid port number: ${port}`);
+        }
+        if (!isIPv4(server)) {
+            throw new Error(`Invalid IP address: ${server}`);
+        }
+    } catch (e) {
+        // throw new Error(`IP4P 解析失败: ${e}`);
+        $.error(`IP4P 解析失败: ${e}`);
+    }
+    return { server, port };
+}
+
 const DOMAIN_RESOLVERS = {
-    Google: async function (domain, type) {
+    Google: async function (domain, type, noCache) {
         const id = hex_md5(`GOOGLE:${domain}:${type}`);
         const cached = resourceCache.get(id);
-        if (cached) return cached;
+        if (!noCache && cached) return cached;
         const resp = await $.http.get({
             url: `https://8.8.4.4/resolve?name=${encodeURIComponent(
                 domain,
@@ -382,10 +412,13 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    'IP-API': async function (domain) {
+    'IP-API': async function (domain, type, noCache) {
+        if (['IPv6'].includes(type)) {
+            throw new Error(`域名解析服务提供方 IP-API 不支持 ${type}`);
+        }
         const id = hex_md5(`IP-API:${domain}`);
         const cached = resourceCache.get(id);
-        if (cached) return cached;
+        if (!noCache && cached) return cached;
         const resp = await $.http.get({
             url: `http://ip-api.com/json/${encodeURIComponent(
                 domain,
@@ -399,10 +432,10 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Cloudflare: async function (domain, type) {
+    Cloudflare: async function (domain, type, noCache) {
         const id = hex_md5(`CLOUDFLARE:${domain}:${type}`);
         const cached = resourceCache.get(id);
-        if (cached) return cached;
+        if (!noCache && cached) return cached;
         const resp = await $.http.get({
             url: `https://1.0.0.1/dns-query?name=${encodeURIComponent(
                 domain,
@@ -423,10 +456,10 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Ali: async function (domain, type) {
+    Ali: async function (domain, type, noCache) {
         const id = hex_md5(`ALI:${domain}:${type}`);
         const cached = resourceCache.get(id);
-        if (cached) return cached;
+        if (!noCache && cached) return cached;
         const resp = await $.http.get({
             url: `http://223.6.6.6/resolve?name=${encodeURIComponent(
                 domain,
@@ -443,10 +476,10 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Tencent: async function (domain, type) {
+    Tencent: async function (domain, type, noCache) {
         const id = hex_md5(`ALI:${domain}:${type}`);
         const cached = resourceCache.get(id);
-        if (cached) return cached;
+        if (!noCache && cached) return cached;
         const resp = await $.http.get({
             url: `http://119.28.28.28/d?type=${
                 type === 'IPv6' ? 'AAAA' : 'A'
@@ -465,10 +498,13 @@ const DOMAIN_RESOLVERS = {
     },
 };
 
-function ResolveDomainOperator({ provider, type, filter }) {
-    if (type === 'IPv6' && ['IP-API'].includes(provider)) {
-        throw new Error(`域名解析服务提供方 ${provider} 不支持 IPv6`);
+function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
+    console.log(`cache`, cache);
+    if (['IPv6', 'IP4P'].includes(_type) && ['IP-API'].includes(provider)) {
+        throw new Error(`域名解析服务提供方 ${provider} 不支持 ${_type}`);
     }
+    let type = ['IPv6', 'IP4P'].includes(_type) ? 'IPv6' : 'IPv4';
+
     const resolver = DOMAIN_RESOLVERS[provider];
     if (!resolver) {
         throw new Error(`找不到域名解析服务提供方: ${provider}`);
@@ -490,7 +526,7 @@ function ResolveDomainOperator({ provider, type, filter }) {
                 const currentBatch = [];
                 for (let domain of totalDomain.splice(0, limit)) {
                     currentBatch.push(
-                        resolver(domain, type)
+                        resolver(domain, type, cache === 'disabled')
                             .then((ip) => {
                                 results[domain] = ip;
                                 $.info(
@@ -509,8 +545,19 @@ function ResolveDomainOperator({ provider, type, filter }) {
             proxies.forEach((p) => {
                 if (!p['no-resolve']) {
                     if (results[p.server]) {
-                        p.server = results[p.server];
-                        p.resolved = true;
+                        if (_type === 'IP4P') {
+                            const { server, port } = parseIP4P(
+                                results[p.server],
+                            );
+                            if (server && port) {
+                                p.server = server;
+                                p.port = port;
+                                p.resolved = true;
+                            }
+                        } else {
+                            p.server = results[p.server];
+                            p.resolved = true;
+                        }
                     } else {
                         p.resolved = false;
                     }
