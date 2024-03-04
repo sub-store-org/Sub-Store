@@ -53,7 +53,8 @@ export default async function download(rawUrl, ua, timeout) {
     // }
 
     const { isNode } = ENV();
-    const { defaultUserAgent, defaultTimeout } = $.read(SETTINGS_KEY);
+    const { defaultUserAgent, defaultTimeout, cacheThreshold } =
+        $.read(SETTINGS_KEY);
     const userAgent = ua || defaultUserAgent || 'clash.meta';
     const requestTimeout = timeout || defaultTimeout;
     const id = hex_md5(userAgent + url);
@@ -90,8 +91,22 @@ export default async function download(rawUrl, ua, timeout) {
             }
             if (body.replace(/\s/g, '').length === 0)
                 throw new Error(new Error('远程资源内容为空'));
+            let shouldCache = true;
+            if (cacheThreshold) {
+                const size = body.length / 1024;
+                if (size > cacheThreshold) {
+                    $.info(
+                        `资源大小 ${size.toFixed(
+                            2,
+                        )} KB 超过了 ${cacheThreshold} KB, 不缓存`,
+                    );
+                    shouldCache = false;
+                }
+            }
+            if (shouldCache) {
+                resourceCache.set(id, body);
+            }
 
-            resourceCache.set(id, body);
             result = body;
         } catch (e) {
             throw new Error(`无法下载 URL ${url}: ${e.message ?? e}`);
