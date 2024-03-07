@@ -843,7 +843,7 @@ private-key = ${proxy['private-key']}`);
     }
     const peer = {
         'public-key': proxy['public-key'],
-        'allowed-ips': allowedIps,
+        'allowed-ips': allowedIps ? `"${allowedIps}"` : undefined,
         endpoint: `${proxy.server}:${proxy.port}`,
         keepalive: proxy['persistent-keepalive'] || proxy.keepalive,
         'client-id': reserved,
