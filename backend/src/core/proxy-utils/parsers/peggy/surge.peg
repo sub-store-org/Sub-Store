@@ -75,7 +75,7 @@ http = tag equals "http" address (username password)? (usernamek passwordk)? (ip
     proxy.type = "http";
     handleShadowTLS();
 }
-ssh = tag equals "ssh" address (username password)? (usernamek passwordk)? (server_fingerprint/idle_timeout/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+ssh = tag equals "ssh" address (username password)? (usernamek passwordk)? (server_fingerprint/idle_timeout/private_key/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "ssh";
     handleShadowTLS();
 }
@@ -227,6 +227,7 @@ interface = comma "interface" equals match:[^,]+ { proxy.interface = match.join(
 allow_other_interface = comma "allow-other-interface" equals flag:bool { proxy["allow-other-interface"] = flag; }
 hybrid = comma "hybrid" equals flag:bool { proxy.hybrid = flag; }
 idle_timeout = comma "idle-timeout" equals match:$[0-9]+ { proxy["idle-timeout"] = parseInt(match.trim()); }
+private_key = comma "private-key" equals match:[^,]+ { proxy["keystore-private-key"] = match.join("").replace(/^"(.*)"$/, '$1'); }
 server_fingerprint = comma "server-fingerprint" equals match:[^,]+ { proxy["server-fingerprint"] = match.join("").replace(/^"(.*)"$/, '$1'); }
 block_quic = comma "block-quic" equals match:[^,]+ { proxy["block-quic"] = match.join(""); }
 shadow_tls_version = comma "shadow-tls-version" equals match:$[0-9]+ { proxy["shadow-tls-version"] = parseInt(match.trim()); }

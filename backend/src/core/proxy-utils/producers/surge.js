@@ -356,8 +356,15 @@ function ssh(proxy) {
     const result = new Result(proxy);
     result.append(`${proxy.name}=ssh,${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,${proxy.username}`, 'username');
+    // 所有的类似的字段都有双引号的问题 暂不处理
     result.appendIfPresent(`,${proxy.password}`, 'password');
 
+    // https://manual.nssurge.com/policy/ssh.html
+    // 需配合 Keystore
+    result.appendIfPresent(
+        `,private-key=${proxy['keystore-private-key']}`,
+        'keystore-private-key',
+    );
     result.appendIfPresent(
         `,idle-timeout=${proxy['idle-timeout']}`,
         'idle-timeout',
