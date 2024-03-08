@@ -228,6 +228,9 @@ const sshParser = (proxy = {}) => {
         throw 'invalid port';
     if (proxy.username) parsedProxy.user = proxy.username;
     if (proxy.password) parsedProxy.password = proxy.password;
+    // https://wiki.metacubex.one/config/proxies/ssh
+    // https://sing-box.sagernet.org/zh/configuration/outbound/ssh
+    if (proxy['privateKey']) parsedProxy.private_key_path = proxy['privateKey'];
     if (proxy['server-fingerprint']) {
         parsedProxy.host_key = [proxy['server-fingerprint']];
         // https://manual.nssurge.com/policy/ssh.html
