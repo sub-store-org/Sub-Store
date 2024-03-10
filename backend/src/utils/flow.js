@@ -144,22 +144,58 @@ export function validCheck(flow) {
     }
 }
 
-export function getRmainingDays(_resetDay) {
-    if (!_resetDay) return;
-    const resetDay = parseInt(_resetDay);
-    if (isNaN(resetDay) || resetDay <= 0 || resetDay > 31) return;
+export function getRmainingDays(opt = {}) {
+    try {
+        let { resetDay, startDate, cycleDays } = opt;
+        if (['string', 'number'].includes(typeof opt)) {
+            resetDay = opt;
+        }
 
-    let now = new Date();
-    let today = now.getDate();
-    let month = now.getMonth();
-    let year = now.getFullYear();
-    let daysInMonth;
+        if (startDate && cycleDays) {
+            cycleDays = parseInt(cycleDays);
+            if (isNaN(cycleDays) || cycleDays <= 0)
+                throw new Error('重置周期应为正整数');
+            if (!startDate || !Date.parse(startDate))
+                throw new Error('开始日期不合法');
 
-    if (resetDay > today) {
-        daysInMonth = 0;
-    } else {
-        daysInMonth = new Date(year, month + 1, 0).getDate();
+            const start = new Date(startDate);
+            const today = new Date();
+            start.setHours(0, 0, 0, 0);
+            today.setHours(0, 0, 0, 0);
+            if (start.getTime() > today.getTime())
+                throw new Error('开始日期应早于现在');
+
+            let resetDate = new Date(startDate);
+            resetDate.setDate(resetDate.getDate() + cycleDays);
+
+            while (resetDate < today) {
+                resetDate.setDate(resetDate.getDate() + cycleDays);
+            }
+
+            const timeDiff = resetDate.getTime() - today.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+            return daysDiff;
+        } else {
+            if (!resetDay) throw new Error('未提供月重置日 resetDay');
+            resetDay = parseInt(resetDay);
+            if (isNaN(resetDay) || resetDay <= 0 || resetDay > 31)
+                throw new Error('月重置日应为 1-31 之间的整数');
+            let now = new Date();
+            let today = now.getDate();
+            let month = now.getMonth();
+            let year = now.getFullYear();
+            let daysInMonth;
+
+            if (resetDay > today) {
+                daysInMonth = 0;
+            } else {
+                daysInMonth = new Date(year, month + 1, 0).getDate();
+            }
+
+            return daysInMonth - today + resetDay;
+        }
+    } catch (e) {
+        $.error(`getRmainingDays failed: ${e.message ?? e}`);
     }
-
-    return daysInMonth - today + resetDay;
 }
