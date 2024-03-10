@@ -35,13 +35,21 @@ async function produceArtifact({
     ignoreFailedRemoteFile,
     produceType,
     produceOpts = {},
+    subscription,
 }) {
     platform = platform || 'JSON';
 
     if (type === 'subscription') {
-        const allSubs = $.read(SUBS_KEY);
-        const sub = findByName(allSubs, name);
-        if (!sub) throw new Error(`找不到订阅 ${name}`);
+        let sub;
+        if (name) {
+            const allSubs = $.read(SUBS_KEY);
+            sub = findByName(allSubs, name);
+            if (!sub) throw new Error(`找不到订阅 ${name}`);
+        } else if (subscription) {
+            sub = subscription;
+        } else {
+            throw new Error('未提供订阅名称或订阅数据');
+        }
         let raw;
         if (content && !['localFirst', 'remoteFirst'].includes(mergeSources)) {
             raw = content;

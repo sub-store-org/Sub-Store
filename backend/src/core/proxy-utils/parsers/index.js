@@ -444,6 +444,7 @@ function URI_VLESS() {
                 proxy[`${params.security}-opts`] = opts;
             }
         }
+
         proxy.network = params.type;
         if (proxy.network === 'tcp' && params.headerType === 'http') {
             proxy.network = 'http';
