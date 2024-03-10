@@ -111,7 +111,11 @@ async function getFlowInfo(req, res) {
         }
         success(res, {
             ...parseFlowHeaders(flowHeaders),
-            remainingDays: getRmainingDays($arguments.resetDay),
+            remainingDays: getRmainingDays({
+                resetDay: $arguments.resetDay,
+                startDate: $arguments.startDate,
+                cycleDays: $arguments.cycleDays,
+            }),
         });
     } catch (err) {
         failed(
