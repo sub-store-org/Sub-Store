@@ -370,6 +370,10 @@ function lastParse(proxy) {
         delete proxy.ports;
     }
     if (['vless'].includes(proxy.type)) {
+        // 非 reality, 空 flow 没有意义
+        if (!proxy['reality-opts'] && !proxy.flow) {
+            delete proxy.flow;
+        }
         if (['http'].includes(proxy.network)) {
             let transportPath = proxy[`${proxy.network}-opts`]?.path;
             if (!transportPath) {
