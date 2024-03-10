@@ -6,7 +6,11 @@ import {
 } from './errors';
 import { deleteByName, findByName, updateByName } from '@/utils/database';
 import { SUBS_KEY, COLLECTIONS_KEY, ARTIFACTS_KEY } from '@/constants';
-import { getFlowHeaders, parseFlowHeaders } from '@/utils/flow';
+import {
+    getFlowHeaders,
+    parseFlowHeaders,
+    getRmainingDays,
+} from '@/utils/flow';
 import { success, failed } from './response';
 import $ from '@/core/app';
 
@@ -105,8 +109,10 @@ async function getFlowInfo(req, res) {
             );
             return;
         }
-
-        success(res, parseFlowHeaders(flowHeaders));
+        success(res, {
+            ...parseFlowHeaders(flowHeaders),
+            remainingDays: getRmainingDays($arguments.resetDay),
+        });
     } catch (err) {
         failed(
             res,

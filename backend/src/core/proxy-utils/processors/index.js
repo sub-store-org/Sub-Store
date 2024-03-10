@@ -16,6 +16,7 @@ import {
     parseFlowHeaders,
     validCheck,
     flowTransfer,
+    getRmainingDays,
 } from '@/utils/flow';
 
 /**
@@ -863,6 +864,7 @@ function createDynamicFunction(name, script, $arguments) {
         parseFlowHeaders,
         flowTransfer,
         validCheck,
+        getRmainingDays,
     };
     if ($.env.isLoon) {
         return new Function(

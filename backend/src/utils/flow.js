@@ -143,3 +143,23 @@ export function validCheck(flow) {
         }
     }
 }
+
+export function getRmainingDays(_resetDay) {
+    if (!_resetDay) return;
+    const resetDay = parseInt(_resetDay);
+    if (isNaN(resetDay) || resetDay <= 0 || resetDay > 31) return;
+
+    let now = new Date();
+    let today = now.getDate();
+    let month = now.getMonth();
+    let year = now.getFullYear();
+    let daysInMonth;
+
+    if (resetDay > today) {
+        daysInMonth = 0;
+    } else {
+        daysInMonth = new Date(year, month + 1, 0).getDate();
+    }
+
+    return daysInMonth - today + resetDay;
+}
