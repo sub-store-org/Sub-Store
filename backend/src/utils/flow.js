@@ -172,6 +172,7 @@ export function getRmainingDays(opt = {}) {
                 resetDate.setDate(resetDate.getDate() + cycleDays);
             }
 
+            resetDate.setHours(0, 0, 0, 0);
             const timeDiff = resetDate.getTime() - today.getTime();
             const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
