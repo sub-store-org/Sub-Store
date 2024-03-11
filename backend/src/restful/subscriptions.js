@@ -51,14 +51,20 @@ async function getFlowInfo(req, res) {
         sub.source === 'local' &&
         !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
     ) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'NO_FLOW_INFO',
-                'N/A',
-                `Local subscription ${name} has no flow information!`,
-            ),
-        );
+        if (sub.subUserinfo) {
+            success(res, {
+                ...parseFlowHeaders(sub.subUserinfo),
+            });
+        } else {
+            failed(
+                res,
+                new RequestInvalidError(
+                    'NO_FLOW_INFO',
+                    'N/A',
+                    `Local subscription ${name} has no flow information!`,
+                ),
+            );
+        }
         return;
     }
     try {
@@ -97,26 +103,37 @@ async function getFlowInfo(req, res) {
             );
             return;
         }
-        const flowHeaders = await getFlowHeaders(url);
-        if (!flowHeaders) {
-            failed(
-                res,
-                new InternalServerError(
-                    'NO_FLOW_INFO',
-                    'No flow info',
-                    `Failed to fetch flow headers`,
-                ),
-            );
-            return;
+        if (sub.subUserinfo) {
+            success(res, {
+                ...parseFlowHeaders(sub.subUserinfo),
+                remainingDays: getRmainingDays({
+                    resetDay: $arguments.resetDay,
+                    startDate: $arguments.startDate,
+                    cycleDays: $arguments.cycleDays,
+                }),
+            });
+        } else {
+            const flowHeaders = await getFlowHeaders(url);
+            if (!flowHeaders) {
+                failed(
+                    res,
+                    new InternalServerError(
+                        'NO_FLOW_INFO',
+                        'No flow info',
+                        `Failed to fetch flow headers`,
+                    ),
+                );
+                return;
+            }
+            success(res, {
+                ...parseFlowHeaders(flowHeaders),
+                remainingDays: getRmainingDays({
+                    resetDay: $arguments.resetDay,
+                    startDate: $arguments.startDate,
+                    cycleDays: $arguments.cycleDays,
+                }),
+            });
         }
-        success(res, {
-            ...parseFlowHeaders(flowHeaders),
-            remainingDays: getRmainingDays({
-                resetDay: $arguments.resetDay,
-                startDate: $arguments.startDate,
-                cycleDays: $arguments.cycleDays,
-            }),
-        });
     } catch (err) {
         failed(
             res,

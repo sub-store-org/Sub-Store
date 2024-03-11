@@ -124,6 +124,9 @@ async function downloadSubscription(req, res) {
                     );
                 }
             }
+            if (sub.subUserinfo) {
+                res.set('subscription-userinfo', sub.subUserinfo);
+            }
 
             if (platform === 'JSON') {
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
@@ -252,6 +255,9 @@ async function downloadCollection(req, res) {
                             } 获取流量信息时发生错误: ${err.message ?? err}`,
                         );
                     }
+                }
+                if (sub.subUserinfo) {
+                    res.set('subscription-userinfo', sub.subUserinfo);
                 }
             }
 
