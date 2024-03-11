@@ -77,12 +77,44 @@ async function downloadSubscription(req, res) {
                 },
             });
 
-            if (sub.source !== 'local' || url) {
+            if (
+                sub.source !== 'local' ||
+                ['localFirst', 'remoteFirst'].includes(sub.mergeSources) ||
+                url
+            ) {
                 try {
-                    // forward flow headers
-                    const flowInfo = await getFlowHeaders(url || sub.url);
-                    if (flowInfo) {
-                        res.set('subscription-userinfo', flowInfo);
+                    url = `${url || sub.url}`
+                        .split(/[\r\n]+/)
+                        .map((i) => i.trim())
+                        .filter((i) => i.length)?.[0];
+
+                    let $arguments = {};
+                    const rawArgs = url.split('#');
+                    url = url.split('#')[0];
+                    if (rawArgs.length > 1) {
+                        try {
+                            // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
+                            $arguments = JSON.parse(
+                                decodeURIComponent(rawArgs[1]),
+                            );
+                        } catch (e) {
+                            for (const pair of rawArgs[1].split('&')) {
+                                const key = pair.split('=')[0];
+                                const value = pair.split('=')[1];
+                                // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
+                                $arguments[key] =
+                                    value == null || value === ''
+                                        ? true
+                                        : decodeURIComponent(value);
+                            }
+                        }
+                    }
+                    if (!$arguments.noFlow) {
+                        // forward flow headers
+                        const flowInfo = await getFlowHeaders(url);
+                        if (flowInfo) {
+                            res.set('subscription-userinfo', flowInfo);
+                        }
                     }
                 } catch (err) {
                     $.error(
@@ -176,11 +208,42 @@ async function downloadCollection(req, res) {
             const subnames = collection.subscriptions;
             if (subnames.length > 0) {
                 const sub = findByName(allSubs, subnames[0]);
-                if (sub.source !== 'local') {
+                if (
+                    sub.source !== 'local' ||
+                    ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
+                ) {
                     try {
-                        const flowInfo = await getFlowHeaders(sub.url);
-                        if (flowInfo) {
-                            res.set('subscription-userinfo', flowInfo);
+                        let url = `${sub.url}`
+                            .split(/[\r\n]+/)
+                            .map((i) => i.trim())
+                            .filter((i) => i.length)?.[0];
+
+                        let $arguments = {};
+                        const rawArgs = url.split('#');
+                        url = url.split('#')[0];
+                        if (rawArgs.length > 1) {
+                            try {
+                                // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
+                                $arguments = JSON.parse(
+                                    decodeURIComponent(rawArgs[1]),
+                                );
+                            } catch (e) {
+                                for (const pair of rawArgs[1].split('&')) {
+                                    const key = pair.split('=')[0];
+                                    const value = pair.split('=')[1];
+                                    // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
+                                    $arguments[key] =
+                                        value == null || value === ''
+                                            ? true
+                                            : decodeURIComponent(value);
+                                }
+                            }
+                        }
+                        if (!$arguments.noFlow) {
+                            const flowInfo = await getFlowHeaders(url);
+                            if (flowInfo) {
+                                res.set('subscription-userinfo', flowInfo);
+                            }
                         }
                     } catch (err) {
                         $.error(
