@@ -35,6 +35,17 @@ function getIfPresent(obj, defaultValue) {
     return isPresent(obj) ? obj : defaultValue;
 }
 
+function getPolicyDescriptor(str) {
+    if (!str) return {};
+    return /^.+?\s*?=\s*?.+?\s*?,.+?/.test(str)
+        ? {
+              'policy-descriptor': str,
+          }
+        : {
+              policy: str,
+          };
+}
+
 const utf8ArrayToStr =
     typeof TextDecoder !== 'undefined'
         ? (v) => new TextDecoder().decode(new Uint8Array(v))
@@ -91,4 +102,5 @@ export {
     isPresent,
     getIfPresent,
     utf8ArrayToStr,
+    getPolicyDescriptor,
 };
