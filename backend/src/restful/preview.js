@@ -109,7 +109,12 @@ async function compareSub(req, res) {
                     .filter((i) => i.length)
                     .map(async (url) => {
                         try {
-                            return await download(url, sub.ua);
+                            return await download(
+                                url,
+                                sub.ua,
+                                undefined,
+                                sub.proxy,
+                            );
                         } catch (err) {
                             errors[url] = err;
                             $.error(
@@ -195,7 +200,12 @@ async function compareCollection(req, res) {
                                 .filter((i) => i.length)
                                 .map(async (url) => {
                                     try {
-                                        return await download(url, sub.ua);
+                                        return await download(
+                                            url,
+                                            sub.ua,
+                                            undefined,
+                                            sub.proxy,
+                                        );
                                     } catch (err) {
                                         errors[url] = err;
                                         $.error(

@@ -1,6 +1,7 @@
 import { SETTINGS_KEY } from '@/constants';
 import { HTTP, ENV } from '@/vendor/open-api';
 import { hex_md5 } from '@/vendor/md5';
+import { getPolicyDescriptor } from '@/utils';
 import resourceCache from '@/utils/resource-cache';
 import headersResourceCache from '@/utils/headers-resource-cache';
 import {
@@ -13,7 +14,7 @@ import $ from '@/core/app';
 
 const tasks = new Map();
 
-export default async function download(rawUrl, ua, timeout) {
+export default async function download(rawUrl, ua, timeout, proxy) {
     let $arguments = {};
     let url = rawUrl.replace(/#noFlow$/, '');
     const rawArgs = url.split('#');
@@ -52,7 +53,7 @@ export default async function download(rawUrl, ua, timeout) {
     //     return item.content;
     // }
 
-    const { isNode } = ENV();
+    const { isNode, isStash } = ENV();
     const { defaultUserAgent, defaultTimeout, cacheThreshold } =
         $.read(SETTINGS_KEY);
     const userAgent = ua || defaultUserAgent || 'clash.meta';
@@ -65,6 +66,8 @@ export default async function download(rawUrl, ua, timeout) {
     const http = HTTP({
         headers: {
             'User-Agent': userAgent,
+            'X-Stash-Selected-Proxy':
+                isStash && proxy ? encodeURIComponent(proxy) : undefined,
         },
         timeout: requestTimeout,
     });
@@ -78,10 +81,14 @@ export default async function download(rawUrl, ua, timeout) {
         result = cached;
     } else {
         $.info(
-            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nURL: ${url}`,
+            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nURL: ${url}`,
         );
         try {
-            const { body, headers } = await http.get(url);
+            const { body, headers } = await http.get({
+                url,
+                proxy,
+                ...getPolicyDescriptor(proxy),
+            });
 
             if (headers) {
                 const flowInfo = getFlowField(headers);
@@ -116,7 +123,11 @@ export default async function download(rawUrl, ua, timeout) {
     // 检查订阅有效性
 
     if ($arguments?.validCheck) {
-        await validCheck(parseFlowHeaders(await getFlowHeaders(url)));
+        await validCheck(
+            parseFlowHeaders(
+                await getFlowHeaders(url, undefined, undefined, proxy),
+            ),
+        );
     }
 
     if (!isNode) {

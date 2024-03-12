@@ -1,5 +1,6 @@
 import { SETTINGS_KEY } from '@/constants';
-import { HTTP } from '@/vendor/open-api';
+import { HTTP, ENV } from '@/vendor/open-api';
+import { getPolicyDescriptor } from '@/utils';
 import $ from '@/core/app';
 import headersResourceCache from '@/utils/headers-resource-cache';
 
@@ -9,7 +10,7 @@ export function getFlowField(headers) {
     )[0];
     return headers[subkey];
 }
-export async function getFlowHeaders(rawUrl, ua, timeout) {
+export async function getFlowHeaders(rawUrl, ua, timeout, proxy) {
     let url = rawUrl;
     let $arguments = {};
     const rawArgs = url.split('#');
@@ -33,6 +34,7 @@ export async function getFlowHeaders(rawUrl, ua, timeout) {
     if ($arguments?.noFlow) {
         return;
     }
+    const { isStash } = ENV();
     const cached = headersResourceCache.get(url);
     let flowInfo;
     if (!$arguments?.noCache && cached) {
@@ -55,8 +57,14 @@ export async function getFlowHeaders(rawUrl, ua, timeout) {
                     .filter((i) => i.length)[0],
                 headers: {
                     'User-Agent': userAgent,
+                    'X-Stash-Selected-Proxy':
+                        isStash && proxy
+                            ? encodeURIComponent(proxy)
+                            : undefined,
                 },
                 timeout: requestTimeout,
+                proxy,
+                ...getPolicyDescriptor(proxy),
             });
             flowInfo = getFlowField(headers);
         } catch (e) {
@@ -178,7 +186,7 @@ export function getRmainingDays(opt = {}) {
 
             return daysDiff;
         } else {
-            if (!resetDay) throw new Error('未提供月重置日 resetDay');
+            if (!resetDay) return;
             resetDay = parseInt(resetDay);
             if (isNaN(resetDay) || resetDay <= 0 || resetDay > 31)
                 throw new Error('月重置日应为 1-31 之间的整数');
