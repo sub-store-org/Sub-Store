@@ -13,7 +13,7 @@ import $ from '@/core/app';
 
 const tasks = new Map();
 
-export default async function download(rawUrl, ua, timeout) {
+export default async function download(rawUrl, ua, timeout, proxy) {
     let $arguments = {};
     let url = rawUrl.replace(/#noFlow$/, '');
     const rawArgs = url.split('#');
@@ -78,10 +78,15 @@ export default async function download(rawUrl, ua, timeout) {
         result = cached;
     } else {
         $.info(
-            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nURL: ${url}`,
+            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nURL: ${url}`,
         );
         try {
-            const { body, headers } = await http.get(url);
+            const { body, headers } = await http.get({
+                url,
+                proxy,
+                node: proxy,
+                'policy-descriptor': proxy,
+            });
 
             if (headers) {
                 const flowInfo = getFlowField(headers);
@@ -116,7 +121,11 @@ export default async function download(rawUrl, ua, timeout) {
     // 检查订阅有效性
 
     if ($arguments?.validCheck) {
-        await validCheck(parseFlowHeaders(await getFlowHeaders(url)));
+        await validCheck(
+            parseFlowHeaders(
+                await getFlowHeaders(url, undefined, undefined, proxy),
+            ),
+        );
     }
 
     if (!isNode) {

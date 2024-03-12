@@ -113,7 +113,12 @@ async function getFlowInfo(req, res) {
                 }),
             });
         } else {
-            const flowHeaders = await getFlowHeaders(url);
+            const flowHeaders = await getFlowHeaders(
+                url,
+                undefined,
+                undefined,
+                sub.proxy,
+            );
             if (!flowHeaders) {
                 failed(
                     res,

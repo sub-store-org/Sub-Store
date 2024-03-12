@@ -111,7 +111,12 @@ async function downloadSubscription(req, res) {
                     }
                     if (!$arguments.noFlow) {
                         // forward flow headers
-                        const flowInfo = await getFlowHeaders(url);
+                        const flowInfo = await getFlowHeaders(
+                            url,
+                            undefined,
+                            undefined,
+                            sub.proxy,
+                        );
                         if (flowInfo) {
                             res.set('subscription-userinfo', flowInfo);
                         }
@@ -243,7 +248,12 @@ async function downloadCollection(req, res) {
                             }
                         }
                         if (!$arguments.noFlow) {
-                            const flowInfo = await getFlowHeaders(url);
+                            const flowInfo = await getFlowHeaders(
+                                url,
+                                undefined,
+                                undefined,
+                                sub.proxy,
+                            );
                             if (flowInfo) {
                                 res.set('subscription-userinfo', flowInfo);
                             }

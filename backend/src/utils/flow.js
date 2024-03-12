@@ -9,7 +9,7 @@ export function getFlowField(headers) {
     )[0];
     return headers[subkey];
 }
-export async function getFlowHeaders(rawUrl, ua, timeout) {
+export async function getFlowHeaders(rawUrl, ua, timeout, proxy) {
     let url = rawUrl;
     let $arguments = {};
     const rawArgs = url.split('#');
@@ -57,6 +57,9 @@ export async function getFlowHeaders(rawUrl, ua, timeout) {
                     'User-Agent': userAgent,
                 },
                 timeout: requestTimeout,
+                proxy,
+                node: proxy,
+                'policy-descriptor': proxy,
             });
             flowInfo = getFlowField(headers);
         } catch (e) {
@@ -178,7 +181,7 @@ export function getRmainingDays(opt = {}) {
 
             return daysDiff;
         } else {
-            if (!resetDay) throw new Error('未提供月重置日 resetDay');
+            if (!resetDay) return;
             resetDay = parseInt(resetDay);
             if (isNaN(resetDay) || resetDay <= 0 || resetDay > 31)
                 throw new Error('月重置日应为 1-31 之间的整数');
