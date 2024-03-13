@@ -53,7 +53,7 @@ export default async function download(rawUrl, ua, timeout, proxy) {
     //     return item.content;
     // }
 
-    const { isNode, isStash } = ENV();
+    const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
     const { defaultUserAgent, defaultTimeout, cacheThreshold } =
         $.read(SETTINGS_KEY);
     const userAgent = ua || defaultUserAgent || 'clash.meta';
@@ -66,8 +66,10 @@ export default async function download(rawUrl, ua, timeout, proxy) {
     const http = HTTP({
         headers: {
             'User-Agent': userAgent,
-            'X-Stash-Selected-Proxy':
-                isStash && proxy ? encodeURIComponent(proxy) : undefined,
+            ...(isStash && proxy
+                ? { 'X-Stash-Selected-Proxy': encodeURIComponent(proxy) }
+                : {}),
+            ...(isShadowRocket && proxy ? { 'X-Surge-Policy': proxy } : {}),
         },
         timeout: requestTimeout,
     });
@@ -86,8 +88,10 @@ export default async function download(rawUrl, ua, timeout, proxy) {
         try {
             const { body, headers } = await http.get({
                 url,
-                proxy,
-                ...getPolicyDescriptor(proxy),
+                ...(proxy ? { proxy } : {}),
+                ...(isLoon && proxy ? { node: proxy } : {}),
+                ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
+                ...(proxy ? getPolicyDescriptor(proxy) : {}),
             });
 
             if (headers) {
