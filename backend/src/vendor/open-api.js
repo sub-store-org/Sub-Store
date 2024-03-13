@@ -316,6 +316,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 url: options.url,
                 headers: options.headers,
                 body: options.body,
+                opts: options.opts,
             });
         } else if (isLoon || isSurge || isNode) {
             worker = new Promise((resolve, reject) => {
