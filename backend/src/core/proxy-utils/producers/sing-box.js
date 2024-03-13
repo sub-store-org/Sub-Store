@@ -231,6 +231,10 @@ const sshParser = (proxy = {}) => {
     // https://wiki.metacubex.one/config/proxies/ssh
     // https://sing-box.sagernet.org/zh/configuration/outbound/ssh
     if (proxy['privateKey']) parsedProxy.private_key_path = proxy['privateKey'];
+    if (proxy['private-key'])
+        parsedProxy.private_key_path = proxy['private-key'];
+    if (proxy['private-key-passphrase'])
+        parsedProxy.private_key_passphrase = proxy['private-key-passphrase'];
     if (proxy['server-fingerprint']) {
         parsedProxy.host_key = [proxy['server-fingerprint']];
         // https://manual.nssurge.com/policy/ssh.html
@@ -240,6 +244,9 @@ const sshParser = (proxy = {}) => {
             proxy['server-fingerprint'].split(' ')[0],
         ];
     }
+    if (proxy['host-key']) parsedProxy.host_key = proxy['host-key'];
+    if (proxy['host-key-algorithms'])
+        parsedProxy.host_key_algorithms = proxy['host-key-algorithms'];
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     tfoParser(proxy, parsedProxy);
     return parsedProxy;
