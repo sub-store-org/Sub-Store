@@ -34,7 +34,7 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy) {
     if ($arguments?.noFlow) {
         return;
     }
-    const { isStash } = ENV();
+    const { isStash, isLoon, isShadowRocket, isQX } = ENV();
     const cached = headersResourceCache.get(url);
     let flowInfo;
     if (!$arguments?.noCache && cached) {
@@ -57,14 +57,21 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy) {
                     .filter((i) => i.length)[0],
                 headers: {
                     'User-Agent': userAgent,
-                    'X-Stash-Selected-Proxy':
-                        isStash && proxy
-                            ? encodeURIComponent(proxy)
-                            : undefined,
+                    ...(isStash && proxy
+                        ? {
+                              'X-Stash-Selected-Proxy':
+                                  encodeURIComponent(proxy),
+                          }
+                        : {}),
+                    ...(isShadowRocket && proxy
+                        ? { 'X-Surge-Policy': proxy }
+                        : {}),
                 },
                 timeout: requestTimeout,
-                proxy,
-                ...getPolicyDescriptor(proxy),
+                ...(proxy ? { proxy } : {}),
+                ...(isLoon && proxy ? { node: proxy } : {}),
+                ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
+                ...(proxy ? getPolicyDescriptor(proxy) : {}),
             });
             flowInfo = getFlowField(headers);
         } catch (e) {
