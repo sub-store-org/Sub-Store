@@ -113,7 +113,7 @@ async function downloadSubscription(req, res) {
                         // forward flow headers
                         const flowInfo = await getFlowHeaders(
                             url,
-                            undefined,
+                            $arguments.flowUserAgent,
                             undefined,
                             sub.proxy,
                         );
@@ -250,7 +250,7 @@ async function downloadCollection(req, res) {
                         if (!$arguments.noFlow) {
                             const flowInfo = await getFlowHeaders(
                                 url,
-                                undefined,
+                                $arguments.flowUserAgent,
                                 undefined,
                                 sub.proxy,
                             );

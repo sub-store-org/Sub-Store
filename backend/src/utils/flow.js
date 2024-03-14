@@ -49,7 +49,11 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy) {
         const requestTimeout = timeout || defaultTimeout;
         const http = HTTP();
         try {
-            // $.info(`使用 HEAD 方法获取流量信息: ${url}`);
+            $.info(
+                `使用 HEAD 方法获取流量信息: ${url}, User-Agent: ${
+                    userAgent || ''
+                }`,
+            );
             const { headers } = await http.head({
                 url: url
                     .split(/[\r\n]+/)
@@ -76,11 +80,17 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy) {
             flowInfo = getFlowField(headers);
         } catch (e) {
             $.error(
-                `使用 HEAD 方法获取流量信息失败: ${url}: ${e.message ?? e}`,
+                `使用 HEAD 方法获取流量信息失败: ${url}, User-Agent: ${
+                    userAgent || ''
+                }: ${e.message ?? e}`,
             );
         }
         if (!flowInfo) {
-            $.info(`使用 GET 方法获取流量信息: ${url}`);
+            $.info(
+                `使用 GET 方法获取流量信息: ${url}, User-Agent: ${
+                    userAgent || ''
+                }`,
+            );
             const { headers } = await http.get({
                 url: url
                     .split(/[\r\n]+/)
