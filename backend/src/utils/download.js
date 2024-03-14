@@ -129,7 +129,12 @@ export default async function download(rawUrl, ua, timeout, proxy) {
     if ($arguments?.validCheck) {
         await validCheck(
             parseFlowHeaders(
-                await getFlowHeaders(url, undefined, undefined, proxy),
+                await getFlowHeaders(
+                    url,
+                    $arguments.flowUserAgent,
+                    undefined,
+                    proxy,
+                ),
             ),
         );
     }

@@ -115,7 +115,7 @@ async function getFlowInfo(req, res) {
         } else {
             const flowHeaders = await getFlowHeaders(
                 url,
-                undefined,
+                $arguments.flowUserAgent,
                 undefined,
                 sub.proxy,
             );
