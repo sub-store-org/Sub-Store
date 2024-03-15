@@ -10,6 +10,8 @@ const RULE_TYPES_MAPPING = [
     [/^PROTOCOL$/, 'PROTOCOL'],
     [/^IP-CIDR$/i, 'IP-CIDR'],
     [/^(IP-CIDR6|ip6-cidr|IP6-CIDR)$/, 'IP-CIDR6'],
+    [/^GEOIP$/i, 'GEOIP'],
+    [/^GEOSITE$/i, 'GEOSITE'],
 ];
 
 function AllRuleParser() {
