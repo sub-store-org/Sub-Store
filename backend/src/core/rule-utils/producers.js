@@ -10,6 +10,8 @@ function QXFilter() {
             'SRC-IP',
             'IN-PORT',
             'PROTOCOL',
+            'GEOSITE',
+            'GEOIP',
         ];
         if (UNSUPPORTED.indexOf(rule.type) !== -1) return null;
 
@@ -29,6 +31,8 @@ function QXFilter() {
 function SurgeRuleSet() {
     const type = 'SINGLE';
     const func = (rule) => {
+        const UNSUPPORTED = ['GEOSITE', 'GEOIP'];
+        if (UNSUPPORTED.indexOf(rule.type) !== -1) return null;
         let output = `${rule.type},${rule.content}`;
         if (['IP-CIDR', 'IP-CIDR6'].includes(rule.type)) {
             output +=
@@ -43,7 +47,7 @@ function LoonRules() {
     const type = 'SINGLE';
     const func = (rule) => {
         // skip unsupported rules
-        const UNSUPPORTED = ['DEST-PORT', 'SRC-IP', 'IN-PORT', 'PROTOCOL'];
+        const UNSUPPORTED = ['SRC-IP', 'GEOSITE', 'GEOIP'];
         if (UNSUPPORTED.indexOf(rule.type) !== -1) return null;
         if (['IP-CIDR', 'IP-CIDR6'].includes(rule.type) && rule.options) {
             // Loon only supports the no-resolve option
@@ -69,7 +73,7 @@ function ClashRuleProvider() {
                 let output = `${TRANSFORM[rule.type] || rule.type},${
                     rule.content
                 }`;
-                if (['IP-CIDR', 'IP-CIDR6'].includes(rule.type)) {
+                if (['IP-CIDR', 'IP-CIDR6', 'GEOIP'].includes(rule.type)) {
                     if (rule.options) {
                         // Clash only supports the no-resolve option
                         rule.options = rule.options.filter((option) =>

@@ -39,8 +39,7 @@ function AllRuleParser() {
                             content: params[1],
                         };
                         if (
-                            rule.type === 'IP-CIDR' ||
-                            rule.type === 'IP-CIDR6'
+                            ['IP-CIDR', 'IP-CIDR6', 'GEOIP'].includes(rule.type)
                         ) {
                             rule.options = params.slice(2);
                         }
