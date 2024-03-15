@@ -563,10 +563,19 @@ async function syncArtifacts() {
                         files.map((item) => [item.path, item]),
                     );
                 }
-                const url = files[encodeURIComponent(artifact.name)]?.raw_url;
-                artifact.url = isGitLab
-                    ? url
-                    : url?.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
+                const raw_url =
+                    files[encodeURIComponent(artifact.name)]?.raw_url;
+                const new_url = isGitLab
+                    ? raw_url
+                    : raw_url?.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
+                $.info(
+                    `上传配置完成\n文件列表: ${Object.keys(files).join(
+                        ', ',
+                    )}\n当前文件: ${encodeURIComponent(
+                        artifact.name,
+                    )}\n响应返回的原始链接: ${raw_url}\n处理完的新链接: ${new_url}`,
+                );
+                artifact.url = new_url;
             }
         }
 
@@ -660,10 +669,18 @@ async function syncArtifact(req, res) {
             isGitLab = true;
             files = Object.fromEntries(files.map((item) => [item.path, item]));
         }
-        const url = files[encodeURIComponent(artifact.name)]?.raw_url;
-        artifact.url = isGitLab
-            ? url
-            : url?.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
+        const raw_url = files[encodeURIComponent(artifact.name)]?.raw_url;
+        const new_url = isGitLab
+            ? raw_url
+            : raw_url?.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
+        $.info(
+            `上传配置完成\n文件列表: ${Object.keys(files).join(
+                ', ',
+            )}\n当前文件: ${encodeURIComponent(
+                artifact.name,
+            )}\n响应返回的原始链接: ${raw_url}\n处理完的新链接: ${new_url}`,
+        );
+        artifact.url = new_url;
         $.write(allArtifacts, ARTIFACTS_KEY);
         success(res, artifact);
     } catch (err) {
