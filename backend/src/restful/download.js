@@ -79,8 +79,7 @@ async function downloadSubscription(req, res) {
 
             if (
                 sub.source !== 'local' ||
-                ['localFirst', 'remoteFirst'].includes(sub.mergeSources) ||
-                url
+                ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
             ) {
                 try {
                     url = `${url || sub.url}`
