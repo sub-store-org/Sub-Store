@@ -49,7 +49,10 @@ function operator(proxies = [], targetPlatform, context) {
   
   // 2. sing-box
 
-  // 但是一般不需要这样用, 可参考 1. https://t.me/zhetengsha/1111 和 2. https://t.me/zhetengsha/1070
+  // 但是一般不需要这样用, 可参考
+  // 1. https://t.me/zhetengsha/1111
+  // 2. https://t.me/zhetengsha/1070
+  // 3. https://t.me/zhetengsha/1241
 
   // let singboxProxies = await produceArtifact({
   //     type: 'subscription', // type: 'subscription' 或 'collection'
@@ -63,24 +66,41 @@ function operator(proxies = [], targetPlatform, context) {
 
   // 3. clash.meta
 
-  // 但是一般不需要这样用, 可参考 1. https://t.me/zhetengsha/1111 和 2. https://t.me/zhetengsha/1070
+  // 但是一般不需要这样用, 可参考
+  // 1. https://t.me/zhetengsha/1111
+  // 2. https://t.me/zhetengsha/1070
+  // 3. https://t.me/zhetengsha/1234
 
   // let clashMetaProxies = await produceArtifact({
   //     type: 'subscription',
   //     name: 'sub',
   //     platform: 'ClashMeta',
   //     produceType: 'internal' // 'internal' produces an Array, otherwise produces a String( ProxyUtils.yaml.safeLoad('YAML String').proxies )
-  // }))
+  // })
 
   // // YAML
+  // ProxyUtils.yaml.load('YAML String')
+  // ProxyUtils.yaml.safeLoad('YAML String')
   // $content = ProxyUtils.yaml.safeDump({})
+  // $content = ProxyUtils.yaml.dump({})
+
+  // 一个往文件里插入本地节点的例子:
+  // const yaml = ProxyUtils.yaml.safeLoad($content ?? $files[0])
+  // let clashMetaProxies = await produceArtifact({
+  //     type: 'collection',
+  //     name: '机场',
+  //     platform: 'ClashMeta',
+  //     produceType: 'internal'
+  // })
+  // yaml.proxies.unshift(...clashMetaProxies)
+  // $content = ProxyUtils.yaml.dump(yaml)
 
 
   // { $content, $files } will be passed to the next operator 
   // $content is the final content of the file
   // flowUtils 为机场订阅流量信息处理工具
-  // 可参考 https://t.me/zhetengsha/948
-  // https://github.com/sub-store-org/Sub-Store/blob/31b6dd0507a9286d6ab834ec94ad3050f6bdc86b/backend/src/utils/download.js#L104
+  // 可参考: 
+  // 1. https://t.me/zhetengsha/948
 
   // context 为传入的上下文
   // 有三种情况, 按需判断
