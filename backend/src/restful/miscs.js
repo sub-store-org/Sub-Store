@@ -153,11 +153,14 @@ async function gistBackup(req, res) {
             }
             success(res);
         } catch (err) {
+            $.error(
+                `Failed to ${action} gist data.\nReason: ${err.message ?? err}`,
+            );
             failed(
                 res,
                 new InternalServerError(
                     'BACKUP_FAILED',
-                    `Failed to ${action} data to gist!`,
+                    `Failed to ${action} gist data!`,
                     `Reason: ${err.message ?? err}`,
                 ),
             );
