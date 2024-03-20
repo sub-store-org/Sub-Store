@@ -22,6 +22,9 @@ function operator(proxies = [], targetPlatform, context) {
   
   // scriptResourceCache 缓存
   // 可参考 https://t.me/zhetengsha/1003
+  // const cache = scriptResourceCache
+  // cache.set(id, data)
+  // cache.get(id)
 
   // ProxyUtils 为节点处理工具
   // 可参考 https://t.me/zhetengsha/1066
@@ -34,6 +37,13 @@ function operator(proxies = [], targetPlatform, context) {
   //     isIP,
   //     yaml, // yaml 解析和生成
   // }
+
+  // 示例: 从 sni 文件中读取内容并进行节点操作
+  // const sni = await produceArtifact({
+  //     type: 'file',
+  //     name: 'sni' // 文件名
+  // });
+  // $server.sni = sni
 
   // 1. Surge 输出 WireGuard 完整配置
 
@@ -98,6 +108,7 @@ function operator(proxies = [], targetPlatform, context) {
 
   // { $content, $files } will be passed to the next operator 
   // $content is the final content of the file
+
   // flowUtils 为机场订阅流量信息处理工具
   // 可参考: 
   // 1. https://t.me/zhetengsha/948
