@@ -274,6 +274,9 @@ export default function URI_Producer() {
                         `sni=${encodeURIComponent(proxy.sni)}`,
                     );
                 }
+                if (proxy.ports) {
+                    hysteria2params.push(`mport=${proxy.ports}`);
+                }
                 if (proxy['tls-fingerprint']) {
                     hysteria2params.push(
                         `pinSHA256=${encodeURIComponent(
