@@ -547,6 +547,7 @@ function URI_Hysteria2() {
             proxy.obfs = params.obfs;
         }
 
+        proxy.ports = params.mport;
         proxy['obfs-password'] = params['obfs-password'];
         proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.insecure);
         proxy.tfo = /(TRUE)|1/i.test(params.fastopen);
