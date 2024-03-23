@@ -323,36 +323,46 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 const request = isNode
                     ? eval("require('request')")
                     : $httpClient;
-                request[method.toLowerCase()](
-                    JSON.parse(JSON.stringify(options)),
-                    (err, response, body) => {
-                        // if (err) {
-                        //     console.log(err);
-                        // } else {
-                        //     console.log({
-                        //         statusCode:
-                        //             response.status || response.statusCode,
-                        //         headers: response.headers,
-                        //         body,
-                        //     });
-                        // }
+                const opts = JSON.parse(JSON.stringify(options));
+                if (!isNode && opts.timeout) {
+                    opts.timeout++;
+                    let unit = 'ms';
+                    // 这些客户端单位为 s
+                    if (isSurge || isStash || isShadowRocket) {
+                        opts.timeout = Math.ceil(opts.timeout / 1000);
+                        unit = 's';
+                    }
+                    // Loon 为 ms
+                    // console.log(`[httpClient timeout] ${opts.timeout}${unit}`);
+                }
+                request[method.toLowerCase()](opts, (err, response, body) => {
+                    // if (err) {
+                    //     console.log(err);
+                    // } else {
+                    //     console.log({
+                    //         statusCode:
+                    //             response.status || response.statusCode,
+                    //         headers: response.headers,
+                    //         body,
+                    //     });
+                    // }
 
-                        if (err) reject(err);
-                        else
-                            resolve({
-                                statusCode:
-                                    response.status || response.statusCode,
-                                headers: response.headers,
-                                body,
-                            });
-                    },
-                );
+                    if (err) reject(err);
+                    else
+                        resolve({
+                            statusCode: response.status || response.statusCode,
+                            headers: response.headers,
+                            body,
+                        });
+                });
             });
         }
 
         let timeoutid;
+
         const timer = timeout
             ? new Promise((_, reject) => {
+                  //   console.log(`[request timeout] ${timeout}ms`);
                   timeoutid = setTimeout(() => {
                       events.onTimeout();
                       return reject(
