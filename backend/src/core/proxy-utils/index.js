@@ -159,7 +159,7 @@ async function processFn(proxies, operators = [], targetPlatform, source) {
             continue;
         }
 
-        $.info(
+        $.log(
             `Applying "${item.type}" with arguments:\n >>> ${
                 JSON.stringify(item.args, null, 2) || 'None'
             }`,
@@ -199,7 +199,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         return proxy;
     });
 
-    $.info(`Producing proxies for target: ${targetPlatform}`);
+    $.log(`Producing proxies for target: ${targetPlatform}`);
     if (typeof producer.type === 'undefined' || producer.type === 'SINGLE') {
         let localPort = 10000;
         const list = proxies
