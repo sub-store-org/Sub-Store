@@ -138,10 +138,10 @@ export function parseFlowHeaders(flowHeaders) {
     return { expires, total, usage: { upload, download } };
 }
 export function flowTransfer(flow, unit = 'B') {
-    const unitList = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
+    const unitList = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
     let unitIndex = unitList.indexOf(unit);
 
-    return flow < 1024
+    return flow < 1024 || unitIndex === unitList.length - 1
         ? { value: flow.toFixed(1), unit: unit }
         : flowTransfer(flow / 1024, unitList[++unitIndex]);
 }
