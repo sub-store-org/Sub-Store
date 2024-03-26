@@ -253,11 +253,7 @@ async function compareCollection(req, res) {
                     errors[name] = err;
 
                     $.error(
-                        `❌ 处理组合订阅中的子订阅: ${
-                            sub.name
-                        }时出现错误：${err}！进度--${
-                            100 * (processed / subnames.length).toFixed(1)
-                        }%`,
+                        `❌ 处理组合订阅 ${collection.name} 中的子订阅: ${sub.name}时出现错误：${err}！`,
                     );
                 }
             }),
