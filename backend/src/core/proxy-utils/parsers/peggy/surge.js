@@ -177,7 +177,13 @@ username = & {
 password = comma match:[^,]+ { proxy.password = match.join(""); }
 
 tls = comma "tls" equals flag:bool { proxy.tls = flag; }
-sni = comma "sni" equals sni:domain { proxy.sni = sni; }
+sni = comma "sni" equals sni:("off"/domain) { 
+    if (sni === "off") {
+        proxy["disable-sni"] = true;
+    } else {
+        proxy.sni = sni;
+    }
+}
 tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-verify"] = flag; }
 tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:$[^,]+ { proxy["tls-fingerprint"] = tls_fingerprint.trim(); }
 
