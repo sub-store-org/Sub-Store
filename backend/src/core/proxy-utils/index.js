@@ -186,6 +186,10 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         throw new Error(`Target platform: ${targetPlatform} is not supported!`);
     }
 
+    const sni_off_supported = /Surge|SurgeMac|Shadowrocket/i.test(
+        targetPlatform,
+    );
+
     // filter unsupported proxies
     proxies = proxies.filter(
         (proxy) =>
@@ -195,6 +199,18 @@ function produce(proxies, targetPlatform, type, opts = {}) {
     proxies = proxies.map((proxy) => {
         if (!isNotBlank(proxy.name)) {
             proxy.name = `${proxy.type} ${proxy.server}:${proxy.port}`;
+        }
+        if (proxy['disable-sni']) {
+            if (sni_off_supported) {
+                proxy.sni = 'off';
+            } else if (!['tuic'].includes(proxy.type)) {
+                $.error(
+                    `Target platform ${targetPlatform} does not support sni off. Proxy's fields (tls-fingerprint and skip-cert-verify) will be modified.`,
+                );
+                delete proxy.sni;
+                proxy['skip-cert-verify'] = true;
+                delete proxy['tls-fingerprint'];
+            }
         }
         return proxy;
     });
