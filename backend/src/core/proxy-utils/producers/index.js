@@ -13,7 +13,8 @@ import singbox_Producer from './sing-box';
 
 function JSON_Producer() {
     const type = 'ALL';
-    const produce = (proxies) => JSON.stringify(proxies, null, 2);
+    const produce = (proxies, type) =>
+        type === 'internal' ? proxies : JSON.stringify(proxies, null, 2);
     return { type, produce };
 }
 
