@@ -1,4 +1,4 @@
-export function getPlatformFromHeaders(headers) {
+export function getUserAgentFromHeaders(headers) {
     const keys = Object.keys(headers);
     let UA = '';
     let ua = '';
@@ -9,6 +9,9 @@ export function getPlatformFromHeaders(headers) {
             break;
         }
     }
+    return { UA, ua };
+}
+export function getPlatformFromUserAgent({ ua, UA }) {
     if (UA.indexOf('Quantumult%20X') !== -1) {
         return 'QX';
     } else if (UA.indexOf('Surfboard') !== -1) {
@@ -37,4 +40,8 @@ export function getPlatformFromHeaders(headers) {
     } else {
         return 'JSON';
     }
+}
+export function getPlatformFromHeaders(headers) {
+    const { UA, ua } = getUserAgentFromHeaders(headers);
+    return getPlatformFromUserAgent({ ua, UA });
 }
