@@ -150,6 +150,13 @@ export default function Clash_Producer() {
 
                 delete proxy.subName;
                 delete proxy.collectionName;
+                delete proxy.id;
+                delete proxy.resolved;
+                for (const key in proxy) {
+                    if (proxy[key] == null) {
+                        delete proxy[key];
+                    }
+                }
                 if (
                     ['grpc'].includes(proxy.network) &&
                     proxy[`${proxy.network}-opts`]
