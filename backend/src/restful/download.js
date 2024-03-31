@@ -1,4 +1,7 @@
-import { getPlatformFromHeaders } from '@/utils/platform';
+import {
+    getUserAgentFromHeaders,
+    getPlatformFromUserAgent,
+} from '@/utils/user-agent';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { getFlowHeaders } from '@/utils/flow';
@@ -16,10 +19,15 @@ async function downloadSubscription(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
 
-    const platform =
-        req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
+    const userAgent = getUserAgentFromHeaders(req.headers);
 
-    $.info(`正在下载订阅：${name}`);
+    const platform =
+        req.query.target || getPlatformFromUserAgent(userAgent) || 'JSON';
+
+    $.info(
+        `正在下载订阅：${name}\ntarget: ${platform}\n来源 User-Agent: ${userAgent.UA}`,
+    );
+
     let {
         url,
         ua,
@@ -172,13 +180,17 @@ async function downloadCollection(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
 
+    const userAgent = getUserAgentFromHeaders(req.headers);
+
     const platform =
-        req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
+        req.query.target || getPlatformFromUserAgent(userAgent) || 'JSON';
 
     const allCols = $.read(COLLECTIONS_KEY);
     const collection = findByName(allCols, name);
 
-    $.info(`正在下载组合订阅：${name}`);
+    $.info(
+        `正在下载组合订阅：${name}\ntarget: ${platform}\n来源 User-Agent: ${userAgent.UA}`,
+    );
 
     let { ignoreFailedRemoteSub, produceType, includeUnsupportedProxy } =
         req.query;
