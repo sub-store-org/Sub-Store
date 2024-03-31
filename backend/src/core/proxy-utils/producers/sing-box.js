@@ -789,7 +789,9 @@ export default function singbox_Producer() {
                     $.error(e.message ?? e);
                 }
             });
-        return type === 'internal' ? list : JSON.stringify(list, null, 2);
+        return type === 'internal'
+            ? list
+            : JSON.stringify({ outbounds: list }, null, 2);
     };
     return { type, produce };
 }

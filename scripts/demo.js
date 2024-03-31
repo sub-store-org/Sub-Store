@@ -36,7 +36,12 @@ function operator(proxies = [], targetPlatform, context) {
   //     isIPv6,
   //     isIP,
   //     yaml, // yaml 解析和生成
+  //     getFlag, // 获取 emoji 旗帜
+  //     getISO, // 获取 ISO 3166-1 alpha-2 代码
   // }
+
+  // 示例: 给节点名添加前缀
+  // $server.name = `[${ProxyUtils.getISO($server.name)}] ${$server.name}`
 
   // 示例: 从 sni 文件中读取内容并进行节点操作
   // const sni = await produceArtifact({

@@ -8,6 +8,13 @@ export default function URI_Producer() {
         let result = '';
         delete proxy.subName;
         delete proxy.collectionName;
+        delete proxy.id;
+        delete proxy.resolved;
+        for (const key in proxy) {
+            if (proxy[key] == null) {
+                delete proxy[key];
+            }
+        }
         if (['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(proxy.type)) {
             delete proxy.tls;
         }
