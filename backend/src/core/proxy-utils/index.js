@@ -15,6 +15,7 @@ import $ from '@/core/app';
 import { FILES_KEY, MODULES_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
+import { getFlag, getISO } from '@/utils/geo';
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
@@ -258,6 +259,8 @@ export const ProxyUtils = {
     isIPv6,
     isIP,
     yaml: YAML,
+    getFlag,
+    getISO,
 };
 
 function tryParse(parser, line) {
