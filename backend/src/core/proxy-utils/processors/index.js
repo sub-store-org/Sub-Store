@@ -617,6 +617,8 @@ function RegionFilter(regions) {
         SG: '🇸🇬',
         JP: '🇯🇵',
         UK: '🇬🇧',
+        DE: '🇩🇪',
+        KR: '🇰🇷',
     };
     return {
         name: 'Region Filter',
