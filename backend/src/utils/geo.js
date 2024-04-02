@@ -399,7 +399,9 @@ export function getFlag(name) {
             // 不精确匹配（只要包含就算,忽略大小写)
             keywords.some((keyword) => RegExp(`${keyword}`, 'i').test(name))
         ) {
-            //console.log(`newFlag = ${flag}`)
+            if (/内蒙古/.test(name) && ['🇲🇳'].includes(flag)) {
+                return (Flag = '🇨🇳');
+            }
             return (Flag = flag);
         }
     }
@@ -417,6 +419,7 @@ export function getFlag(name) {
             return (Flag = flag);
         }
     }
+
     //console.log(`Final Flag = ${Flag}`)
     return Flag;
 }
