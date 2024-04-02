@@ -67,7 +67,7 @@ const ISOFlags = {
     '🇲🇹': ['MT', 'MLT'],
     '🇲🇽': ['MX', 'MEX'],
     '🇲🇾': ['MY', 'MYS'],
-    '🇳🇱': ['NL', 'NLD'],
+    '🇳🇱': ['NL', 'NLD', 'AMS'],
     '🇳🇴': ['NO', 'NOR'],
     '🇳🇵': ['NP', 'NPL'],
     '🇳🇿': ['NZ', 'NZL'],
