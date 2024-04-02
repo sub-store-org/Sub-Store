@@ -45,7 +45,7 @@ const ISOFlags = {
     '🇰🇬': ['KG', 'KGZ'],
     '🇰🇭': ['KH', 'KGZ'],
     '🇰🇵': ['KP', 'PRK'],
-    '🇰🇷': ['KR', 'KOR'],
+    '🇰🇷': ['KR', 'KOR', 'SEL'],
     '🇰🇿': ['KZ', 'KAZ'],
     '🇮🇩': ['ID', 'IDN'],
     '🇮🇪': ['IE', 'IRL'],
@@ -93,11 +93,11 @@ const ISOFlags = {
     '🇹🇷': ['TR', 'TUR'],
     '🇹🇼': ['TW', 'TWN', 'CHT', 'HINET', 'ROC'],
     '🇺🇦': ['UA', 'UKR'],
-    '🇺🇸': ['US', 'USA', 'LAX', 'SFO'],
+    '🇺🇸': ['US', 'USA', 'LAX', 'SFO', 'SJC'],
     '🇺🇾': ['UY', 'URY'],
     '🇻🇪': ['VE', 'VEN'],
     '🇻🇳': ['VN', 'VNM'],
-    '🇿🇦': ['ZA', 'ZAF'],
+    '🇿🇦': ['ZA', 'ZAF', 'JNB'],
     '🇨🇳': ['CN', 'CHN', 'BACK'],
 };
 // get proxy flag according to its name
