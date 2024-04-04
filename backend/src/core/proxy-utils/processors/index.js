@@ -490,7 +490,7 @@ const DOMAIN_RESOLVERS = {
             },
         });
         const answers = resp.body.split(';').map((i) => i.split(',')[0]);
-        if (answers.length === 0) {
+        if (answers.length === 0 || String(answers) === '0') {
             throw new Error('No answers');
         }
         const result = answers[answers.length - 1];
