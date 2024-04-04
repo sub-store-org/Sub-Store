@@ -63,9 +63,9 @@ function URI_SS() {
             /\d+/,
         )?.[0];
 
-        const userInfo = userInfoStr.split(':');
-        proxy.cipher = userInfo[0];
-        proxy.password = userInfo[1];
+        const userInfo = userInfoStr.match(/(^.*?):(.*$)/);
+        proxy.cipher = userInfo[1];
+        proxy.password = userInfo[2];
 
         // handle obfs
         const idx = content.indexOf('?plugin=');
