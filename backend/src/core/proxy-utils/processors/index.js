@@ -550,13 +550,25 @@ function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
                                 results[p.server],
                             );
                             if (server && port) {
+                                p._domain = p.server;
                                 p.server = server;
                                 p.port = port;
                                 p.resolved = true;
+                                p._IPv4 = p.server;
+                                if (!isIP(p._IP)) {
+                                    p._IP = p.server;
+                                }
+                            } else {
+                                p.resolved = false;
                             }
                         } else {
+                            p._domain = p.server;
                             p.server = results[p.server];
                             p.resolved = true;
+                            p[`_${type}`] = p.server;
+                            if (!isIP(p._IP)) {
+                                p._IP = p.server;
+                            }
                         }
                     } else {
                         p.resolved = false;
