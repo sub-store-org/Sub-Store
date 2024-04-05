@@ -11,7 +11,7 @@ export default function URI_Producer() {
         delete proxy.id;
         delete proxy.resolved;
         for (const key in proxy) {
-            if (proxy[key] == null) {
+            if (proxy[key] == null || /^_/i.test(key)) {
                 delete proxy[key];
             }
         }

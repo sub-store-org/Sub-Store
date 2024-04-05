@@ -1,7 +1,4 @@
-import {
-    getUserAgentFromHeaders,
-    getPlatformFromUserAgent,
-} from '@/utils/user-agent';
+import { getPlatformFromHeaders } from '@/utils/user-agent';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { getFlowHeaders } from '@/utils/flow';
@@ -9,25 +6,39 @@ import $ from '@/core/app';
 import { failed } from '@/restful/response';
 import { InternalServerError, ResourceNotFoundError } from '@/restful/errors';
 import { produceArtifact } from '@/restful/sync';
+// eslint-disable-next-line no-unused-vars
+import { isIPv4, isIPv6 } from '@/utils';
+import { getISO } from '@/utils/geo';
+import env from '@/utils/env';
 
 export default function register($app) {
     $app.get('/download/collection/:name', downloadCollection);
     $app.get('/download/:name', downloadSubscription);
+    $app.get(
+        '/download/collection/:name/api/v1/server/details',
+        async (req, res) => {
+            req.query.platform = 'JSON';
+            req.query.produceType = 'internal';
+            req.query.resultFormat = 'nezha';
+            await downloadCollection(req, res);
+        },
+    );
+    $app.get('/download/:name/api/v1/server/details', async (req, res) => {
+        req.query.platform = 'JSON';
+        req.query.produceType = 'internal';
+        req.query.resultFormat = 'nezha';
+        await downloadSubscription(req, res);
+    });
 }
 
 async function downloadSubscription(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
 
-    const userAgent = getUserAgentFromHeaders(req.headers);
-
     const platform =
-        req.query.target || getPlatformFromUserAgent(userAgent) || 'JSON';
+        req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
-    $.info(
-        `正在下载订阅：${name}\ntarget: ${platform}\n来源 User-Agent: ${userAgent.UA}`,
-    );
-
+    $.info(`正在下载订阅：${name}`);
     let {
         url,
         ua,
@@ -36,6 +47,7 @@ async function downloadSubscription(req, res) {
         ignoreFailedRemoteSub,
         produceType,
         includeUnsupportedProxy,
+        resultFormat,
     } = req.query;
     if (url) {
         url = decodeURIComponent(url);
@@ -70,7 +82,7 @@ async function downloadSubscription(req, res) {
     const sub = findByName(allSubs, name);
     if (sub) {
         try {
-            const output = await produceArtifact({
+            let output = await produceArtifact({
                 type: 'subscription',
                 name,
                 platform,
@@ -141,6 +153,9 @@ async function downloadSubscription(req, res) {
             }
 
             if (platform === 'JSON') {
+                if (resultFormat === 'nezha') {
+                    output = nezhaTransform(output);
+                }
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
                     output,
                 );
@@ -180,20 +195,20 @@ async function downloadCollection(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
 
-    const userAgent = getUserAgentFromHeaders(req.headers);
-
     const platform =
-        req.query.target || getPlatformFromUserAgent(userAgent) || 'JSON';
+        req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
     const allCols = $.read(COLLECTIONS_KEY);
     const collection = findByName(allCols, name);
 
-    $.info(
-        `正在下载组合订阅：${name}\ntarget: ${platform}\n来源 User-Agent: ${userAgent.UA}`,
-    );
+    $.info(`正在下载组合订阅：${name}`);
 
-    let { ignoreFailedRemoteSub, produceType, includeUnsupportedProxy } =
-        req.query;
+    let {
+        ignoreFailedRemoteSub,
+        produceType,
+        includeUnsupportedProxy,
+        resultFormat,
+    } = req.query;
 
     if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
         ignoreFailedRemoteSub = decodeURIComponent(ignoreFailedRemoteSub);
@@ -211,7 +226,7 @@ async function downloadCollection(req, res) {
 
     if (collection) {
         try {
-            const output = await produceArtifact({
+            let output = await produceArtifact({
                 type: 'collection',
                 name,
                 platform,
@@ -283,6 +298,9 @@ async function downloadCollection(req, res) {
             }
 
             if (platform === 'JSON') {
+                if (resultFormat === 'nezha') {
+                    output = nezhaTransform(output);
+                }
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
                     output,
                 );
@@ -318,4 +336,67 @@ async function downloadCollection(req, res) {
             404,
         );
     }
+}
+
+function nezhaTransform(output) {
+    const result = {
+        code: 0,
+        message: 'success',
+        result: [],
+    };
+    output.map((proxy, index) => {
+        // 如果节点上有数据 就取节点上的数据
+        let CountryCode = proxy._geo?.countryCode || proxy._geo?.country;
+        // 简单判断下
+        if (!/^[a-z]{2}$/i.test(CountryCode)) {
+            CountryCode = getISO(proxy.name);
+        }
+        // 简单判断下
+        if (/^[a-z]{2}$/i.test(CountryCode)) {
+            // 如果节点上有数据 就取节点上的数据
+            let time = proxy._unavailable ? 0 : Date.now();
+            result.result.push({
+                id: index,
+                name: proxy.name,
+                tag: `${proxy._tag ?? ''}`,
+                last_active: time,
+                // 暂时不用处理 现在 VPings App 端的接口支持域名查询
+                // 其他场景使用 自己在 Sub-Store 加一步域名解析
+                valid_ip: proxy._IP || proxy.server,
+                ipv4: proxy._IPv4 || proxy.server,
+                ipv6: proxy._IPv6 || (isIPv6(proxy.server) ? proxy.server : ''),
+                host: {
+                    Platform: 'Sub-Store',
+                    PlatformVersion: env.version,
+                    CPU: [],
+                    MemTotal: 1024,
+                    DiskTotal: 1024,
+                    SwapTotal: 1024,
+                    Arch: '',
+                    Virtualization: '',
+                    BootTime: time,
+                    CountryCode, // 目前需要
+                    Version: '',
+                },
+                status: {
+                    CPU: 0,
+                    MemUsed: 0,
+                    SwapUsed: 0,
+                    DiskUsed: 0,
+                    NetInTransfer: 0,
+                    NetOutTransfer: 0,
+                    NetInSpeed: 0,
+                    NetOutSpeed: 0,
+                    Uptime: 0,
+                    Load1: 0,
+                    Load5: 0,
+                    Load15: 0,
+                    TcpConnCount: 0,
+                    UdpConnCount: 0,
+                    ProcessCount: 0,
+                },
+            });
+        }
+    });
+    return JSON.stringify(result, null, 2);
 }
