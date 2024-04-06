@@ -13,15 +13,13 @@ Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 
 ### 2. Surge
 
-0. 最新 Surge iOS TestFlight 版本 可使用 Beta 版(支持最新 Surge iOS TestFlight 版本的分类和参数设置): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Beta.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Beta.sgmodule)
+0. 最新 Surge iOS TestFlight 版本 可使用 Beta 版(支持最新 Surge iOS TestFlight 版本的特性): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Beta.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Beta.sgmodule)
 
-1. 官方默认版模块(目前不带 ability 参数, 不保证以后不会改动): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule)
+1. 官方默认版模块(支持 App 内使用编辑参数): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule)
 
-2. 固定带 ability 参数版本,可能会爆内存, 如果需要使用指定节点功能 例如[加旗帜脚本或者cname脚本] 请使用此带 ability 参数版本: [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule)
+2. 经典版, 不支持编辑参数, 固定带 ability 参数版本, 使用 jsc 引擎时, 可能会爆内存, 如果需要使用指定节点功能 例如[加旗帜脚本或者cname脚本] 请使用此带 ability 参数版本: [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule)
 
-> 最新 Surge iOS TestFlight 版本应该没有内存问题了 可以大胆尝试带 ability 参数版本
-
-3. 固定不带 ability 参数版本： [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule)
+3. 经典版, 不支持编辑参数, 固定不带 ability 参数版本： [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule)
 
 
 ### 3. QX
