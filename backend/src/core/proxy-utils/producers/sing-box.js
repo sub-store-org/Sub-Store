@@ -622,7 +622,7 @@ const wireguardParser = (proxy = {}) => {
         throw 'invalid port';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     if (typeof proxy.reserved === 'string') {
-        parsedProxy.reserved.push(proxy.reserved);
+        parsedProxy.reserved = proxy.reserved;
     } else if (Array.isArray(proxy.reserved)) {
         for (const r of proxy.reserved) parsedProxy.reserved.push(r);
     } else {
