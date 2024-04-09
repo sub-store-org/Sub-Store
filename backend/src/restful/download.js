@@ -387,7 +387,7 @@ function nezhaTransform(output) {
                     NetOutTransfer: 0,
                     NetInSpeed: 0,
                     NetOutSpeed: 0,
-                    Uptime: 0,
+                    Uptime: parseInt(proxy._uptime ?? index, 10),
                     Load1: 0,
                     Load5: 0,
                     Load15: 0,
