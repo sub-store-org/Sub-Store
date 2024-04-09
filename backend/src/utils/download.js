@@ -35,6 +35,9 @@ export default async function download(rawUrl, ua, timeout, proxy) {
             }
         }
     }
+    const customCacheKey = $arguments?.cacheKey
+        ? `#sub-store-cached-custom-${$arguments?.cacheKey}`
+        : undefined;
 
     // const downloadUrlMatch = url.match(/^\/api\/(file|module)\/(.+)/);
     // if (downloadUrlMatch) {
@@ -116,10 +119,24 @@ export default async function download(rawUrl, ua, timeout, proxy) {
             }
             if (shouldCache) {
                 resourceCache.set(id, body);
+                if (customCacheKey) {
+                    $.write(body, customCacheKey);
+                }
             }
 
             result = body;
         } catch (e) {
+            if (customCacheKey) {
+                const cached = $.read(customCacheKey);
+                if (cached) {
+                    $.info(
+                        `无法下载 URL ${url}: ${
+                            e.message ?? e
+                        }\n使用自定义缓存 ${$arguments?.cacheKey}`,
+                    );
+                    return cached;
+                }
+            }
             throw new Error(`无法下载 URL ${url}: ${e.message ?? e}`);
         }
     }
