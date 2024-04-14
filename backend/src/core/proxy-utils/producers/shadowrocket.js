@@ -163,6 +163,12 @@ export default function ShadowRocket_Producer() {
                     proxy.fingerprint = proxy['tls-fingerprint'];
                 }
                 delete proxy['tls-fingerprint'];
+
+                if (proxy['underlying-proxy']) {
+                    proxy['dialer-proxy'] = proxy['underlying-proxy'];
+                }
+                delete proxy['underlying-proxy'];
+
                 if (isPresent(proxy, 'tls') && typeof proxy.tls !== 'boolean') {
                     delete proxy.tls;
                 }
