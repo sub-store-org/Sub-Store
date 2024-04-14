@@ -751,6 +751,9 @@ function Clash_All() {
         if (proxy.fingerprint) {
             proxy['tls-fingerprint'] = proxy.fingerprint;
         }
+        if (proxy['dialer-proxy']) {
+            proxy['underlying-proxy'] = proxy['dialer-proxy'];
+        }
 
         if (proxy['benchmark-url']) {
             proxy['test-url'] = proxy['benchmark-url'];
