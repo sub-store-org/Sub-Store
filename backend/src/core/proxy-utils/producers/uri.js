@@ -411,8 +411,51 @@ export default function URI_Producer() {
                     }?${tuicParams.join('&')}#${encodeURIComponent(
                         proxy.name,
                     )}`;
-                    break;
                 }
+                break;
+            case 'wireguard':
+                let wireguardParams = [];
+
+                Object.keys(proxy).forEach((key) => {
+                    if (
+                        ![
+                            'name',
+                            'type',
+                            'server',
+                            'port',
+                            'ip',
+                            'ipv6',
+                            'private-key',
+                        ].includes(key)
+                    ) {
+                        if (['public-key'].includes(key)) {
+                            wireguardParams.push(`publickey=${proxy[key]}`);
+                        } else if (['udp'].includes(key)) {
+                            if (proxy[key]) {
+                                wireguardParams.push(`${key}=1`);
+                            }
+                        } else if (proxy[key]) {
+                            wireguardParams.push(
+                                `${key}=${encodeURIComponent(proxy[key])}`,
+                            );
+                        }
+                    }
+                });
+                if (proxy.ip && proxy.ipv6) {
+                    wireguardParams.push(
+                        `address=${proxy.ip}/32,${proxy.ipv6}/128`,
+                    );
+                } else if (proxy.ip) {
+                    wireguardParams.push(`address=${proxy.ip}/32`);
+                } else if (proxy.ipv6) {
+                    wireguardParams.push(`address=${proxy.ipv6}/128`);
+                }
+                result = `wireguard://${encodeURIComponent(
+                    proxy['private-key'],
+                )}@${proxy.server}:${proxy.port}/?${wireguardParams.join(
+                    '&',
+                )}#${encodeURIComponent(proxy.name)}`;
+                break;
         }
         return result;
     };

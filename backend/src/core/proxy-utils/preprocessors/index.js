@@ -22,6 +22,9 @@ function Base64Encoded() {
         'aHR0c', // htt
         'dmxlc3M=', // vless
         'aHlzdGVyaWEy', // hysteria2
+        'd2lyZWd1YXJkOi8v', // wireguard://
+        'd2c6Ly8=', // wg://
+        'dHVpYzovLw==', // tuic://
     ];
 
     const test = function (raw) {
