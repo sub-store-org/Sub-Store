@@ -21,11 +21,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "16"
+          node-version: "20"
       - name: Install dependencies
         run: |
           npm install -g pnpm
-          cd backend && pnpm i
+          cd backend && pnpm i --no-frozen-lockfile
       - name: Test
         run: |
           cd backend
