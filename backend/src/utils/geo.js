@@ -40,7 +40,7 @@ const ISOFlags = {
     '🇭🇷': ['HR', 'HRV'],
     '🇭🇺': ['HU', 'HUN'],
     '🇯🇴': ['JO', 'JOR'],
-    '🇯🇵': ['JP', 'JPN'],
+    '🇯🇵': ['JP', 'JPN', 'TYO'],
     '🇰🇪': ['KE', 'KEN'],
     '🇰🇬': ['KG', 'KGZ'],
     '🇰🇭': ['KH', 'KGZ'],
