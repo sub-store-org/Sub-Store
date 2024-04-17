@@ -1,5 +1,6 @@
 import ClashMeta_Producer from './clashmeta';
 import $ from '@/core/app';
+import { isIPv4, isIPv6 } from '@/utils';
 
 const detourParser = (proxy, parsedProxy) => {
     if (proxy['dialer-proxy']) parsedProxy.detour = proxy['dialer-proxy'];
@@ -620,8 +621,11 @@ const tuic5Parser = (proxy = {}) => {
 const wireguardParser = (proxy = {}) => {
     const local_address = ['ip', 'ipv6']
         .map((i) => proxy[i])
-        .filter((i) => i)
-        .map((i) => (/\\/.test(i) ? i : `${i}/32`));
+        .map((i) => {
+            if (isIPv4(i)) return `${i}/32`;
+            if (isIPv6(i)) return `${i}/128`;
+        })
+        .filter((i) => i);
     const parsedProxy = {
         tag: proxy.name,
         type: 'wireguard',
