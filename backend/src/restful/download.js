@@ -176,7 +176,11 @@ async function downloadSubscription(req, res) {
                     nezhaIndex = /^\d+$/.test(nezhaIndex)
                         ? parseInt(nezhaIndex, 10)
                         : output.findIndex((i) => i.name === nezhaIndex);
-                    output = await nezhaMonitor(output[nezhaIndex], nezhaIndex);
+                    output = await nezhaMonitor(
+                        output[nezhaIndex],
+                        nezhaIndex,
+                        req.query,
+                    );
                 }
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
                     output,
@@ -327,7 +331,11 @@ async function downloadCollection(req, res) {
                     nezhaIndex = /^\d+$/.test(nezhaIndex)
                         ? parseInt(nezhaIndex, 10)
                         : output.findIndex((i) => i.name === nezhaIndex);
-                    output = await nezhaMonitor(output[nezhaIndex], nezhaIndex);
+                    output = await nezhaMonitor(
+                        output[nezhaIndex],
+                        nezhaIndex,
+                        req.query,
+                    );
                 }
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
                     output,
@@ -366,7 +374,7 @@ async function downloadCollection(req, res) {
     }
 }
 
-async function nezhaMonitor(proxy, index) {
+async function nezhaMonitor(proxy, index, query) {
     const result = {
         code: 0,
         message: 'success',
@@ -395,7 +403,8 @@ async function nezhaMonitor(proxy, index) {
                 timeout: 2000,
             },
         ];
-
+        const number =
+            query.number || Math.max(...monitors.map((i) => i.number)) || 3;
         for (const monitor of monitors) {
             const interval = 10 * 60 * 1000;
             const data = {
@@ -406,8 +415,7 @@ async function nezhaMonitor(proxy, index) {
                 created_at: [],
                 avg_delay: [],
             };
-
-            for (let index = 0; index < monitor.number; index++) {
+            for (let index = 0; index < number; index++) {
                 const startedAt = Date.now();
                 try {
                     await $.http[(monitor.method || 'HEAD').toLowerCase()]({
