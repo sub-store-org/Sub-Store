@@ -1,4 +1,5 @@
 import { getPlatformFromHeaders } from '@/utils/user-agent';
+import { ProxyUtils } from '@/core/proxy-utils';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { getFlowHeaders } from '@/utils/flow';
@@ -29,10 +30,26 @@ export default function register($app) {
         req.query.resultFormat = 'nezha';
         await downloadSubscription(req, res);
     });
+    $app.get(
+        '/download/collection/:name/api/v1/monitor/:index',
+        async (req, res) => {
+            req.query.platform = 'JSON';
+            req.query.produceType = 'internal';
+            req.query.resultFormat = 'nezha-monitor';
+            await downloadCollection(req, res);
+        },
+    );
+    $app.get('/download/:name/api/v1/monitor/:index', async (req, res) => {
+        req.query.platform = 'JSON';
+        req.query.produceType = 'internal';
+        req.query.resultFormat = 'nezha-monitor';
+        await downloadSubscription(req, res);
+    });
 }
 
 async function downloadSubscription(req, res) {
-    let { name } = req.params;
+    let { name, index: nezhaIndex } = req.params;
+    nezhaIndex = parseInt(nezhaIndex, 10);
     name = decodeURIComponent(name);
 
     const platform =
@@ -155,6 +172,8 @@ async function downloadSubscription(req, res) {
             if (platform === 'JSON') {
                 if (resultFormat === 'nezha') {
                     output = nezhaTransform(output);
+                } else if (resultFormat === 'nezha-monitor') {
+                    output = await nezhaMonitor(output[nezhaIndex], nezhaIndex);
                 }
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
                     output,
@@ -192,7 +211,8 @@ async function downloadSubscription(req, res) {
 }
 
 async function downloadCollection(req, res) {
-    let { name } = req.params;
+    let { name, index: nezhaIndex } = req.params;
+    nezhaIndex = parseInt(nezhaIndex, 10);
     name = decodeURIComponent(name);
 
     const platform =
@@ -300,6 +320,8 @@ async function downloadCollection(req, res) {
             if (platform === 'JSON') {
                 if (resultFormat === 'nezha') {
                     output = nezhaTransform(output);
+                } else if (resultFormat === 'nezha-monitor') {
+                    output = await nezhaMonitor(output[nezhaIndex], nezhaIndex);
                 }
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
                     output,
@@ -338,6 +360,84 @@ async function downloadCollection(req, res) {
     }
 }
 
+async function nezhaMonitor(proxy, index) {
+    const result = {
+        code: 0,
+        message: 'success',
+        result: [],
+    };
+
+    try {
+        const { isLoon, isSurge } = $.env;
+        if (!isLoon && !isSurge)
+            throw new Error('仅支持 Loon 和 Surge(ability=http-client-policy)');
+        const node = ProxyUtils.produce([proxy], isLoon ? 'Loon' : 'Surge');
+        const monitors = proxy._monitors || [
+            {
+                name: 'Cloudflare',
+                url: 'http://cp.cloudflare.com/generate_204',
+                method: 'HEAD',
+                number: 3,
+                timeout: 2000,
+            },
+            {
+                name: 'Google',
+                url: 'http://www.google.com/generate_204',
+                method: 'HEAD',
+                number: 3,
+                timeout: 2000,
+            },
+        ];
+
+        for (const monitor of monitors) {
+            const interval = 10 * 60 * 1000;
+            const data = {
+                monitor_id: monitors.indexOf(monitor),
+                server_id: index,
+                monitor_name: monitor.name,
+                server_name: proxy.name,
+                created_at: [],
+                avg_delay: [],
+            };
+
+            for (let index = 0; index < monitor.number; index++) {
+                const startedAt = Date.now();
+                try {
+                    await $.http[(monitor.method || 'HEAD').toLowerCase()]({
+                        timeout: monitor.timeout || 2000,
+                        url: monitor.url,
+                        'policy-descriptor': node,
+                        node,
+                    });
+                    const latency = Date.now() - startedAt;
+                    $.info(`${monitor.name} latency: ${latency}`);
+                    data.avg_delay.push(latency);
+                } catch (e) {
+                    $.error(e);
+                    data.avg_delay.push(0);
+                }
+
+                data.created_at.push(
+                    Date.now() - interval * (monitor.number - index - 1),
+                );
+            }
+
+            result.result.push(data);
+        }
+    } catch (e) {
+        $.error(e);
+        result.result.push({
+            monitor_id: 0,
+            server_id: 0,
+            monitor_name: `❌ ${e.message ?? e}`,
+            server_name: proxy.name,
+            created_at: [Date.now()],
+            avg_delay: [0],
+        });
+    }
+
+    return JSON.stringify(result, null, 2);
+}
 function nezhaTransform(output) {
     const result = {
         code: 0,
