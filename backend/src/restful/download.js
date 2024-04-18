@@ -31,7 +31,7 @@ export default function register($app) {
         await downloadSubscription(req, res);
     });
     $app.get(
-        '/download/collection/:name/api/v1/monitor/:index',
+        '/download/collection/:name/api/v1/monitor/:nezhaIndex',
         async (req, res) => {
             req.query.platform = 'JSON';
             req.query.produceType = 'internal';
@@ -39,7 +39,7 @@ export default function register($app) {
             await downloadCollection(req, res);
         },
     );
-    $app.get('/download/:name/api/v1/monitor/:index', async (req, res) => {
+    $app.get('/download/:name/api/v1/monitor/:nezhaIndex', async (req, res) => {
         req.query.platform = 'JSON';
         req.query.produceType = 'internal';
         req.query.resultFormat = 'nezha-monitor';
@@ -48,9 +48,9 @@ export default function register($app) {
 }
 
 async function downloadSubscription(req, res) {
-    let { name, index: nezhaIndex } = req.params;
-    nezhaIndex = parseInt(nezhaIndex, 10);
+    let { name, nezhaIndex } = req.params;
     name = decodeURIComponent(name);
+    nezhaIndex = decodeURIComponent(nezhaIndex);
 
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
@@ -173,6 +173,9 @@ async function downloadSubscription(req, res) {
                 if (resultFormat === 'nezha') {
                     output = nezhaTransform(output);
                 } else if (resultFormat === 'nezha-monitor') {
+                    nezhaIndex = /^\d+$/.test(nezhaIndex)
+                        ? parseInt(nezhaIndex, 10)
+                        : output.findIndex((i) => i.name === nezhaIndex);
                     output = await nezhaMonitor(output[nezhaIndex], nezhaIndex);
                 }
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
@@ -211,9 +214,9 @@ async function downloadSubscription(req, res) {
 }
 
 async function downloadCollection(req, res) {
-    let { name, index: nezhaIndex } = req.params;
-    nezhaIndex = parseInt(nezhaIndex, 10);
+    let { name, nezhaIndex } = req.params;
     name = decodeURIComponent(name);
+    nezhaIndex = decodeURIComponent(nezhaIndex);
 
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
@@ -321,6 +324,9 @@ async function downloadCollection(req, res) {
                 if (resultFormat === 'nezha') {
                     output = nezhaTransform(output);
                 } else if (resultFormat === 'nezha-monitor') {
+                    nezhaIndex = /^\d+$/.test(nezhaIndex)
+                        ? parseInt(nezhaIndex, 10)
+                        : output.findIndex((i) => i.name === nezhaIndex);
                     output = await nezhaMonitor(output[nezhaIndex], nezhaIndex);
                 }
                 res.set('Content-Type', 'application/json;charset=utf-8').send(
@@ -372,6 +378,7 @@ async function nezhaMonitor(proxy, index) {
         if (!isLoon && !isSurge)
             throw new Error('仅支持 Loon 和 Surge(ability=http-client-policy)');
         const node = ProxyUtils.produce([proxy], isLoon ? 'Loon' : 'Surge');
+        if (!node) throw new Error('当前客户端不兼容此节点');
         const monitors = proxy._monitors || [
             {
                 name: 'Cloudflare',
