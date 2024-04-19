@@ -491,7 +491,7 @@ function nezhaTransform(output) {
                     Virtualization: '',
                     BootTime: time,
                     CountryCode, // 目前需要
-                    Version: '',
+                    Version: '0.0.1',
                 },
                 status: {
                     CPU: 0,
