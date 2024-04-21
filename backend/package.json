@@ -1,6 +1,6 @@
 {
   "name": "sub-store",
-  "version": "2.14.295",
+  "version": "2.14.297",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket.",
   "main": "src/main.js",
   "scripts": {
@@ -11,7 +11,8 @@
     "dev:esbuild": "nodemon -w src -w package.json dev-esbuild.js",
     "dev:run": "nodemon -w sub-store.min.js sub-store.min.js",
     "build": "gulp",
-    "bundle": "node bundle.js"
+    "bundle": "node bundle.js",
+    "changelog": "conventional-changelog -p cli -i CHANGELOG.md -s"
   },
   "author": "Peng-YM",
   "license": "GPL-3.0",
