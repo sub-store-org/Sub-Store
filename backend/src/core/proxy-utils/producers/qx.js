@@ -3,6 +3,7 @@ import { isPresent, Result } from './utils';
 const targetPlatform = 'QX';
 
 export default function QX_Producer() {
+    // eslint-disable-next-line no-unused-vars
     const produce = (proxy, type, opts = {}) => {
         switch (proxy.type) {
             case 'ss':
@@ -18,13 +19,7 @@ export default function QX_Producer() {
             case 'socks5':
                 return socks5(proxy);
             case 'vless':
-                if (opts['include-unsupported-proxy']) {
-                    return vless(proxy);
-                } else {
-                    throw new Error(
-                        `Platform ${targetPlatform}(App Store Release) does not support proxy type: ${proxy.type}`,
-                    );
-                }
+                return vless(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
