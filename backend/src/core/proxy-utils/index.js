@@ -404,15 +404,19 @@ function lastParse(proxy) {
         }
     }
     if (typeof proxy.name !== 'string') {
-        try {
-            if (proxy.name?.data) {
-                proxy.name = Buffer.from(proxy.name.data).toString('utf8');
-            } else {
-                proxy.name = utf8ArrayToStr(proxy.name);
+        if (/^\d+$/.test(proxy.name)) {
+            proxy.name = `${proxy.name}`;
+        } else {
+            try {
+                if (proxy.name?.data) {
+                    proxy.name = Buffer.from(proxy.name.data).toString('utf8');
+                } else {
+                    proxy.name = utf8ArrayToStr(proxy.name);
+                }
+            } catch (e) {
+                $.error(`proxy.name decode failed\nReason: ${e}`);
+                proxy.name = `${proxy.type} ${proxy.server}:${proxy.port}`;
             }
-        } catch (e) {
-            $.error(`proxy.name decode failed\nReason: ${e}`);
-            proxy.name = `${proxy.type} ${proxy.server}:${proxy.port}`;
         }
     }
     if (['', 'off'].includes(proxy.sni)) {
