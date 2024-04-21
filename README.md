@@ -26,7 +26,7 @@ Core functionalities:
 
 ### Supported Input Formats
 
-- [x] URI(SS, SSR, VMess, VLESS, Trojan, Hysteria, Hysteria 2, TUIC v5)
+- [x] URI(SS, SSR, VMess, VLESS, Trojan, Hysteria, Hysteria 2, TUIC v5, WireGuard)
 - [x] Clash Proxies YAML
 - [x] Clash Proxy JSON(single line)
 - [x] QX (SS, SSR, VMess, Trojan, HTTP, SOCKS5, VLESS)
