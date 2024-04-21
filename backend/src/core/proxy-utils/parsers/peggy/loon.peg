@@ -33,7 +33,7 @@
     }
 }
 
-start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/hysteria2) {
+start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2) {
     return proxy;
 }
 
@@ -75,6 +75,9 @@ https = tag equals "https"i address (username password)? (tls_host/tls_verificat
 }
 http = tag equals "http"i address (username password)? (fast_open/udp_relay/others)* {
     proxy.type = "http";
+}
+socks5 = tag equals "socks5"i address (username password)? (over_tls/tls_host/tls_verification/fast_open/udp_relay/others)* {
+    proxy.type = "socks5";
 }
 
 address = comma server:server comma port:port {
@@ -165,7 +168,7 @@ ssr_protocol_param = comma "protocol-param" equals param:$[^=,]+ { proxy["protoc
 vmess_alterId = comma "alterId" equals alterId:$[0-9]+ { proxy.alterId = parseInt(alterId); } 
 
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
-tls_host = comma "tls-name" equals host:domain { proxy.sni = host; }
+tls_host = comma sni:("tls-name"/"sni") equals host:domain { proxy.sni = host; }
 tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-verify"] = flag; }
 
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
