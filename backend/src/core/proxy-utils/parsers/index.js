@@ -996,6 +996,15 @@ function Loon_Http() {
     const parse = (line) => getLoonParser().parse(line);
     return { name, test, parse };
 }
+function Loon_Socks5() {
+    const name = 'Loon SOCKS5 Parser';
+    const test = (line) => {
+        return /^.*=\s*socks5/i.test(line.split(',')[0]);
+    };
+
+    const parse = (line) => getLoonParser().parse(line);
+    return { name, test, parse };
+}
 
 function Loon_WireGuard() {
     const name = 'Loon WireGuard Parser';
@@ -1302,6 +1311,7 @@ export default [
     Loon_Hysteria2(),
     Loon_Trojan(),
     Loon_Http(),
+    Loon_Socks5(),
     Loon_WireGuard(),
     QX_SS(),
     QX_SSR(),

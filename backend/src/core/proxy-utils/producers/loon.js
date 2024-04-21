@@ -18,6 +18,8 @@ export default function Loon_Producer() {
                 return vless(proxy);
             case 'http':
                 return http(proxy);
+            case 'socks5':
+                return socks5(proxy);
             case 'wireguard':
                 return wireguard(proxy);
             case 'hysteria2':
@@ -301,6 +303,29 @@ function http(proxy) {
     result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,${proxy.username}`, 'username');
     result.appendIfPresent(`,"${proxy.password}"`, 'password');
+
+    // sni
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+
+    // tls verification
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    return result.toString();
+}
+function socks5(proxy) {
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=socks5,${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,${proxy.username}`, 'username');
+    result.appendIfPresent(`,"${proxy.password}"`, 'password');
+
+    // tls
+    result.appendIfPresent(`,over-tls=${proxy.tls}`, 'tls');
 
     // sni
     result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
