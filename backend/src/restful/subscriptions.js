@@ -181,11 +181,21 @@ function createSubscription(req, res) {
 
 function getSubscription(req, res) {
     let { name } = req.params;
+    let { raw } = req.query;
     name = decodeURIComponent(name);
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
     if (sub) {
-        success(res, sub);
+        if (raw) {
+            res.set('content-type', 'application/json')
+                .set(
+                    'content-disposition',
+                    `attachment; filename="${encodeURIComponent(name)}.json"`,
+                )
+                .send(JSON.stringify(sub));
+        } else {
+            success(res, sub);
+        }
     } else {
         failed(
             res,
