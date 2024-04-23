@@ -253,7 +253,25 @@ async function syncToGist(files) {
         key: ARTIFACT_REPOSITORY_KEY,
         syncPlatform,
     });
-    return manager.upload(files);
+    const res = await manager.upload(files);
+    let body = {};
+    try {
+        body = JSON.parse(res.body);
+        // eslint-disable-next-line no-empty
+    } catch (e) {}
+
+    const url = body?.html_url ?? body?.web_url;
+    const settings = $.read(SETTINGS_KEY);
+    if (url) {
+        $.log(`同步 Gist 后, 找到 Sub-Store Gist: ${url}`);
+        settings.artifactStore = url;
+        settings.artifactStoreStatus = 'VALID';
+    } else {
+        $.error(`同步 Gist 后, 找不到 Sub-Store Gist`);
+        settings.artifactStoreStatus = 'NOT FOUND';
+    }
+    $.write(settings, SETTINGS_KEY);
+    return res;
 }
 
 export { syncToGist };
