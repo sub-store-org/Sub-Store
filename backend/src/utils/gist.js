@@ -135,9 +135,9 @@ export default class Gist {
                     }
                 }
             });
-            console.log(`result`, result);
-            console.log(`files`, files);
-            console.log(`actions`, actions);
+            // console.log(`result`, result);
+            // console.log(`files`, files);
+            // console.log(`actions`, actions);
 
             if (this.syncPlatform === 'gitlab') {
                 if (Object.keys(result).length === 0) {
