@@ -762,8 +762,8 @@ function wireguard(proxy) {
     }
     const result = new Result(proxy);
 
-    result.append(`# WireGuard Proxy ${proxy.name}
-${proxy.name}=wireguard`);
+    result.append(`# > WireGuard Proxy ${proxy.name}
+# ${proxy.name}=wireguard`);
 
     proxy['section-name'] = getIfNotBlank(proxy['section-name'], proxy.name);
 
@@ -821,7 +821,7 @@ ${proxy.name}=wireguard`);
     );
 
     result.append(`
-# WireGuard Section ${proxy.name}
+# > WireGuard Section ${proxy.name}
 [WireGuard ${proxy['section-name']}]
 private-key = ${proxy['private-key']}`);
 
