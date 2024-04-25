@@ -867,7 +867,7 @@ function clone(object) {
 // remove flag
 function removeFlag(str) {
     return str
-        .replace(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/g, '')
+        .replace(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]|🏴‍☠️|🏳️‍🌈/g, '')
         .trim();
 }
 
