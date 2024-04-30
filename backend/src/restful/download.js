@@ -469,7 +469,11 @@ function nezhaTransform(output) {
         // 简单判断下
         if (/^[a-z]{2}$/i.test(CountryCode)) {
             // 如果节点上有数据 就取节点上的数据
-            let time = proxy._unavailable ? 0 : Date.now();
+            let now = Math.round(new Date().getTime() / 1000);
+            let time = proxy._unavailable ? 0 : now;
+
+            const uptime = parseInt(proxy._uptime || 0, 10);
+
             result.result.push({
                 id: index,
                 name: proxy.name,
@@ -489,7 +493,7 @@ function nezhaTransform(output) {
                     SwapTotal: 1024,
                     Arch: '',
                     Virtualization: '',
-                    BootTime: time,
+                    BootTime: now - uptime,
                     CountryCode, // 目前需要
                     Version: '0.0.1',
                 },
@@ -502,7 +506,7 @@ function nezhaTransform(output) {
                     NetOutTransfer: 0,
                     NetInSpeed: 0,
                     NetOutSpeed: 0,
-                    Uptime: parseInt(proxy._uptime ?? index, 10),
+                    Uptime: uptime,
                     Load1: 0,
                     Load5: 0,
                     Load15: 0,
