@@ -48,8 +48,11 @@ trojan = "trojan" equals address
 
 shadowsocks = "shadowsocks" equals address
     (password/method/obfs_ssr/obfs_ss/obfs_host/obfs_uri/ssr_protocol/ssr_protocol_param/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/udp_relay/udp_over_tcp/fast_open/tag/server_check_url/others)* {
-    if (proxy.protocol) {
+    if (proxy.protocol || proxy.type === "ssr") {
         proxy.type = "ssr";
+        if (!proxy.protocol) {
+            proxy.protocol = "origin";
+        }
         // handle ssr obfs
         if (obfs.host) proxy["obfs-param"] = obfs.host;
         if (obfs.type) proxy.obfs = obfs.type;
@@ -170,7 +173,7 @@ tls_no_session_reuse = comma "tls-no-session-reuse" equals flag:bool {
 }
 
 obfs_ss = comma "obfs" equals type:("http"/"tls"/"wss"/"ws"/"over-tls") { obfs.type = type; return type; }
-obfs_ssr = comma "obfs" equals type:("plain"/"http_simple"/"http_post"/"random_head"/"tls1.2_ticket_auth"/"tls1.2_ticket_fastauth") { obfs.type = type; return type; }
+obfs_ssr = comma "obfs" equals type:("plain"/"http_simple"/"http_post"/"random_head"/"tls1.2_ticket_auth"/"tls1.2_ticket_fastauth") { proxy.type = "ssr"; obfs.type = type; return type; }
 obfs = comma "obfs" equals type:("wss"/"ws"/"over-tls"/"http") { obfs.type = type; return type; };
 
 obfs_host = comma "obfs-host" equals host:domain { obfs.host = host; }
