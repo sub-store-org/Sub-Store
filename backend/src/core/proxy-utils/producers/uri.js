@@ -26,7 +26,7 @@ export default function URI_Producer() {
                 const userinfo = `${proxy.cipher}:${proxy.password}`;
                 result = `ss://${Base64.encode(userinfo)}@${proxy.server}:${
                     proxy.port
-                }/`;
+                }${proxy.plugin ? '/' : ''}`;
                 if (proxy.plugin) {
                     result += '?plugin=';
                     const opts = proxy['plugin-opts'];
