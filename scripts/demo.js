@@ -39,6 +39,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     yaml, // yaml 解析和生成
   //     getFlag, // 获取 emoji 旗帜
   //     getISO, // 获取 ISO 3166-1 alpha-2 代码
+  //     Gist, // Gist 类
   // }
 
   // 示例: 给节点名添加前缀
@@ -93,6 +94,42 @@ function operator(proxies = [], targetPlatform, context) {
   //     platform: 'ClashMeta',
   //     produceType: 'internal' // 'internal' produces an Array, otherwise produces a String( ProxyUtils.yaml.safeLoad('YAML String').proxies )
   // })
+
+  // 4. 一个比较折腾的方案: 在脚本操作中, 把内容同步到另一个 gist
+
+  // async function operator(proxies = []) {
+  //   const $ = $substore
+  //   const GITHUB_TOKEN = 'ghp_xxxxxxxxxxxxxxxxxxxxx'
+  //   const GIST_NAME = 'share'
+  //   const FILENAME = 'mihomo.yaml'
+  //   let files = {}
+  //   let content = await produceArtifact({
+  //     type: 'subscription',
+  //     subscription: {},
+  //     content: 'proxies:\n' + proxies.map((proxy) => '  - ' + JSON.stringify(proxy) + '\n').join(''),
+  //     platform: 'ClashMeta',
+  //   })
+  //   const manager = new ProxyUtils.Gist({
+  //       token: GITHUB_TOKEN,
+  //       key: GIST_NAME,
+  //   });
+  //   files[encodeURIComponent(FILENAME)] = {
+  //       content,
+  //   };
+  //   const res = await manager.upload(files);
+  //   let body = {};
+  //   try {
+  //       body = JSON.parse(res.body);
+  //       // eslint-disable-next-line no-empty
+  //   } catch (e) {}
+  //   const raw_url =
+  //   body.files[encodeURIComponent(FILENAME)]?.raw_url;
+  //   console.log(raw_url)
+  //   const new_url = raw_url?.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
+  //   console.log(new_url)
+  //   $.notify('🌍 Sub-Store', `更新到 Gist: ${new_url}`);
+  //   return proxies
+  // }
 
   // // YAML
   // ProxyUtils.yaml.load('YAML String')
