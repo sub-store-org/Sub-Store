@@ -16,6 +16,7 @@ import { Base64 } from 'js-base64';
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
 // reference: https://github.com/shadowsocks/shadowsocks-org/wiki/SIP002-URI-Scheme
 function URI_SS() {
+    // TODO: 暂不支持 httpupgrade
     const name = 'URI SS Parser';
     const test = (line) => {
         return /^ss:\/\//.test(line);
@@ -299,6 +300,7 @@ function URI_VMess() {
             if (proxy.tls && proxy.sni) {
                 proxy.sni = params.sni;
             }
+            let httpupgrade = false;
             // handle obfs
             if (params.net === 'ws' || params.obfs === 'websocket') {
                 proxy.network = 'ws';
@@ -309,6 +311,12 @@ function URI_VMess() {
                 proxy.network = 'http';
             } else if (['grpc'].includes(params.net)) {
                 proxy.network = 'grpc';
+            } else if (
+                params.net === 'httpupgrade' ||
+                proxy.network === 'httpupgrade'
+            ) {
+                proxy.network = 'ws';
+                httpupgrade = true;
             }
             if (proxy.network) {
                 let transportHost = params.host ?? params.obfsParam;
@@ -341,10 +349,15 @@ function URI_VMess() {
                             '_grpc-type': getIfNotBlank(params.type),
                         };
                     } else {
-                        proxy[`${proxy.network}-opts`] = {
+                        const opts = {
                             path: getIfNotBlank(transportPath),
                             headers: { Host: getIfNotBlank(transportHost) },
                         };
+                        if (httpupgrade) {
+                            opts['v2ray-http-upgrade'] = true;
+                            opts['v2ray-http-upgrade-fast-open'] = true;
+                        }
+                        proxy[`${proxy.network}-opts`] = opts;
                     }
                 } else {
                     delete proxy.network;
@@ -444,10 +457,13 @@ function URI_VLESS() {
                 proxy[`${params.security}-opts`] = opts;
             }
         }
-
+        let httpupgrade = false;
         proxy.network = params.type;
         if (proxy.network === 'tcp' && params.headerType === 'http') {
             proxy.network = 'http';
+        } else if (proxy.network === 'httpupgrade') {
+            proxy.network = 'ws';
+            httpupgrade = true;
         }
         if (!proxy.network && isShadowrocket && params.obfs) {
             proxy.network = params.obfs;
@@ -484,6 +500,10 @@ function URI_VLESS() {
             // https://github.com/XTLS/Xray-core/issues/91
             if (['grpc'].includes(proxy.network)) {
                 opts['_grpc-type'] = params.mode || 'gun';
+            }
+            if (httpupgrade) {
+                opts['v2ray-http-upgrade'] = true;
+                opts['v2ray-http-upgrade-fast-open'] = true;
             }
             if (Object.keys(opts).length > 0) {
                 proxy[`${proxy.network}-opts`] = opts;

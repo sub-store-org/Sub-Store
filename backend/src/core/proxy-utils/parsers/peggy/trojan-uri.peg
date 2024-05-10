@@ -87,7 +87,12 @@ params = "?" head:param tail:("&"@param)* {
   }
   
   if (params["type"]) {
+    let httpupgrade
     proxy.network = params["type"]
+    if(proxy.network === 'httpupgrade') {
+      proxy.network = 'ws'
+      httpupgrade = true
+    }
     if (['grpc'].includes(proxy.network)) {
         proxy[proxy.network + '-opts'] = {
             'grpc-service-name': params["serviceName"],
@@ -99,6 +104,10 @@ params = "?" head:param tail:("&"@param)* {
       }
       if (params["host"]) {
         $set(proxy, proxy.network+"-opts.headers.Host", decodeURIComponent(params["host"])); 
+      }
+      if (httpupgrade) {
+        $set(proxy, proxy.network+"-opts.v2ray-http-upgrade", true); 
+        $set(proxy, proxy.network+"-opts.v2ray-http-upgrade-fast-open", true); 
       }
     }
   }
