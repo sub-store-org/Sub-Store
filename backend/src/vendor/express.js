@@ -54,6 +54,7 @@ export default function express({ substore: $, port, host }) {
     // dispatch url to route
     const dispatch = (request, start = 0) => {
         let { method, url, headers, body } = request;
+        console.log(url, method, headers, body);
         headers = formatHeaders(headers);
         if (/json/i.test(headers['content-type'])) {
             body = JSON.parse(body);
@@ -161,7 +162,7 @@ export default function express({ substore: $, port, host }) {
 
     function Response() {
         let statusCode = 200;
-        const { isQX, isLoon, isSurge } = ENV();
+        const { isQX, isLoon, isSurge, isGUIforCores } = ENV();
         const headers = DEFAULT_HEADERS;
         const STATUS_CODE_MAP = {
             200: 'HTTP/1.1 200 OK',
@@ -184,7 +185,7 @@ export default function express({ substore: $, port, host }) {
                     body,
                     headers,
                 };
-                if (isQX) {
+                if (isQX || isGUIforCores) {
                     $done(response);
                 } else if (isLoon || isSurge) {
                     $done({

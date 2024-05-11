@@ -8,6 +8,7 @@ const isStash =
 const isShadowRocket = 'undefined' !== typeof $rocket;
 const isEgern = 'object' == typeof egern;
 const isLanceX = 'undefined' != typeof $native;
+const isGUIforCores = typeof $Plugins !== 'undefined';
 
 export class OpenAPI {
     constructor(name = 'untitled', debug = false) {
@@ -79,6 +80,24 @@ export class OpenAPI {
                 this.cache = JSON.parse(this.node.fs.readFileSync(`${fpath}`));
             }
         }
+        if (isGUIforCores) {
+            const basePath = 'data/third/sub-store-v3';
+            this.cache = {};
+            this.root = {};
+            $Plugins
+                .ignoredError($Plugins.Readfile, `${basePath}/root.json`)
+                .then((text) => {
+                    this.root = JSON.parse(text || '{}');
+                });
+            $Plugins
+                .ignoredError(
+                    $Plugins.Readfile,
+                    `${basePath}/${this.name}.json`,
+                )
+                .then((text) => {
+                    this.cache = JSON.parse(text || '{}');
+                });
+        }
     }
 
     // store cache
@@ -103,6 +122,18 @@ export class OpenAPI {
                 (err) => console.log(err),
             );
         }
+        if (isGUIforCores) {
+            const basePath = 'data/third/sub-store-v3';
+            $Plugins
+                .Writefile(`${basePath}/${this.name}.json`, data)
+                .catch((err) => console.log(err));
+            $Plugins
+                .Writefile(
+                    `${basePath}/root.json`,
+                    JSON.stringify(this.root, null, 2),
+                )
+                .catch((err) => console.log(err));
+        }
     }
 
     write(data, key) {
@@ -116,6 +147,9 @@ export class OpenAPI {
                 return $prefs.setValueForKey(data, key);
             }
             if (isNode) {
+                this.root[key] = data;
+            }
+            if (isGUIforCores) {
                 this.root[key] = data;
             }
         } else {
@@ -137,6 +171,9 @@ export class OpenAPI {
             if (isNode) {
                 return this.root[key];
             }
+            if (isGUIforCores) {
+                return this.root[key];
+            }
         } else {
             return this.cache[key];
         }
@@ -153,6 +190,9 @@ export class OpenAPI {
                 return $prefs.removeValueForKey(key);
             }
             if (isNode) {
+                delete this.root[key];
+            }
+            if (isGUIforCores) {
                 delete this.root[key];
             }
         } else {
@@ -220,6 +260,9 @@ export class OpenAPI {
                     });
             }
         }
+        if (isGUIforCores) {
+            $Plugins.Notify(title, subtitle + '\n' + content);
+        }
     }
 
     // other helper functions
@@ -240,7 +283,7 @@ export class OpenAPI {
     }
 
     done(value = {}) {
-        if (isQX || isLoon || isSurge) {
+        if (isQX || isLoon || isSurge || isGUIforCores) {
             $done(value);
         } else if (isNode) {
             if (typeof $context !== 'undefined') {
@@ -262,11 +305,12 @@ export function ENV() {
         isShadowRocket,
         isEgern,
         isLanceX,
+        isGUIforCores,
     };
 }
 
 export function HTTP(defaultOptions = { baseURL: '' }) {
-    const { isQX, isLoon, isSurge, isNode } = ENV();
+    const { isQX, isLoon, isSurge, isNode, isGUIforCores } = ENV();
     const methods = [
         'GET',
         'POST',
@@ -355,6 +399,31 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                             body,
                         });
                 });
+            });
+        } else if (isGUIforCores) {
+            worker = new Promise(async (resolve, reject) => {
+                const requestHandler = {
+                    get: $Plugins.HttpGet,
+                    post: $Plugins.HttpPost,
+                    put: $Plugins.HttpPut,
+                    delete: $Plugins.HttpDelete,
+                };
+                const request = requestHandler[method.toLowerCase()];
+                if (!request) reject('GUI.for.Cores未实现当前方法：' + method);
+                const body = ['put', 'post'].includes(method.toLowerCase())
+                    ? options.body
+                    : {};
+                try {
+                    const { url, headers } = options;
+                    const response = await request(url, headers, body);
+                    resolve({
+                        statusCode: response.status ?? 200,
+                        headers: response.header,
+                        body: response.body,
+                    });
+                } catch (error) {
+                    reject(error);
+                }
             });
         }
 

@@ -10,6 +10,7 @@ const {
     isShadowRocket,
     isLanceX,
     isEgern,
+    isGUIforCores,
 } = ENV();
 let backend = 'Node';
 if (isNode) backend = 'Node';
@@ -20,6 +21,7 @@ if (isStash) backend = 'Stash';
 if (isShadowRocket) backend = 'ShadowRocket';
 if (isEgern) backend = 'Egern';
 if (isLanceX) backend = 'LanceX';
+if (isGUIforCores) backend = 'GUI.for.Cores';
 
 let meta = {};
 
@@ -50,6 +52,9 @@ try {
                 meta.node.env[key] = env[key];
             }
         }
+    }
+    if (isGUIforCores) {
+        meta.plugin = Plugin;
     }
     // eslint-disable-next-line no-empty
 } catch (e) {}
