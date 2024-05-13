@@ -54,7 +54,6 @@ export default function express({ substore: $, port, host }) {
     // dispatch url to route
     const dispatch = (request, start = 0) => {
         let { method, url, headers, body } = request;
-        console.log(url, method, headers, body);
         headers = formatHeaders(headers);
         if (/json/i.test(headers['content-type'])) {
             body = JSON.parse(body);

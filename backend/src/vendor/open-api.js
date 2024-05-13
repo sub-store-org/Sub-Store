@@ -49,7 +49,8 @@ export class OpenAPI {
             this.cache = JSON.parse($prefs.valueForKey(this.name) || '{}');
         if (isLoon || isSurge)
             this.cache = JSON.parse($persistentStore.read(this.name) || '{}');
-
+        if (isGUIforCores)
+            this.cache = JSON.parse(Plugins.$memory.get(this.name) || '{}');
         if (isNode) {
             // create a json for root cache
             const basePath =
@@ -80,24 +81,6 @@ export class OpenAPI {
                 this.cache = JSON.parse(this.node.fs.readFileSync(`${fpath}`));
             }
         }
-        if (isGUIforCores) {
-            const basePath = 'data/third/sub-store-v3';
-            this.cache = {};
-            this.root = {};
-            $Plugins
-                .ignoredError($Plugins.Readfile, `${basePath}/root.json`)
-                .then((text) => {
-                    this.root = JSON.parse(text || '{}');
-                });
-            $Plugins
-                .ignoredError(
-                    $Plugins.Readfile,
-                    `${basePath}/${this.name}.json`,
-                )
-                .then((text) => {
-                    this.cache = JSON.parse(text || '{}');
-                });
-        }
     }
 
     // store cache
@@ -105,6 +88,7 @@ export class OpenAPI {
         const data = JSON.stringify(this.cache, null, 2);
         if (isQX) $prefs.setValueForKey(data, this.name);
         if (isLoon || isSurge) $persistentStore.write(data, this.name);
+        if (isGUIforCores) Plugins.$memory.set(this.name, data);
         if (isNode) {
             const basePath =
                 eval('process.env.SUB_STORE_DATA_BASE_PATH') || '.';
@@ -122,18 +106,6 @@ export class OpenAPI {
                 (err) => console.log(err),
             );
         }
-        if (isGUIforCores) {
-            const basePath = 'data/third/sub-store-v3';
-            $Plugins
-                .Writefile(`${basePath}/${this.name}.json`, data)
-                .catch((err) => console.log(err));
-            $Plugins
-                .Writefile(
-                    `${basePath}/root.json`,
-                    JSON.stringify(this.root, null, 2),
-                )
-                .catch((err) => console.log(err));
-        }
     }
 
     write(data, key) {
@@ -150,7 +122,7 @@ export class OpenAPI {
                 this.root[key] = data;
             }
             if (isGUIforCores) {
-                this.root[key] = data;
+                return Plugins.$memory.set(key, data);
             }
         } else {
             this.cache[key] = data;
@@ -172,7 +144,7 @@ export class OpenAPI {
                 return this.root[key];
             }
             if (isGUIforCores) {
-                return this.root[key];
+                return Plugins.$memory.get(key);
             }
         } else {
             return this.cache[key];
@@ -193,7 +165,7 @@ export class OpenAPI {
                 delete this.root[key];
             }
             if (isGUIforCores) {
-                delete this.root[key];
+                return Plugins.$memory.remove(key);
             }
         } else {
             delete this.cache[key];
@@ -410,12 +382,9 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 };
                 const request = requestHandler[method.toLowerCase()];
                 if (!request) reject('GUI.for.Cores未实现当前方法：' + method);
-                const body = ['put', 'post'].includes(method.toLowerCase())
-                    ? options.body
-                    : {};
                 try {
                     const { url, headers } = options;
-                    const response = await request(url, headers, body);
+                    const response = await request(url, headers, options.body);
                     resolve({
                         statusCode: response.status ?? 200,
                         headers: response.header,
