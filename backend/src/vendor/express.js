@@ -161,7 +161,7 @@ export default function express({ substore: $, port, host }) {
 
     function Response() {
         let statusCode = 200;
-        const { isQX, isLoon, isSurge } = ENV();
+        const { isQX, isLoon, isSurge, isGUIforCores } = ENV();
         const headers = DEFAULT_HEADERS;
         const STATUS_CODE_MAP = {
             200: 'HTTP/1.1 200 OK',
@@ -184,7 +184,7 @@ export default function express({ substore: $, port, host }) {
                     body,
                     headers,
                 };
-                if (isQX) {
+                if (isQX || isGUIforCores) {
                     $done(response);
                 } else if (isLoon || isSurge) {
                     $done({
