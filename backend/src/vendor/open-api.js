@@ -8,6 +8,7 @@ const isStash =
 const isShadowRocket = 'undefined' !== typeof $rocket;
 const isEgern = 'object' == typeof egern;
 const isLanceX = 'undefined' != typeof $native;
+const isGUIforCores = typeof $Plugins !== 'undefined';
 
 export class OpenAPI {
     constructor(name = 'untitled', debug = false) {
@@ -48,7 +49,10 @@ export class OpenAPI {
             this.cache = JSON.parse($prefs.valueForKey(this.name) || '{}');
         if (isLoon || isSurge)
             this.cache = JSON.parse($persistentStore.read(this.name) || '{}');
-
+        if (isGUIforCores)
+            this.cache = JSON.parse(
+                $Plugins.SubStoreCache.get(this.name) || '{}',
+            );
         if (isNode) {
             // create a json for root cache
             const basePath =
@@ -86,6 +90,7 @@ export class OpenAPI {
         const data = JSON.stringify(this.cache, null, 2);
         if (isQX) $prefs.setValueForKey(data, this.name);
         if (isLoon || isSurge) $persistentStore.write(data, this.name);
+        if (isGUIforCores) $Plugins.SubStoreCache.set(this.name, data);
         if (isNode) {
             const basePath =
                 eval('process.env.SUB_STORE_DATA_BASE_PATH') || '.';
@@ -118,6 +123,9 @@ export class OpenAPI {
             if (isNode) {
                 this.root[key] = data;
             }
+            if (isGUIforCores) {
+                return $Plugins.SubStoreCache.set(key, data);
+            }
         } else {
             this.cache[key] = data;
         }
@@ -137,6 +145,9 @@ export class OpenAPI {
             if (isNode) {
                 return this.root[key];
             }
+            if (isGUIforCores) {
+                return $Plugins.SubStoreCache.get(key);
+            }
         } else {
             return this.cache[key];
         }
@@ -154,6 +165,9 @@ export class OpenAPI {
             }
             if (isNode) {
                 delete this.root[key];
+            }
+            if (isGUIforCores) {
+                return $Plugins.SubStoreCache.remove(key);
             }
         } else {
             delete this.cache[key];
@@ -220,6 +234,9 @@ export class OpenAPI {
                     });
             }
         }
+        if (isGUIforCores) {
+            $Plugins.Notify(title, subtitle + '\n' + content);
+        }
     }
 
     // other helper functions
@@ -240,7 +257,7 @@ export class OpenAPI {
     }
 
     done(value = {}) {
-        if (isQX || isLoon || isSurge) {
+        if (isQX || isLoon || isSurge || isGUIforCores) {
             $done(value);
         } else if (isNode) {
             if (typeof $context !== 'undefined') {
@@ -262,11 +279,12 @@ export function ENV() {
         isShadowRocket,
         isEgern,
         isLanceX,
+        isGUIforCores,
     };
 }
 
 export function HTTP(defaultOptions = { baseURL: '' }) {
-    const { isQX, isLoon, isSurge, isNode } = ENV();
+    const { isQX, isLoon, isSurge, isNode, isGUIforCores } = ENV();
     const methods = [
         'GET',
         'POST',
@@ -355,6 +373,33 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                             body,
                         });
                 });
+            });
+        } else if (isGUIforCores) {
+            worker = new Promise(async (resolve, reject) => {
+                const requestHandler = {
+                    get: $Plugins.HttpGet,
+                    head: $Plugins.HttpHead,
+                    post: $Plugins.HttpPost,
+                    put: $Plugins.HttpPut,
+                    delete: $Plugins.HttpDelete,
+                };
+                const request = requestHandler[method.toLowerCase()];
+                if (!request)
+                    reject(
+                        '[GUI.for.Cores] This method is not implemented: ' +
+                            method,
+                    );
+                try {
+                    const { url, headers } = options;
+                    const response = await request(url, headers, options.body);
+                    resolve({
+                        statusCode: response.status ?? 200,
+                        headers: response.header,
+                        body: response.body,
+                    });
+                } catch (error) {
+                    reject(error);
+                }
             });
         }
 
