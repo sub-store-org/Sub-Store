@@ -50,7 +50,9 @@ export class OpenAPI {
         if (isLoon || isSurge)
             this.cache = JSON.parse($persistentStore.read(this.name) || '{}');
         if (isGUIforCores)
-            this.cache = JSON.parse(Plugins.$memory.get(this.name) || '{}');
+            this.cache = JSON.parse(
+                $Plugins.SubStoreCache.get(this.name) || '{}',
+            );
         if (isNode) {
             // create a json for root cache
             const basePath =
@@ -88,7 +90,7 @@ export class OpenAPI {
         const data = JSON.stringify(this.cache, null, 2);
         if (isQX) $prefs.setValueForKey(data, this.name);
         if (isLoon || isSurge) $persistentStore.write(data, this.name);
-        if (isGUIforCores) Plugins.$memory.set(this.name, data);
+        if (isGUIforCores) $Plugins.SubStoreCache.set(this.name, data);
         if (isNode) {
             const basePath =
                 eval('process.env.SUB_STORE_DATA_BASE_PATH') || '.';
@@ -122,7 +124,7 @@ export class OpenAPI {
                 this.root[key] = data;
             }
             if (isGUIforCores) {
-                return Plugins.$memory.set(key, data);
+                return $Plugins.SubStoreCache.set(key, data);
             }
         } else {
             this.cache[key] = data;
@@ -144,7 +146,7 @@ export class OpenAPI {
                 return this.root[key];
             }
             if (isGUIforCores) {
-                return Plugins.$memory.get(key);
+                return $Plugins.SubStoreCache.get(key);
             }
         } else {
             return this.cache[key];
@@ -165,7 +167,7 @@ export class OpenAPI {
                 delete this.root[key];
             }
             if (isGUIforCores) {
-                return Plugins.$memory.remove(key);
+                return $Plugins.SubStoreCache.remove(key);
             }
         } else {
             delete this.cache[key];
