@@ -38,6 +38,10 @@ try {
         // eslint-disable-next-line no-undef
         meta.script = $script;
     }
+    if (typeof $Plugin !== 'undefined') {
+        // eslint-disable-next-line no-undef
+        meta.plugin = $Plugin;
+    }
     if (isNode) {
         meta.node = {
             version: eval('process.version'),
@@ -52,9 +56,6 @@ try {
                 meta.node.env[key] = env[key];
             }
         }
-    }
-    if (isGUIforCores) {
-        meta.plugin = Plugin;
     }
     // eslint-disable-next-line no-empty
 } catch (e) {}
