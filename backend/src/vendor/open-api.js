@@ -376,12 +376,17 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
             worker = new Promise(async (resolve, reject) => {
                 const requestHandler = {
                     get: $Plugins.HttpGet,
+                    head: $Plugins.HttpHead,
                     post: $Plugins.HttpPost,
                     put: $Plugins.HttpPut,
                     delete: $Plugins.HttpDelete,
                 };
                 const request = requestHandler[method.toLowerCase()];
-                if (!request) reject('GUI.for.Cores未实现当前方法：' + method);
+                if (!request)
+                    reject(
+                        '[GUI.for.Cores] This method is not implemented: ' +
+                            method,
+                    );
                 try {
                     const { url, headers } = options;
                     const response = await request(url, headers, options.body);
