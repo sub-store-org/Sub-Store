@@ -1,3 +1,5 @@
+import $ from '@/core/app';
+
 const ISOFlags = {
     '🏳️‍🌈': ['EXP', 'BAND'],
     '🇸🇱': ['TEST', 'SOS'],
@@ -426,4 +428,32 @@ export function getFlag(name) {
 
 export function getISO(name) {
     return ISOFlags[getFlag(name)]?.[0];
+}
+
+export class MMDB {
+    constructor({ country, asn } = {}) {
+        if ($.env.isNode) {
+            const Reader = eval(`require("@maxmind/geoip2-node")`).Reader;
+            const fs = eval("require('fs')");
+            const countryFile =
+                country || eval('process.env.SUB_STORE_MMDB_COUNTRY_PATH');
+            const asnFile = asn || eval('process.env.SUB_STORE_MMDB_ASN_PATH');
+            if (countryFile) {
+                this.countryReader = Reader.openBuffer(
+                    fs.readFileSync(countryFile),
+                );
+            }
+            if (asnFile) {
+                if (!fs.existsSync(asnFile))
+                    throw new Error('GeoLite2 ASN MMDB does not exist');
+                this.asnReader = Reader.openBuffer(fs.readFileSync(asnFile));
+            }
+        }
+    }
+    geoip(ip) {
+        return this.countryReader?.country(ip)?.country?.isoCode;
+    }
+    ipaso(ip) {
+        return this.asnReader?.asn(ip)?.autonomousSystemOrganization;
+    }
 }
