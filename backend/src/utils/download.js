@@ -14,7 +14,13 @@ import $ from '@/core/app';
 
 const tasks = new Map();
 
-export default async function download(rawUrl, ua, timeout, proxy) {
+export default async function download(
+    rawUrl,
+    ua,
+    timeout,
+    proxy,
+    skipCustomCache,
+) {
     let $arguments = {};
     let url = rawUrl.replace(/#noFlow$/, '');
     const rawArgs = url.split('#');
@@ -38,6 +44,23 @@ export default async function download(rawUrl, ua, timeout, proxy) {
     const customCacheKey = $arguments?.cacheKey
         ? `#sub-store-cached-custom-${$arguments?.cacheKey}`
         : undefined;
+
+    if (customCacheKey && !skipCustomCache) {
+        const cached = $.read(customCacheKey);
+        if (cached) {
+            $.info(
+                `乐观缓存: URL ${url}\n本次返回自定义缓存 ${$arguments?.cacheKey}\n并进行请求 尝试更新缓存`,
+            );
+            download(
+                rawUrl.replace(/(\?|&)cacheKey=.*?(&|$)/, ''),
+                ua,
+                timeout,
+                proxy,
+                true,
+            );
+            return cached;
+        }
+    }
 
     // const downloadUrlMatch = url.match(/^\/api\/(file|module)\/(.+)/);
     // if (downloadUrlMatch) {
@@ -81,7 +104,7 @@ export default async function download(rawUrl, ua, timeout, proxy) {
 
     // try to find in app cache
     const cached = resourceCache.get(id);
-    if (!$arguments?.noCache && cached) {
+    if (!$arguments?.noCache && cached && !skipCustomCache) {
         $.info(`使用缓存: ${url}`);
         result = cached;
     } else {
@@ -120,6 +143,9 @@ export default async function download(rawUrl, ua, timeout, proxy) {
             if (shouldCache) {
                 resourceCache.set(id, body);
                 if (customCacheKey) {
+                    $.info(
+                        `URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`,
+                    );
                     $.write(body, customCacheKey);
                 }
             }
