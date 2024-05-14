@@ -376,25 +376,16 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
             });
         } else if (isGUIforCores) {
             worker = new Promise(async (resolve, reject) => {
-                const requestHandler = {
-                    get: $Plugins.HttpGet,
-                    head: $Plugins.HttpHead,
-                    post: $Plugins.HttpPost,
-                    put: $Plugins.HttpPut,
-                    delete: $Plugins.HttpDelete,
-                };
-                const request = requestHandler[method.toLowerCase()];
-                if (!request)
-                    reject(
-                        '[GUI.for.Cores] This method is not implemented: ' +
-                            method,
-                    );
                 try {
-                    const { url, headers } = options;
-                    const response = await request(url, headers, options.body);
+                    const response = await $Plugins.Requests({
+                        method,
+                        url: options.url,
+                        headers: options.headers,
+                        body: options.body,
+                    });
                     resolve({
-                        statusCode: response.status ?? 200,
-                        headers: response.header,
+                        statusCode: response.status,
+                        headers: response.headers,
                         body: response.body,
                     });
                 } catch (error) {
