@@ -31,7 +31,7 @@ Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 安装使用 覆写 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Stash.stoverride`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Stash.stoverride) 即可。
 
 ### 5. Shadowrocket
-安装使用 模块 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule) 即可。
+安装使用 模块 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule) 即可。
 
 ## 使用 Sub-Store
 1. 使用 Safari 打开这个 https://sub.store 如网页正常打开并且未弹出任何错误提示，说明 Sub-Store 已经配置成功。
