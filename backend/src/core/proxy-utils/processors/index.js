@@ -462,7 +462,7 @@ const DOMAIN_RESOLVERS = {
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const resp = await $.http.get({
-            url: `http://223.6.6.6/resolve?name=${encodeURIComponent(
+            url: `http://223.6.6.6/resolve?edns_client_subnet=223.6.6.6/24&name=${encodeURIComponent(
                 domain,
             )}&type=${type === 'IPv6' ? 'AAAA' : 'A'}&short=1`,
             headers: {
@@ -482,7 +482,7 @@ const DOMAIN_RESOLVERS = {
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const resp = await $.http.get({
-            url: `http://119.28.28.28/d?type=${
+            url: `http://119.28.28.28/d?ip=119.28.28.28&type=${
                 type === 'IPv6' ? 'AAAA' : 'A'
             }&dn=${encodeURIComponent(domain)}`,
             headers: {
