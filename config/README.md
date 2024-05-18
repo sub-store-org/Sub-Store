@@ -17,6 +17,8 @@ Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 
 1. 官方默认版模块(支持 App 内使用编辑参数): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule)
 
+> 最新版 Surge 已删除 `ability: http-client-policy` 参数, 模块暂不做修改, 对测落地功能无影响
+
 2. 经典版, 不支持编辑参数, 固定带 ability 参数版本, 使用 jsc 引擎时, 可能会爆内存, 如果需要使用指定节点功能 例如[加旗帜脚本或者cname脚本] 请使用此带 ability 参数版本: [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule)
 
 3. 经典版, 不支持编辑参数, 固定不带 ability 参数版本： [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule)
