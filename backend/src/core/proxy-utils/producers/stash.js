@@ -239,7 +239,7 @@ export default function Stash_Producer() {
                     delete proxy.tls;
                 }
                 if (proxy['tls-fingerprint']) {
-                    proxy.fingerprint = proxy['tls-fingerprint'];
+                    proxy['server-cert-fingerprint'] = proxy['tls-fingerprint'];
                 }
                 delete proxy['tls-fingerprint'];
 
