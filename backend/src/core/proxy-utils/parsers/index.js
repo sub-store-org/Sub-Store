@@ -851,6 +851,9 @@ function Clash_All() {
             }
         }
 
+        if (proxy['server-cert-fingerprint']) {
+            proxy['tls-fingerprint'] = proxy['server-cert-fingerprint'];
+        }
         if (proxy.fingerprint) {
             proxy['tls-fingerprint'] = proxy.fingerprint;
         }
