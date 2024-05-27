@@ -11,17 +11,63 @@ import { syncToGist } from '@/restful/artifacts';
 import { findByName } from '@/utils/database';
 
 !(async function () {
-    const settings = $.read(SETTINGS_KEY);
-    // if GitHub token is not configured
-    if (!settings.githubUser || !settings.gistToken) return;
+    let arg;
+    if (typeof $argument != 'undefined') {
+        arg = Object.fromEntries(
+            // eslint-disable-next-line no-undef
+            $argument.split('&').map((item) => item.split('=')),
+        );
+    } else {
+        arg = {};
+    }
+    let sub_names = (arg?.subscription ?? arg?.sub ?? '')
+        .split(/,|，/g)
+        .map((i) => i.trim())
+        .filter((i) => i.length > 0);
+    let col_names = (arg?.collection ?? arg?.col ?? '')
+        .split(/,|，/g)
+        .map((i) => i.trim())
+        .filter((i) => i.length > 0);
+    if (sub_names.length > 0 || col_names.length > 0) {
+        if (sub_names.length > 0)
+            await produceArtifacts(sub_names, 'subscription');
+        if (col_names.length > 0)
+            await produceArtifacts(col_names, 'collection');
+    } else {
+        const settings = $.read(SETTINGS_KEY);
+        // if GitHub token is not configured
+        if (!settings.githubUser || !settings.gistToken) return;
 
-    const artifacts = $.read(ARTIFACTS_KEY);
-    if (!artifacts || artifacts.length === 0) return;
+        const artifacts = $.read(ARTIFACTS_KEY);
+        if (!artifacts || artifacts.length === 0) return;
 
-    const shouldSync = artifacts.some((artifact) => artifact.sync);
-    if (shouldSync) await doSync();
+        const shouldSync = artifacts.some((artifact) => artifact.sync);
+        if (shouldSync) await doSync();
+    }
 })().finally(() => $.done());
 
+async function produceArtifacts(names, type) {
+    try {
+        if (names.length > 0) {
+            $.info(`produceArtifacts ${type} 开始: ${names.join(', ')}`);
+            await Promise.all(
+                names.map(async (name) => {
+                    try {
+                        await produceArtifact({
+                            type,
+                            name,
+                        });
+                    } catch (e) {
+                        $.error(`${type} ${name} error: ${e.message ?? e}`);
+                    }
+                }),
+            );
+            $.info(`produceArtifacts ${type} 完成: ${names.join(', ')}`);
+        }
+    } catch (e) {
+        $.error(`produceArtifacts error: ${e.message ?? e}`);
+    }
+}
 async function doSync() {
     console.log(
         `
