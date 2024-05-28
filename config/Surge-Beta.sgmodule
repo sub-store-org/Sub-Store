@@ -2,7 +2,7 @@
 #!desc=支持 Surge 正式版的参数设置功能. 测落地功能 ability: http-client-policy, 同步配置的定时 cronexp: 55 23 * * *
 #!category=订阅管理
 #!arguments=ability:http-client-policy,cronexp:55 23 * * *,sync:"Sub-Store Sync",timeout:120,engine:auto,produce:"# Sub-Store Produce",produce_cronexp:50 */6 * * *,produce_sub:"sub1,sub2",produce_col:"col1,col2"
-#!arguments-desc=\n1️⃣ ability\n\n默认已开启测落地能力\n需要配合脚本操作\n如 https://raw.githubusercontent.com/Keywos/rule/main/cname.js\n填写任意其他值关闭\n\n2️⃣ cronexp\n\n同步配置定时任务\n默认为每天 23 点 55 分\n\n定时任务指定时将订阅/文件上传到私有 Gist. 在前端, 叫做 '同步' 或 '同步配置'\n\n3️⃣ sync\n\n自定义定时任务名\n便于在脚本编辑器中选择\n若设为 # 可取消定时任务\n\n4️⃣ timeout\n\n超时, 单位为秒\n\n5️⃣ engine\n\n默认为自动使用 webview 引擎, 可设为指定 jsc, 但 jsc 容易爆内存\n\n6️⃣ produce\n\n自定义处理订阅的定时任务名\n一般用于定时处理耗时较长的订阅, 以更新缓存\n这样 Surge 中拉取的时候就能用到缓存, 不至于总是超时\n若设为 # 可取消此定时任务\n默认不开启\n\n7️⃣ produce_cronexp\n\n配置处理订阅的定时任务\n\n默认为每 6 小时\n\n9️⃣ produce_sub\n\n自定义需定时处理的单条订阅名\n多个用 , 连接\n\n🔟produce_col\n\n自定义需定时处理的组合订阅名\n多个用 , 连接
+#!arguments-desc=\n1️⃣ ability\n\n默认已开启测落地能力\n需要配合脚本操作\n如 https://raw.githubusercontent.com/Keywos/rule/main/cname.js\n填写任意其他值关闭\n\n2️⃣ cronexp\n\n同步配置定时任务\n默认为每天 23 点 55 分\n\n定时任务指定时将订阅/文件上传到私有 Gist. 在前端, 叫做 '同步' 或 '同步配置'\n\n3️⃣ sync\n\n自定义定时任务名\n便于在脚本编辑器中选择\n若设为 # 可取消定时任务\n\n4️⃣ timeout\n\n脚本超时, 单位为秒\n\n5️⃣ engine\n\n默认为自动使用 webview 引擎, 可设为指定 jsc, 但 jsc 容易爆内存\n\n6️⃣ produce\n\n自定义处理订阅的定时任务名\n一般用于定时处理耗时较长的订阅, 以更新缓存\n这样 Surge 中拉取的时候就能用到缓存, 不至于总是超时\n若设为 # 可取消此定时任务\n默认不开启\n\n7️⃣ produce_cronexp\n\n配置处理订阅的定时任务\n\n默认为每 6 小时\n\n9️⃣ produce_sub\n\n自定义需定时处理的单条订阅名\n多个用 , 连接\n\n🔟 produce_col\n\n自定义需定时处理的组合订阅名\n多个用 , 连接\n\n⚠️ 注意: 是 名称(name) 不是 显示名称(displayName)\n如果名称需要编码, 请编码后再用 , 连接\n顺序: 并发执行单条订阅, 然后并发执行组合订阅
 
 [MITM]
 hostname = %APPEND% sub.store
