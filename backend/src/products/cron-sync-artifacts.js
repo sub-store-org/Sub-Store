@@ -23,11 +23,13 @@ import { findByName } from '@/utils/database';
     let sub_names = (arg?.subscription ?? arg?.sub ?? '')
         .split(/,|，/g)
         .map((i) => i.trim())
-        .filter((i) => i.length > 0);
+        .filter((i) => i.length > 0)
+        .map((i) => decodeURIComponent(i));
     let col_names = (arg?.collection ?? arg?.col ?? '')
         .split(/,|，/g)
         .map((i) => i.trim())
-        .filter((i) => i.length > 0);
+        .filter((i) => i.length > 0)
+        .map((i) => decodeURIComponent(i));
     if (sub_names.length > 0 || col_names.length > 0) {
         if (sub_names.length > 0)
             await produceArtifacts(sub_names, 'subscription');
