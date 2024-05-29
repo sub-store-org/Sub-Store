@@ -14,6 +14,7 @@ const ipVersions = {
 
 export default function Surge_Producer() {
     const produce = (proxy, type, opts = {}) => {
+        proxy.name = proxy.name.replace(/=|,/g, '');
         switch (proxy.type) {
             case 'ss':
                 return shadowsocks(proxy);
