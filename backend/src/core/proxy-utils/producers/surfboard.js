@@ -6,7 +6,7 @@ const targetPlatform = 'Surfboard';
 
 export default function Surfboard_Producer() {
     const produce = (proxy) => {
-        proxy.name = proxy.name.replace(/=/g, '');
+        proxy.name = proxy.name.replace(/=|,/g, '');
         switch (proxy.type) {
             case 'ss':
                 return shadowsocks(proxy);
