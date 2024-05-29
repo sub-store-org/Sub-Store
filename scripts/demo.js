@@ -7,7 +7,7 @@ function operator(proxies = [], targetPlatform, context) {
   // proxies 为传入的内部节点数组
   // 结构大致参考了 Clash.Meta(mihomo) 有私货
   // 可在预览界面点击节点查看 JSON 结构 或查看 `target=JSON` 的通用订阅
-  // 1. `no-resolve` 为不解析域名
+  // 1. `_no-resolve` 为不解析域名
   // 2. 域名解析后 会多一个 `_resolved` 字段
   // 3. 域名解析后会有`_IPv4`, `_IPv6`, `_IP`(若有多个步骤, 只取第一次成功的 v4 或 v6 数据), `_domain` 字段
   // 4. 节点字段 `exec` 为 `ssr-local` 路径, 默认 `/usr/local/bin/ssr-local`; 端口从 10000 开始递增(暂不支持配置)

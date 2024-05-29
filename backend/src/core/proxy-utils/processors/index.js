@@ -512,12 +512,17 @@ function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
     return {
         name: 'Resolve Domain Operator',
         func: async (proxies) => {
+            proxies.forEach((p, i) => {
+                if (!p['_no-resolve'] && p['no-resolve']) {
+                    proxies[i]['_no-resolve'] = p['no-resolve'];
+                }
+            });
             const results = {};
             const limit = 15; // more than 20 concurrency may result in surge TCP connection shortage.
             const totalDomain = [
                 ...new Set(
                     proxies
-                        .filter((p) => !isIP(p.server) && !p['no-resolve'])
+                        .filter((p) => !isIP(p.server) && !p['_no-resolve'])
                         .map((c) => c.server),
                 ),
             ];
@@ -543,7 +548,7 @@ function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
                 await Promise.all(currentBatch);
             }
             proxies.forEach((p) => {
-                if (!p['no-resolve']) {
+                if (!p['_no-resolve']) {
                     if (results[p.server]) {
                         if (_type === 'IP4P') {
                             const { server, port } = parseIP4P(
@@ -578,7 +583,7 @@ function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
 
             return proxies.filter((p) => {
                 if (filter === 'removeFailed') {
-                    return isIP(p.server) || p['no-resolve'] || p.resolved;
+                    return isIP(p.server) || p['_no-resolve'] || p.resolved;
                 } else if (filter === 'IPOnly') {
                     return isIP(p.server);
                 } else if (filter === 'IPv4Only') {
