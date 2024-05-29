@@ -158,6 +158,7 @@ export default function Clash_Producer() {
                 delete proxy.collectionName;
                 delete proxy.id;
                 delete proxy.resolved;
+                delete proxy['no-resolve'];
                 for (const key in proxy) {
                     if (proxy[key] == null || /^_/i.test(key)) {
                         delete proxy[key];
