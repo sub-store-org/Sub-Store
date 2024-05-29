@@ -199,6 +199,10 @@ function produce(proxies, targetPlatform, type, opts = {}) {
     );
 
     proxies = proxies.map((proxy) => {
+        proxy._subName = proxy.subName;
+        proxy._collectionName = proxy.collectionName;
+        proxy._resolved = proxy.resolved;
+
         if (!isNotBlank(proxy.name)) {
             proxy.name = `${proxy.type} ${proxy.server}:${proxy.port}`;
         }

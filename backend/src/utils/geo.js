@@ -438,11 +438,21 @@ export class MMDB {
             const countryFile =
                 country || eval('process.env.SUB_STORE_MMDB_COUNTRY_PATH');
             const asnFile = asn || eval('process.env.SUB_STORE_MMDB_ASN_PATH');
+            // $.info(
+            //     `GeoLite2 Country MMDB: ${countryFile}, exists: ${fs.existsSync(
+            //         countryFile,
+            //     )}`,
+            // );
             if (countryFile) {
                 this.countryReader = Reader.openBuffer(
                     fs.readFileSync(countryFile),
                 );
             }
+            // $.info(
+            //     `GeoLite2 ASN MMDB: ${asnFile}, exists: ${fs.existsSync(
+            //         asnFile,
+            //     )}`,
+            // );
             if (asnFile) {
                 if (!fs.existsSync(asnFile))
                     throw new Error('GeoLite2 ASN MMDB does not exist');
