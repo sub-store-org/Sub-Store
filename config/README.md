@@ -6,12 +6,20 @@ Sub-Store Releases: [`https://github.com/sub-store-org/Sub-Store/releases`](http
 
 Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 
-## 脚本配置：
+## 服务器/云平台/Docker/Android 版
+
+https://xream.notion.site/Sub-Store-abe6a96944724dc6a36833d5c9ab7c87
+
+## App 版
 
 ### 1. Loon
 安装使用 插件 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin) 即可。
 
 ### 2. Surge
+
+#### 关于 Surge 的格外说明
+
+Surge Mac 版如何支持 SSR, 如何去除 HTTP 传输层以支持 类似 VMess HTTP 节点等 请查看 [链接参数说明](https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E)
 
 0. 最新 Surge iOS TestFlight 版本 可使用 Beta 版(支持最新 Surge iOS TestFlight 版本的特性): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Beta.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Beta.sgmodule)
 
@@ -39,3 +47,11 @@ Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
 1. 使用 Safari 打开这个 https://sub.store 如网页正常打开并且未弹出任何错误提示，说明 Sub-Store 已经配置成功。
 2. 可以把 Sub-Store 添加到主屏幕，即可获得类似于 APP 的使用体验。
 3. 更详细的使用指南请参考[文档](https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46)。
+
+## 链接参数说明
+
+https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E
+
+## 脚本使用说明
+
+https://github.com/sub-store-org/Sub-Store/wiki/%E8%84%9A%E6%9C%AC%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E
