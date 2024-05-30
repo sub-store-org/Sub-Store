@@ -340,6 +340,8 @@ function URI_VMess() {
                         transportPath = Array.isArray(transportPath)
                             ? transportPath[0]
                             : transportPath;
+                    } else {
+                        transportPath = '/';
                     }
                 }
                 if (transportPath || transportHost) {
