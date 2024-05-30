@@ -57,7 +57,11 @@ export default async function download(
                 timeout,
                 proxy,
                 true,
-            );
+            ).catch((e) => {
+                $.error(
+                    `乐观缓存: URL ${url} 更新缓存发生错误 ${e.message ?? e}`,
+                );
+            });
             return cached;
         }
     }
