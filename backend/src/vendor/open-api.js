@@ -382,6 +382,12 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                         url: options.url,
                         headers: options.headers,
                         body: options.body,
+                        options: {
+                            Proxy: options.proxy,
+                            Timeout: options.timeout
+                                ? options.timeout / 1000
+                                : 15,
+                        },
                     });
                     resolve({
                         statusCode: response.status,
