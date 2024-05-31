@@ -108,9 +108,13 @@ export default async function download(
 
     // try to find in app cache
     const cached = resourceCache.get(id);
-    if (!$arguments?.noCache && cached && !skipCustomCache) {
+    if (!$arguments?.noCache && cached) {
         $.info(`使用缓存: ${url}`);
         result = cached;
+        if (customCacheKey) {
+            $.info(`URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`);
+            $.write(cached, customCacheKey);
+        }
     } else {
         $.info(
             `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nURL: ${url}`,
