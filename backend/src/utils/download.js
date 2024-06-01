@@ -20,6 +20,7 @@ export default async function download(
     timeout,
     proxy,
     skipCustomCache,
+    awaitCustomCache,
 ) {
     let $arguments = {};
     let url = rawUrl.replace(/#noFlow$/, '');
@@ -41,28 +42,65 @@ export default async function download(
             }
         }
     }
+    const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
+    const { defaultUserAgent, defaultTimeout, cacheThreshold } =
+        $.read(SETTINGS_KEY);
+    const userAgent = ua || defaultUserAgent || 'clash.meta';
+    const requestTimeout = timeout || defaultTimeout;
+    const id = hex_md5(userAgent + url);
+
     const customCacheKey = $arguments?.cacheKey
         ? `#sub-store-cached-custom-${$arguments?.cacheKey}`
         : undefined;
 
     if (customCacheKey && !skipCustomCache) {
-        const cached = $.read(customCacheKey);
-        if (cached) {
+        const customCached = $.read(customCacheKey);
+        const cached = resourceCache.get(id);
+        if (!$arguments?.noCache && cached) {
             $.info(
-                `乐观缓存: URL ${url}\n本次返回自定义缓存 ${$arguments?.cacheKey}\n并进行请求 尝试更新缓存`,
+                `乐观缓存: URL ${url}\n存在有效的常规缓存\n使用常规缓存以避免重复请求`,
             );
-            download(
-                rawUrl.replace(/(\?|&)cacheKey=.*?(&|$)/, ''),
-                ua,
-                timeout,
-                proxy,
-                true,
-            ).catch((e) => {
-                $.error(
-                    `乐观缓存: URL ${url} 更新缓存发生错误 ${e.message ?? e}`,
-                );
-            });
             return cached;
+        }
+        if (customCached) {
+            if (awaitCustomCache) {
+                $.info(`乐观缓存: URL ${url}\n本次进行请求 尝试更新缓存`);
+                try {
+                    await download(
+                        rawUrl.replace(/(\?|&)cacheKey=.*?(&|$)/, ''),
+                        ua,
+                        timeout,
+                        proxy,
+                        true,
+                    );
+                } catch (e) {
+                    $.error(
+                        `乐观缓存: URL ${url} 更新缓存发生错误 ${
+                            e.message ?? e
+                        }`,
+                    );
+                    $.info('使用乐观缓存的数据刷新缓存, 防止后续请求');
+                    resourceCache.set(id, customCached);
+                }
+            } else {
+                $.info(
+                    `乐观缓存: URL ${url}\n本次返回自定义缓存 ${$arguments?.cacheKey}\n并进行请求 尝试异步更新缓存`,
+                );
+                download(
+                    rawUrl.replace(/(\?|&)cacheKey=.*?(&|$)/, ''),
+                    ua,
+                    timeout,
+                    proxy,
+                    true,
+                ).catch((e) => {
+                    $.error(
+                        `乐观缓存: URL ${url} 异步更新缓存发生错误 ${
+                            e.message ?? e
+                        }`,
+                    );
+                });
+            }
+            return customCached;
         }
     }
 
@@ -83,12 +121,6 @@ export default async function download(
     //     return item.content;
     // }
 
-    const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
-    const { defaultUserAgent, defaultTimeout, cacheThreshold } =
-        $.read(SETTINGS_KEY);
-    const userAgent = ua || defaultUserAgent || 'clash.meta';
-    const requestTimeout = timeout || defaultTimeout;
-    const id = hex_md5(userAgent + url);
     if (!isNode && tasks.has(id)) {
         return tasks.get(id);
     }
