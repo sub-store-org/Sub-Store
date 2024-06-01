@@ -36,6 +36,7 @@ async function produceArtifact({
     produceType,
     produceOpts = {},
     subscription,
+    awaitCustomCache,
 }) {
     platform = platform || 'JSON';
 
@@ -67,6 +68,8 @@ async function produceArtifact({
                                 ua || sub.ua,
                                 undefined,
                                 sub.proxy,
+                                undefined,
+                                awaitCustomCache,
                             );
                         } catch (err) {
                             errors[url] = err;
@@ -112,6 +115,8 @@ async function produceArtifact({
                                 ua || sub.ua,
                                 undefined,
                                 sub.proxy,
+                                undefined,
+                                awaitCustomCache,
                             );
                         } catch (err) {
                             errors[url] = err;
