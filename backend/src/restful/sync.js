@@ -508,6 +508,7 @@ async function syncArtifacts() {
                         await produceArtifact({
                             type: 'subscription',
                             name: subName,
+                            awaitCustomCache: true,
                         });
                     } catch (e) {
                         // $.error(`${e.message ?? e}`);
