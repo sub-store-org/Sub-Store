@@ -40,12 +40,15 @@ function operator(proxies = [], targetPlatform, context) {
   //     isIP,
   //     yaml, // yaml 解析和生成
   //     getFlag, // 获取 emoji 旗帜
+  //     removeFlag, // 移除 emoji 旗帜
   //     getISO, // 获取 ISO 3166-1 alpha-2 代码
   //     Gist, // Gist 类
   // }
 
   // 示例: 给节点名添加前缀
   // $server.name = `[${ProxyUtils.getISO($server.name)}] ${$server.name}`
+  // 示例: 给节点名添加旗帜
+  // $server.name = `[${ProxyUtils.getFlag($server.name).replace(/🇹🇼/g, '🇼🇸')}] ${ProxyUtils.removeFlag($server.name)}`
 
   // 示例: 从 sni 文件中读取内容并进行节点操作
   // const sni = await produceArtifact({

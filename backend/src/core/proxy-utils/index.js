@@ -15,7 +15,7 @@ import $ from '@/core/app';
 import { FILES_KEY, MODULES_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
-import { getFlag, getISO, MMDB } from '@/utils/geo';
+import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
 import Gist from '@/utils/gist';
 
 function preprocess(raw) {
@@ -276,6 +276,7 @@ export const ProxyUtils = {
     isIP,
     yaml: YAML,
     getFlag,
+    removeFlag,
     getISO,
     MMDB,
     Gist,
