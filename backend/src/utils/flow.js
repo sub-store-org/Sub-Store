@@ -10,8 +10,8 @@ export function getFlowField(headers) {
     )[0];
     return headers[subkey];
 }
-export async function getFlowHeaders(rawUrl, ua, timeout, proxy) {
-    let url = rawUrl;
+export async function getFlowHeaders(rawUrl, ua, timeout, proxy, flowUrl) {
+    let url = flowUrl || rawUrl;
     let $arguments = {};
     const rawArgs = url.split('#');
     url = url.split('#')[0];
@@ -48,60 +48,76 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy) {
             'Quantumult%20X/1.0.30 (iPhone14,2; iOS 15.6)';
         const requestTimeout = timeout || defaultTimeout;
         const http = HTTP();
-        try {
+        if (flowUrl) {
             $.info(
-                `使用 HEAD 方法获取流量信息: ${url}, User-Agent: ${
+                `使用 GET 方法从响应体获取流量信息: ${flowUrl}, User-Agent: ${
                     userAgent || ''
                 }`,
             );
-            const { headers } = await http.head({
-                url: url
-                    .split(/[\r\n]+/)
-                    .map((i) => i.trim())
-                    .filter((i) => i.length)[0],
-                headers: {
-                    'User-Agent': userAgent,
-                    ...(isStash && proxy
-                        ? {
-                              'X-Stash-Selected-Proxy':
-                                  encodeURIComponent(proxy),
-                          }
-                        : {}),
-                    ...(isShadowRocket && proxy
-                        ? { 'X-Surge-Policy': proxy }
-                        : {}),
-                },
-                timeout: requestTimeout,
-                ...(proxy ? { proxy } : {}),
-                ...(isLoon && proxy ? { node: proxy } : {}),
-                ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
-                ...(proxy ? getPolicyDescriptor(proxy) : {}),
-            });
-            flowInfo = getFlowField(headers);
-        } catch (e) {
-            $.error(
-                `使用 HEAD 方法获取流量信息失败: ${url}, User-Agent: ${
-                    userAgent || ''
-                }: ${e.message ?? e}`,
-            );
-        }
-        if (!flowInfo) {
-            $.info(
-                `使用 GET 方法获取流量信息: ${url}, User-Agent: ${
-                    userAgent || ''
-                }`,
-            );
-            const { headers } = await http.get({
-                url: url
-                    .split(/[\r\n]+/)
-                    .map((i) => i.trim())
-                    .filter((i) => i.length)[0],
+            const { body } = await http.get({
+                url: flowUrl,
                 headers: {
                     'User-Agent': userAgent,
                 },
                 timeout: requestTimeout,
             });
-            flowInfo = getFlowField(headers);
+            flowInfo = body;
+        } else {
+            try {
+                $.info(
+                    `使用 HEAD 方法从响应头获取流量信息: ${url}, User-Agent: ${
+                        userAgent || ''
+                    }`,
+                );
+                const { headers } = await http.head({
+                    url: url
+                        .split(/[\r\n]+/)
+                        .map((i) => i.trim())
+                        .filter((i) => i.length)[0],
+                    headers: {
+                        'User-Agent': userAgent,
+                        ...(isStash && proxy
+                            ? {
+                                  'X-Stash-Selected-Proxy':
+                                      encodeURIComponent(proxy),
+                              }
+                            : {}),
+                        ...(isShadowRocket && proxy
+                            ? { 'X-Surge-Policy': proxy }
+                            : {}),
+                    },
+                    timeout: requestTimeout,
+                    ...(proxy ? { proxy } : {}),
+                    ...(isLoon && proxy ? { node: proxy } : {}),
+                    ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
+                    ...(proxy ? getPolicyDescriptor(proxy) : {}),
+                });
+                flowInfo = getFlowField(headers);
+            } catch (e) {
+                $.error(
+                    `使用 HEAD 方法从响应头获取流量信息失败: ${url}, User-Agent: ${
+                        userAgent || ''
+                    }: ${e.message ?? e}`,
+                );
+            }
+            if (!flowInfo) {
+                $.info(
+                    `使用 GET 方法获取流量信息: ${url}, User-Agent: ${
+                        userAgent || ''
+                    }`,
+                );
+                const { headers } = await http.get({
+                    url: url
+                        .split(/[\r\n]+/)
+                        .map((i) => i.trim())
+                        .filter((i) => i.length)[0],
+                    headers: {
+                        'User-Agent': userAgent,
+                    },
+                    timeout: requestTimeout,
+                });
+                flowInfo = getFlowField(headers);
+            }
         }
         if (flowInfo) {
             headersResourceCache.set(url, flowInfo);

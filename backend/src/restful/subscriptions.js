@@ -118,6 +118,7 @@ async function getFlowInfo(req, res) {
                 $arguments.flowUserAgent,
                 undefined,
                 sub.proxy,
+                $arguments.flowUrl,
             );
             if (!flowHeaders) {
                 failed(
