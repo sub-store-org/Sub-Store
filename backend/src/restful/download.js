@@ -156,6 +156,7 @@ async function downloadSubscription(req, res) {
                             $arguments.flowUserAgent,
                             undefined,
                             sub.proxy,
+                            $arguments.flowUrl,
                         );
                         if (flowInfo) {
                             res.set('subscription-userinfo', flowInfo);
@@ -314,6 +315,7 @@ async function downloadCollection(req, res) {
                                 $arguments.flowUserAgent,
                                 undefined,
                                 sub.proxy,
+                                $arguments.flowUrl,
                             );
                             if (flowInfo) {
                                 res.set('subscription-userinfo', flowInfo);

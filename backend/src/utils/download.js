@@ -217,6 +217,7 @@ export default async function download(
                     $arguments.flowUserAgent,
                     undefined,
                     proxy,
+                    $arguments.flowUrl,
                 ),
             ),
         );
