@@ -2,7 +2,7 @@ import resourceCache from '@/utils/resource-cache';
 import scriptResourceCache from '@/utils/script-resource-cache';
 import { isIPv4, isIPv6 } from '@/utils';
 import { FULL } from '@/utils/logical';
-import { getFlag } from '@/utils/geo';
+import { getFlag, removeFlag } from '@/utils/geo';
 import lodash from 'lodash';
 import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
@@ -867,13 +867,6 @@ function shuffle(array) {
 // deep clone object
 function clone(object) {
     return JSON.parse(JSON.stringify(object));
-}
-
-// remove flag
-function removeFlag(str) {
-    return str
-        .replace(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]|🏴‍☠️|🏳️‍🌈/g, '')
-        .trim();
 }
 
 function createDynamicFunction(name, script, $arguments) {

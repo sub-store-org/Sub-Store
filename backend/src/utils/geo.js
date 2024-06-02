@@ -430,6 +430,13 @@ export function getISO(name) {
     return ISOFlags[getFlag(name)]?.[0];
 }
 
+// remove flag
+export function removeFlag(str) {
+    return str
+        .replace(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]|🏴‍☠️|🏳️‍🌈/g, '')
+        .trim();
+}
+
 export class MMDB {
     constructor({ country, asn } = {}) {
         if ($.env.isNode) {
