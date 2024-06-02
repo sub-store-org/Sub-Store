@@ -438,6 +438,24 @@ function lastParse(proxy) {
             }
         }
     }
+    if (['ws', 'http', 'h2'].includes(proxy.network)) {
+        if (
+            ['ws', 'h2'].includes(proxy.network) &&
+            !proxy[`${proxy.network}-opts`]?.path
+        ) {
+            proxy[`${proxy.network}-opts`] =
+                proxy[`${proxy.network}-opts`] || {};
+            proxy[`${proxy.network}-opts`].path = '/';
+        } else if (
+            proxy.network === 'http' &&
+            (!Array.isArray(proxy[`${proxy.network}-opts`]?.path) ||
+                proxy[`${proxy.network}-opts`]?.path.every((i) => !i))
+        ) {
+            proxy[`${proxy.network}-opts`] =
+                proxy[`${proxy.network}-opts`] || {};
+            proxy[`${proxy.network}-opts`].path = ['/'];
+        }
+    }
     if (['', 'off'].includes(proxy.sni)) {
         proxy['disable-sni'] = true;
     }
