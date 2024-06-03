@@ -305,8 +305,9 @@ function URI_VMess() {
             if (params.net === 'ws' || params.obfs === 'websocket') {
                 proxy.network = 'ws';
             } else if (
-                ['tcp', 'http'].includes(params.net) ||
-                params.obfs === 'http'
+                ['http'].includes(params.net) ||
+                ['http'].includes(params.obfs) ||
+                ['http'].includes(params.type)
             ) {
                 proxy.network = 'http';
             } else if (['grpc'].includes(params.net)) {
@@ -317,6 +318,8 @@ function URI_VMess() {
             ) {
                 proxy.network = 'ws';
                 httpupgrade = true;
+            } else if (params.net === 'h2' || proxy.network === 'h2') {
+                proxy.network = 'h2';
             }
             if (proxy.network) {
                 let transportHost = params.host ?? params.obfsParam;
@@ -332,6 +335,10 @@ function URI_VMess() {
 
                 if (proxy.network === 'http') {
                     if (transportHost) {
+                        // 1)http(tcp)->host中间逗号(,)隔开
+                        transportHost = transportHost
+                            .split(',')
+                            .map((i) => i.trim());
                         transportHost = Array.isArray(transportHost)
                             ? transportHost[0]
                             : transportHost;
