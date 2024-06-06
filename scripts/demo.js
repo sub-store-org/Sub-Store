@@ -103,7 +103,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 4. 一个比较折腾的方案: 在脚本操作中, 把内容同步到另一个 gist
   // 见 https://t.me/zhetengsha/1428
   // 
-  // const content = ProxyUtils.produce(proxies, platform)
+  // const content = ProxyUtils.produce([...proxies], platform)
 
   // // YAML
   // ProxyUtils.yaml.load('YAML String')
