@@ -123,10 +123,11 @@ async function downloadSubscription(req, res) {
                 ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
             ) {
                 try {
-                    url = `${url || sub.url}`
-                        .split(/[\r\n]+/)
-                        .map((i) => i.trim())
-                        .filter((i) => i.length)?.[0];
+                    url =
+                        `${url || sub.url}`
+                            .split(/[\r\n]+/)
+                            .map((i) => i.trim())
+                            .filter((i) => i.length)?.[0] || '';
 
                     let $arguments = {};
                     const rawArgs = url.split('#');
@@ -283,10 +284,11 @@ async function downloadCollection(req, res) {
                     ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
                 ) {
                     try {
-                        let url = `${sub.url}`
-                            .split(/[\r\n]+/)
-                            .map((i) => i.trim())
-                            .filter((i) => i.length)?.[0];
+                        let url =
+                            `${sub.url}`
+                                .split(/[\r\n]+/)
+                                .map((i) => i.trim())
+                                .filter((i) => i.length)?.[0] || '';
 
                         let $arguments = {};
                         const rawArgs = url.split('#');

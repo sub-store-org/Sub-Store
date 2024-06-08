@@ -11,7 +11,7 @@ export function getFlowField(headers) {
     return headers[subkey];
 }
 export async function getFlowHeaders(rawUrl, ua, timeout, proxy, flowUrl) {
-    let url = flowUrl || rawUrl;
+    let url = flowUrl || rawUrl || '';
     let $arguments = {};
     const rawArgs = url.split('#');
     url = url.split('#')[0];

@@ -15,7 +15,7 @@ import $ from '@/core/app';
 const tasks = new Map();
 
 export default async function download(
-    rawUrl,
+    rawUrl = '',
     ua,
     timeout,
     proxy,
