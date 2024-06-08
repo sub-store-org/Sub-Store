@@ -83,7 +83,7 @@ async function processFn(proxies, operators = [], targetPlatform, source) {
             const { mode, content } = item.args;
             if (mode === 'link') {
                 let noCache;
-                let url = content;
+                let url = content || '';
                 if (url.endsWith('#noCache')) {
                     url = url.replace(/#noCache$/, '');
                     noCache = true;
