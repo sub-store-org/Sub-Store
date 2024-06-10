@@ -34,6 +34,11 @@ export default function register($app) {
 async function getFlowInfo(req, res) {
     let { name } = req.params;
     name = decodeURIComponent(name);
+    let { url } = req.query;
+    if (url) {
+        url = decodeURIComponent(url);
+        $.info(`指定远程订阅 URL: ${url}`);
+    }
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
     if (!sub) {
@@ -68,8 +73,8 @@ async function getFlowInfo(req, res) {
         return;
     }
     try {
-        let url =
-            `${sub.url}`
+        url =
+            `${url || sub.url}`
                 .split(/[\r\n]+/)
                 .map((i) => i.trim())
                 .filter((i) => i.length)?.[0] || '';
