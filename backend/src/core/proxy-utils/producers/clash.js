@@ -133,9 +133,13 @@ export default function Clash_Producer() {
                     }
                 }
                 if (
-                    ['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(
-                        proxy.type,
-                    )
+                    [
+                        'trojan',
+                        'tuic',
+                        'hysteria',
+                        'hysteria2',
+                        'juicity',
+                    ].includes(proxy.type)
                 ) {
                     delete proxy.tls;
                 }

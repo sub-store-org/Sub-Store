@@ -338,7 +338,11 @@ function lastParse(proxy) {
             proxy.network = 'tcp';
         }
     }
-    if (['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(proxy.type)) {
+    if (
+        ['trojan', 'tuic', 'hysteria', 'hysteria2', 'juicity'].includes(
+            proxy.type,
+        )
+    ) {
         proxy.tls = true;
     }
     if (proxy.network) {
