@@ -21,6 +21,8 @@ export default function Stash_Producer() {
                         'wireguard',
                         'hysteria',
                         'hysteria2',
+                        'ssh',
+                        'juicity',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ![
@@ -232,9 +234,13 @@ export default function Stash_Producer() {
                     }
                 }
                 if (
-                    ['trojan', 'tuic', 'hysteria', 'hysteria2'].includes(
-                        proxy.type,
-                    )
+                    [
+                        'trojan',
+                        'tuic',
+                        'hysteria',
+                        'hysteria2',
+                        'juicity',
+                    ].includes(proxy.type)
                 ) {
                     delete proxy.tls;
                 }
