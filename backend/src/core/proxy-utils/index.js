@@ -1,3 +1,4 @@
+import rs from '@/utils/rs';
 import YAML from '@/utils/yaml';
 import download from '@/utils/download';
 import {
@@ -462,6 +463,19 @@ function lastParse(proxy) {
     }
     if (['', 'off'].includes(proxy.sni)) {
         proxy['disable-sni'] = true;
+    }
+    let caStr = proxy['ca_str'];
+    if (proxy['ca-str']) {
+        caStr = proxy['ca-str'];
+    } else if (caStr) {
+        delete proxy['ca_str'];
+        proxy['ca-str'] = caStr;
+    }
+    // if ($.env.isNode && !caStr && proxy.ca) {
+    //     caStr = $.node.fs.readFileSync(proxy.ca, { encoding: 'utf8' });
+    // }
+    if (!proxy.fingerprint && caStr) {
+        proxy.fingerprint = rs.generateFingerprint(caStr);
     }
     return proxy;
 }
