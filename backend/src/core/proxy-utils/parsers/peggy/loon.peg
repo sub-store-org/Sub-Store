@@ -66,7 +66,7 @@ trojan = tag equals "trojan"i address password (transport/transport_host/transpo
     proxy.type = "trojan";
     handleTransport();
 }
-hysteria2 = tag equals "hysteria2"i address password (tls_host/tls_verification/udp_relay/fast_open/download_bandwidth/ecn/others)* {
+hysteria2 = tag equals "hysteria2"i address password (tls_host/tls_verification/udp_relay/fast_open/download_bandwidth/salamander_password/ecn/others)* {
     proxy.type = "hysteria2";
 }
 https = tag equals "https"i address (username password)? (tls_host/tls_verification/fast_open/udp_relay/others)* {
@@ -176,6 +176,7 @@ udp_relay = comma "udp" equals flag:bool { proxy.udp = flag; }
 
 ecn = comma "ecn" equals flag:bool { proxy.ecn = flag; }
 download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down = match.join(""); }
+salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join(""); proxy.obfs = 'salamander'; }
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
 comma = _ "," _
