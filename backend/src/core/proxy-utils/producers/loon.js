@@ -424,7 +424,7 @@ function hysteria2(proxy) {
     );
 
     if (proxy['obfs-password'] && proxy.obfs == 'salamander') {
-        result.append(`,salamander-password="${proxy['obfs-password']}"`);
+        result.append(`,salamander-password=${proxy['obfs-password']}`);
     }
 
     // tfo
