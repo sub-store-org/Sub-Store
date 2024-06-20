@@ -8,11 +8,16 @@ function operator(proxies = [], targetPlatform, context) {
   // 结构大致参考了 Clash.Meta(mihomo) 有私货
   // 可在预览界面点击节点查看 JSON 结构 或查看 `target=JSON` 的通用订阅
   // 1. `_no-resolve` 为不解析域名
-  // 2. 域名解析后 会多一个 `_resolved` 字段
-  // 3. 域名解析后会有`_IPv4`, `_IPv6`, `_IP`(若有多个步骤, 只取第一次成功的 v4 或 v6 数据), `_domain` 字段
+  // 2. 域名解析后 会多一个 `_resolved` 字段, 表示是否解析成功
+  // 3. 域名解析后会有`_IPv4`, `_IPv6`, `_IP`(若有多个步骤, 只取第一次成功的 v4 或 v6 数据), `_domain` 字段, `_resolved_ips` 为解析出的所有 IP
   // 4. 节点字段 `exec` 为 `ssr-local` 路径, 默认 `/usr/local/bin/ssr-local`; 端口从 10000 开始递增(暂不支持配置)
   // 5. `_subName` 为单条订阅名
   // 6. `_collectionName` 为组合订阅名
+  // 7. `tls-fingerprint` 为 tls 指纹
+  // 8. `underlying-proxy` 为前置代理
+  // 9. `trojan`, `tuic`, `hysteria`, `hysteria2`, `juicity` 会在解析时设置 `tls`: true (会使用 tls 类协议的通用逻辑),  输出时删除
+  // 10. `sni` 在某些协议里会自动与 `servername` 转换
+  // 11. 读取节点的 ca-str 和 _ca (后端文件路径) 字段, 自动计算 fingerprint (参考 https://t.me/zhetengsha/1512)
 
   // $arguments 为传入的脚本参数
 
