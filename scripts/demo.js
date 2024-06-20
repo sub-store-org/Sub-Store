@@ -5,8 +5,8 @@ function operator(proxies = [], targetPlatform, context) {
 
 
   // proxies 为传入的内部节点数组
-  // 结构大致参考了 Clash.Meta(mihomo) 有私货
   // 可在预览界面点击节点查看 JSON 结构 或查看 `target=JSON` 的通用订阅
+  // 0. 结构大致参考了 Clash.Meta(mihomo), 可参考 mihomo 的文档, 例如 `xudp`, `smux` 都可以自己设置. 但是有私货, 下面是我能想起来的一些私货
   // 1. `_no-resolve` 为不解析域名
   // 2. 域名解析后 会多一个 `_resolved` 字段, 表示是否解析成功
   // 3. 域名解析后会有`_IPv4`, `_IPv6`, `_IP`(若有多个步骤, 只取第一次成功的 v4 或 v6 数据), `_domain` 字段, `_resolved_ips` 为解析出的所有 IP
@@ -18,6 +18,9 @@ function operator(proxies = [], targetPlatform, context) {
   // 9. `trojan`, `tuic`, `hysteria`, `hysteria2`, `juicity` 会在解析时设置 `tls`: true (会使用 tls 类协议的通用逻辑),  输出时删除
   // 10. `sni` 在某些协议里会自动与 `servername` 转换
   // 11. 读取节点的 ca-str 和 _ca (后端文件路径) 字段, 自动计算 fingerprint (参考 https://t.me/zhetengsha/1512)
+  // 12. 以 Surge 为例, 最新的参数一般我都会跟进, 以 Surge 文档为例, 一些常用的: TUIC/Hysteria 2 的 `ecn`, Snell 的 `reuse` 连接复用, QUIC 策略 block-quic`, Hysteria 2 下载带宽 `down`
+  // 
+  // 如果只是为了快速修改或者筛选 可以参考 脚本操作支持节点快捷脚本 https://t.me/zhetengsha/970 和 脚本筛选支持节点快捷脚本 https://t.me/zhetengsha/1009
 
   // $arguments 为传入的脚本参数
 
