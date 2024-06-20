@@ -406,10 +406,13 @@ const DOMAIN_RESOLVERS = {
             throw new Error(`Status is ${body['Status']}`);
         }
         const answers = body['Answer'];
-        if (answers.length === 0) {
+        if (!Array.isArray(answers) || answers.length === 0) {
             throw new Error('No answers');
         }
-        const result = answers[answers.length - 1].data;
+        const result = answers.map((i) => i?.data).filter((i) => i);
+        if (result.length === 0) {
+            throw new Error('No answers');
+        }
         resourceCache.set(id, result);
         return result;
     },
@@ -429,7 +432,13 @@ const DOMAIN_RESOLVERS = {
         if (body['status'] !== 'success') {
             throw new Error(`Status is ${body['status']}`);
         }
-        const result = body.query;
+        if (!body.query || body.query === 0) {
+            throw new Error('No answers');
+        }
+        const result = [body.query];
+        if (result.length === 0) {
+            throw new Error('No answers');
+        }
         resourceCache.set(id, result);
         return result;
     },
@@ -450,10 +459,13 @@ const DOMAIN_RESOLVERS = {
             throw new Error(`Status is ${body['Status']}`);
         }
         const answers = body['Answer'];
-        if (answers.length === 0) {
+        if (!Array.isArray(answers) || answers.length === 0) {
             throw new Error('No answers');
         }
-        const result = answers[answers.length - 1].data;
+        const result = answers.map((i) => i?.data).filter((i) => i);
+        if (result.length === 0) {
+            throw new Error('No answers');
+        }
         resourceCache.set(id, result);
         return result;
     },
@@ -470,10 +482,13 @@ const DOMAIN_RESOLVERS = {
             },
         });
         const answers = JSON.parse(resp.body);
-        if (answers.length === 0) {
+        if (!Array.isArray(answers) || answers.length === 0) {
             throw new Error('No answers');
         }
-        const result = answers[answers.length - 1];
+        const result = answers;
+        if (result.length === 0) {
+            throw new Error('No answers');
+        }
         resourceCache.set(id, result);
         return result;
     },
@@ -493,7 +508,10 @@ const DOMAIN_RESOLVERS = {
         if (answers.length === 0 || String(answers) === '0') {
             throw new Error('No answers');
         }
-        const result = answers[answers.length - 1];
+        const result = answers;
+        if (result.length === 0) {
+            throw new Error('No answers');
+        }
         resourceCache.set(id, result);
         return result;
     },
@@ -550,10 +568,16 @@ function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
             proxies.forEach((p) => {
                 if (!p['_no-resolve']) {
                     if (results[p.server]) {
+                        p._resolved_ips = results[p.server];
+                        const ip = Array.isArray(results[p.server])
+                            ? results[p.server][
+                                  Math.floor(
+                                      Math.random() * results[p.server].length,
+                                  )
+                              ]
+                            : results[p.server];
                         if (_type === 'IP4P') {
-                            const { server, port } = parseIP4P(
-                                results[p.server],
-                            );
+                            const { server, port } = parseIP4P(ip);
                             if (server && port) {
                                 p._domain = p.server;
                                 p.server = server;
@@ -568,7 +592,7 @@ function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
                             }
                         } else {
                             p._domain = p.server;
-                            p.server = results[p.server];
+                            p.server = ip;
                             p.resolved = true;
                             p[`_${type}`] = p.server;
                             if (!isIP(p._IP)) {
