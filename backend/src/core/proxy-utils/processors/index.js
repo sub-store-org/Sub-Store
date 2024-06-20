@@ -478,7 +478,7 @@ const DOMAIN_RESOLVERS = {
         return result;
     },
     Tencent: async function (domain, type, noCache) {
-        const id = hex_md5(`ALI:${domain}:${type}`);
+        const id = hex_md5(`TENCENT:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const resp = await $.http.get({
