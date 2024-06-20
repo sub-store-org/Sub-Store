@@ -3,6 +3,7 @@ import scriptResourceCache from '@/utils/script-resource-cache';
 import { isIPv4, isIPv6 } from '@/utils';
 import { FULL } from '@/utils/logical';
 import { getFlag, removeFlag } from '@/utils/geo';
+import { doh } from '@/utils/dns';
 import lodash from 'lodash';
 import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
@@ -390,6 +391,27 @@ function parseIP4P(IP4P) {
 }
 
 const DOMAIN_RESOLVERS = {
+    Custom: async function (domain, type, noCache, timeout, url) {
+        const id = hex_md5(`CUSTOM:${url}:${domain}:${type}`);
+        const cached = resourceCache.get(id);
+        if (!noCache && cached) return cached;
+        const res = await doh({
+            url,
+            domain,
+            type: type === 'IPv6' ? 'AAAA' : 'A',
+            timeout,
+        });
+        const { answers } = res;
+        if (!Array.isArray(answers) || answers.length === 0) {
+            throw new Error('No answers');
+        }
+        const result = answers.map((i) => i?.data).filter((i) => i);
+        if (result.length === 0) {
+            throw new Error('No answers');
+        }
+        resourceCache.set(id, result);
+        return result;
+    },
     Google: async function (domain, type, noCache, timeout) {
         const id = hex_md5(`GOOGLE:${domain}:${type}`);
         const cached = resourceCache.get(id);
@@ -528,6 +550,7 @@ function ResolveDomainOperator({
     type: _type,
     filter,
     cache,
+    url,
     timeout,
 }) {
     if (['IPv6', 'IP4P'].includes(_type) && ['IP-API'].includes(provider)) {
@@ -541,6 +564,7 @@ function ResolveDomainOperator({
     if (!resolver) {
         throw new Error(`找不到域名解析服务提供方: ${provider}`);
     }
+    $.info(`Domain Resolver: [${_type}] ${provider} ${url || ''}`);
     return {
         name: 'Resolve Domain Operator',
         func: async (proxies) => {
@@ -568,6 +592,7 @@ function ResolveDomainOperator({
                             type,
                             cache === 'disabled',
                             requestTimeout,
+                            url,
                         )
                             .then((ip) => {
                                 results[domain] = ip;
