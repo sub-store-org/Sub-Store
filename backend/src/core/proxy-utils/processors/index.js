@@ -8,6 +8,7 @@ import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { produceArtifact } from '@/restful/sync';
+import { SETTINGS_KEY } from '@/constants';
 
 import env from '@/utils/env';
 import {
@@ -389,7 +390,7 @@ function parseIP4P(IP4P) {
 }
 
 const DOMAIN_RESOLVERS = {
-    Google: async function (domain, type, noCache) {
+    Google: async function (domain, type, noCache, timeout) {
         const id = hex_md5(`GOOGLE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -400,6 +401,7 @@ const DOMAIN_RESOLVERS = {
             headers: {
                 accept: 'application/dns-json',
             },
+            timeout,
         });
         const body = JSON.parse(resp.body);
         if (body['Status'] !== 0) {
@@ -416,7 +418,7 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    'IP-API': async function (domain, type, noCache) {
+    'IP-API': async function (domain, type, noCache, timeout) {
         if (['IPv6'].includes(type)) {
             throw new Error(`域名解析服务提供方 IP-API 不支持 ${type}`);
         }
@@ -427,6 +429,7 @@ const DOMAIN_RESOLVERS = {
             url: `http://ip-api.com/json/${encodeURIComponent(
                 domain,
             )}?lang=zh-CN`,
+            timeout,
         });
         const body = JSON.parse(resp.body);
         if (body['status'] !== 'success') {
@@ -442,7 +445,7 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Cloudflare: async function (domain, type, noCache) {
+    Cloudflare: async function (domain, type, noCache, timeout) {
         const id = hex_md5(`CLOUDFLARE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -453,6 +456,7 @@ const DOMAIN_RESOLVERS = {
             headers: {
                 accept: 'application/dns-json',
             },
+            timeout,
         });
         const body = JSON.parse(resp.body);
         if (body['Status'] !== 0) {
@@ -469,7 +473,7 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Ali: async function (domain, type, noCache) {
+    Ali: async function (domain, type, noCache, timeout) {
         const id = hex_md5(`ALI:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -480,6 +484,7 @@ const DOMAIN_RESOLVERS = {
             headers: {
                 accept: 'application/dns-json',
             },
+            timeout,
         });
         const answers = JSON.parse(resp.body);
         if (!Array.isArray(answers) || answers.length === 0) {
@@ -492,7 +497,7 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Tencent: async function (domain, type, noCache) {
+    Tencent: async function (domain, type, noCache, timeout) {
         const id = hex_md5(`TENCENT:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -503,6 +508,7 @@ const DOMAIN_RESOLVERS = {
             headers: {
                 accept: 'application/dns-json',
             },
+            timeout,
         });
         const answers = resp.body.split(';').map((i) => i.split(',')[0]);
         if (answers.length === 0 || String(answers) === '0') {
@@ -517,10 +523,18 @@ const DOMAIN_RESOLVERS = {
     },
 };
 
-function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
+function ResolveDomainOperator({
+    provider,
+    type: _type,
+    filter,
+    cache,
+    timeout,
+}) {
     if (['IPv6', 'IP4P'].includes(_type) && ['IP-API'].includes(provider)) {
         throw new Error(`域名解析服务提供方 ${provider} 不支持 ${_type}`);
     }
+    const { defaultTimeout } = $.read(SETTINGS_KEY);
+    const requestTimeout = timeout || defaultTimeout;
     let type = ['IPv6', 'IP4P'].includes(_type) ? 'IPv6' : 'IPv4';
 
     const resolver = DOMAIN_RESOLVERS[provider];
@@ -549,7 +563,12 @@ function ResolveDomainOperator({ provider, type: _type, filter, cache }) {
                 const currentBatch = [];
                 for (let domain of totalDomain.splice(0, limit)) {
                     currentBatch.push(
-                        resolver(domain, type, cache === 'disabled')
+                        resolver(
+                            domain,
+                            type,
+                            cache === 'disabled',
+                            requestTimeout,
+                        )
                             .then((ip) => {
                                 results[domain] = ip;
                                 $.info(
