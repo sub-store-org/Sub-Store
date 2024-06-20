@@ -1,13 +1,8 @@
+import { Buffer } from 'buffer';
 import rs from '@/utils/rs';
 import YAML from '@/utils/yaml';
 import download from '@/utils/download';
-import {
-    isIPv4,
-    isIPv6,
-    isValidPortNumber,
-    isNotBlank,
-    utf8ArrayToStr,
-} from '@/utils';
+import { isIPv4, isIPv6, isValidPortNumber, isNotBlank } from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
@@ -427,6 +422,7 @@ function lastParse(proxy) {
             }
         }
     }
+
     if (typeof proxy.name !== 'string') {
         if (/^\d+$/.test(proxy.name)) {
             proxy.name = `${proxy.name}`;
@@ -435,7 +431,7 @@ function lastParse(proxy) {
                 if (proxy.name?.data) {
                     proxy.name = Buffer.from(proxy.name.data).toString('utf8');
                 } else {
-                    proxy.name = utf8ArrayToStr(proxy.name);
+                    proxy.name = Buffer.from(proxy.name).toString('utf8');
                 }
             } catch (e) {
                 $.error(`proxy.name decode failed\nReason: ${e}`);

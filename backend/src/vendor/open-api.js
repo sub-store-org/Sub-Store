@@ -341,7 +341,10 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 const request = isNode
                     ? eval("require('request')")
                     : $httpClient;
+                const body = options.body;
                 const opts = JSON.parse(JSON.stringify(options));
+                opts.body = body;
+
                 if (!isNode && opts.timeout) {
                     opts.timeout++;
                     let unit = 'ms';
