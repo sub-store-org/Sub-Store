@@ -391,7 +391,7 @@ function parseIP4P(IP4P) {
 }
 
 const DOMAIN_RESOLVERS = {
-    Custom: async function (domain, type, noCache, timeout, url) {
+    Custom: async function (domain, type, noCache, timeout, edns, url) {
         const id = hex_md5(`CUSTOM:${url}:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -400,6 +400,7 @@ const DOMAIN_RESOLVERS = {
             domain,
             type: type === 'IPv6' ? 'AAAA' : 'A',
             timeout,
+            edns,
         });
         const { answers } = res;
         if (!Array.isArray(answers) || answers.length === 0) {
@@ -412,14 +413,16 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Google: async function (domain, type, noCache, timeout) {
+    Google: async function (domain, type, noCache, timeout, edns) {
         const id = hex_md5(`GOOGLE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const resp = await $.http.get({
             url: `https://8.8.4.4/resolve?name=${encodeURIComponent(
                 domain,
-            )}&type=${type === 'IPv6' ? 'AAAA' : 'A'}`,
+            )}&type=${
+                type === 'IPv6' ? 'AAAA' : 'A'
+            }&edns_client_subnet=${edns}`,
             headers: {
                 accept: 'application/dns-json',
             },
@@ -495,12 +498,12 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Ali: async function (domain, type, noCache, timeout) {
+    Ali: async function (domain, type, noCache, timeout, edns) {
         const id = hex_md5(`ALI:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const resp = await $.http.get({
-            url: `http://223.6.6.6/resolve?edns_client_subnet=223.6.6.6/24&name=${encodeURIComponent(
+            url: `http://223.6.6.6/resolve?edns_client_subnet=${edns}/24&name=${encodeURIComponent(
                 domain,
             )}&type=${type === 'IPv6' ? 'AAAA' : 'A'}&short=1`,
             headers: {
@@ -519,12 +522,12 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Tencent: async function (domain, type, noCache, timeout) {
+    Tencent: async function (domain, type, noCache, timeout, edns) {
         const id = hex_md5(`TENCENT:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const resp = await $.http.get({
-            url: `http://119.28.28.28/d?ip=119.28.28.28&type=${
+            url: `http://119.28.28.28/d?ip=${edns}&type=${
                 type === 'IPv6' ? 'AAAA' : 'A'
             }&dn=${encodeURIComponent(domain)}`,
             headers: {
@@ -552,6 +555,7 @@ function ResolveDomainOperator({
     cache,
     url,
     timeout,
+    edns: _edns,
 }) {
     if (['IPv6', 'IP4P'].includes(_type) && ['IP-API'].includes(provider)) {
         throw new Error(`域名解析服务提供方 ${provider} 不支持 ${_type}`);
@@ -564,7 +568,11 @@ function ResolveDomainOperator({
     if (!resolver) {
         throw new Error(`找不到域名解析服务提供方: ${provider}`);
     }
-    $.info(`Domain Resolver: [${_type}] ${provider} ${url || ''}`);
+    let edns = _edns || '223.6.6.6';
+    if (!isIP(edns)) throw new Error(`域名解析 EDNS 应为 IP`);
+    $.info(
+        `Domain Resolver: [${_type}] ${provider} ${edns || ''} ${url || ''}`,
+    );
     return {
         name: 'Resolve Domain Operator',
         func: async (proxies) => {
@@ -592,6 +600,7 @@ function ResolveDomainOperator({
                             type,
                             cache === 'disabled',
                             requestTimeout,
+                            edns,
                             url,
                         )
                             .then((ip) => {

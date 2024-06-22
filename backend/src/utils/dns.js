@@ -2,13 +2,7 @@ import $ from '@/core/app';
 import dnsPacket from 'dns-packet';
 import { Buffer } from 'buffer';
 
-export async function doh({
-    url,
-    domain,
-    type = 'A',
-    timeout,
-    ip = '223.6.6.6',
-}) {
+export async function doh({ url, domain, type = 'A', timeout, edns }) {
     const buf = dnsPacket.encode({
         type: 'query',
         id: 0,
@@ -28,7 +22,7 @@ export async function doh({
                 options: [
                     {
                         code: 'CLIENT_SUBNET',
-                        ip,
+                        ip: edns,
                         sourcePrefixLength: 24,
                         scopePrefixLength: 0,
                     },
