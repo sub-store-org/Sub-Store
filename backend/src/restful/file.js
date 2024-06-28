@@ -1,4 +1,5 @@
 import { deleteByName, findByName, updateByName } from '@/utils/database';
+import { getFlowHeaders } from '@/utils/flow';
 import { FILES_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
@@ -50,7 +51,15 @@ async function getFile(req, res) {
     name = decodeURIComponent(name);
 
     $.info(`正在下载文件：${name}`);
-    let { url, ua, content, mergeSources, ignoreFailedRemoteFile } = req.query;
+    let {
+        url,
+        subInfoUrl,
+        subInfoUserAgent,
+        ua,
+        content,
+        mergeSources,
+        ignoreFailedRemoteFile,
+    } = req.query;
     if (url) {
         url = decodeURIComponent(url);
         $.info(`指定远程文件 URL: ${url}`);
@@ -58,6 +67,14 @@ async function getFile(req, res) {
     if (ua) {
         ua = decodeURIComponent(ua);
         $.info(`指定远程文件 User-Agent: ${ua}`);
+    }
+    if (subInfoUrl) {
+        subInfoUrl = decodeURIComponent(subInfoUrl);
+        $.info(`指定获取流量的 subInfoUrl: ${subInfoUrl}`);
+    }
+    if (subInfoUserAgent) {
+        subInfoUserAgent = decodeURIComponent(subInfoUserAgent);
+        $.info(`指定获取流量的 subInfoUserAgent: ${subInfoUserAgent}`);
     }
     if (content) {
         content = decodeURIComponent(content);
@@ -85,6 +102,26 @@ async function getFile(req, res) {
                 mergeSources,
                 ignoreFailedRemoteFile,
             });
+
+            try {
+                subInfoUrl = subInfoUrl || file.subInfoUrl;
+                if (subInfoUrl) {
+                    // forward flow headers
+                    const flowInfo = await getFlowHeaders(
+                        subInfoUrl,
+                        subInfoUserAgent || file.subInfoUserAgent,
+                    );
+                    if (flowInfo) {
+                        res.set('subscription-userinfo', flowInfo);
+                    }
+                }
+            } catch (err) {
+                $.error(
+                    `文件 ${name} 获取流量信息时发生错误: ${JSON.stringify(
+                        err,
+                    )}`,
+                );
+            }
 
             res.set('Content-Type', 'text/plain; charset=utf-8').send(
                 output ?? '',
