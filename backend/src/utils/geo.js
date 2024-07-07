@@ -329,6 +329,7 @@ export function getFlag(name) {
             '台',
             '臺',
             'Taipei',
+            'Tai Wan',
         ],
         '🇺🇦': ['Ukraine', '乌克兰', '烏克蘭'],
         '🇺🇸': [
