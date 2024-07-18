@@ -627,8 +627,15 @@ function ResolveDomainOperator({
                               ]
                             : results[p.server];
                         if (type === 'IPv6' && isIPv6(ip)) {
-                            ip = new ipAddress.Address6(ip).correctForm();
+                            try {
+                                ip = new ipAddress.Address6(ip).correctForm();
+                            } catch (e) {
+                                $.error(
+                                    `Failed to parse IPv6 address: ${ip}: ${e}`,
+                                );
+                            }
                             if (/^2001::[^:]+:[^:]+:[^:]+$/.test(ip)) {
+                                p._IP4P = ip;
                                 const { server, port } = parseIP4P(ip);
                                 if (server && port) {
                                     p._domain = p.server;
@@ -636,7 +643,6 @@ function ResolveDomainOperator({
                                     p.port = port;
                                     p.resolved = true;
                                     p._IPv4 = p.server;
-                                    p._IP4P = ip;
                                     if (!isIP(p._IP)) {
                                         p._IP = p.server;
                                     }
