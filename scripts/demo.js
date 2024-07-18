@@ -1,8 +1,7 @@
 function operator(proxies = [], targetPlatform, context) {
   // 支持快捷操作 不一定要写一个 function
   // 可参考 https://t.me/zhetengsha/970
-  // https://t.me/zhetengsha/1009 
-
+  // https://t.me/zhetengsha/1009
 
   // proxies 为传入的内部节点数组
   // 可在预览界面点击节点查看 JSON 结构 或查看 `target=JSON` 的通用订阅
@@ -19,7 +18,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 10. `sni` 在某些协议里会自动与 `servername` 转换
   // 11. 读取节点的 ca-str 和 _ca (后端文件路径) 字段, 自动计算 fingerprint (参考 https://t.me/zhetengsha/1512)
   // 12. 以 Surge 为例, 最新的参数一般我都会跟进, 以 Surge 文档为例, 一些常用的: TUIC/Hysteria 2 的 `ecn`, Snell 的 `reuse` 连接复用, QUIC 策略 block-quic`, Hysteria 2 下载带宽 `down`
-  // 
+  //
   // 如果只是为了快速修改或者筛选 可以参考 脚本操作支持节点快捷脚本 https://t.me/zhetengsha/970 和 脚本筛选支持节点快捷脚本 https://t.me/zhetengsha/1009
 
   // $arguments 为传入的脚本参数
@@ -30,7 +29,7 @@ function operator(proxies = [], targetPlatform, context) {
 
   // $substore 为 OpenAPI
   // 参考 https://github.com/Peng-YM/QuanX/blob/master/Tools/OpenAPI/README.md
-  
+
   // scriptResourceCache 缓存
   // 可参考 https://t.me/zhetengsha/1003
   // const cache = scriptResourceCache
@@ -43,6 +42,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     parse, // 订阅解析
   //     process, // 节点操作/文件操作
   //     produce, // 输出订阅
+  //     ipAddress, // https://github.com/beaugunderson/ip-address
   //     isIPv4,
   //     isIPv6,
   //     isIP,
@@ -76,7 +76,7 @@ function operator(proxies = [], targetPlatform, context) {
   //   }
   // })
   // $content = proxies
-  
+
   // 2. sing-box
 
   // 但是一般不需要这样用, 可参考
@@ -110,7 +110,7 @@ function operator(proxies = [], targetPlatform, context) {
 
   // 4. 一个比较折腾的方案: 在脚本操作中, 把内容同步到另一个 gist
   // 见 https://t.me/zhetengsha/1428
-  // 
+  //
   // const content = ProxyUtils.produce([...proxies], platform)
 
   // // YAML
@@ -130,12 +130,11 @@ function operator(proxies = [], targetPlatform, context) {
   // yaml.proxies.unshift(...clashMetaProxies)
   // $content = ProxyUtils.yaml.dump(yaml)
 
-
-  // { $content, $files } will be passed to the next operator 
+  // { $content, $files } will be passed to the next operator
   // $content is the final content of the file
 
   // flowUtils 为机场订阅流量信息处理工具
-  // 可参考: 
+  // 可参考:
   // 1. https://t.me/zhetengsha/948
 
   // context 为传入的上下文
@@ -224,7 +223,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 参数说明
   // 可参考 https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E
 
-  console.log(JSON.stringify(context, null, 2))
+  console.log(JSON.stringify(context, null, 2));
 
-  return proxies
+  return proxies;
 }

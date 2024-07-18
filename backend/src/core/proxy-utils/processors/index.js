@@ -1,6 +1,6 @@
 import resourceCache from '@/utils/resource-cache';
 import scriptResourceCache from '@/utils/script-resource-cache';
-import { isIPv4, isIPv6 } from '@/utils';
+import { isIPv4, isIPv6, ipAddress } from '@/utils';
 import { FULL } from '@/utils/logical';
 import { getFlag, removeFlag } from '@/utils/geo';
 import { doh } from '@/utils/dns';
@@ -360,10 +360,11 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
     };
 }
 
-function parseIP4P(IP4P) {
+function parseIP4P(ip) {
     let server;
     let port;
     try {
+        const IP4P = new ipAddress.Address6(ip).correctForm();
         if (!/^2001::[^:]+:[^:]+:[^:]+$/.test(IP4P)) {
             throw new Error(`Invalid IP4P: ${IP4P}`);
         }
@@ -629,7 +630,7 @@ function ResolveDomainOperator({
                                   )
                               ]
                             : results[p.server];
-                        if (_type === 'IP4P') {
+                        if (type === 'IPv6' && isIPv6(ip)) {
                             const { server, port } = parseIP4P(ip);
                             if (server && port) {
                                 p._domain = p.server;
