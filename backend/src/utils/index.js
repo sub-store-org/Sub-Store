@@ -1,3 +1,4 @@
+import * as ipAddress from 'ip-address';
 // source: https://stackoverflow.com/a/36760050
 const IPV4_REGEX = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
 
@@ -94,6 +95,7 @@ function getPolicyDescriptor(str) {
 //           })();
 
 export {
+    ipAddress,
     isIPv4,
     isIPv6,
     isValidPortNumber,
