@@ -8,6 +8,7 @@ import {
     isValidPortNumber,
     isNotBlank,
     ipAddress,
+    getRandomPort,
 } from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
@@ -220,6 +221,17 @@ function produce(proxies, targetPlatform, type, opts = {}) {
                 delete proxy['tls-fingerprint'];
             }
         }
+
+        // 处理 端口跳跃
+        if (proxy.ports) {
+            if (!['ClashMeta'].includes(targetPlatform)) {
+                proxy.ports = proxy.ports.replace(/\//g, ',');
+            }
+            if (!proxy.port) {
+                proxy.port = getRandomPort(proxy.ports);
+            }
+        }
+
         return proxy;
     });
 
@@ -274,6 +286,7 @@ export const ProxyUtils = {
     process: processFn,
     produce,
     ipAddress,
+    getRandomPort,
     isIPv4,
     isIPv6,
     isIP,
