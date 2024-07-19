@@ -414,6 +414,15 @@ function lastParse(proxy) {
     if (['hysteria', 'hysteria2'].includes(proxy.type) && !proxy.ports) {
         delete proxy.ports;
     }
+    if (
+        ['hysteria2'].includes(proxy.type) &&
+        proxy.obfs &&
+        !['salamander'].includes(proxy.obfs) &&
+        !proxy['obfs-password']
+    ) {
+        proxy['obfs-password'] = proxy.obfs;
+        proxy.obfs = 'salamander';
+    }
     if (['vless'].includes(proxy.type)) {
         // 删除 reality-opts: {}
         if (
