@@ -42,6 +42,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     parse, // 订阅解析
   //     process, // 节点操作/文件操作
   //     produce, // 输出订阅
+  //     getRandomPort, // 获取随机端口(参考 ports 端口跳跃的格式 443,8443,5000-6000)
   //     ipAddress, // https://github.com/beaugunderson/ip-address
   //     isIPv4,
   //     isIPv6,
