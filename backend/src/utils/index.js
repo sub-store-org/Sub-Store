@@ -94,6 +94,23 @@ function getPolicyDescriptor(str) {
 //               };
 //           })();
 
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomPort(portString) {
+    let portParts = portString.split(/,|\//);
+    let randomPart = portParts[Math.floor(Math.random() * portParts.length)];
+    if (randomPart.includes('-')) {
+        let [min, max] = randomPart.split('-').map(Number);
+        return getRandomInt(min, max);
+    } else {
+        return Number(randomPart);
+    }
+}
+
 export {
     ipAddress,
     isIPv4,
@@ -105,4 +122,5 @@ export {
     getIfPresent,
     // utf8ArrayToStr,
     getPolicyDescriptor,
+    getRandomPort,
 };
