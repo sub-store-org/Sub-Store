@@ -20,6 +20,23 @@ import { produceArtifact } from '@/restful/sync';
 import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
 import Gist from '@/utils/gist';
 
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomPort(portString) {
+    let portParts = portString.split(',');
+    let randomPart = portParts[Math.floor(Math.random() * portParts.length)];
+    if (randomPart.includes('-')) {
+        let [min, max] = randomPart.split('-').map(Number);
+        return getRandomInt(min, max);
+    } else {
+        return Number(randomPart);
+    }
+}
+
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
         try {
@@ -220,6 +237,18 @@ function produce(proxies, targetPlatform, type, opts = {}) {
                 delete proxy['tls-fingerprint'];
             }
         }
+
+        // 处理 端口跳跃
+        if (proxy.ports) {
+            if (!['ClashMeta', 'JSON'].includes(targetPlatform)) {
+                proxy.ports = proxy.ports.replace(/\//g, ',');
+            }
+            if (!['ClashMeta', 'Stash', 'JSON'].includes(targetPlatform)) {
+                proxy.port = getRandomPort(proxy.ports);
+                delete proxy.ports;
+            }
+        }
+
         return proxy;
     });
 
