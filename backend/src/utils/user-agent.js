@@ -28,7 +28,9 @@ export function getPlatformFromUserAgent({ ua, UA }) {
         return 'Stash';
     } else if (
         ua === 'meta' ||
-        (ua.indexOf('clash') !== -1 && ua.indexOf('meta') !== -1)
+        (ua.indexOf('clash') !== -1 && ua.indexOf('meta') !== -1) ||
+        ua.indexOf('clash-verge') !== -1 ||
+        ua.indexOf('flclash') !== -1
     ) {
         return 'ClashMeta';
     } else if (ua.indexOf('clash') !== -1) {
