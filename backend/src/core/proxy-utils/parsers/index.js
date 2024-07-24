@@ -351,6 +351,7 @@ function URI_VMess() {
                         transportPath = '/';
                     }
                 }
+                // 传输层应该有配置, 暂时不考虑兼容不给配置的节点
                 if (transportPath || transportHost) {
                     if (['grpc'].includes(proxy.network)) {
                         proxy[`${proxy.network}-opts`] = {
