@@ -363,6 +363,11 @@ function socks5(proxy) {
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
 
+    // udp
+    if (proxy.udp) {
+        result.append(`,udp=true`);
+    }
+
     return result.toString();
 }
 
