@@ -1,6 +1,6 @@
-import { Result } from './utils';
+import { Result, isPresent } from './utils';
 import Surge_Producer from './surge';
-import { isIPv4, isIPv6, isPresent } from '@/utils';
+import { isIPv4, isIPv6 } from '@/utils';
 import $ from '@/core/app';
 
 const targetPlatform = 'SurgeMac';
@@ -84,6 +84,7 @@ function shadowsocksr(proxy) {
     for (const [key, value] of Object.entries({
         cipher: '-m',
         obfs: '-o',
+        'obfs-param': '-g',
         password: '-k',
         port: '-p',
         protocol: '-O',
@@ -92,8 +93,10 @@ function shadowsocksr(proxy) {
         'local-port': '-l',
         'local-address': '-b',
     })) {
-        external_proxy.args.push(value);
-        external_proxy.args.push(external_proxy[key]);
+        if (external_proxy[key] != null) {
+            external_proxy.args.push(value);
+            external_proxy.args.push(external_proxy[key]);
+        }
     }
 
     return external(external_proxy);
