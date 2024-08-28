@@ -158,7 +158,7 @@ function URI_SSR() {
             for (const item of line) {
                 let [key, val] = item.split('=');
                 val = val.trim();
-                if (val.length > 0) {
+                if (val.length > 0 && val !== '(null)') {
                     other_params[key] = val;
                 }
             }
