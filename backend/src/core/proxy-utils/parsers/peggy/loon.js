@@ -182,7 +182,6 @@ ecn = comma "ecn" equals flag:bool { proxy.ecn = flag; }
 download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down = match.join(""); }
 salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join(""); proxy.obfs = 'salamander'; }
 
-
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
 comma = _ "," _
 equals = _ "=" _
