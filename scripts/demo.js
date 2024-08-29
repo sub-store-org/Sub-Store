@@ -18,8 +18,8 @@ function operator(proxies = [], targetPlatform, context) {
   // 10. `sni` 在某些协议里会自动与 `servername` 转换
   // 11. 读取节点的 ca-str 和 _ca (后端文件路径) 字段, 自动计算 fingerprint (参考 https://t.me/zhetengsha/1512)
   // 12. 以 Surge 为例, 最新的参数一般我都会跟进, 以 Surge 文档为例, 一些常用的: TUIC/Hysteria 2 的 `ecn`, Snell 的 `reuse` 连接复用, QUIC 策略 block-quic`, Hysteria 2 下载带宽 `down`
-  //
-  // 如果只是为了快速修改或者筛选 可以参考 脚本操作支持节点快捷脚本 https://t.me/zhetengsha/970 和 脚本筛选支持节点快捷脚本 https://t.me/zhetengsha/1009
+
+  // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
 
   // $arguments 为传入的脚本参数
 
@@ -54,6 +54,8 @@ function operator(proxies = [], targetPlatform, context) {
   //     Gist, // Gist 类
   // }
 
+  // 如果只是为了快速修改或者筛选 可以参考 脚本操作支持节点快捷脚本 https://t.me/zhetengsha/970 和 脚本筛选支持节点快捷脚本 https://t.me/zhetengsha/1009
+  // ⚠️ 注意: 函数式(即本文件这样的 function operator() {}) 和快捷操作(下面使用 $server) 只能二选一
   // 示例: 给节点名添加前缀
   // $server.name = `[${ProxyUtils.getISO($server.name)}] ${$server.name}`
   // 示例: 给节点名添加旗帜
