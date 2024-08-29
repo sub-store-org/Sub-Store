@@ -45,6 +45,9 @@ Surge Mac 版如何支持 SSR, 如何去除 HTTP 传输层以支持 类似 VMess
 ### 5. Shadowrocket
 安装使用 模块 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Noability.sgmodule) 即可。
 
+### 6. Egern
+安装使用 模块 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Egern.yaml`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Egern.yaml) 即可。
+
 ## 使用 Sub-Store
 1. 使用 Safari 打开这个 https://sub.store 如网页正常打开并且未弹出任何错误提示，说明 Sub-Store 已经配置成功。
 2. 可以把 Sub-Store 添加到主屏幕，即可获得类似于 APP 的使用体验。
