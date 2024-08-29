@@ -392,18 +392,23 @@ const DOMAIN_RESOLVERS = {
         const id = hex_md5(`CUSTOM:${url}:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
+        const answerType = type === 'IPv6' ? 'AAAA' : 'A';
         const res = await doh({
             url,
             domain,
-            type: type === 'IPv6' ? 'AAAA' : 'A',
+            type: answerType,
             timeout,
             edns,
         });
+
         const { answers } = res;
         if (!Array.isArray(answers) || answers.length === 0) {
             throw new Error('No answers');
         }
-        const result = answers.map((i) => i?.data).filter((i) => i);
+        const result = answers
+            .filter((i) => i?.type === answerType)
+            .map((i) => i?.data)
+            .filter((i) => i);
         if (result.length === 0) {
             throw new Error('No answers');
         }
