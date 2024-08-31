@@ -987,7 +987,6 @@ function createDynamicFunction(name, script, $arguments) {
             'scriptResourceCache',
             'flowUtils',
             'produceArtifact',
-            'require',
             `${script}\n return ${name}`,
         )(
             $arguments,
@@ -1003,7 +1002,6 @@ function createDynamicFunction(name, script, $arguments) {
             scriptResourceCache,
             flowUtils,
             produceArtifact,
-            require,
         );
     } else {
         return new Function(
@@ -1014,7 +1012,6 @@ function createDynamicFunction(name, script, $arguments) {
             'scriptResourceCache',
             'flowUtils',
             'produceArtifact',
-            'require',
 
             `${script}\n return ${name}`,
         )(
@@ -1025,7 +1022,6 @@ function createDynamicFunction(name, script, $arguments) {
             scriptResourceCache,
             flowUtils,
             produceArtifact,
-            require,
         );
     }
 }
