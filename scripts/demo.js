@@ -3,6 +3,8 @@ function operator(proxies = [], targetPlatform, context) {
   // 可参考 https://t.me/zhetengsha/970
   // https://t.me/zhetengsha/1009
 
+  // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
+
   // proxies 为传入的内部节点数组
   // 可在预览界面点击节点查看 JSON 结构 或查看 `target=JSON` 的通用订阅
   // 0. 结构大致参考了 Clash.Meta(mihomo), 可参考 mihomo 的文档, 例如 `xudp`, `smux` 都可以自己设置. 但是有私货, 下面是我能想起来的一些私货
