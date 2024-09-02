@@ -424,8 +424,12 @@ function lastParse(proxy) {
             proxy[`${proxy.network}-opts`].path = [transportPath];
         }
     }
-    if (['hysteria', 'hysteria2'].includes(proxy.type) && !proxy.ports) {
-        delete proxy.ports;
+    if (['hysteria', 'hysteria2'].includes(proxy.type)) {
+        if (proxy.ports) {
+            proxy.ports = proxy.ports.replace(/\//g, ',');
+        } else {
+            delete proxy.ports;
+        }
     }
     if (
         ['hysteria2'].includes(proxy.type) &&
