@@ -10,10 +10,10 @@
 Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.
 </p>
 
-[![Build](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/sub-store-org/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/sub-store-org/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Lines of code](https://img.shields.io/tokei/lines/github/sub-store-org/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/sub-store-org/Sub-Store) 
+[![Build](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/sub-store-org/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/sub-store-org/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Lines of code](https://img.shields.io/tokei/lines/github/sub-store-org/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/sub-store-org/Sub-Store)
 <a href="https://trendshift.io/repositories/4572" target="_blank"><img src="https://trendshift.io/api/badge/repositories/4572" alt="sub-store-org%2FSub-Store | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/PengYM)
-   
+
 Core functionalities:
 
 1. Conversion among various formats.
@@ -21,7 +21,7 @@ Core functionalities:
 3. Collect multiple subscriptions in one URL.
 
 > The following descriptions of features may not be updated in real-time. Please refer to the actual available features for accurate information.
-   
+
 ## 1. Subscription Conversion
 
 ### Supported Input Formats
@@ -98,7 +98,7 @@ or
 esbuild(experimental)
 
 ```
-pnpm run --parallel "/^dev:.*/"
+SUB_STORE_BACKEND_API_PORT=3000 pnpm run --parallel "/^dev:.*/"
 ```
 
 ## LICENSE
@@ -110,7 +110,6 @@ This project is under the GPL V3 LICENSE.
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=sub-store-org/sub-store&type=Date)](https://star-history.com/#sub-store-org/sub-store&Date)
-
 
 ## Acknowledgements
 

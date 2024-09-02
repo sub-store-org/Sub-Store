@@ -5,6 +5,7 @@ import {
     isPresent,
     isNotBlank,
     getIfPresent,
+    getRandomPort,
 } from '@/utils';
 import getSurgeParser from './peggy/surge';
 import getLoonParser from './peggy/loon';
@@ -12,6 +13,19 @@ import getQXParser from './peggy/qx';
 import getTrojanURIParser from './peggy/trojan-uri';
 
 import { Base64 } from 'js-base64';
+
+function surge_port_hopping(raw) {
+    const [parts, port_hopping] =
+        raw.match(
+            /,\s*?port-hopping\s*?=\s*?["']?\s*?((\d+(-\d+)?)([,;]\d+(-\d+)?)*)\s*?["']?\s*?/,
+        ) || [];
+    return {
+        port_hopping: port_hopping
+            ? port_hopping.replace(/;/g, ',')
+            : undefined,
+        line: parts ? raw.replace(parts, '') : raw,
+    };
+}
 
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
 // reference: https://github.com/shadowsocks/shadowsocks-org/wiki/SIP002-URI-Scheme
@@ -545,13 +559,42 @@ function URI_Hysteria2() {
     };
     const parse = (line) => {
         line = line.split(/(hysteria2|hy2):\/\//)[2];
-        // eslint-disable-next-line no-unused-vars
-        let [__, password, server, ___, port, ____, addons = '', name] =
-            /^(.*?)@(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
-        port = parseInt(`${port}`, 10);
-        if (isNaN(port)) {
+        // 端口跳跃有两种写法:
+        // 1. 服务器的地址和可选端口。如果省略端口，则默认为 443。
+        // 端口部分支持 端口跳跃 的「多端口地址格式」。
+        // https://hysteria.network/zh/docs/advanced/Port-Hopping
+        // 2. 参数 mport
+        let ports;
+        /* eslint-disable no-unused-vars */
+        let [
+            __,
+            password,
+            server,
+            ___,
+            port,
+            ____,
+            _____,
+            ______,
+            _______,
+            ________,
+            addons = '',
+            name,
+        ] = /^(.*?)@(.*?)(:((\d+(-\d+)?)([,;]\d+(-\d+)?)*))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(
+            line,
+        );
+        /* eslint-enable no-unused-vars */
+        if (/^\d+$/.test(port)) {
+            port = parseInt(`${port}`, 10);
+            if (isNaN(port)) {
+                port = 443;
+            }
+        } else if (port) {
+            ports = port;
+            port = getRandomPort(ports);
+        } else {
             port = 443;
         }
+
         password = decodeURIComponent(password);
         if (name != null) {
             name = decodeURIComponent(name);
@@ -563,6 +606,7 @@ function URI_Hysteria2() {
             name,
             server,
             port,
+            ports,
             password,
         };
 
@@ -1295,7 +1339,12 @@ function Surge_Tuic() {
     const test = (line) => {
         return /^.*=\s*tuic(-v5)?/.test(line.split(',')[0]);
     };
-    const parse = (line) => getSurgeParser().parse(line);
+    const parse = (raw) => {
+        const { port_hopping, line } = surge_port_hopping(raw);
+        const proxy = getSurgeParser().parse(line);
+        proxy['ports'] = port_hopping;
+        return proxy;
+    };
     return { name, test, parse };
 }
 function Surge_WireGuard() {
@@ -1312,7 +1361,12 @@ function Surge_Hysteria2() {
     const test = (line) => {
         return /^.*=\s*hysteria2/.test(line.split(',')[0]);
     };
-    const parse = (line) => getSurgeParser().parse(line);
+    const parse = (raw) => {
+        const { port_hopping, line } = surge_port_hopping(raw);
+        const proxy = getSurgeParser().parse(line);
+        proxy['ports'] = port_hopping;
+        return proxy;
+    };
     return { name, test, parse };
 }
 

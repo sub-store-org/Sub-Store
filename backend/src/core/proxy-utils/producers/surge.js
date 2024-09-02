@@ -675,6 +675,15 @@ function tuic(proxy) {
         'alpn',
     );
 
+    if (isPresent(proxy, 'ports')) {
+        result.append(`,port-hopping=${proxy.ports.replace(/,/g, ';')}`);
+    }
+
+    result.appendIfPresent(
+        `,port-hopping-interval=${proxy['hop-interval']}`,
+        'hop-interval',
+    );
+
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
 
@@ -934,6 +943,15 @@ function hysteria2(proxy) {
     result.append(`${proxy.name}=hysteria2,${proxy.server},${proxy.port}`);
 
     result.appendIfPresent(`,password=${proxy.password}`, 'password');
+
+    if (isPresent(proxy, 'ports')) {
+        result.append(`,port-hopping=${proxy.ports.replace(/,/g, ';')}`);
+    }
+
+    result.appendIfPresent(
+        `,port-hopping-interval=${proxy['hop-interval']}`,
+        'hop-interval',
+    );
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
