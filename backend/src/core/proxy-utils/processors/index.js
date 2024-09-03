@@ -316,7 +316,7 @@ function RegexDeleteOperator(regex) {
  1. This function name should be `operator`!
  2. Always declare variables before using them!
  */
-function ScriptOperator(script, targetPlatform, $arguments, source) {
+function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
     return {
         name: 'Script Operator',
         func: async (proxies) => {
@@ -326,6 +326,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                     'operator',
                     script,
                     $arguments,
+                    $options,
                 );
                 output = operator(proxies, targetPlatform, { source, ...env });
             })();
@@ -338,9 +339,9 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                     'operator',
                     `async function operator(input = []) {
                         if (input && (input.$files || input.$content)) {
-                            let { $content, $files } = input
+                            let { $content, $files, $options } = input
                             ${script}
-                            return { $content, $files }
+                            return { $content, $files, $options }
                         } else {
                             let proxies = input
                             let list = []
@@ -352,6 +353,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source) {
                         }
                       }`,
                     $arguments,
+                    $options,
                 );
                 output = operator(proxies, targetPlatform, { source, ...env });
             })();
@@ -794,7 +796,7 @@ function TypeFilter(types) {
  1. This function name should be `filter`!
  2. Always declare variables before using them!
  */
-function ScriptFilter(script, targetPlatform, $arguments, source) {
+function ScriptFilter(script, targetPlatform, $arguments, source, $options) {
     return {
         name: 'Script Filter',
         func: async (proxies) => {
@@ -804,6 +806,7 @@ function ScriptFilter(script, targetPlatform, $arguments, source) {
                     'filter',
                     script,
                     $arguments,
+                    $options,
                 );
                 output = filter(proxies, targetPlatform, { source, ...env });
             })();
@@ -826,6 +829,7 @@ function ScriptFilter(script, targetPlatform, $arguments, source) {
                         return list
                       }`,
                     $arguments,
+                    $options,
                 );
                 output = filter(proxies, targetPlatform, { source, ...env });
             })();
@@ -966,7 +970,7 @@ function clone(object) {
     return JSON.parse(JSON.stringify(object));
 }
 
-function createDynamicFunction(name, script, $arguments) {
+function createDynamicFunction(name, script, $arguments, $options) {
     const flowUtils = {
         getFlowField,
         getFlowHeaders,
@@ -978,6 +982,7 @@ function createDynamicFunction(name, script, $arguments) {
     if ($.env.isLoon) {
         return new Function(
             '$arguments',
+            '$options',
             '$substore',
             'lodash',
             '$persistentStore',
@@ -991,6 +996,7 @@ function createDynamicFunction(name, script, $arguments) {
             `${script}\n return ${name}`,
         )(
             $arguments,
+            $options,
             $,
             lodash,
             // eslint-disable-next-line no-undef
@@ -1008,6 +1014,7 @@ function createDynamicFunction(name, script, $arguments) {
     } else {
         return new Function(
             '$arguments',
+            '$options',
             '$substore',
             'lodash',
             'ProxyUtils',
@@ -1018,6 +1025,7 @@ function createDynamicFunction(name, script, $arguments) {
             `${script}\n return ${name}`,
         )(
             $arguments,
+            $options,
             $,
             lodash,
             ProxyUtils,

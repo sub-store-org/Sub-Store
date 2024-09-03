@@ -77,7 +77,13 @@ function parse(raw) {
     return proxies;
 }
 
-async function processFn(proxies, operators = [], targetPlatform, source) {
+async function processFn(
+    proxies,
+    operators = [],
+    targetPlatform,
+    source,
+    $options,
+) {
     for (const item of operators) {
         // process script
         let script;
@@ -176,6 +182,7 @@ async function processFn(proxies, operators = [], targetPlatform, source) {
                 targetPlatform,
                 $arguments,
                 source,
+                $options,
             );
         } else {
             processor = PROXY_PROCESSORS[item.type](item.args || {});
