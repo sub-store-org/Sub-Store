@@ -181,9 +181,11 @@ export default function ShadowRocket_Producer() {
                 delete proxy.id;
                 delete proxy.resolved;
                 delete proxy['no-resolve'];
-                for (const key in proxy) {
-                    if (proxy[key] == null || /^_/i.test(key)) {
-                        delete proxy[key];
+                if (type !== 'internal') {
+                    for (const key in proxy) {
+                        if (proxy[key] == null || /^_/i.test(key)) {
+                            delete proxy[key];
+                        }
                     }
                 }
                 if (
