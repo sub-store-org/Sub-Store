@@ -3,6 +3,7 @@ import $ from '@/core/app';
 import migrate from '@/utils/migration';
 import download from '@/utils/download';
 import { syncArtifacts } from '@/restful/sync';
+import { gistBackupAction } from '@/restful/miscs';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
@@ -46,18 +47,76 @@ export default function serve() {
     if ($.env.isNode) {
         const backend_cron = eval('process.env.SUB_STORE_BACKEND_CRON');
         if (backend_cron) {
-            $.info(`[CRON] ${backend_cron} enabled`);
+            $.info(`[SYNC CRON] ${backend_cron} enabled`);
             const { CronJob } = eval(`require("cron")`);
             new CronJob(
                 backend_cron,
                 async function () {
                     try {
-                        $.info(`[CRON] ${backend_cron} started`);
+                        $.info(`[SYNC CRON] ${backend_cron} started`);
                         await syncArtifacts();
-                        $.info(`[CRON] ${backend_cron} finished`);
+                        $.info(`[SYNC CRON] ${backend_cron} finished`);
                     } catch (e) {
                         $.error(
-                            `[CRON] ${backend_cron} error: ${e.message ?? e}`,
+                            `[SYNC CRON] ${backend_cron} error: ${
+                                e.message ?? e
+                            }`,
+                        );
+                    }
+                }, // onTick
+                null, // onComplete
+                true, // start
+                // 'Asia/Shanghai' // timeZone
+            );
+        }
+        const backend_download_cron = eval(
+            'process.env.SUB_STORE_BACKEND_DOWNLOAD_CRON',
+        );
+        if (backend_download_cron) {
+            $.info(`[DOWNLOAD CRON] ${backend_download_cron} enabled`);
+            const { CronJob } = eval(`require("cron")`);
+            new CronJob(
+                backend_download_cron,
+                async function () {
+                    try {
+                        $.info(
+                            `[DOWNLOAD CRON] ${backend_download_cron} started`,
+                        );
+                        await gistBackupAction('download');
+                        $.info(
+                            `[DOWNLOAD CRON] ${backend_download_cron} finished`,
+                        );
+                    } catch (e) {
+                        $.error(
+                            `[DOWNLOAD CRON] ${backend_download_cron} error: ${
+                                e.message ?? e
+                            }`,
+                        );
+                    }
+                }, // onTick
+                null, // onComplete
+                true, // start
+                // 'Asia/Shanghai' // timeZone
+            );
+        }
+        const backend_upload_cron = eval(
+            'process.env.SUB_STORE_BACKEND_UPLOAD_CRON',
+        );
+        if (backend_upload_cron) {
+            $.info(`[UPLOAD CRON] ${backend_upload_cron} enabled`);
+            const { CronJob } = eval(`require("cron")`);
+            new CronJob(
+                backend_upload_cron,
+                async function () {
+                    try {
+                        $.info(`[UPLOAD CRON] ${backend_upload_cron} started`);
+                        await gistBackupAction('upload');
+                        $.info(`[UPLOAD CRON] ${backend_upload_cron} finished`);
+                    } catch (e) {
+                        $.error(
+                            `[UPLOAD CRON] ${backend_upload_cron} error: ${
+                                e.message ?? e
+                            }`,
                         );
                     }
                 }, // onTick
