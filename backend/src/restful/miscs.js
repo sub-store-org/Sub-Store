@@ -80,10 +80,72 @@ async function refresh(_, res) {
     success(res);
 }
 
+async function gistBackupAction(action) {
+    // read token
+    const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
+    if (!gistToken) throw new Error('GitHub Token is required for backup!');
+
+    const gist = new Gist({
+        token: gistToken,
+        key: GIST_BACKUP_KEY,
+        syncPlatform,
+    });
+    let content;
+    const settings = $.read(SETTINGS_KEY);
+    const updated = settings.syncTime;
+    switch (action) {
+        case 'upload':
+            // update syncTime
+            settings.syncTime = new Date().getTime();
+            $.write(settings, SETTINGS_KEY);
+            content = $.read('#sub-store');
+            if ($.env.isNode) content = JSON.stringify($.cache, null, `  `);
+            $.info(`上传备份中...`);
+            try {
+                await gist.upload({
+                    [GIST_BACKUP_FILE_NAME]: { content },
+                });
+                $.info(`上传备份完成`);
+            } catch (err) {
+                // restore syncTime if upload failed
+                settings.syncTime = updated;
+                $.write(settings, SETTINGS_KEY);
+                throw err;
+            }
+            break;
+        case 'download':
+            $.info(`还原备份中...`);
+            content = await gist.download(GIST_BACKUP_FILE_NAME);
+            try {
+                if (Object.keys(JSON.parse(content).settings).length === 0) {
+                    throw new Error('备份文件应该至少包含 settings 字段');
+                }
+            } catch (err) {
+                $.error(
+                    `Gist 备份文件校验失败, 无法还原\nReason: ${
+                        err.message ?? err
+                    }`,
+                );
+                throw new Error('Gist 备份文件校验失败, 无法还原');
+            }
+            // restore settings
+            $.write(content, '#sub-store');
+            if ($.env.isNode) {
+                content = JSON.parse(content);
+                $.cache = content;
+                $.persistCache();
+            }
+            $.info(`perform migration after restoring from gist...`);
+            migrate();
+            $.info(`migration completed`);
+            $.info(`还原备份完成`);
+            break;
+    }
+}
 async function gistBackup(req, res) {
     const { action } = req.query;
     // read token
-    const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
+    const { gistToken } = $.read(SETTINGS_KEY);
     if (!gistToken) {
         failed(
             res,
@@ -93,68 +155,8 @@ async function gistBackup(req, res) {
             ),
         );
     } else {
-        const gist = new Gist({
-            token: gistToken,
-            key: GIST_BACKUP_KEY,
-            syncPlatform,
-        });
         try {
-            let content;
-            const settings = $.read(SETTINGS_KEY);
-            const updated = settings.syncTime;
-            switch (action) {
-                case 'upload':
-                    // update syncTime
-                    settings.syncTime = new Date().getTime();
-                    $.write(settings, SETTINGS_KEY);
-                    content = $.read('#sub-store');
-                    if ($.env.isNode)
-                        content = JSON.stringify($.cache, null, `  `);
-                    $.info(`上传备份中...`);
-                    try {
-                        await gist.upload({
-                            [GIST_BACKUP_FILE_NAME]: { content },
-                        });
-                    } catch (err) {
-                        // restore syncTime if upload failed
-                        settings.syncTime = updated;
-                        $.write(settings, SETTINGS_KEY);
-                        throw err;
-                    }
-                    break;
-                case 'download':
-                    $.info(`还原备份中...`);
-                    content = await gist.download(GIST_BACKUP_FILE_NAME);
-                    try {
-                        if (
-                            Object.keys(JSON.parse(content).settings).length ===
-                            0
-                        ) {
-                            throw new Error(
-                                '备份文件应该至少包含 settings 字段',
-                            );
-                        }
-                    } catch (err) {
-                        $.error(
-                            `Gist 备份文件校验失败, 无法还原\nReason: ${
-                                err.message ?? err
-                            }`,
-                        );
-                        throw new Error('Gist 备份文件校验失败, 无法还原');
-                    }
-                    // restore settings
-                    $.write(content, '#sub-store');
-                    if ($.env.isNode) {
-                        content = JSON.parse(content);
-                        $.cache = content;
-                        $.persistCache();
-                    }
-                    $.info(`perform migration after restoring from gist...`);
-                    migrate();
-                    $.info(`migration completed`);
-                    $.info(`还原备份完成`);
-                    break;
-            }
+            await gistBackupAction(action);
             success(res);
         } catch (err) {
             $.error(
@@ -171,3 +173,5 @@ async function gistBackup(req, res) {
         }
     }
 }
+
+export { gistBackupAction };
