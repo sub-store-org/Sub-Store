@@ -1,5 +1,7 @@
+import { Base64 } from 'js-base64';
 import { Result, isPresent } from './utils';
 import Surge_Producer from './surge';
+import ClashMeta_Producer from './clashmeta';
 import { isIPv4, isIPv6 } from '@/utils';
 import $ from '@/core/app';
 
@@ -8,14 +10,22 @@ const targetPlatform = 'SurgeMac';
 const surge_Producer = Surge_Producer();
 
 export default function SurgeMac_Producer() {
-    const produce = (proxy) => {
+    const produce = (proxy, type, opts = {}) => {
         switch (proxy.type) {
             case 'external':
                 return external(proxy);
-            case 'ssr':
-                return shadowsocksr(proxy);
-            default:
-                return surge_Producer.produce(proxy);
+            // case 'ssr':
+            //     return shadowsocksr(proxy);
+            default: {
+                try {
+                    return surge_Producer.produce(proxy, type, opts);
+                } catch (e) {
+                    $.log(
+                        `${proxy.name} is not supported on ${targetPlatform}, try to use Mihomo(SurgeMac - External Proxy Program) instead`,
+                    );
+                    return mihomo(proxy, type, opts);
+                }
+            }
         }
     };
     return { produce };
@@ -60,6 +70,7 @@ function external(proxy) {
 
     return result.toString();
 }
+// eslint-disable-next-line no-unused-vars
 function shadowsocksr(proxy) {
     const external_proxy = {
         ...proxy,
@@ -100,6 +111,65 @@ function shadowsocksr(proxy) {
     }
 
     return external(external_proxy);
+}
+// eslint-disable-next-line no-unused-vars
+function mihomo(proxy, type, opts) {
+    const clashProxy = ClashMeta_Producer().produce([proxy], 'internal')?.[0];
+    if (clashProxy) {
+        const localPort = opts?.localPort || proxy._localPort || 65535;
+        const ipv6 = ['ipv4', 'v4-only'].includes(proxy['ip-version'])
+            ? false
+            : true;
+        const external_proxy = {
+            name: proxy.name,
+            type: 'external',
+            exec: proxy._exec || '/usr/local/bin/mihomo',
+            'local-port': localPort,
+            args: [
+                '-config',
+                Base64.encode(
+                    JSON.stringify({
+                        'mixed-port': localPort,
+                        ipv6,
+                        mode: 'global',
+                        dns: {
+                            enable: true,
+                            ipv6,
+                            nameserver: [
+                                'https://223.6.6.6/dns-query',
+                                'https://120.53.53.53/dns-query',
+                            ],
+                        },
+                        proxies: [
+                            {
+                                ...clashProxy,
+                                name: 'proxy',
+                            },
+                        ],
+                        'proxy-groups': [
+                            {
+                                name: 'GLOBAL',
+                                type: 'select',
+                                proxies: ['proxy'],
+                            },
+                        ],
+                    }),
+                ),
+            ],
+            addresses: [],
+        };
+
+        // https://manual.nssurge.com/policy/external-proxy.html
+        if (isIP(proxy.server)) {
+            external_proxy.addresses.push(proxy.server);
+        } else {
+            $.log(
+                `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}`,
+            );
+        }
+        opts.localPort = localPort - 1;
+        return external(external_proxy);
+    }
 }
 
 function isIP(ip) {
