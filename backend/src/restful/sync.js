@@ -37,6 +37,7 @@ async function produceArtifact({
     produceOpts = {},
     subscription,
     awaitCustomCache,
+    $options,
 }) {
     platform = platform || 'JSON';
 
@@ -158,6 +159,7 @@ async function produceArtifact({
             sub.process || [],
             platform,
             { [sub.name]: sub },
+            $options,
         );
         if (proxies.length === 0) {
             throw new Error(`订阅 ${name} 中不含有效节点`);
@@ -259,7 +261,11 @@ async function produceArtifact({
                         currentProxies,
                         sub.process || [],
                         platform,
-                        { [sub.name]: sub, _collection: collection },
+                        {
+                            [sub.name]: sub,
+                            _collection: collection,
+                            $options,
+                        },
                     );
                     results[name] = currentProxies;
                     processed++;
@@ -312,6 +318,7 @@ async function produceArtifact({
             collection.process || [],
             platform,
             { _collection: collection },
+            $options,
         );
         if (proxies.length === 0) {
             throw new Error(`组合订阅 ${name} 中不含有效节点`);
@@ -460,10 +467,10 @@ async function produceArtifact({
         const processed =
             Array.isArray(file.process) && file.process.length > 0
                 ? await ProxyUtils.process(
-                      { $files: files, $content: filesContent },
+                      { $files: files, $content: filesContent, $options },
                       file.process,
                   )
-                : { $content: filesContent, $files: files };
+                : { $content: filesContent, $files: files, $options };
 
         return processed?.$content ?? '';
     }

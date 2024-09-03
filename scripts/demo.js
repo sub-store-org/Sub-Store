@@ -23,6 +23,17 @@ function operator(proxies = [], targetPlatform, context) {
 
   // $arguments 为传入的脚本参数
 
+  // $options 为通过链接传入的参数
+  // 例如: { arg1: 'a', arg2: 'b' }
+  // 可这样传:
+  // 先这样处理 encodeURIComponent(JSON.stringify({ arg1: 'a', arg2: 'b' }))
+  // /api/file/foo?$options=%7B%22arg1%22%3A%22a%22%2C%22arg2%22%3A%22b%22%7D
+  // 或这样传:
+  // 先这样处理 encodeURIComponent('arg1=a&arg2=b')
+  // /api/file/foo?$options=arg1%3Da%26arg2%3Db
+
+  // console.log($options)
+
   // targetPlatform 为输出的目标平台
 
   // lodash
@@ -133,7 +144,7 @@ function operator(proxies = [], targetPlatform, context) {
   // yaml.proxies.unshift(...clashMetaProxies)
   // $content = ProxyUtils.yaml.dump(yaml)
 
-  // { $content, $files } will be passed to the next operator
+  // { $content, $files, $options } will be passed to the next operator
   // $content is the final content of the file
 
   // flowUtils 为机场订阅流量信息处理工具
@@ -141,7 +152,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 1. https://t.me/zhetengsha/948
 
   // context 为传入的上下文
-  // 有三种情况, 按需判断
+  // 其中 source 为 订阅和组合订阅的数据, 有三种情况, 按需判断
 
   // 若存在 `source._collection` 且 `source._collection.subscriptions` 中的 key 在 `source` 上也存在, 说明输出结果为组合订阅, 但是脚本设置在单条订阅上
 

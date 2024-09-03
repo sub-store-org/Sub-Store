@@ -70,6 +70,24 @@ async function downloadSubscription(req, res) {
         includeUnsupportedProxy,
         resultFormat,
     } = req.query;
+    let $options = {};
+    if (req.query.$options) {
+        try {
+            // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
+            $options = JSON.parse(decodeURIComponent(req.query.$options));
+        } catch (e) {
+            for (const pair of req.query.$options.split('&')) {
+                const key = pair.split('=')[0];
+                const value = pair.split('=')[1];
+                // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
+                $options[key] =
+                    value == null || value === ''
+                        ? true
+                        : decodeURIComponent(value);
+            }
+        }
+        $.info(`传入 $options: ${JSON.stringify($options)}`);
+    }
     if (url) {
         url = decodeURIComponent(url);
         $.info(`指定远程订阅 URL: ${url}`);
@@ -116,6 +134,7 @@ async function downloadSubscription(req, res) {
                 produceOpts: {
                     'include-unsupported-proxy': includeUnsupportedProxy,
                 },
+                $options,
             });
 
             if (
@@ -247,6 +266,25 @@ async function downloadCollection(req, res) {
         resultFormat,
     } = req.query;
 
+    let $options = {};
+    if (req.query.$options) {
+        try {
+            // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
+            $options = JSON.parse(decodeURIComponent(req.query.$options));
+        } catch (e) {
+            for (const pair of req.query.$options.split('&')) {
+                const key = pair.split('=')[0];
+                const value = pair.split('=')[1];
+                // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
+                $options[key] =
+                    value == null || value === ''
+                        ? true
+                        : decodeURIComponent(value);
+            }
+        }
+        $.info(`传入 $options: ${JSON.stringify($options)}`);
+    }
+
     if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
         ignoreFailedRemoteSub = decodeURIComponent(ignoreFailedRemoteSub);
         $.info(`指定忽略失败的远程订阅: ${ignoreFailedRemoteSub}`);
@@ -272,6 +310,7 @@ async function downloadCollection(req, res) {
                 produceOpts: {
                     'include-unsupported-proxy': includeUnsupportedProxy,
                 },
+                $options,
             });
 
             // forward flow header from the first subscription in this collection

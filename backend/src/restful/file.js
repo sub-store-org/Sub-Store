@@ -60,6 +60,24 @@ async function getFile(req, res) {
         mergeSources,
         ignoreFailedRemoteFile,
     } = req.query;
+    let $options = {};
+    if (req.query.$options) {
+        try {
+            // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
+            $options = JSON.parse(decodeURIComponent(req.query.$options));
+        } catch (e) {
+            for (const pair of req.query.$options.split('&')) {
+                const key = pair.split('=')[0];
+                const value = pair.split('=')[1];
+                // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
+                $options[key] =
+                    value == null || value === ''
+                        ? true
+                        : decodeURIComponent(value);
+            }
+        }
+        $.info(`传入 $options: ${JSON.stringify($options)}`);
+    }
     if (url) {
         url = decodeURIComponent(url);
         $.info(`指定远程文件 URL: ${url}`);
@@ -101,6 +119,7 @@ async function getFile(req, res) {
                 content,
                 mergeSources,
                 ignoreFailedRemoteFile,
+                $options,
             });
 
             try {
