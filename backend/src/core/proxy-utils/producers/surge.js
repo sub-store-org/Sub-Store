@@ -15,6 +15,9 @@ const ipVersions = {
 export default function Surge_Producer() {
     const produce = (proxy, type, opts = {}) => {
         proxy.name = proxy.name.replace(/=|,/g, '');
+        if (proxy.ports) {
+            proxy.ports = String(proxy.ports);
+        }
         switch (proxy.type) {
             case 'ss':
                 return shadowsocks(proxy);
@@ -676,7 +679,7 @@ function tuic(proxy) {
     );
 
     if (isPresent(proxy, 'ports')) {
-        result.append(`,port-hopping=${proxy.ports.replace(/,/g, ';')}`);
+        result.append(`,port-hopping="${proxy.ports.replace(/,/g, ';')}"`);
     }
 
     result.appendIfPresent(
@@ -945,7 +948,7 @@ function hysteria2(proxy) {
     result.appendIfPresent(`,password=${proxy.password}`, 'password');
 
     if (isPresent(proxy, 'ports')) {
-        result.append(`,port-hopping=${proxy.ports.replace(/,/g, ';')}`);
+        result.append(`,port-hopping="${proxy.ports.replace(/,/g, ';')}"`);
     }
 
     result.appendIfPresent(

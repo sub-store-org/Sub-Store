@@ -231,6 +231,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
 
         // 处理 端口跳跃
         if (proxy.ports) {
+            proxy.ports = String(proxy.ports);
             if (!['ClashMeta'].includes(targetPlatform)) {
                 proxy.ports = proxy.ports.replace(/\//g, ',');
             }
@@ -420,13 +421,13 @@ function lastParse(proxy) {
             proxy[`${proxy.network}-opts`].path = [transportPath];
         }
     }
-    if (['hysteria', 'hysteria2'].includes(proxy.type)) {
-        if (proxy.ports) {
-            proxy.ports = proxy.ports.replace(/\//g, ',');
-        } else {
-            delete proxy.ports;
-        }
+    // if (['hysteria', 'hysteria2', 'tuic'].includes(proxy.type)) {
+    if (proxy.ports) {
+        proxy.ports = String(proxy.ports).replace(/\//g, ',');
+    } else {
+        delete proxy.ports;
     }
+    // }
     if (
         ['hysteria2'].includes(proxy.type) &&
         proxy.obfs &&
