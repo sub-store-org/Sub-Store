@@ -501,6 +501,18 @@ function lastParse(proxy) {
             proxy[`${proxy.network}-opts`].path = ['/'];
         }
     }
+    const transportPath = proxy[`${proxy.network}-opts`]?.path;
+    if (Array.isArray(transportPath)) {
+        transportPath.forEach((path, index) => {
+            if (!path.startsWith('/')) {
+                proxy[`${proxy.network}-opts`].path[index] = `/${path}`;
+            }
+        });
+    } else if (transportPath) {
+        if (!transportPath.startsWith('/')) {
+            proxy[`${proxy.network}-opts`].path = `/${transportPath}`;
+        }
+    }
     if (['', 'off'].includes(proxy.sni)) {
         proxy['disable-sni'] = true;
     }
