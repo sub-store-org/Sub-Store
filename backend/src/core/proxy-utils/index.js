@@ -313,6 +313,19 @@ function safeMatch(parser, line) {
     }
 }
 
+function formatTransportPath(path) {
+    if (typeof path === 'string' || typeof path === 'number') {
+        path = String(path).trim();
+
+        if (path === '') {
+            return '/';
+        } else if (!path.startsWith('/')) {
+            return '/' + path;
+        }
+    }
+    return path;
+}
+
 function lastParse(proxy) {
     if (proxy.interface) {
         proxy['interface-name'] = proxy.interface;
@@ -339,6 +352,17 @@ function lastParse(proxy) {
         }
         delete proxy['ws-path'];
         delete proxy['ws-headers'];
+    }
+
+    const transportPath = proxy[`${proxy.network}-opts`]?.path;
+
+    if (Array.isArray(transportPath)) {
+        proxy[`${proxy.network}-opts`].path = transportPath.map((item) =>
+            formatTransportPath(item),
+        );
+    } else if (transportPath != null) {
+        proxy[`${proxy.network}-opts`].path =
+            formatTransportPath(transportPath);
     }
 
     if (proxy.type === 'trojan') {
@@ -499,18 +523,6 @@ function lastParse(proxy) {
             proxy[`${proxy.network}-opts`] =
                 proxy[`${proxy.network}-opts`] || {};
             proxy[`${proxy.network}-opts`].path = ['/'];
-        }
-    }
-    const transportPath = proxy[`${proxy.network}-opts`]?.path;
-    if (Array.isArray(transportPath)) {
-        transportPath.forEach((path, index) => {
-            if (!path.startsWith('/')) {
-                proxy[`${proxy.network}-opts`].path[index] = `/${path}`;
-            }
-        });
-    } else if (transportPath) {
-        if (!transportPath.startsWith('/')) {
-            proxy[`${proxy.network}-opts`].path = `/${transportPath}`;
         }
     }
     if (['', 'off'].includes(proxy.sni)) {
