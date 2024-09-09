@@ -421,26 +421,23 @@ const DOMAIN_RESOLVERS = {
         const id = hex_md5(`GOOGLE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
-        const resp = await $.http.get({
-            url: `https://8.8.4.4/resolve?name=${encodeURIComponent(
-                domain,
-            )}&type=${
-                type === 'IPv6' ? 'AAAA' : 'A'
-            }&edns_client_subnet=${edns}`,
-            headers: {
-                accept: 'application/dns-json',
-            },
+        const answerType = type === 'IPv6' ? 'AAAA' : 'A';
+        const res = await doh({
+            url: 'https://8.8.4.4/dns-query',
+            domain,
+            type: answerType,
             timeout,
+            edns,
         });
-        const body = JSON.parse(resp.body);
-        if (body['Status'] !== 0) {
-            throw new Error(`Status is ${body['Status']}`);
-        }
-        const answers = body['Answer'];
+
+        const { answers } = res;
         if (!Array.isArray(answers) || answers.length === 0) {
             throw new Error('No answers');
         }
-        const result = answers.map((i) => i?.data).filter((i) => i);
+        const result = answers
+            .filter((i) => i?.type === answerType)
+            .map((i) => i?.data)
+            .filter((i) => i);
         if (result.length === 0) {
             throw new Error('No answers');
         }
@@ -474,28 +471,27 @@ const DOMAIN_RESOLVERS = {
         resourceCache.set(id, result);
         return result;
     },
-    Cloudflare: async function (domain, type, noCache, timeout) {
+    Cloudflare: async function (domain, type, noCache, timeout, edns) {
         const id = hex_md5(`CLOUDFLARE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
-        const resp = await $.http.get({
-            url: `https://1.0.0.1/dns-query?name=${encodeURIComponent(
-                domain,
-            )}&type=${type === 'IPv6' ? 'AAAA' : 'A'}`,
-            headers: {
-                accept: 'application/dns-json',
-            },
+        const answerType = type === 'IPv6' ? 'AAAA' : 'A';
+        const res = await doh({
+            url: 'https://1.0.0.1/dns-query',
+            domain,
+            type: answerType,
             timeout,
+            edns,
         });
-        const body = JSON.parse(resp.body);
-        if (body['Status'] !== 0) {
-            throw new Error(`Status is ${body['Status']}`);
-        }
-        const answers = body['Answer'];
+
+        const { answers } = res;
         if (!Array.isArray(answers) || answers.length === 0) {
             throw new Error('No answers');
         }
-        const result = answers.map((i) => i?.data).filter((i) => i);
+        const result = answers
+            .filter((i) => i?.type === answerType)
+            .map((i) => i?.data)
+            .filter((i) => i);
         if (result.length === 0) {
             throw new Error('No answers');
         }
