@@ -49,6 +49,11 @@ export default async function download(
     const requestTimeout = timeout || defaultTimeout;
     const id = hex_md5(userAgent + url);
 
+    if ($arguments?.cacheKey === true) {
+        $.error(`使用自定义缓存时 cacheKey 的值不能为空`);
+        $arguments.cacheKey = undefined;
+    }
+
     const customCacheKey = $arguments?.cacheKey
         ? `#sub-store-cached-custom-${$arguments?.cacheKey}`
         : undefined;
