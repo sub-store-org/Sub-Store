@@ -111,6 +111,12 @@ function getRandomPort(portString) {
     }
 }
 
+function numberToString(value) {
+    return Number.isSafeInteger(value)
+        ? String(value)
+        : BigInt(value).toString();
+}
+
 export {
     ipAddress,
     isIPv4,
@@ -123,4 +129,5 @@ export {
     // utf8ArrayToStr,
     getPolicyDescriptor,
     getRandomPort,
+    numberToString,
 };

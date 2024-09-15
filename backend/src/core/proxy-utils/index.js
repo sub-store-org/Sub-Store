@@ -9,6 +9,7 @@ import {
     isNotBlank,
     ipAddress,
     getRandomPort,
+    numberToString,
 } from '@/utils';
 import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
@@ -327,6 +328,9 @@ function formatTransportPath(path) {
 }
 
 function lastParse(proxy) {
+    if (typeof proxy.password === 'number') {
+        proxy.password = numberToString(proxy.password);
+    }
     if (proxy.interface) {
         proxy['interface-name'] = proxy.interface;
         delete proxy.interface;
