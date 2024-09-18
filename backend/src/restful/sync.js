@@ -151,7 +151,7 @@ async function produceArtifact({
             .flat();
 
         proxies.forEach((proxy) => {
-            proxy.subName = sub.name;
+            proxy._subName = sub.name;
         });
         // apply processors
         proxies = await ProxyUtils.process(
@@ -252,8 +252,8 @@ async function produceArtifact({
                         .flat();
 
                     currentProxies.forEach((proxy) => {
-                        proxy.subName = sub.name;
-                        proxy.collectionName = collection.name;
+                        proxy._subName = sub.name;
+                        proxy._collectionName = collection.name;
                     });
 
                     // apply processors
@@ -309,7 +309,7 @@ async function produceArtifact({
         );
 
         proxies.forEach((proxy) => {
-            proxy.collectionName = collection.name;
+            proxy._collectionName = collection.name;
         });
 
         // apply own processors
