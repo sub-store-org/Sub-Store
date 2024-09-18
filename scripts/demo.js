@@ -10,8 +10,8 @@ function operator(proxies = [], targetPlatform, context) {
   // 2. 域名解析后 会多一个 `_resolved` 字段, 表示是否解析成功
   // 3. 域名解析后会有`_IPv4`, `_IPv6`, `_IP`(若有多个步骤, 只取第一次成功的 v4 或 v6 数据), `_IP4P`(若解析类型为 IPv6 且符合 IP4P 类型, 将自动转换), `_domain` 字段, `_resolved_ips` 为解析出的所有 IP
   // 4. 节点字段 `exec` 为 `ssr-local` 路径, 默认 `/usr/local/bin/ssr-local`; 端口从 10000 开始递增(暂不支持配置)
-  // 5. `_subName` 为单条订阅名
-  // 6. `_collectionName` 为组合订阅名
+  // 5. `_subName` 为单条订阅名, `_subDisplayName` 为单条订阅显示名
+  // 6. `_collectionName` 为组合订阅名, `_collectionDisplayName` 为组合订阅显示名
   // 7. `tls-fingerprint` 为 tls 指纹
   // 8. `underlying-proxy` 为前置代理
   // 9. `trojan`, `tuic`, `hysteria`, `hysteria2`, `juicity` 会在解析时设置 `tls`: true (会使用 tls 类协议的通用逻辑),  输出时删除
@@ -152,7 +152,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 1. https://t.me/zhetengsha/948
 
   // context 为传入的上下文
-  // 其中 source 为 订阅和组合订阅的数据, 有三种情况, 按需判断 (若只需要取订阅/组合订阅名称 直接用 `_subName` 和 `_collectionName` 即可)
+  // 其中 source 为 订阅和组合订阅的数据, 有三种情况, 按需判断 (若只需要取订阅/组合订阅名称 直接用 `_subName` `_subDisplayName` `_collectionName` `_collectionDisplayName` 即可)
 
   // 若存在 `source._collection` 且 `source._collection.subscriptions` 中的 key 在 `source` 上也存在, 说明输出结果为组合订阅, 但是脚本设置在单条订阅上
 

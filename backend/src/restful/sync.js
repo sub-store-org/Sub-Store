@@ -152,6 +152,7 @@ async function produceArtifact({
 
         proxies.forEach((proxy) => {
             proxy._subName = sub.name;
+            proxy._subDisplayName = sub.displayName;
         });
         // apply processors
         proxies = await ProxyUtils.process(
@@ -253,7 +254,9 @@ async function produceArtifact({
 
                     currentProxies.forEach((proxy) => {
                         proxy._subName = sub.name;
+                        proxy._subDisplayName = sub.displayName;
                         proxy._collectionName = collection.name;
+                        proxy._collectionDisplayName = collection.displayName;
                     });
 
                     // apply processors
@@ -310,6 +313,7 @@ async function produceArtifact({
 
         proxies.forEach((proxy) => {
             proxy._collectionName = collection.name;
+            proxy._collectionDisplayName = collection.displayName;
         });
 
         // apply own processors
@@ -340,6 +344,7 @@ async function produceArtifact({
             }
             exist[proxy.name] = true;
         }
+        console.log(proxies);
         return ProxyUtils.produce(proxies, platform, produceType, produceOpts);
     } else if (type === 'rule') {
         const allRules = $.read(RULES_KEY);
