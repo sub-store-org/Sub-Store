@@ -147,6 +147,7 @@ async function compareSub(req, res) {
         original.forEach((proxy, i) => {
             proxy.id = i;
             proxy._subName = sub.name;
+            proxy._subDisplayName = sub.displayName;
         });
 
         // apply processors
@@ -238,7 +239,9 @@ async function compareCollection(req, res) {
 
                     currentProxies.forEach((proxy) => {
                         proxy._subName = sub.name;
+                        proxy._subDisplayName = sub.displayName;
                         proxy._collectionName = collection.name;
+                        proxy._collectionDisplayName = collection.displayName;
                     });
 
                     // apply processors
@@ -277,6 +280,7 @@ async function compareCollection(req, res) {
         original.forEach((proxy, i) => {
             proxy.id = i;
             proxy._collectionName = collection.name;
+            proxy._collectionDisplayName = collection.displayName;
         });
 
         const processed = await ProxyUtils.process(
