@@ -45,6 +45,7 @@ export default function serve() {
     $app.start();
 
     if ($.env.isNode) {
+        // Deprecated: SUB_STORE_BACKEND_CRON
         const backend_sync_cron =
             eval('process.env.SUB_STORE_BACKEND_SYNC_CRON') ||
             eval('process.env.SUB_STORE_BACKEND_CRON');
