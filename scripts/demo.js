@@ -18,6 +18,9 @@ function operator(proxies = [], targetPlatform, context) {
   // 10. `sni` 在某些协议里会自动与 `servername` 转换
   // 11. 读取节点的 ca-str 和 _ca (后端文件路径) 字段, 自动计算 fingerprint (参考 https://t.me/zhetengsha/1512)
   // 12. 以 Surge 为例, 最新的参数一般我都会跟进, 以 Surge 文档为例, 一些常用的: TUIC/Hysteria 2 的 `ecn`, Snell 的 `reuse` 连接复用, QUIC 策略 block-quic`, Hysteria 2 下载带宽 `down`
+  // 13. `test-url` 为测延迟链接, `test-timeout` 为测延迟超时
+  // 14. `ports` 为端口跳跃, `hop-interval` 变换端口号的时间间隔
+  // 15. `ip-version` 设置节点使用 IP 版本，可选：dual，ipv4，ipv6，ipv4-prefer，ipv6-prefer. 会进行内部转换, 若无法匹配则使用原始值
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
 
