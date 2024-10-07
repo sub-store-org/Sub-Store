@@ -38,6 +38,7 @@ async function produceArtifact({
     subscription,
     awaitCustomCache,
     $options,
+    proxy,
 }) {
     platform = platform || 'JSON';
 
@@ -68,7 +69,7 @@ async function produceArtifact({
                                 url,
                                 ua || sub.ua,
                                 undefined,
-                                sub.proxy,
+                                sub.proxy || proxy,
                                 undefined,
                                 awaitCustomCache,
                             );
@@ -115,7 +116,7 @@ async function produceArtifact({
                                 url,
                                 ua || sub.ua,
                                 undefined,
-                                sub.proxy,
+                                sub.proxy || proxy,
                                 undefined,
                                 awaitCustomCache,
                             );
@@ -220,7 +221,9 @@ async function produceArtifact({
                                             url,
                                             sub.ua,
                                             undefined,
-                                            sub.proxy,
+                                            sub.proxy ||
+                                                collection.proxy ||
+                                                proxy,
                                         );
                                     } catch (err) {
                                         errors[url] = err;
@@ -344,7 +347,6 @@ async function produceArtifact({
             }
             exist[proxy.name] = true;
         }
-        console.log(proxies);
         return ProxyUtils.produce(proxies, platform, produceType, produceOpts);
     } else if (type === 'rule') {
         const allRules = $.read(RULES_KEY);
