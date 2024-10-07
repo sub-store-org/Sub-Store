@@ -9,8 +9,12 @@ import { SETTINGS_KEY } from '@/constants';
 export default class Gist {
     constructor({ token, key, syncPlatform }) {
         const { isStash, isLoon, isShadowRocket, isQX } = ENV();
-        const { defaultProxy: proxy, defaultTimeout: timeout } =
-            $.read(SETTINGS_KEY);
+        const { defaultProxy, defaultTimeout: timeout } = $.read(SETTINGS_KEY);
+        let proxy = defaultProxy;
+        if ($.env.isNode) {
+            proxy =
+                proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');
+        }
 
         if (syncPlatform === 'gitlab') {
             this.headers = {

@@ -66,6 +66,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     removeFlag, // 移除 emoji 旗帜
   //     getISO, // 获取 ISO 3166-1 alpha-2 代码
   //     Gist, // Gist 类
+  //     download, // 内部的下载方法, 见 backend/src/utils/download.js
   // }
 
   // 如果只是为了快速修改或者筛选 可以参考 脚本操作支持节点快捷脚本 https://t.me/zhetengsha/970 和 脚本筛选支持节点快捷脚本 https://t.me/zhetengsha/1009

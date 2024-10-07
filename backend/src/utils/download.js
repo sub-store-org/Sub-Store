@@ -45,7 +45,10 @@ export default async function download(
     const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
     const { defaultProxy, defaultUserAgent, defaultTimeout, cacheThreshold } =
         $.read(SETTINGS_KEY);
-    const proxy = customProxy || defaultProxy;
+    let proxy = customProxy || defaultProxy;
+    if ($.env.isNode) {
+        proxy = proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');
+    }
     const userAgent = ua || defaultUserAgent || 'clash.meta';
     const requestTimeout = timeout || defaultTimeout;
     const id = hex_md5(userAgent + url);
