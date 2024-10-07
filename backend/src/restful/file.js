@@ -59,6 +59,7 @@ async function getFile(req, res) {
         content,
         mergeSources,
         ignoreFailedRemoteFile,
+        proxy,
     } = req.query;
     let $options = {};
     if (req.query.$options) {
@@ -81,6 +82,10 @@ async function getFile(req, res) {
     if (url) {
         url = decodeURIComponent(url);
         $.info(`指定远程文件 URL: ${url}`);
+    }
+    if (proxy) {
+        proxy = decodeURIComponent(proxy);
+        $.info(`指定远程订阅使用代理/策略 proxy: ${proxy}`);
     }
     if (ua) {
         ua = decodeURIComponent(ua);
@@ -120,6 +125,7 @@ async function getFile(req, res) {
                 mergeSources,
                 ignoreFailedRemoteFile,
                 $options,
+                proxy,
             });
 
             try {
@@ -129,6 +135,8 @@ async function getFile(req, res) {
                     const flowInfo = await getFlowHeaders(
                         subInfoUrl,
                         subInfoUserAgent || file.subInfoUserAgent,
+                        undefined,
+                        proxy || file.proxy,
                     );
                     if (flowInfo) {
                         res.set('subscription-userinfo', flowInfo);

@@ -181,7 +181,7 @@ async function downloadSubscription(req, res) {
                             url,
                             $arguments.flowUserAgent,
                             undefined,
-                            sub.proxy,
+                            proxy || sub.proxy,
                             $arguments.flowUrl,
                         );
                         if (flowInfo) {
@@ -368,7 +368,7 @@ async function downloadCollection(req, res) {
                                 url,
                                 $arguments.flowUserAgent,
                                 undefined,
-                                sub.proxy || collection.proxy || proxy,
+                                proxy || sub.proxy || collection.proxy,
                                 $arguments.flowUrl,
                             );
                             if (flowInfo) {
