@@ -141,7 +141,14 @@ async function getFile(req, res) {
                     )}`,
                 );
             }
-
+            if (file.download) {
+                res.set(
+                    'Content-Disposition',
+                    `attachment; filename*=UTF-8''${encodeURIComponent(
+                        file.displayName || file.name,
+                    )}`,
+                );
+            }
             res.set('Content-Type', 'text/plain; charset=utf-8').send(
                 output ?? '',
             );
