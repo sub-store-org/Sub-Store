@@ -10,7 +10,13 @@ export function getFlowField(headers) {
     )[0];
     return headers[subkey];
 }
-export async function getFlowHeaders(rawUrl, ua, timeout, proxy, flowUrl) {
+export async function getFlowHeaders(
+    rawUrl,
+    ua,
+    timeout,
+    customProxy,
+    flowUrl,
+) {
     let url = flowUrl || rawUrl || '';
     let $arguments = {};
     const rawArgs = url.split('#');
@@ -41,7 +47,9 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy, flowUrl) {
         // $.info(`使用缓存的流量信息: ${url}`);
         flowInfo = cached;
     } else {
-        const { defaultFlowUserAgent, defaultTimeout } = $.read(SETTINGS_KEY);
+        const { defaultProxy, defaultFlowUserAgent, defaultTimeout } =
+            $.read(SETTINGS_KEY);
+        const proxy = customProxy || defaultProxy;
         const userAgent =
             ua ||
             defaultFlowUserAgent ||
@@ -67,7 +75,7 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy, flowUrl) {
                 $.info(
                     `使用 HEAD 方法从响应头获取流量信息: ${url}, User-Agent: ${
                         userAgent || ''
-                    }`,
+                    }, Proxy: ${proxy}`,
                 );
                 const { headers } = await http.head({
                     url: url
@@ -97,14 +105,14 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy, flowUrl) {
                 $.error(
                     `使用 HEAD 方法从响应头获取流量信息失败: ${url}, User-Agent: ${
                         userAgent || ''
-                    }: ${e.message ?? e}`,
+                    }, Proxy: ${proxy}: ${e.message ?? e}`,
                 );
             }
             if (!flowInfo) {
                 $.info(
                     `使用 GET 方法获取流量信息: ${url}, User-Agent: ${
                         userAgent || ''
-                    }`,
+                    }, Proxy: ${proxy}`,
                 );
                 const { headers } = await http.get({
                     url: url
@@ -113,8 +121,21 @@ export async function getFlowHeaders(rawUrl, ua, timeout, proxy, flowUrl) {
                         .filter((i) => i.length)[0],
                     headers: {
                         'User-Agent': userAgent,
+                        ...(isStash && proxy
+                            ? {
+                                  'X-Stash-Selected-Proxy':
+                                      encodeURIComponent(proxy),
+                              }
+                            : {}),
+                        ...(isShadowRocket && proxy
+                            ? { 'X-Surge-Policy': proxy }
+                            : {}),
                     },
                     timeout: requestTimeout,
+                    ...(proxy ? { proxy } : {}),
+                    ...(isLoon && proxy ? { node: proxy } : {}),
+                    ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
+                    ...(proxy ? getPolicyDescriptor(proxy) : {}),
                 });
                 flowInfo = getFlowField(headers);
             }
