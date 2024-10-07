@@ -292,6 +292,7 @@ export const ProxyUtils = {
     getISO,
     MMDB,
     Gist,
+    download,
 };
 
 function tryParse(parser, line) {

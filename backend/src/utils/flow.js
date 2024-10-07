@@ -49,7 +49,11 @@ export async function getFlowHeaders(
     } else {
         const { defaultProxy, defaultFlowUserAgent, defaultTimeout } =
             $.read(SETTINGS_KEY);
-        const proxy = customProxy || defaultProxy;
+        let proxy = customProxy || defaultProxy;
+        if ($.env.isNode) {
+            proxy =
+                proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');
+        }
         const userAgent =
             ua ||
             defaultFlowUserAgent ||
