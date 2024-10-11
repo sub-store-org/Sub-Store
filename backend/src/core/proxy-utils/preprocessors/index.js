@@ -50,10 +50,32 @@ function Clash() {
     };
     const parse = function (raw) {
         // Clash YAML format
+
+        // 防止 VLESS节点 reality-opts 选项中的 short-id 被解析成 Infinity
+        // 匹配 short-id 冒号后面的值(包含空格和引号)
+        const afterReplace = raw.replace(
+            /short-id:([ ]*[^,\n}]*)/g,
+            (matched, value) => {
+            const afterTrim = value.trim();
+        
+            // 为空
+            if (!afterTrim || afterTrim === '') {
+                return 'short-id: ""'
+            }
+        
+            // 是否被引号包裹
+            if (/^(['"]).*\1$/.test(afterTrim)) {
+                return `short-id: ${afterTrim}`;
+            } else {
+                return `short-id: "${afterTrim}"`
+            }
+            }
+        );
+
         const {
             proxies,
             'global-client-fingerprint': globalClientFingerprint,
-        } = safeLoad(raw);
+        } = safeLoad(afterReplace);
         return proxies
             .map((p) => {
                 // https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config.yaml#L73C1-L73C26
