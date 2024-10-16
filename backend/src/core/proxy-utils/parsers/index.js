@@ -391,12 +391,6 @@ function URI_VMess() {
                 } else {
                     delete proxy.network;
                 }
-
-                // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L413
-                // sni 优先级应高于 host
-                if (proxy.tls && !proxy.sni && transportHost) {
-                    proxy.sni = transportHost;
-                }
             }
             return proxy;
         }
@@ -536,15 +530,6 @@ function URI_VLESS() {
             }
             if (Object.keys(opts).length > 0) {
                 proxy[`${proxy.network}-opts`] = opts;
-            }
-        }
-
-        if (proxy.tls && !proxy.sni) {
-            if (proxy.network === 'ws') {
-                proxy.sni = proxy['ws-opts']?.headers?.Host;
-            } else if (proxy.network === 'http') {
-                let httpHost = proxy['http-opts']?.headers?.Host;
-                proxy.sni = Array.isArray(httpHost) ? httpHost[0] : httpHost;
             }
         }
 
@@ -892,22 +877,6 @@ function Clash_All() {
             throw new Error(
                 `Clash does not support proxy with type: ${proxy.type}`,
             );
-        }
-
-        // handle vmess sni
-        if (['vmess', 'vless'].includes(proxy.type)) {
-            proxy.sni = proxy.servername;
-            delete proxy.servername;
-            if (proxy.tls && !proxy.sni) {
-                if (proxy.network === 'ws') {
-                    proxy.sni = proxy['ws-opts']?.headers?.Host;
-                } else if (proxy.network === 'http') {
-                    let httpHost = proxy['http-opts']?.headers?.Host;
-                    proxy.sni = Array.isArray(httpHost)
-                        ? httpHost[0]
-                        : httpHost;
-                }
-            }
         }
 
         if (proxy['server-cert-fingerprint']) {
