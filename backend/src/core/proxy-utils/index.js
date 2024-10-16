@@ -408,20 +408,7 @@ function lastParse(proxy) {
             proxy['h2-opts'].path = path[0];
         }
     }
-    if (proxy.tls && !proxy.sni) {
-        if (proxy.network) {
-            let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
-            transportHost = Array.isArray(transportHost)
-                ? transportHost[0]
-                : transportHost;
-            if (transportHost) {
-                proxy.sni = transportHost;
-            }
-        }
-        if (!proxy.sni && !isIP(proxy.server)) {
-            proxy.sni = proxy.server;
-        }
-    }
+
     // 非 tls, 有 ws/http 传输层, 使用域名的节点, 将设置传输层 Host 防止之后域名解析后丢失域名(不覆盖现有的 Host)
     if (
         !proxy.tls &&
@@ -446,6 +433,20 @@ function lastParse(proxy) {
         }
         if (transportPath && !Array.isArray(transportPath)) {
             proxy[`${proxy.network}-opts`].path = [transportPath];
+        }
+    }
+    if (proxy.tls && !proxy.sni) {
+        if (!isIP(proxy.server)) {
+            proxy.sni = proxy.server;
+        }
+        if (!proxy.sni && proxy.network) {
+            let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
+            transportHost = Array.isArray(transportHost)
+                ? transportHost[0]
+                : transportHost;
+            if (transportHost) {
+                proxy.sni = transportHost;
+            }
         }
     }
     // if (['hysteria', 'hysteria2', 'tuic'].includes(proxy.type)) {
