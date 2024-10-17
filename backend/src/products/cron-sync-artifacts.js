@@ -130,6 +130,15 @@ async function doSync() {
                 try {
                     if (artifact.sync && artifact.source) {
                         $.info(`正在同步云配置：${artifact.name}...`);
+
+                        const useMihomoExternal =
+                            artifact.platform === 'SurgeMac';
+
+                        if (useMihomoExternal) {
+                            $.info(
+                                `手动指定了 target 为 SurgeMac, 将使用 Mihomo External`,
+                            );
+                        }
                         const output = await produceArtifact({
                             type: artifact.type,
                             name: artifact.source,
@@ -137,6 +146,7 @@ async function doSync() {
                             produceOpts: {
                                 'include-unsupported-proxy':
                                     artifact.includeUnsupportedProxy,
+                                useMihomoExternal,
                             },
                         });
 
