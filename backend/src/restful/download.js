@@ -52,6 +52,8 @@ async function downloadSubscription(req, res) {
     name = decodeURIComponent(name);
     nezhaIndex = decodeURIComponent(nezhaIndex);
 
+    const useMihomoExternal = req.query.target === 'SurgeMac';
+
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
@@ -122,6 +124,10 @@ async function downloadSubscription(req, res) {
         $.info(`包含不支持的节点: ${includeUnsupportedProxy}`);
     }
 
+    if (useMihomoExternal) {
+        $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
+    }
+
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
     if (sub) {
@@ -138,6 +144,7 @@ async function downloadSubscription(req, res) {
                 produceType,
                 produceOpts: {
                     'include-unsupported-proxy': includeUnsupportedProxy,
+                    useMihomoExternal,
                 },
                 $options,
                 proxy,
@@ -253,6 +260,8 @@ async function downloadCollection(req, res) {
     name = decodeURIComponent(name);
     nezhaIndex = decodeURIComponent(nezhaIndex);
 
+    const useMihomoExternal = req.query.target === 'SurgeMac';
+
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
 
@@ -310,6 +319,9 @@ async function downloadCollection(req, res) {
         includeUnsupportedProxy = decodeURIComponent(includeUnsupportedProxy);
         $.info(`包含不支持的节点: ${includeUnsupportedProxy}`);
     }
+    if (useMihomoExternal) {
+        $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
+    }
 
     if (collection) {
         try {
@@ -321,6 +333,7 @@ async function downloadCollection(req, res) {
                 produceType,
                 produceOpts: {
                     'include-unsupported-proxy': includeUnsupportedProxy,
+                    useMihomoExternal,
                 },
                 $options,
                 proxy,

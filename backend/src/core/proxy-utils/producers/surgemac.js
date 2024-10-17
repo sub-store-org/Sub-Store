@@ -20,10 +20,12 @@ export default function SurgeMac_Producer() {
                 try {
                     return surge_Producer.produce(proxy, type, opts);
                 } catch (e) {
-                    $.log(
-                        `${proxy.name} is not supported on ${targetPlatform}, try to use Mihomo(SurgeMac - External Proxy Program) instead`,
-                    );
-                    return mihomo(proxy, type, opts);
+                    if (opts.useMihomoExternal) {
+                        $.log(
+                            `${proxy.name} is not supported on ${targetPlatform}, try to use Mihomo(SurgeMac - External Proxy Program) instead`,
+                        );
+                        return mihomo(proxy, type, opts);
+                    }
                 }
             }
         }
