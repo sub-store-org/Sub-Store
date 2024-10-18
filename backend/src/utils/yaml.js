@@ -17,16 +17,16 @@ function retry(fn, content, ...args) {
 }
 
 export function safeLoad(content, ...args) {
-    return retry(YAML.safeLoad, content, ...args);
+    return retry(YAML.safeLoad, JSON.parse(JSON.stringify(content)), ...args);
 }
 export function load(content, ...args) {
-    return retry(YAML.load, content, ...args);
+    return retry(YAML.load, JSON.parse(JSON.stringify(content)), ...args);
 }
-export function safeDump(...args) {
-    return YAML.safeDump(...args);
+export function safeDump(content, ...args) {
+    return YAML.safeDump(JSON.parse(JSON.stringify(content)), ...args);
 }
-export function dump(...args) {
-    return YAML.dump(...args);
+export function dump(content, ...args) {
+    return YAML.dump(JSON.parse(JSON.stringify(content)), ...args);
 }
 
 export default {
