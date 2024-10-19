@@ -57,9 +57,25 @@ async function getFlowInfo(req, res) {
         !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
     ) {
         if (sub.subUserinfo) {
-            success(res, {
-                ...parseFlowHeaders(sub.subUserinfo),
-            });
+            try {
+                success(res, {
+                    ...parseFlowHeaders(sub.subUserinfo),
+                });
+            } catch (e) {
+                $.error(
+                    `Failed to parse flow info for local subscription ${name}: ${
+                        e.message ?? e
+                    }`,
+                );
+                failed(
+                    res,
+                    new RequestInvalidError(
+                        'NO_FLOW_INFO',
+                        'N/A',
+                        `Failed to parse flow info`,
+                    ),
+                );
+            }
         } else {
             failed(
                 res,
@@ -110,14 +126,30 @@ async function getFlowInfo(req, res) {
             return;
         }
         if (sub.subUserinfo) {
-            success(res, {
-                ...parseFlowHeaders(sub.subUserinfo),
-                remainingDays: getRmainingDays({
-                    resetDay: $arguments.resetDay,
-                    startDate: $arguments.startDate,
-                    cycleDays: $arguments.cycleDays,
-                }),
-            });
+            try {
+                success(res, {
+                    ...parseFlowHeaders(sub.subUserinfo),
+                    remainingDays: getRmainingDays({
+                        resetDay: $arguments.resetDay,
+                        startDate: $arguments.startDate,
+                        cycleDays: $arguments.cycleDays,
+                    }),
+                });
+            } catch (e) {
+                $.error(
+                    `Failed to parse flow info for local subscription ${name}: ${
+                        e.message ?? e
+                    }`,
+                );
+                failed(
+                    res,
+                    new RequestInvalidError(
+                        'NO_FLOW_INFO',
+                        'N/A',
+                        `Failed to parse flow info`,
+                    ),
+                );
+            }
         } else {
             const flowHeaders = await getFlowHeaders(
                 url,
