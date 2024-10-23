@@ -224,6 +224,18 @@ export default function URI_Producer() {
                         vlessTransportServiceName,
                     )}`;
                 }
+                if (proxy.network === 'kcp') {
+                    if (proxy.seed) {
+                        vlessTransport += `&seed=${encodeURIComponent(
+                            proxy.seed,
+                        )}`;
+                    }
+                    if (proxy.headerType) {
+                        vlessTransport += `&headerType=${encodeURIComponent(
+                            proxy.headerType,
+                        )}`;
+                    }
+                }
 
                 result = `vless://${proxy.uuid}@${proxy.server}:${
                     proxy.port
