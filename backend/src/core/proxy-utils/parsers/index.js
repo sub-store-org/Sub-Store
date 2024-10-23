@@ -531,6 +531,14 @@ function URI_VLESS() {
             if (Object.keys(opts).length > 0) {
                 proxy[`${proxy.network}-opts`] = opts;
             }
+            if (proxy.network === 'kcp') {
+                // mKCP 种子。省略时不使用种子，但不可以为空字符串。建议 mKCP 用户使用 seed。
+                if (params.seed) {
+                    proxy.seed = params.seed;
+                }
+                // mKCP 的伪装头部类型。当前可选值有 none / srtp / utp / wechat-video / dtls / wireguard。省略时默认值为 none，即不使用伪装头部，但不可以为空字符串。
+                proxy.headerType = params.headerType || 'none';
+            }
         }
 
         return proxy;
