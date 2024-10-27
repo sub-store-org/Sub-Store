@@ -125,6 +125,8 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    // udp-port
+    result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
