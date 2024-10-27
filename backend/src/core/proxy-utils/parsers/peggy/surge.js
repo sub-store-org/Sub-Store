@@ -41,7 +41,7 @@ start = (shadowsocks/vmess/trojan/https/http/snell/socks5/socks5_tls/tuic/tuic_v
     return proxy;
 }
 
-shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/udp_port/others)* {
     proxy.type = "ss";
     // handle obfs
     if (obfs.type == "http" || obfs.type === "tls") {
@@ -219,7 +219,7 @@ obfs_host = comma "obfs-host" equals host:domain { obfs.host = host; };
 obfs_uri = comma "obfs-uri" equals path:uri { obfs.path = path }
 uri = $[^,]+
 
-udp_relay = comma "udp" equals flag:bool { proxy.udp = flag; }
+udp_relay = comma "udp-relay" equals flag:bool { proxy.udp = flag; }
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 reuse = comma "reuse" equals flag:bool { proxy.reuse = flag; }
 ecn = comma "ecn" equals flag:bool { proxy.ecn = flag; }
@@ -240,6 +240,7 @@ idle_timeout = comma "idle-timeout" equals match:$[0-9]+ { proxy["idle-timeout"]
 private_key = comma "private-key" equals match:[^,]+ { proxy["keystore-private-key"] = match.join("").replace(/^"(.*)"$/, '$1'); }
 server_fingerprint = comma "server-fingerprint" equals match:[^,]+ { proxy["server-fingerprint"] = match.join("").replace(/^"(.*)"$/, '$1'); }
 block_quic = comma "block-quic" equals match:[^,]+ { proxy["block-quic"] = match.join(""); }
+udp_port = comma "udp-port" equals match:$[0-9]+ { proxy["udp-port"] = parseInt(match.trim()); }
 shadow_tls_version = comma "shadow-tls-version" equals match:$[0-9]+ { proxy["shadow-tls-version"] = parseInt(match.trim()); }
 shadow_tls_sni = comma "shadow-tls-sni" equals match:[^,]+ { proxy["shadow-tls-sni"] = match.join(""); }
 shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { proxy["shadow-tls-password"] = match.join(""); }
