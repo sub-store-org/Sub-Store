@@ -25,6 +25,10 @@ export default function SurgeMac_Producer() {
                             `${proxy.name} is not supported on ${targetPlatform}, try to use Mihomo(SurgeMac - External Proxy Program) instead`,
                         );
                         return mihomo(proxy, type, opts);
+                    } else {
+                        throw new Error(
+                            `Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议`,
+                        );
                     }
                 }
             }
