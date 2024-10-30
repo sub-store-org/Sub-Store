@@ -67,6 +67,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     getISO, // 获取 ISO 3166-1 alpha-2 代码
   //     Gist, // Gist 类
   //     download, // 内部的下载方法, 见 backend/src/utils/download.js
+  //     MMDB, // Node.js 环境 可用于模拟 Surge/Loon 的 $utils.ipasn, $utils.ipaso, $utils.geoip. 具体见 https://t.me/zhetengsha/1269
   // }
 
   // 如果只是为了快速修改或者筛选 可以参考 脚本操作支持节点快捷脚本 https://t.me/zhetengsha/970 和 脚本筛选支持节点快捷脚本 https://t.me/zhetengsha/1009
