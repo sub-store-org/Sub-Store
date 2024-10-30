@@ -28,10 +28,10 @@
     "http-proxy-middleware": "^2.0.6",
     "ip-address": "^9.0.5",
     "js-base64": "^3.7.2",
+    "jsonwebtoken": "^9.0.2",
     "jsrsasign": "^11.1.0",
     "lodash": "^4.17.21",
     "request": "^2.88.2",
-    "requests": "^0.3.0",
     "semver": "^7.3.7",
     "static-js-yaml": "^1.0.0",
     "uuid": "^8.3.2"

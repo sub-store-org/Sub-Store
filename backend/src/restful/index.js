@@ -143,7 +143,7 @@ export default function serve() {
             try {
                 fs.accessSync(path.join(fe_abs_path, 'index.html'));
             } catch (e) {
-                throw new Error(
+                $.error(
                     `[FRONTEND] index.html file not found in ${fe_abs_path}`,
                 );
             }
@@ -158,6 +158,7 @@ export default function serve() {
 
             const staticFileMiddleware = express_.static(fe_path);
 
+            let be_share_rewrite = '/share/:type/:name';
             let be_api_rewrite = '';
             let be_download_rewrite = '';
             let be_api = '/api/';
@@ -174,6 +175,45 @@ export default function serve() {
                 be_download_rewrite = `${
                     fe_be_path === '/' ? '' : fe_be_path
                 }${be_download}`;
+
+                const jwt = eval(`require("jsonwebtoken")`);
+
+                app.use(
+                    be_share_rewrite,
+                    createProxyMiddleware({
+                        target: `http://127.0.0.1:${port}`,
+                        changeOrigin: true,
+                        pathRewrite: (path, req) => {
+                            if (req.method.toLowerCase() !== 'get')
+                                throw new Error('Method not allowed');
+                            const payload = jwt.verify(
+                                req.query.token,
+                                fe_be_path,
+                            );
+                            if (
+                                payload.type !== req.params.type ||
+                                payload.name !== req.params.name
+                            )
+                                throw new Error('Forbbiden');
+                            if (payload.type === 'sub')
+                                return path.replace(
+                                    '/share/sub/',
+                                    '/download/',
+                                );
+                            if (payload.type === 'col')
+                                return path.replace(
+                                    '/share/col/',
+                                    '/download/collection/',
+                                );
+                            if (payload.type === 'file')
+                                return path.replace(
+                                    '/share/file/',
+                                    '/api/file/',
+                                );
+                            throw new Error('Not Found');
+                        },
+                    }),
+                );
                 app.use(
                     be_api_rewrite,
                     createProxyMiddleware({
@@ -219,6 +259,9 @@ export default function serve() {
                     );
                     $.info(
                         `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_download_rewrite} -> http://127.0.0.1:${port}${be_download}`,
+                    );
+                    $.info(
+                        `[SHARE BACKEND] ${fe_address}:${fe_port}${be_share_rewrite}`,
                     );
                 }
             });
