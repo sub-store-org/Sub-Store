@@ -30,15 +30,27 @@ export default function register($app) {
                 ),
             );
         }
-        const { payload, options } = req.body;
-        const jwt = eval(`require("jsonwebtoken")`);
-        res.set('Content-Type', 'application/json;charset=utf-8').send({
-            token: jwt.sign(
+        try {
+            const { payload, options } = req.body;
+            const jwt = eval(`require("jsonwebtoken")`);
+            const token = jwt.sign(
                 payload,
                 eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH'),
                 options,
-            ),
-        });
+            );
+            res.set('Content-Type', 'application/json;charset=utf-8').send({
+                token,
+            });
+        } catch (e) {
+            return failed(
+                res,
+                new InternalServerError(
+                    'JWT_SIGN_FAILED',
+                    `Failed to sign JWT token`,
+                    `Reason: ${e.message ?? e}`,
+                ),
+            );
+        }
     });
 
     // Storage management
