@@ -157,8 +157,13 @@ export default async function download(
             $.write(cached, customCacheKey);
         }
     } else {
+        const insecure = $arguments?.insecure
+            ? isNode
+                ? { strictSSL: false }
+                : { insecure: true }
+            : undefined;
         $.info(
-            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nURL: ${url}`,
+            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nURL: ${url}`,
         );
         try {
             const { body, headers } = await http.get({
@@ -167,6 +172,7 @@ export default async function download(
                 ...(isLoon && proxy ? { node: proxy } : {}),
                 ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
                 ...(proxy ? getPolicyDescriptor(proxy) : {}),
+                ...(insecure ? insecure : {}),
             });
 
             if (headers) {
