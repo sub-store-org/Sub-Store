@@ -35,7 +35,7 @@ export default function register($app) {
             const jwt = eval(`require("jsonwebtoken")`);
             const secret = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
             const token = jwt.sign(payload, secret, options);
-            res.set('Content-Type', 'application/json;charset=utf-8').send({
+            return success(res, {
                 token,
                 secret,
             });
