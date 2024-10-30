@@ -24,6 +24,7 @@ if (isLanceX) backend = 'LanceX';
 if (isGUIforCores) backend = 'GUI.for.Cores';
 
 let meta = {};
+let feature = {};
 
 try {
     if (typeof $environment !== 'undefined') {
@@ -43,6 +44,12 @@ try {
         meta.plugin = $Plugin;
     }
     if (isNode) {
+        if (
+            eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH') &&
+            eval('process.env.SUB_STORE_FRONTEND_PATH')
+        ) {
+            feature.share = true;
+        }
         meta.node = {
             version: eval('process.version'),
             argv: eval('process.argv'),
@@ -63,5 +70,6 @@ try {
 export default {
     backend,
     version: substoreVersion,
+    feature,
     meta,
 };
