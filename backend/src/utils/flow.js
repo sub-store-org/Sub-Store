@@ -47,6 +47,11 @@ export async function getFlowHeaders(
         // $.info(`使用缓存的流量信息: ${url}`);
         flowInfo = cached;
     } else {
+        const insecure = $arguments?.insecure
+            ? $.env.isNode
+                ? { strictSSL: false }
+                : { insecure: true }
+            : undefined;
         const { defaultProxy, defaultFlowUserAgent, defaultTimeout } =
             $.read(SETTINGS_KEY);
         let proxy = customProxy || defaultProxy;
@@ -64,7 +69,7 @@ export async function getFlowHeaders(
             $.info(
                 `使用 GET 方法从响应体获取流量信息: ${flowUrl}, User-Agent: ${
                     userAgent || ''
-                }`,
+                }, Insecure: ${!!insecure}, Proxy: ${proxy}`,
             );
             const { body } = await http.get({
                 url: flowUrl,
@@ -72,6 +77,11 @@ export async function getFlowHeaders(
                     'User-Agent': userAgent,
                 },
                 timeout: requestTimeout,
+                ...(proxy ? { proxy } : {}),
+                ...(isLoon && proxy ? { node: proxy } : {}),
+                ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
+                ...(proxy ? getPolicyDescriptor(proxy) : {}),
+                ...(insecure ? insecure : {}),
             });
             flowInfo = body;
         } else {
@@ -79,7 +89,7 @@ export async function getFlowHeaders(
                 $.info(
                     `使用 HEAD 方法从响应头获取流量信息: ${url}, User-Agent: ${
                         userAgent || ''
-                    }, Proxy: ${proxy}`,
+                    }, Insecure: ${!!insecure}, Proxy: ${proxy}`,
                 );
                 const { headers } = await http.head({
                     url: url
@@ -103,20 +113,23 @@ export async function getFlowHeaders(
                     ...(isLoon && proxy ? { node: proxy } : {}),
                     ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
                     ...(proxy ? getPolicyDescriptor(proxy) : {}),
+                    ...(insecure ? insecure : {}),
                 });
                 flowInfo = getFlowField(headers);
             } catch (e) {
                 $.error(
                     `使用 HEAD 方法从响应头获取流量信息失败: ${url}, User-Agent: ${
                         userAgent || ''
-                    }, Proxy: ${proxy}: ${e.message ?? e}`,
+                    }, Insecure: ${!!insecure}, Proxy: ${proxy}: ${
+                        e.message ?? e
+                    }`,
                 );
             }
             if (!flowInfo) {
                 $.info(
                     `使用 GET 方法获取流量信息: ${url}, User-Agent: ${
                         userAgent || ''
-                    }, Proxy: ${proxy}`,
+                    }, Insecure: ${!!insecure}, Proxy: ${proxy}`,
                 );
                 const { headers } = await http.get({
                     url: url
@@ -140,6 +153,7 @@ export async function getFlowHeaders(
                     ...(isLoon && proxy ? { node: proxy } : {}),
                     ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
                     ...(proxy ? getPolicyDescriptor(proxy) : {}),
+                    ...(insecure ? insecure : {}),
                 });
                 flowInfo = getFlowField(headers);
             }

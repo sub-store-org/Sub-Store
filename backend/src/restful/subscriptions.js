@@ -152,7 +152,7 @@ async function getFlowInfo(req, res) {
             }
         } else {
             const flowHeaders = await getFlowHeaders(
-                url,
+                $arguments?.insecure ? `${url}#insecure` : url,
                 $arguments.flowUserAgent,
                 undefined,
                 sub.proxy,
