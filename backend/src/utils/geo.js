@@ -474,4 +474,7 @@ export class MMDB {
     ipaso(ip) {
         return this.asnReader?.asn(ip)?.autonomousSystemOrganization;
     }
+    ipasn(ip) {
+        return this.asnReader?.asn(ip)?.autonomousSystemNumber;
+    }
 }
