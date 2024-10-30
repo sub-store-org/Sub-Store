@@ -33,13 +33,11 @@ export default function register($app) {
         try {
             const { payload, options } = req.body;
             const jwt = eval(`require("jsonwebtoken")`);
-            const token = jwt.sign(
-                payload,
-                eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH'),
-                options,
-            );
+            const secret = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
+            const token = jwt.sign(payload, secret, options);
             res.set('Content-Type', 'application/json;charset=utf-8').send({
                 token,
+                secret,
             });
         } catch (e) {
             return failed(
