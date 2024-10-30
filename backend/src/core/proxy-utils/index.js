@@ -327,6 +327,9 @@ function formatTransportPath(path) {
 }
 
 function lastParse(proxy) {
+    if (typeof proxy.cipher === 'string') {
+        proxy.cipher = proxy.cipher.toLowerCase();
+    }
     if (typeof proxy.password === 'number') {
         proxy.password = numberToString(proxy.password);
     }
