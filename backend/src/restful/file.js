@@ -13,6 +13,8 @@ import { produceArtifact } from '@/restful/sync';
 export default function register($app) {
     if (!$.read(FILES_KEY)) $.write([], FILES_KEY);
 
+    $app.get('/share/file/:name', getFile);
+
     $app.route('/api/file/:name')
         .get(getFile)
         .patch(updateFile)

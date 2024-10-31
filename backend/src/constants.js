@@ -6,6 +6,7 @@ export const FILES_KEY = 'files';
 export const MODULES_KEY = 'modules';
 export const ARTIFACTS_KEY = 'artifacts';
 export const RULES_KEY = 'rules';
+export const TOKENS_KEY = 'tokens';
 export const GIST_BACKUP_KEY = 'Auto Generated Sub-Store Backup';
 export const GIST_BACKUP_FILE_NAME = 'Sub-Store';
 export const ARTIFACT_REPOSITORY_KEY = 'Sub-Store Artifacts Repository';

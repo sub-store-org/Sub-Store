@@ -44,10 +44,6 @@ try {
         meta.plugin = $Plugin;
     }
     if (isNode) {
-        const secret = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
-        if (secret && eval('process.env.SUB_STORE_FRONTEND_PATH')) {
-            feature.share = true;
-        }
         meta.node = {
             version: eval('process.version'),
             argv: eval('process.argv'),
