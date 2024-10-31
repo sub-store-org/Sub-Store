@@ -13,6 +13,9 @@ import { getISO } from '@/utils/geo';
 import env from '@/utils/env';
 
 export default function register($app) {
+    $app.get('/share/col/:name', downloadCollection);
+    $app.get('/share/sub/:name', downloadSubscription);
+
     $app.get('/download/collection/:name', downloadCollection);
     $app.get('/download/:name', downloadSubscription);
     $app.get(

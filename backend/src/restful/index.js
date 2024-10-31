@@ -4,6 +4,7 @@ import migrate from '@/utils/migration';
 import download from '@/utils/download';
 import { syncArtifacts } from '@/restful/sync';
 import { gistBackupAction } from '@/restful/miscs';
+import { TOKENS_KEY } from '@/constants';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
@@ -176,8 +177,6 @@ export default function serve() {
                     fe_be_path === '/' ? '' : fe_be_path
                 }${be_download}`;
 
-                const jwt = eval(`require("jsonwebtoken")`);
-
                 app.use(
                     be_share_rewrite,
                     createProxyMiddleware({
@@ -186,31 +185,16 @@ export default function serve() {
                         pathRewrite: (path, req) => {
                             if (req.method.toLowerCase() !== 'get')
                                 throw new Error('Method not allowed');
-                            const payload = jwt.verify(
-                                req.query.token,
-                                fe_be_path,
+                            const tokens = $.read(TOKENS_KEY) || [];
+                            const token = tokens.find(
+                                (t) =>
+                                    t.token === req.query.token &&
+                                    t.type === req.params.type &&
+                                    t.name === req.params.name &&
+                                    (t.exp == null || t.exp > Date.now()),
                             );
-                            if (
-                                payload.type !== req.params.type ||
-                                payload.name !== req.params.name
-                            )
-                                throw new Error('Forbbiden');
-                            if (payload.type === 'sub')
-                                return path.replace(
-                                    '/share/sub/',
-                                    '/download/',
-                                );
-                            if (payload.type === 'col')
-                                return path.replace(
-                                    '/share/col/',
-                                    '/download/collection/',
-                                );
-                            if (payload.type === 'file')
-                                return path.replace(
-                                    '/share/file/',
-                                    '/api/file/',
-                                );
-                            throw new Error('Not Found');
+                            if (!token) throw new Error('Forbbiden');
+                            return path;
                         },
                     }),
                 );
