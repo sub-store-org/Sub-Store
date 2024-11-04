@@ -10,6 +10,7 @@ import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
 import registerArtifactRoutes from './artifacts';
 import registerFileRoutes from './file';
+import registerTokenRoutes from './token';
 import registerModuleRoutes from './module';
 import registerSyncRoutes from './sync';
 import registerDownloadRoutes from './download';
@@ -37,6 +38,7 @@ export default function serve() {
     registerSettingRoutes($app);
     registerArtifactRoutes($app);
     registerFileRoutes($app);
+    registerTokenRoutes($app);
     registerModuleRoutes($app);
     registerSyncRoutes($app);
     registerNodeInfoRoutes($app);
