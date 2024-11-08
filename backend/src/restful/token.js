@@ -140,7 +140,7 @@ async function signToken(req, res) {
                 );
             }
         }
-        const secret = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
+        // const secret = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
         const nanoid = eval(`require("nanoid")`);
         const tokens = $.read(TOKENS_KEY) || [];
         // const now = Date.now();
@@ -166,7 +166,7 @@ async function signToken(req, res) {
         $.write(tokens, TOKENS_KEY);
         return success(res, {
             token,
-            secret,
+            // secret,
         });
     } catch (e) {
         return failed(
