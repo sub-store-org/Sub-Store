@@ -39,6 +39,7 @@ async function produceArtifact({
     awaitCustomCache,
     $options,
     proxy,
+    noCache,
 }) {
     platform = platform || 'JSON';
 
@@ -72,6 +73,7 @@ async function produceArtifact({
                                 proxy || sub.proxy,
                                 undefined,
                                 awaitCustomCache,
+                                noCache,
                             );
                         } catch (err) {
                             errors[url] = err;
@@ -119,6 +121,7 @@ async function produceArtifact({
                                 proxy || sub.proxy,
                                 undefined,
                                 awaitCustomCache,
+                                noCache,
                             );
                         } catch (err) {
                             errors[url] = err;
@@ -237,6 +240,9 @@ async function produceArtifact({
                                             proxy ||
                                                 sub.proxy ||
                                                 collection.proxy,
+                                            undefined,
+                                            undefined,
+                                            noCache,
                                         );
                                     } catch (err) {
                                         errors[url] = err;
@@ -410,6 +416,9 @@ async function produceArtifact({
                                 ua || file.ua,
                                 undefined,
                                 file.proxy || proxy,
+                                undefined,
+                                undefined,
+                                noCache,
                             );
                         } catch (err) {
                             errors[url] = err;
@@ -458,6 +467,9 @@ async function produceArtifact({
                                 ua || file.ua,
                                 undefined,
                                 file.proxy || proxy,
+                                undefined,
+                                undefined,
+                                noCache,
                             );
                         } catch (err) {
                             errors[url] = err;
