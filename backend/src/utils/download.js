@@ -21,6 +21,7 @@ export default async function download(
     customProxy,
     skipCustomCache,
     awaitCustomCache,
+    noCache,
 ) {
     let $arguments = {};
     let url = rawUrl.replace(/#noFlow$/, '');
@@ -65,7 +66,7 @@ export default async function download(
     if (customCacheKey && !skipCustomCache) {
         const customCached = $.read(customCacheKey);
         const cached = resourceCache.get(id);
-        if (!$arguments?.noCache && cached) {
+        if (!noCache && !$arguments?.noCache && cached) {
             $.info(
                 `乐观缓存: URL ${url}\n存在有效的常规缓存\n使用常规缓存以避免重复请求`,
             );
@@ -149,7 +150,7 @@ export default async function download(
 
     // try to find in app cache
     const cached = resourceCache.get(id);
-    if (!$arguments?.noCache && cached) {
+    if (!noCache && !$arguments?.noCache && cached) {
         $.info(`使用缓存: ${url}`);
         result = cached;
         if (customCacheKey) {

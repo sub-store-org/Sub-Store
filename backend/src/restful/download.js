@@ -75,6 +75,7 @@ async function downloadSubscription(req, res) {
         includeUnsupportedProxy,
         resultFormat,
         proxy,
+        noCache,
     } = req.query;
     let $options = {};
     if (req.query.$options) {
@@ -131,6 +132,10 @@ async function downloadSubscription(req, res) {
         $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
     }
 
+    if (noCache) {
+        $.info(`指定不使用缓存: ${noCache}`);
+    }
+
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
     if (sub) {
@@ -151,6 +156,7 @@ async function downloadSubscription(req, res) {
                 },
                 $options,
                 proxy,
+                noCache,
             });
 
             if (
@@ -283,6 +289,7 @@ async function downloadCollection(req, res) {
         includeUnsupportedProxy,
         resultFormat,
         proxy,
+        noCache,
     } = req.query;
 
     let $options = {};
@@ -325,6 +332,9 @@ async function downloadCollection(req, res) {
     if (useMihomoExternal) {
         $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
     }
+    if (noCache) {
+        $.info(`指定不使用缓存: ${noCache}`);
+    }
 
     if (collection) {
         try {
@@ -340,6 +350,7 @@ async function downloadCollection(req, res) {
                 },
                 $options,
                 proxy,
+                noCache,
             });
 
             // forward flow header from the first subscription in this collection
