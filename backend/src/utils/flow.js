@@ -198,12 +198,18 @@ export function parseFlowHeaders(flowHeaders) {
     const appUrlMatch = flowHeaders.match(/app_url=(.*?)\s*?(;|$)/);
     const appUrl = appUrlMatch ? appUrlMatch[1] : undefined;
 
+    const planNameMatch = flowHeaders.match(/plan_name=(.*?)\s*?(;|$)/);
+    const planName = planNameMatch
+        ? decodeURIComponent(planNameMatch[1])
+        : undefined;
+
     return {
         expires,
         total,
         usage: { upload, download },
         remainingDays,
         appUrl,
+        planName,
     };
 }
 
