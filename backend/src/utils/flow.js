@@ -190,8 +190,23 @@ export function parseFlowHeaders(flowHeaders) {
         ? Number(expireMatch[1] + expireMatch[2])
         : undefined;
 
-    return { expires, total, usage: { upload, download } };
+    const remainingDaysMatch = flowHeaders.match(/reset_day=([0-9]+)/);
+    const remainingDays = remainingDaysMatch
+        ? Number(remainingDaysMatch[1])
+        : undefined;
+
+    const appUrlMatch = flowHeaders.match(/app_url=(.*?)\s*?(;|$)/);
+    const appUrl = appUrlMatch ? appUrlMatch[1] : undefined;
+
+    return {
+        expires,
+        total,
+        usage: { upload, download },
+        remainingDays,
+        appUrl,
+    };
 }
+
 export function flowTransfer(flow, unit = 'B') {
     const unitList = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
     let unitIndex = unitList.indexOf(unit);
