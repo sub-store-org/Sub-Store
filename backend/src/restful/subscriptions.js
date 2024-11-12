@@ -127,14 +127,18 @@ async function getFlowInfo(req, res) {
         }
         if (sub.subUserinfo) {
             try {
-                success(res, {
-                    ...parseFlowHeaders(sub.subUserinfo),
-                    remainingDays: getRmainingDays({
-                        resetDay: $arguments.resetDay,
-                        startDate: $arguments.startDate,
-                        cycleDays: $arguments.cycleDays,
-                    }),
+                const remainingDays = getRmainingDays({
+                    resetDay: $arguments.resetDay,
+                    startDate: $arguments.startDate,
+                    cycleDays: $arguments.cycleDays,
                 });
+                const result = {
+                    ...parseFlowHeaders(sub.subUserinfo),
+                };
+                if (remainingDays != null) {
+                    result.remainingDays = remainingDays;
+                }
+                success(res, result);
             } catch (e) {
                 $.error(
                     `Failed to parse flow info for local subscription ${name}: ${
@@ -169,14 +173,18 @@ async function getFlowInfo(req, res) {
                 );
                 return;
             }
-            success(res, {
-                ...parseFlowHeaders(flowHeaders),
-                remainingDays: getRmainingDays({
-                    resetDay: $arguments.resetDay,
-                    startDate: $arguments.startDate,
-                    cycleDays: $arguments.cycleDays,
-                }),
+            const remainingDays = getRmainingDays({
+                resetDay: $arguments.resetDay,
+                startDate: $arguments.startDate,
+                cycleDays: $arguments.cycleDays,
             });
+            const result = {
+                ...parseFlowHeaders(flowHeaders),
+            };
+            if (remainingDays != null) {
+                result.remainingDays = remainingDays;
+            }
+            success(res, result);
         }
     } catch (err) {
         failed(
