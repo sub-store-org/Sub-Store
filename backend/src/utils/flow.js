@@ -5,10 +5,21 @@ import $ from '@/core/app';
 import headersResourceCache from '@/utils/headers-resource-cache';
 
 export function getFlowField(headers) {
-    const subkey = Object.keys(headers).filter((k) =>
-        /SUBSCRIPTION-USERINFO/i.test(k),
-    )[0];
-    return headers[subkey];
+    let subKey = '';
+    let webPageKey = '';
+
+    Object.keys(headers).some((k) => {
+        if (/SUBSCRIPTION-USERINFO/i.test(k)) {
+            subKey = k;
+        } else if (/PROFILE-WEB-PAGE-URL/i.test(k)) {
+            webPageKey = k;
+        }
+        return subKey && webPageKey;
+    });
+
+    return `${headers[subKey] || ''}${
+        webPageKey ? `;app_url=${headers[webPageKey]}` : ''
+    }`;
 }
 export async function getFlowHeaders(
     rawUrl,
