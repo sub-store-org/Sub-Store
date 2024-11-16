@@ -151,7 +151,7 @@ export default async function download(
     // try to find in app cache
     const cached = resourceCache.get(id);
     if (!noCache && !$arguments?.noCache && cached) {
-        $.info(`使用缓存: ${url}`);
+        $.info(`使用缓存: ${url}, ${userAgent}`);
         result = cached;
         if (customCacheKey) {
             $.info(`URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`);
@@ -179,7 +179,7 @@ export default async function download(
             if (headers) {
                 const flowInfo = getFlowField(headers);
                 if (flowInfo) {
-                    headersResourceCache.set(url, flowInfo);
+                    headersResourceCache.set(id, flowInfo);
                 }
             }
             if (body.replace(/\s/g, '').length === 0)
