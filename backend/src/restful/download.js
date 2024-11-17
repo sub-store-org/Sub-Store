@@ -213,7 +213,12 @@ async function downloadSubscription(req, res) {
                 }
             }
             if (sub.subUserinfo) {
-                res.set('subscription-userinfo', sub.subUserinfo);
+                res.set(
+                    'subscription-userinfo',
+                    [sub.subUserinfo, res.get('subscription-userinfo')]
+                        .filter((i) => i)
+                        .join('; '),
+                );
             }
 
             if (platform === 'JSON') {
@@ -411,7 +416,12 @@ async function downloadCollection(req, res) {
                     }
                 }
                 if (sub.subUserinfo) {
-                    res.set('subscription-userinfo', sub.subUserinfo);
+                    res.set(
+                        'subscription-userinfo',
+                        [sub.subUserinfo, res.get('subscription-userinfo')]
+                            .filter((i) => i)
+                            .join('; '),
+                    );
                 }
             }
 
