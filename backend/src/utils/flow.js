@@ -205,7 +205,7 @@ export function parseFlowHeaders(flowHeaders) {
         : undefined;
 
     const appUrlMatch = flowHeaders.match(/app_url=(.*?)\s*?(;|$)/);
-    const appUrl = appUrlMatch ? appUrlMatch[1] : undefined;
+    const appUrl = appUrlMatch ? decodeURIComponent(appUrlMatch[1]) : undefined;
 
     const planNameMatch = flowHeaders.match(/plan_name=(.*?)\s*?(;|$)/);
     const planName = planNameMatch

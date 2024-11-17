@@ -158,7 +158,7 @@ async function downloadSubscription(req, res) {
                 proxy,
                 noCache,
             });
-
+            let flowInfo;
             if (
                 sub.source !== 'local' ||
                 ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
@@ -193,7 +193,7 @@ async function downloadSubscription(req, res) {
                     }
                     if (!$arguments.noFlow) {
                         // forward flow headers
-                        const flowInfo = await getFlowHeaders(
+                        flowInfo = await getFlowHeaders(
                             $arguments?.insecure ? `${url}#insecure` : url,
                             $arguments.flowUserAgent,
                             undefined,
@@ -213,7 +213,10 @@ async function downloadSubscription(req, res) {
                 }
             }
             if (sub.subUserinfo) {
-                res.set('subscription-userinfo', sub.subUserinfo);
+                res.set(
+                    'subscription-userinfo',
+                    [sub.subUserinfo, flowInfo].filter((i) => i).join('; '),
+                );
             }
 
             if (platform === 'JSON') {
@@ -358,6 +361,7 @@ async function downloadCollection(req, res) {
             const subnames = collection.subscriptions;
             if (subnames.length > 0) {
                 const sub = findByName(allSubs, subnames[0]);
+                let flowInfo;
                 if (
                     sub.source !== 'local' ||
                     ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
@@ -391,7 +395,7 @@ async function downloadCollection(req, res) {
                             }
                         }
                         if (!$arguments.noFlow) {
-                            const flowInfo = await getFlowHeaders(
+                            flowInfo = await getFlowHeaders(
                                 $arguments?.insecure ? `${url}#insecure` : url,
                                 $arguments.flowUserAgent,
                                 undefined,
@@ -411,7 +415,10 @@ async function downloadCollection(req, res) {
                     }
                 }
                 if (sub.subUserinfo) {
-                    res.set('subscription-userinfo', sub.subUserinfo);
+                    res.set(
+                        'subscription-userinfo',
+                        [sub.subUserinfo, flowInfo].filter((i) => i).join('; '),
+                    );
                 }
             }
 
