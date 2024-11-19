@@ -9,6 +9,7 @@ export default function express({ substore: $, port, host }) {
         'Access-Control-Allow-Methods': 'POST,GET,OPTIONS,PATCH,PUT,DELETE',
         'Access-Control-Allow-Headers':
             'Origin, X-Requested-With, Content-Type, Accept',
+        'X-Powered-By': 'Sub-Store',
     };
 
     // node support
