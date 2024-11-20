@@ -10,6 +10,7 @@ import QX_Producer from './qx';
 import Shadowrocket_Producer from './shadowrocket';
 import Surfboard_Producer from './surfboard';
 import singbox_Producer from './sing-box';
+import Egern_Producer from './egern';
 
 function JSON_Producer() {
     const type = 'ALL';
@@ -34,4 +35,5 @@ export default {
     ShadowRocket: Shadowrocket_Producer(),
     Surfboard: Surfboard_Producer(),
     'sing-box': singbox_Producer(),
+    Egern: Egern_Producer(),
 };
