@@ -18,6 +18,8 @@ export function getUserAgentFromHeaders(headers) {
 export function getPlatformFromUserAgent({ ua, UA, accept }) {
     if (UA.indexOf('Quantumult%20X') !== -1) {
         return 'QX';
+    } else if (ua.indexOf('egern') !== -1) {
+        return 'Egern';
     } else if (UA.indexOf('Surfboard') !== -1) {
         return 'Surfboard';
     } else if (UA.indexOf('Surge Mac') !== -1) {
@@ -39,7 +41,7 @@ export function getPlatformFromUserAgent({ ua, UA, accept }) {
         return 'ClashMeta';
     } else if (ua.indexOf('clash') !== -1) {
         return 'Clash';
-    } else if (ua.indexOf('v2ray') !== -1 || ua.indexOf('egern') !== -1) {
+    } else if (ua.indexOf('v2ray') !== -1) {
         return 'V2Ray';
     } else if (ua.indexOf('sing-box') !== -1) {
         return 'sing-box';
