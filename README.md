@@ -7,7 +7,7 @@
 </div>
 
 <p align="center" color="#6a737d">
-Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.
+Advanced Subscription Manager for QX, Loon, Surge, Stash, Egern and Shadowrocket.
 </p>
 
 [![Build](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/sub-store-org/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/sub-store-org/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Lines of code](https://img.shields.io/tokei/lines/github/sub-store-org/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/sub-store-org/Sub-Store)
@@ -49,6 +49,7 @@ Core functionalities:
 - [x] Surge
 - [x] SurgeMac(Use mihomo to support protocols that are not supported by Surge itself)
 - [x] Loon
+- [x] Egern
 - [x] Shadowrocket
 - [x] QX
 - [x] sing-box
