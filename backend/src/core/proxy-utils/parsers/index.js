@@ -340,6 +340,10 @@ function URI_VMess() {
             } else if (params.net === 'h2' || proxy.network === 'h2') {
                 proxy.network = 'h2';
             }
+            // 暂不支持 tcp + host + path
+            // else if (params.net === 'tcp' || proxy.network === 'tcp') {
+            //     proxy.network = 'tcp';
+            // }
             if (proxy.network) {
                 let transportHost = params.host ?? params.obfsParam;
                 try {
