@@ -1,0 +1,83 @@
+name: build
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "backend/package.json"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "backend/package.json"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: "master"
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: |
+          npm install -g pnpm
+          cd backend && pnpm i --no-frozen-lockfile
+      - name: Test
+        run: |
+          cd backend
+          pnpm test
+      - name: Build
+        run: |
+          cd backend
+          pnpm run build
+      - name: Bundle
+        run: |
+          cd backend
+          pnpm run bundle
+      - id: tag
+        name: Generate release tag
+        run: |
+          cd backend
+          SUBSTORE_RELEASE=`node --eval="process.stdout.write(require('./package.json').version)"`
+          echo "release_tag=$SUBSTORE_RELEASE" >> $GITHUB_OUTPUT
+      - name: Prepare release
+        run: |
+          cd backend
+          pnpm i -D conventional-changelog-cli
+          pnpm run changelog
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: ${{ success() }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          body_path: ./backend/CHANGELOG.md
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+          # generate_release_notes: true
+          files: |
+            ./backend/sub-store.min.js
+            ./backend/dist/sub-store-0.min.js
+            ./backend/dist/sub-store-1.min.js
+            ./backend/dist/sub-store-parser.loon.min.js
+            ./backend/dist/cron-sync-artifacts.min.js
+            ./backend/dist/sub-store.bundle.js
+      - name: Git push assets to "release" branch
+        run: |
+          cd backend/dist || exit 1
+          git init
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b release
+          git add .
+          git commit -m "release: ${{ steps.tag.outputs.release_tag }}"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f -u origin release
+      - name: Sync to GitLab
+        env:
+          GITLAB_PIPELINE_TOKEN: ${{ secrets.GITLAB_PIPELINE_TOKEN }}
+        run: |
+          curl -X POST --fail -F token=$GITLAB_PIPELINE_TOKEN -F ref=master https://gitlab.com/api/v4/projects/48891296/trigger/pipeline
