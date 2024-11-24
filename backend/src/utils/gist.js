@@ -41,7 +41,7 @@ export default class Gist {
                 ...(isLoon && proxy ? { node: proxy } : {}),
                 ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
                 ...(proxy ? getPolicyDescriptor(proxy) : {}),
-                timeout,
+                timeout: timeout || 8000,
 
                 events: {
                     onResponse: (resp) => {
@@ -81,7 +81,7 @@ export default class Gist {
                 ...(isLoon && proxy ? { node: proxy } : {}),
                 ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
                 ...(proxy ? getPolicyDescriptor(proxy) : {}),
-                timeout,
+                timeout: timeout || 8000,
 
                 events: {
                     onResponse: (resp) => {
