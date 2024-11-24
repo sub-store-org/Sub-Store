@@ -51,7 +51,7 @@ export default async function download(
         proxy = proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');
     }
     const userAgent = ua || defaultUserAgent || 'clash.meta';
-    const requestTimeout = timeout || defaultTimeout;
+    const requestTimeout = timeout || defaultTimeout || 8000;
     const id = hex_md5(userAgent + url);
 
     if ($arguments?.cacheKey === true) {

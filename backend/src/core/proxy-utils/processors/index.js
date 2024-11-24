@@ -561,7 +561,7 @@ function ResolveDomainOperator({
         throw new Error(`域名解析服务提供方 ${provider} 不支持 ${_type}`);
     }
     const { defaultTimeout } = $.read(SETTINGS_KEY);
-    const requestTimeout = timeout || defaultTimeout;
+    const requestTimeout = timeout || defaultTimeout || 8000;
     let type = ['IPv6', 'IP4P'].includes(_type) ? 'IPv6' : 'IPv4';
 
     const resolver = DOMAIN_RESOLVERS[provider];
