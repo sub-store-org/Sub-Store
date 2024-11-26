@@ -76,8 +76,8 @@ jobs:
           git commit -m "release: ${{ steps.tag.outputs.release_tag }}"
           git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
           git push -f -u origin release
-      - name: Sync to GitLab
-        env:
-          GITLAB_PIPELINE_TOKEN: ${{ secrets.GITLAB_PIPELINE_TOKEN }}
-        run: |
-          curl -X POST --fail -F token=$GITLAB_PIPELINE_TOKEN -F ref=master https://gitlab.com/api/v4/projects/48891296/trigger/pipeline
+      # - name: Sync to GitLab
+      #   env:
+      #     GITLAB_PIPELINE_TOKEN: ${{ secrets.GITLAB_PIPELINE_TOKEN }}
+      #   run: |
+      #     curl -X POST --fail -F token=$GITLAB_PIPELINE_TOKEN -F ref=master https://gitlab.com/api/v4/projects/48891296/trigger/pipeline
