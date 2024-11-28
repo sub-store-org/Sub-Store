@@ -255,7 +255,7 @@ async function downloadSubscription(req, res) {
             );
         }
     } else {
-        $.notify(`🌍 Sub-Store 下载订阅失败`, `❌ 未找到订阅：${name}！`);
+        $.error(`🌍 Sub-Store 下载订阅失败`, `❌ 未找到订阅：${name}！`);
         failed(
             res,
             new ResourceNotFoundError(
@@ -457,7 +457,7 @@ async function downloadCollection(req, res) {
             );
         }
     } else {
-        $.notify(
+        $.error(
             `🌍 Sub-Store 下载组合订阅失败`,
             `❌ 未找到组合订阅：${name}！`,
         );
