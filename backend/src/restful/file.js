@@ -179,7 +179,7 @@ async function getFile(req, res) {
             );
         }
     } else {
-        $.notify(`🌍 Sub-Store 下载文件失败`, `❌ 未找到文件：${name}！`);
+        $.error(`🌍 Sub-Store 下载文件失败`, `❌ 未找到文件：${name}！`);
         failed(
             res,
             new ResourceNotFoundError(
