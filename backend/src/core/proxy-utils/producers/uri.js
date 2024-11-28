@@ -102,7 +102,7 @@ export default function URI_Producer() {
                     port: proxy.port,
                     id: proxy.uuid,
                     type,
-                    aid: 0,
+                    aid: proxy.alterId || 0,
                     net,
                     tls: proxy.tls ? 'tls' : '',
                 };
@@ -290,11 +290,27 @@ export default function URI_Producer() {
                         )}`;
                     }
                 }
+                let trojanFp = '';
+                if (proxy['client-fingerprint']) {
+                    trojanFp = `&fp=${encodeURIComponent(
+                        proxy['client-fingerprint'],
+                    )}`;
+                }
+                let trojanAlpn = '';
+                if (proxy.alpn) {
+                    trojanAlpn = `&alpn=${encodeURIComponent(
+                        Array.isArray(proxy.alpn)
+                            ? proxy.alpn
+                            : proxy.alpn.join(','),
+                    )}`;
+                }
                 result = `trojan://${proxy.password}@${proxy.server}:${
                     proxy.port
                 }?sni=${encodeURIComponent(proxy.sni || proxy.server)}${
                     proxy['skip-cert-verify'] ? '&allowInsecure=1' : ''
-                }${trojanTransport}#${encodeURIComponent(proxy.name)}`;
+                }${trojanTransport}${trojanAlpn}${trojanFp}#${encodeURIComponent(
+                    proxy.name,
+                )}`;
                 break;
             case 'hysteria2':
                 let hysteria2params = [];
