@@ -842,6 +842,11 @@ function URI_Trojan() {
     };
 
     const parse = (line) => {
+        const matched = /^(trojan:\/\/.*?@.*?)(:(\d+))?\/?(\?.*?)?$/.exec(line);
+        const port = matched?.[2];
+        if (!port) {
+            line = line.replace(matched[1], `${matched[1]}:443`);
+        }
         let [newLine, name] = line.split(/#(.+)/, 2);
         const parser = getTrojanURIParser();
         const proxy = parser.parse(newLine);
