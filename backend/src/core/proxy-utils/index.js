@@ -86,6 +86,16 @@ async function processFn(
     $options,
 ) {
     for (const item of operators) {
+        if (item.disabled) {
+            $.log(
+                `Skipping disabled operator: "${
+                    item.type
+                }" with arguments:\n >>> ${
+                    JSON.stringify(item.args, null, 2) || 'None'
+                }`,
+            );
+            continue;
+        }
         // process script
         let script;
         let $arguments = {};
