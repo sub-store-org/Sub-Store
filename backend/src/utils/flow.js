@@ -18,7 +18,9 @@ export function getFlowField(headers) {
         }
     }
 
-    return `${sub || ''}${webPage ? `;app_url=${webPage}` : ''}`;
+    return `${sub || ''}${
+        webPage ? `; app_url=${encodeURIComponent(webPage)}` : ''
+    }`;
 }
 export async function getFlowHeaders(
     rawUrl,
