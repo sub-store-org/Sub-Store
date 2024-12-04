@@ -190,6 +190,7 @@ export default function ClashMeta_Producer() {
                     proxy[`${proxy.network}-opts`]
                 ) {
                     delete proxy[`${proxy.network}-opts`]['_grpc-type'];
+                    delete proxy[`${proxy.network}-opts`]['_grpc-authority'];
                 }
                 return proxy;
             });
