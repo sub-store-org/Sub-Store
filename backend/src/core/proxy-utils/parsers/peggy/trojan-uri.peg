@@ -99,6 +99,7 @@ params = "?" head:param tail:("&"@param)* {
         proxy[proxy.network + '-opts'] = {
             'grpc-service-name': params["serviceName"],
             '_grpc-type': params["mode"],
+            '_grpc-authority': params["authority"],
         };
     } else {
       if (params["path"]) {

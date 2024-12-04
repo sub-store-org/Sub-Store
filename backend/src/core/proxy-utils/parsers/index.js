@@ -380,6 +380,7 @@ function URI_VMess() {
                         proxy[`${proxy.network}-opts`] = {
                             'grpc-service-name': getIfNotBlank(transportPath),
                             '_grpc-type': getIfNotBlank(params.type),
+                            '_grpc-authority': getIfNotBlank(params.authority),
                         };
                     } else {
                         const opts = {
@@ -515,6 +516,9 @@ function URI_VLESS() {
             }
             if (params.serviceName) {
                 opts[`${proxy.network}-service-name`] = params.serviceName;
+                if (['grpc'].includes(proxy.network) && params.authority) {
+                    opts['_grpc-authority'] = params.authority;
+                }
             } else if (isShadowrocket && params.path) {
                 if (!['ws', 'http', 'h2'].includes(proxy.network)) {
                     opts[`${proxy.network}-service-name`] = params.path;
