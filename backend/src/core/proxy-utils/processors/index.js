@@ -699,24 +699,45 @@ function isIP(ip) {
 
 ResolveDomainOperator.resolver = DOMAIN_RESOLVERS;
 
+function isAscii(str) {
+    // eslint-disable-next-line no-control-regex
+    var pattern = /^[\x00-\x7F]+$/; // ASCII 范围的 Unicode 编码
+    return pattern.test(str);
+}
+
 /**************************** Filters ***************************************/
 // filter useless proxies
 function UselessFilter() {
-    const KEYWORDS = [
-        '网址',
-        '流量',
-        '时间',
-        '应急',
-        '过期',
-        'Bandwidth',
-        'expire',
-    ];
     return {
         name: 'Useless Filter',
-        func: RegexFilter({
-            regex: KEYWORDS,
-            keep: false,
-        }).func,
+        func: (proxies) => {
+            return proxies.map((proxy) => {
+                if (proxy.cipher && !isAscii(proxy.cipher)) {
+                    return false;
+                } else if (proxy.password && !isAscii(proxy.password)) {
+                    return false;
+                } else {
+                    if (proxy.network) {
+                        let transportHosts =
+                            proxy[`${proxy.network}-opts`]?.headers?.Host ||
+                            proxy[`${proxy.network}-opts`]?.headers?.host;
+                        transportHosts = Array.isArray(transportHosts)
+                            ? transportHosts
+                            : [transportHosts];
+                        if (
+                            transportHosts.some(
+                                (host) => host && !isAscii(host),
+                            )
+                        ) {
+                            return false;
+                        }
+                    }
+                    return !/网址|流量|时间|应急|过期|Bandwidth|expire/.test(
+                        proxy.name,
+                    );
+                }
+            });
+        },
     };
 }
 
