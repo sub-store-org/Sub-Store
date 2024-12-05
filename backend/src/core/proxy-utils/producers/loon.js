@@ -4,10 +4,10 @@ import { isPresent, Result } from './utils';
 import { isIPv4, isIPv6 } from '@/utils';
 
 export default function Loon_Producer() {
-    const produce = (proxy) => {
+    const produce = (proxy, type, opts = {}) => {
         switch (proxy.type) {
             case 'ss':
-                return shadowsocks(proxy);
+                return shadowsocks(proxy, opts['include-unsupported-proxy']);
             case 'ssr':
                 return shadowsocksr(proxy);
             case 'trojan':
@@ -32,7 +32,7 @@ export default function Loon_Producer() {
     return { produce };
 }
 
-function shadowsocks(proxy) {
+function shadowsocks(proxy, includeUnsupportedProxy) {
     const result = new Result(proxy);
     if (
         ![
@@ -56,6 +56,9 @@ function shadowsocks(proxy) {
             'aes-256-gcm',
             'chacha20-ietf-poly1305',
             'xchacha20-ietf-poly1305',
+            ...(includeUnsupportedProxy
+                ? ['2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm']
+                : []),
         ].includes(proxy.cipher)
     ) {
         throw new Error(`cipher ${proxy.cipher} is not supported`);
