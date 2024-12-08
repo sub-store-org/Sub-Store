@@ -46,7 +46,9 @@ function URI_SS() {
         content = content.split('#')[0]; // strip proxy name
         // handle IPV4 and IPV6
         let serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
-        let userInfoStr = Base64.decode(content.split('@')[0]);
+        let userInfoStr = Base64.decode(
+            decodeURIComponent(content.split('@')[0]),
+        );
         let query = '';
         if (!serverAndPortArray) {
             if (content.includes('?')) {
@@ -77,7 +79,6 @@ function URI_SS() {
         proxy.port = `${serverAndPort.substring(portIdx + 1)}`.match(
             /\d+/,
         )?.[0];
-
         const userInfo = userInfoStr.match(/(^.*?):(.*$)/);
         proxy.cipher = userInfo[1];
         proxy.password = userInfo[2];
