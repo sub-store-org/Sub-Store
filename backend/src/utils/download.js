@@ -172,7 +172,7 @@ export default async function download(
             `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nURL: ${url}`,
         );
         try {
-            const { body, headers } = await http.get({
+            const { body, headers, statusCode } = await http.get({
                 url,
                 ...(proxy ? { proxy } : {}),
                 ...(isLoon && proxy ? { node: proxy } : {}),
@@ -180,6 +180,10 @@ export default async function download(
                 ...(proxy ? getPolicyDescriptor(proxy) : {}),
                 ...(insecure ? insecure : {}),
             });
+            $.info(`statusCode: ${statusCode}`);
+            if (statusCode < 200 || statusCode >= 400) {
+                throw new Error(`statusCode: ${statusCode}`);
+            }
 
             if (headers) {
                 const flowInfo = getFlowField(headers);
