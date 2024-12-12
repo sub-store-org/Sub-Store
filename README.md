@@ -33,7 +33,7 @@ Core functionalities:
 - [x] Clash Proxy JSON(single line)
 - [x] QX (SS, SSR, VMess, Trojan, HTTP, SOCKS5, VLESS)
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, WireGuard, VLESS, Hysteria 2)
-- [x] Surge (SS, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, TUIC, Snell, Hysteria 2, SSH(Password authentication only), External Proxy Program(only for macOS), WireGuard(Surge to Surge))
+- [x] Surge (Direct, SS, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, TUIC, Snell, Hysteria 2, SSH(Password authentication only), External Proxy Program(only for macOS), WireGuard(Surge to Surge))
 - [x] Surfboard (SS, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, WireGuard(Surfboard to Surfboard))
 - [x] Clash.Meta (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC)
 - [x] Stash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, TUIC, Juicity, SSH)
