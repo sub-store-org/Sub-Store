@@ -108,16 +108,16 @@ hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying
     proxy.type = "hysteria2";
     handleShadowTLS();
 }
-socks5 = tag equals "socks5" address (username password)? (usernamek passwordk)? (no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+socks5 = tag equals "socks5" address (username password)? (usernamek passwordk)? (udp_relay/no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "socks5";
     handleShadowTLS();
 }
-socks5_tls = tag equals "socks5-tls" address (username password)? (usernamek passwordk)? (no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/sni/tls_fingerprint/tls_verification/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+socks5_tls = tag equals "socks5-tls" address (username password)? (usernamek passwordk)? (udp_relay/no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/sni/tls_fingerprint/tls_verification/fast_open/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "socks5";
     proxy.tls = true;
     handleShadowTLS();
 }
-direct = tag equals "direct" (ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/block_quic/others)* {
+direct = tag equals "direct" (udp_relay/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/block_quic/others)* {
     proxy.type = "direct";
 }
 
