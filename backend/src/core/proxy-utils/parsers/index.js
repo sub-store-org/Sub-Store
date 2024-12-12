@@ -894,6 +894,7 @@ function Clash_All() {
                 'hysteria2',
                 'wireguard',
                 'ssh',
+                'direct',
             ].includes(proxy.type)
         ) {
             throw new Error(
