@@ -37,7 +37,7 @@ const grammars = String.raw`
     }
 }
 
-start = (shadowsocks/vmess/trojan/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard/hysteria2/ssh) {
+start = (shadowsocks/vmess/trojan/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard/hysteria2/ssh/direct) {
     return proxy;
 }
 
@@ -116,6 +116,9 @@ socks5_tls = tag equals "socks5-tls" address (username password)? (usernamek pas
     proxy.type = "socks5";
     proxy.tls = true;
     handleShadowTLS();
+}
+direct = tag equals "direct" (ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/block_quic/others)* {
+    proxy.type = "direct";
 }
 
 address = comma server:server comma port:port {

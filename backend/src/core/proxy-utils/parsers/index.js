@@ -1192,6 +1192,14 @@ function Loon_WireGuard() {
     return { name, test, parse };
 }
 
+function Surge_Direct() {
+    const name = 'Surge Direct Parser';
+    const test = (line) => {
+        return /^.*=\s*direct/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
 function Surge_SSH() {
     const name = 'Surge SSH Parser';
     const test = (line) => {
@@ -1381,6 +1389,7 @@ export default [
     URI_Hysteria2(),
     URI_Trojan(),
     Clash_All(),
+    Surge_Direct(),
     Surge_SSH(),
     Surge_SS(),
     Surge_VMess(),

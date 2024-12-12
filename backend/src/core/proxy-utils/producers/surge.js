@@ -27,6 +27,8 @@ export default function Surge_Producer() {
                 return vmess(proxy, opts['include-unsupported-proxy']);
             case 'http':
                 return http(proxy);
+            case 'direct':
+                return direct(proxy);
             case 'socks5':
                 return socks5(proxy);
             case 'snell':
@@ -491,6 +493,54 @@ function http(proxy) {
             'shadow-tls-sni',
         );
     }
+
+    // block-quic
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+
+    // underlying-proxy
+    result.appendIfPresent(
+        `,underlying-proxy=${proxy['underlying-proxy']}`,
+        'underlying-proxy',
+    );
+
+    return result.toString();
+}
+function direct(proxy) {
+    const result = new Result(proxy);
+    const type = 'direct';
+    result.append(`${proxy.name}=${type}`);
+
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
+
+    result.appendIfPresent(
+        `,no-error-alert=${proxy['no-error-alert']}`,
+        'no-error-alert',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+    result.appendIfPresent(
+        `,test-timeout=${proxy['test-timeout']}`,
+        'test-timeout',
+    );
+    result.appendIfPresent(`,test-udp=${proxy['test-udp']}`, 'test-udp');
+    result.appendIfPresent(`,hybrid=${proxy['hybrid']}`, 'hybrid');
+    result.appendIfPresent(`,tos=${proxy['tos']}`, 'tos');
+    result.appendIfPresent(
+        `,allow-other-interface=${proxy['allow-other-interface']}`,
+        'allow-other-interface',
+    );
+    result.appendIfPresent(
+        `,interface=${proxy['interface-name']}`,
+        'interface-name',
+    );
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
