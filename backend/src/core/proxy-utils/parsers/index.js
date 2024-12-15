@@ -46,9 +46,15 @@ function URI_SS() {
         content = content.split('#')[0]; // strip proxy name
         // handle IPV4 and IPV6
         let serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
-        let userInfoStr = Base64.decode(
-            decodeURIComponent(content.split('@')[0]),
-        );
+
+        let rawUserInfoStr = decodeURIComponent(content.split('@')[0]); // 其实应该分隔之后, 用户名和密码再 decodeURIComponent. 但是问题不大
+        let userInfoStr;
+        if (rawUserInfoStr?.startsWith('2022-blake3-')) {
+            userInfoStr = rawUserInfoStr;
+        } else {
+            userInfoStr = Base64.decode(rawUserInfoStr);
+        }
+
         let query = '';
         if (!serverAndPortArray) {
             if (content.includes('?')) {
@@ -73,15 +79,21 @@ function URI_SS() {
             userInfoStr = content.split('@')[0];
             serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
         }
+
         const serverAndPort = serverAndPortArray[1];
         const portIdx = serverAndPort.lastIndexOf(':');
         proxy.server = serverAndPort.substring(0, portIdx);
         proxy.port = `${serverAndPort.substring(portIdx + 1)}`.match(
             /\d+/,
         )?.[0];
-        const userInfo = userInfoStr.match(/(^.*?):(.*$)/);
-        proxy.cipher = userInfo[1];
-        proxy.password = userInfo[2];
+        let userInfo = userInfoStr.match(/(^.*?):(.*$)/);
+        proxy.cipher = userInfo?.[1];
+        proxy.password = userInfo?.[2];
+        // if (!proxy.cipher || !proxy.password) {
+        //     userInfo = rawUserInfoStr.match(/(^.*?):(.*$)/);
+        //     proxy.cipher = userInfo?.[1];
+        //     proxy.password = userInfo?.[2];
+        // }
 
         // handle obfs
         const idx = content.indexOf('?plugin=');
