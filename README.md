@@ -28,6 +28,10 @@ Core functionalities:
 
 > ⚠️ Do not use `Shadowrocket` to export URI and then import it as input. It is not a standard URI.
 
+- [x] Normal Proxy(`socks5`, `socks5+tls`, `http`, `https`(it's ok))
+
+  example: `socks5+tls://user:pass@ip:port#name`
+
 - [x] URI(SS, SSR, VMess, VLESS, Trojan, Hysteria, Hysteria 2, TUIC v5, WireGuard)
 - [x] Clash Proxies YAML
 - [x] Clash Proxy JSON(single line)

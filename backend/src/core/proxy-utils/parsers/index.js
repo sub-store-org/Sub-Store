@@ -27,6 +27,42 @@ function surge_port_hopping(raw) {
     };
 }
 
+function URI_PROXY() {
+    // socks5+tls
+    // socks5
+    // http, https(可以这么写)
+    const name = 'URI PROXY Parser';
+    const test = (line) => {
+        return /^(socks5\+tls|socks5|http|https):\/\//.test(line);
+    };
+    const parse = (line) => {
+        // parse url
+        // eslint-disable-next-line no-unused-vars
+        let [__, type, tls, username, password, server, port, query, name] =
+            line.match(
+                /^(socks5|http|http)(\+tls|s)?:\/\/(?:(.*?):(.*?)@)?(.*?):(\d+?)(\?.*?)?(?:#(.*?))?$/,
+            );
+
+        const proxy = {
+            name:
+                name != null
+                    ? decodeURIComponent(name)
+                    : `${type} ${server}:${port}`,
+            type,
+            tls: tls ? true : false,
+            server,
+            port,
+            username:
+                username != null ? decodeURIComponent(username) : undefined,
+            password:
+                password != null ? decodeURIComponent(password) : undefined,
+        };
+
+        return proxy;
+    };
+    return { name, test, parse };
+}
+
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
 // reference: https://github.com/shadowsocks/shadowsocks-org/wiki/SIP002-URI-Scheme
 function URI_SS() {
@@ -1392,6 +1428,7 @@ function isIP(ip) {
 }
 
 export default [
+    URI_PROXY(),
     URI_SS(),
     URI_SSR(),
     URI_VMess(),
