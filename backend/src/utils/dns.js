@@ -1,6 +1,7 @@
 import $ from '@/core/app';
 import dnsPacket from 'dns-packet';
 import { Buffer } from 'buffer';
+import { isIPv4 } from '@/utils';
 
 export async function doh({ url, domain, type = 'A', timeout, edns }) {
     const buf = dnsPacket.encode({
@@ -23,7 +24,7 @@ export async function doh({ url, domain, type = 'A', timeout, edns }) {
                     {
                         code: 'CLIENT_SUBNET',
                         ip: edns,
-                        sourcePrefixLength: 24,
+                        sourcePrefixLength: isIPv4(edns) ? 24 : 56,
                         scopePrefixLength: 0,
                     },
                 ],
