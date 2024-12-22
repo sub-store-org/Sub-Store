@@ -57,9 +57,29 @@ async function getFlowInfo(req, res) {
         !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
     ) {
         if (sub.subUserinfo) {
+            let subUserInfo;
+            if (/^https?:\/\//.test(sub.subUserinfo)) {
+                try {
+                    subUserInfo = await getFlowHeaders(
+                        undefined,
+                        undefined,
+                        undefined,
+                        sub.proxy,
+                        sub.subUserinfo,
+                    );
+                } catch (e) {
+                    $.error(
+                        `订阅 ${name} 使用自定义流量链接 ${
+                            sub.subUserinfo
+                        } 获取流量信息时发生错误: ${JSON.stringify(e)}`,
+                    );
+                }
+            } else {
+                subUserInfo = sub.subUserinfo;
+            }
             try {
                 success(res, {
-                    ...parseFlowHeaders(sub.subUserinfo),
+                    ...parseFlowHeaders(subUserInfo),
                 });
             } catch (e) {
                 $.error(
@@ -149,9 +169,29 @@ async function getFlowInfo(req, res) {
                 startDate: $arguments.startDate,
                 cycleDays: $arguments.cycleDays,
             });
+            let subUserInfo;
+            if (/^https?:\/\//.test(sub.subUserinfo)) {
+                try {
+                    subUserInfo = await getFlowHeaders(
+                        undefined,
+                        undefined,
+                        undefined,
+                        sub.proxy,
+                        sub.subUserinfo,
+                    );
+                } catch (e) {
+                    $.error(
+                        `订阅 ${name} 使用自定义流量链接 ${
+                            sub.subUserinfo
+                        } 获取流量信息时发生错误: ${JSON.stringify(e)}`,
+                    );
+                }
+            } else {
+                subUserInfo = sub.subUserinfo;
+            }
             const result = {
                 ...parseFlowHeaders(
-                    [sub.subUserinfo, flowHeaders].filter((i) => i).join('; '),
+                    [subUserInfo, flowHeaders].filter((i) => i).join('; '),
                 ),
             };
             if (remainingDays != null) {

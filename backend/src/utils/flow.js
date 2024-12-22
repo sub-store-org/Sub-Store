@@ -168,6 +168,9 @@ export async function getFlowHeaders(
             }
         }
         if (flowInfo) {
+            flowInfo = flowInfo.trim();
+        }
+        if (flowInfo) {
             headersResourceCache.set(id, flowInfo);
         }
     }
