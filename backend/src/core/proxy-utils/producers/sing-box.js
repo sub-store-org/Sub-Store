@@ -3,7 +3,7 @@ import $ from '@/core/app';
 import { isIPv4, isIPv6 } from '@/utils';
 
 const detourParser = (proxy, parsedProxy) => {
-    if (proxy['dialer-proxy']) parsedProxy.detour = proxy['dialer-proxy'];
+    parsedProxy.detour = proxy['dialer-proxy'] || proxy.detour;
 };
 const tfoParser = (proxy, parsedProxy) => {
     parsedProxy.tcp_fast_open = false;
