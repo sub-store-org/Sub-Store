@@ -275,7 +275,7 @@ async function downloadSubscription(req, res) {
             );
         }
     } else {
-        $.error(`🌍 Sub-Store 下载订阅失败`, `❌ 未找到订阅：${name}！`);
+        $.error(`🌍 Sub-Store 下载订阅失败\n❌ 未找到订阅：${name}！`);
         failed(
             res,
             new ResourceNotFoundError(
