@@ -929,6 +929,8 @@ function Clash_All() {
         const proxy = JSON.parse(line);
         if (
             ![
+                'mieru',
+                'juicity',
                 'ss',
                 'ssr',
                 'vmess',
