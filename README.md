@@ -122,3 +122,22 @@ This project is under the GPL V3 LICENSE.
 
 - Special thanks to @KOP-XIAO for his awesome resource-parser. Please give a [star](https://github.com/KOP-XIAO/QuantumultX) for his great work!
 - Special thanks to @Orz-3 and @58xinian for their awesome icons.
+
+## New Feature: Managing and Synchronizing Artifacts with GitHub Gist
+
+The repository now includes a new feature for managing and synchronizing artifacts with GitHub Gist. This feature allows you to synchronize all artifacts with GitHub Gist, ensuring that your configurations are always up-to-date and easily accessible.
+
+To use this feature, follow these steps:
+
+1. Ensure that you have a GitHub account and a GitHub Gist token.
+2. Configure the GitHub Gist token in the settings.
+3. Use the provided RESTful APIs to manage and synchronize your artifacts.
+
+The following RESTful APIs are available for managing and synchronizing artifacts:
+
+- `GET /api/sync/artifacts`: Synchronize all artifacts with GitHub Gist.
+- `GET /api/sync/artifact/:name`: Synchronize a specific artifact with GitHub Gist.
+
+For more information on how to use these APIs, refer to the documentation.
+
+Ndjdjd I
