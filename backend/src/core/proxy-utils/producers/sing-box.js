@@ -214,7 +214,11 @@ const tlsParser = (proxy, parsedProxy) => {
                 proxy['reality-opts']['short-id'];
         parsedProxy.tls.utls = { enabled: true };
     }
-    if (proxy['client-fingerprint'] && proxy['client-fingerprint'] !== '')
+    if (
+        !['hysteria', 'hysteria2', 'tuic'].includes(proxy.type) &&
+        proxy['client-fingerprint'] &&
+        proxy['client-fingerprint'] !== ''
+    )
         parsedProxy.tls.utls = {
             enabled: true,
             fingerprint: proxy['client-fingerprint'],
