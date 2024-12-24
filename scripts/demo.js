@@ -165,6 +165,20 @@ function operator(proxies = [], targetPlatform, context) {
 
   // 若不存在 `source._collection`, 说明输出结果为单条订阅, 脚本设置在此单条订阅上
 
+  // 这个历史遗留原因, 是有点复杂. 提供一个例子, 用来取当前脚本所在的组合订阅或单条订阅名称
+
+  // let name = ''
+  // for (const [key, value] of Object.entries(env.source)) {
+  //   if (!key.startsWith('_')) {
+  //     name = value.displayName || value.name
+  //     break
+  //   }
+  // }
+  // if (!name) {
+  //   const collection = env.source._collection
+  //   name = collection.displayName || collection.name
+  // }
+
   // 1. 输出单条订阅 sub-1 时, 该单条订阅中的脚本上下文为:
   // {
   //   "source": {
