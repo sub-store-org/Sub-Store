@@ -11,6 +11,10 @@ import {
     validCheck,
 } from '@/utils/flow';
 import $ from '@/core/app';
+import PROXY_PREPROCESSORS from '@/core/proxy-utils/preprocessors';
+const clashPreprocessor = PROXY_PREPROCESSORS.find(
+    (processor) => processor.name === 'Clash Pre-processor',
+);
 
 const tasks = new Map();
 
@@ -172,7 +176,7 @@ export default async function download(
             `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nURL: ${url}`,
         );
         try {
-            const { body, headers, statusCode } = await http.get({
+            let { body, headers, statusCode } = await http.get({
                 url,
                 ...(proxy ? { proxy } : {}),
                 ...(isLoon && proxy ? { node: proxy } : {}),
@@ -193,6 +197,13 @@ export default async function download(
             }
             if (body.replace(/\s/g, '').length === 0)
                 throw new Error(new Error('远程资源内容为空'));
+            try {
+                if (clashPreprocessor.test(body)) {
+                    body = clashPreprocessor.parse(body);
+                }
+            } catch (e) {
+                $.error(`Clash Pre-processor error: ${e}`);
+            }
             let shouldCache = true;
             if (cacheThreshold) {
                 const size = body.length / 1024;
