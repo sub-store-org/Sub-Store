@@ -114,6 +114,10 @@ async function compareSub(req, res) {
                                 sub.ua,
                                 undefined,
                                 sub.proxy,
+                                undefined,
+                                undefined,
+                                undefined,
+                                true,
                             );
                         } catch (err) {
                             errors[url] = err;
@@ -219,6 +223,10 @@ async function compareCollection(req, res) {
                                             sub.ua,
                                             undefined,
                                             sub.proxy,
+                                            undefined,
+                                            undefined,
+                                            undefined,
+                                            true,
                                         );
                                     } catch (err) {
                                         errors[url] = err;

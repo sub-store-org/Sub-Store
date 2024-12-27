@@ -74,6 +74,7 @@ async function produceArtifact({
                                 undefined,
                                 awaitCustomCache,
                                 noCache,
+                                true,
                             );
                         } catch (err) {
                             errors[url] = err;
@@ -122,6 +123,7 @@ async function produceArtifact({
                                 undefined,
                                 awaitCustomCache,
                                 noCache,
+                                true,
                             );
                         } catch (err) {
                             errors[url] = err;
@@ -243,6 +245,7 @@ async function produceArtifact({
                                             undefined,
                                             undefined,
                                             noCache,
+                                            true,
                                         );
                                     } catch (err) {
                                         errors[url] = err;

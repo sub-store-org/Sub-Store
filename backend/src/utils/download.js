@@ -11,6 +11,10 @@ import {
     validCheck,
 } from '@/utils/flow';
 import $ from '@/core/app';
+import PROXY_PREPROCESSORS from '@/core/proxy-utils/preprocessors';
+const clashPreprocessor = PROXY_PREPROCESSORS.find(
+    (processor) => processor.name === 'Clash Pre-processor',
+);
 
 const tasks = new Map();
 
@@ -22,6 +26,7 @@ export default async function download(
     skipCustomCache,
     awaitCustomCache,
     noCache,
+    preprocess,
 ) {
     let $arguments = {};
     let url = rawUrl.replace(/#noFlow$/, '');
@@ -87,6 +92,9 @@ export default async function download(
                         timeout,
                         proxy,
                         true,
+                        undefined,
+                        undefined,
+                        preprocess,
                     );
                 } catch (e) {
                     $.error(
@@ -107,6 +115,9 @@ export default async function download(
                     timeout,
                     proxy,
                     true,
+                    undefined,
+                    undefined,
+                    preprocess,
                 ).catch((e) => {
                     $.error(
                         `乐观缓存: URL ${url} 异步更新缓存发生错误 ${
@@ -169,10 +180,10 @@ export default async function download(
                 : { insecure: true }
             : undefined;
         $.info(
-            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nURL: ${url}`,
+            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nPreprocess: ${preprocess}\nURL: ${url}`,
         );
         try {
-            const { body, headers, statusCode } = await http.get({
+            let { body, headers, statusCode } = await http.get({
                 url,
                 ...(proxy ? { proxy } : {}),
                 ...(isLoon && proxy ? { node: proxy } : {}),
@@ -193,6 +204,15 @@ export default async function download(
             }
             if (body.replace(/\s/g, '').length === 0)
                 throw new Error(new Error('远程资源内容为空'));
+            if (preprocess) {
+                try {
+                    if (clashPreprocessor.test(body)) {
+                        body = clashPreprocessor.parse(body);
+                    }
+                } catch (e) {
+                    $.error(`Clash Pre-processor error: ${e}`);
+                }
+            }
             let shouldCache = true;
             if (cacheThreshold) {
                 const size = body.length / 1024;
