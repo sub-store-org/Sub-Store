@@ -63,7 +63,7 @@ async function downloadSubscription(req, res) {
     $.info(
         `正在下载订阅：${name}\n请求 User-Agent: ${
             req.headers['user-agent'] || req.headers['User-Agent']
-        }`,
+        }\n请求 target: ${req.query.target}\n实际输出: ${platform}`,
     );
     let {
         url,
@@ -303,7 +303,7 @@ async function downloadCollection(req, res) {
     $.info(
         `正在下载组合订阅：${name}\n请求 User-Agent: ${
             req.headers['user-agent'] || req.headers['User-Agent']
-        }`,
+        }\n请求 target: ${req.query.target}\n实际输出: ${platform}`,
     );
 
     let {
