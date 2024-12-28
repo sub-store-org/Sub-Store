@@ -72,6 +72,9 @@ export default function Egern_Producer() {
                 return true;
             })
             .map((proxy) => {
+                if (proxy.tls && !proxy.sni) {
+                    proxy.sni = proxy.server;
+                }
                 if (proxy.type === 'http') {
                     proxy = {
                         type: 'http',
