@@ -18,6 +18,11 @@ export default function register($app) {
 
     $app.get('/download/collection/:name', downloadCollection);
     $app.get('/download/:name', downloadSubscription);
+    $app.get('/download/:name/:target', async (req, res) => {
+        req.query.target = req.params.target;
+        $.info(`使用路由指定目标: ${req.params.target}`);
+        await downloadSubscription(req, res);
+    });
     $app.get(
         '/download/collection/:name/api/v1/server/details',
         async (req, res) => {
@@ -98,6 +103,14 @@ async function downloadSubscription(req, res) {
     if (url) {
         url = decodeURIComponent(url);
         $.info(`指定远程订阅 URL: ${url}`);
+        if (!/^https?:\/\//.test(url)) {
+            content = url;
+            $.info(`URL 不是链接，视为本地订阅`);
+        }
+    }
+    if (content) {
+        content = decodeURIComponent(content);
+        $.info(`指定本地订阅: ${content}`);
     }
     if (proxy) {
         proxy = decodeURIComponent(proxy);
@@ -107,10 +120,7 @@ async function downloadSubscription(req, res) {
         ua = decodeURIComponent(ua);
         $.info(`指定远程订阅 User-Agent: ${ua}`);
     }
-    if (content) {
-        content = decodeURIComponent(content);
-        $.info(`指定本地订阅: ${content}`);
-    }
+
     if (mergeSources) {
         mergeSources = decodeURIComponent(mergeSources);
         $.info(`指定合并来源: ${mergeSources}`);
