@@ -13,7 +13,17 @@ import { getISO } from '@/utils/geo';
 import env from '@/utils/env';
 
 export default function register($app) {
+    $app.get('/share/col/:name/:target', async (req, res) => {
+        req.query.target = req.params.target;
+        $.info(`使用路由指定目标: ${req.params.target}`);
+        await downloadCollection(req, res);
+    });
     $app.get('/share/col/:name', downloadCollection);
+    $app.get('/share/sub/:name/:target', async (req, res) => {
+        req.query.target = req.params.target;
+        $.info(`使用路由指定目标: ${req.params.target}`);
+        await downloadSubscription(req, res);
+    });
     $app.get('/share/sub/:name', downloadSubscription);
 
     $app.get('/download/collection/:name/:target', async (req, res) => {
