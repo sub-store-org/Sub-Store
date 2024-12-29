@@ -75,6 +75,12 @@ export default function Egern_Producer() {
                 if (proxy.tls && !proxy.sni) {
                     proxy.sni = proxy.server;
                 }
+                const prev_hop =
+                    proxy.prev_hop ||
+                    proxy['underlying-proxy'] ||
+                    proxy['dialer-proxy'] ||
+                    proxy.detour;
+
                 if (proxy.type === 'http') {
                     proxy = {
                         type: 'http',
@@ -133,6 +139,8 @@ export default function Egern_Producer() {
                         next_hop: proxy.next_hop,
                         sni: proxy.sni,
                         skip_tls_verify: proxy['skip-cert-verify'],
+                        port_hopping: proxy.ports,
+                        port_hopping_interval: proxy['hop-interval'],
                     };
                     if (proxy['obfs-password'] && proxy.obfs == 'salamander') {
                         proxy.obfs = 'salamander';
@@ -287,6 +295,7 @@ export default function Egern_Producer() {
                     [proxy.type]: {
                         ...proxy,
                         type: undefined,
+                        prev_hop,
                     },
                 };
             });
