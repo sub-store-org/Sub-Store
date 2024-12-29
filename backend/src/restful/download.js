@@ -16,13 +16,19 @@ export default function register($app) {
     $app.get('/share/col/:name', downloadCollection);
     $app.get('/share/sub/:name', downloadSubscription);
 
+    $app.get('/download/collection/:name/:target', async (req, res) => {
+        req.query.target = req.params.target;
+        $.info(`使用路由指定目标: ${req.params.target}`);
+        await downloadCollection(req, res);
+    });
     $app.get('/download/collection/:name', downloadCollection);
-    $app.get('/download/:name', downloadSubscription);
     $app.get('/download/:name/:target', async (req, res) => {
         req.query.target = req.params.target;
         $.info(`使用路由指定目标: ${req.params.target}`);
         await downloadSubscription(req, res);
     });
+    $app.get('/download/:name', downloadSubscription);
+
     $app.get(
         '/download/collection/:name/api/v1/server/details',
         async (req, res) => {
@@ -64,11 +70,9 @@ async function downloadSubscription(req, res) {
 
     const platform =
         req.query.target || getPlatformFromHeaders(req.headers) || 'JSON';
-
+    const reqUA = req.headers['user-agent'] || req.headers['User-Agent'];
     $.info(
-        `正在下载订阅：${name}\n请求 User-Agent: ${
-            req.headers['user-agent'] || req.headers['User-Agent']
-        }\n请求 target: ${req.query.target}\n实际输出: ${platform}`,
+        `正在下载订阅：${name}\n请求 User-Agent: ${reqUA}\n请求 target: ${req.query.target}\n实际输出: ${platform}`,
     );
     let {
         url,
@@ -150,6 +154,13 @@ async function downloadSubscription(req, res) {
     const sub = findByName(allSubs, name);
     if (sub) {
         try {
+            const passThroughUA = sub.passThroughUA;
+            if (passThroughUA) {
+                $.info(
+                    `订阅开启了透传 User-Agent, 使用请求的 User-Agent: ${reqUA}`,
+                );
+                ua = reqUA;
+            }
             let output = await produceArtifact({
                 type: 'subscription',
                 name,
