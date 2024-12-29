@@ -73,7 +73,7 @@ async function produceArtifact({
                                 proxy || sub.proxy,
                                 undefined,
                                 awaitCustomCache,
-                                noCache,
+                                noCache || sub.noCache,
                                 true,
                             );
                         } catch (err) {
@@ -122,7 +122,7 @@ async function produceArtifact({
                                 proxy || sub.proxy,
                                 undefined,
                                 awaitCustomCache,
-                                noCache,
+                                noCache || sub.noCache,
                                 true,
                             );
                         } catch (err) {
@@ -244,7 +244,7 @@ async function produceArtifact({
                                                 collection.proxy,
                                             undefined,
                                             undefined,
-                                            noCache,
+                                            noCache || sub.noCache,
                                             true,
                                         );
                                     } catch (err) {
