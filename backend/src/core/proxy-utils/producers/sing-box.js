@@ -568,7 +568,7 @@ const hysteriaParser = (proxy = {}) => {
     smuxParser(proxy.smux, parsedProxy);
     return parsedProxy;
 };
-const hysteria2Parser = (proxy = {}) => {
+const hysteria2Parser = (proxy = {}, includeUnsupportedProxy) => {
     const parsedProxy = {
         tag: proxy.name,
         type: 'hysteria2',
@@ -580,6 +580,16 @@ const hysteria2Parser = (proxy = {}) => {
     };
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
+    if (includeUnsupportedProxy) {
+        if (proxy['hop-interval'])
+            parsedProxy.hop_interval = /^\d+$/.test(proxy['hop-interval'])
+                ? `${proxy['hop-interval']}s`
+                : proxy['hop-interval'];
+        if (proxy['ports'])
+            parsedProxy.server_ports = proxy['ports']
+                .split(/\s*,\s*/)
+                .map((p) => p.replace(/\s*-\s*/g, ':'));
+    }
     if (proxy.up) parsedProxy.up_mbps = parseInt(`${proxy.up}`, 10);
     if (proxy.down) parsedProxy.down_mbps = parseInt(`${proxy.down}`, 10);
     if (proxy.obfs === 'salamander') parsedProxy.obfs.type = 'salamander';
@@ -790,7 +800,12 @@ export default function singbox_Producer() {
                             list.push(hysteriaParser(proxy));
                             break;
                         case 'hysteria2':
-                            list.push(hysteria2Parser(proxy));
+                            list.push(
+                                hysteria2Parser(
+                                    proxy,
+                                    opts['include-unsupported-proxy'],
+                                ),
+                            );
                             break;
                         case 'tuic':
                             if (!proxy.token || proxy.token.length === 0) {
