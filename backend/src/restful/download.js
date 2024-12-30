@@ -14,27 +14,39 @@ import env from '@/utils/env';
 
 export default function register($app) {
     $app.get('/share/col/:name/:target', async (req, res) => {
-        req.query.target = req.params.target;
-        $.info(`使用路由指定目标: ${req.params.target}`);
+        const { target } = req.params;
+        if (target) {
+            req.query.target = target;
+            $.info(`使用路由指定目标: ${target}`);
+        }
         await downloadCollection(req, res);
     });
     $app.get('/share/col/:name', downloadCollection);
     $app.get('/share/sub/:name/:target', async (req, res) => {
-        req.query.target = req.params.target;
-        $.info(`使用路由指定目标: ${req.params.target}`);
+        const { target } = req.params;
+        if (target) {
+            req.query.target = target;
+            $.info(`使用路由指定目标: ${target}`);
+        }
         await downloadSubscription(req, res);
     });
     $app.get('/share/sub/:name', downloadSubscription);
 
     $app.get('/download/collection/:name/:target', async (req, res) => {
-        req.query.target = req.params.target;
-        $.info(`使用路由指定目标: ${req.params.target}`);
+        const { target } = req.params;
+        if (target) {
+            req.query.target = target;
+            $.info(`使用路由指定目标: ${target}`);
+        }
         await downloadCollection(req, res);
     });
     $app.get('/download/collection/:name', downloadCollection);
     $app.get('/download/:name/:target', async (req, res) => {
-        req.query.target = req.params.target;
-        $.info(`使用路由指定目标: ${req.params.target}`);
+        const { target } = req.params;
+        if (target) {
+            req.query.target = target;
+            $.info(`使用路由指定目标: ${target}`);
+        }
         await downloadSubscription(req, res);
     });
     $app.get('/download/:name', downloadSubscription);
