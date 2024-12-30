@@ -197,11 +197,21 @@ async function getFile(req, res) {
 }
 function getWholeFile(req, res) {
     let { name } = req.params;
+    let { raw } = req.query;
     name = decodeURIComponent(name);
     const allFiles = $.read(FILES_KEY);
     const file = findByName(allFiles, name);
     if (file) {
-        success(res, file);
+        if (raw) {
+            res.set('content-type', 'application/json')
+                .set(
+                    'content-disposition',
+                    `attachment; filename="${encodeURIComponent(name)}.json"`,
+                )
+                .send(JSON.stringify(file));
+        } else {
+            success(res, file);
+        }
     } else {
         failed(
             res,
