@@ -50,11 +50,21 @@ function createCollection(req, res) {
 
 function getCollection(req, res) {
     let { name } = req.params;
+    let { raw } = req.query;
     name = decodeURIComponent(name);
     const allCols = $.read(COLLECTIONS_KEY);
     const collection = findByName(allCols, name);
     if (collection) {
-        success(res, collection);
+        if (raw) {
+            res.set('content-type', 'application/json')
+                .set(
+                    'content-disposition',
+                    `attachment; filename="${encodeURIComponent(name)}.json"`,
+                )
+                .send(JSON.stringify(collection));
+        } else {
+            success(res, collection);
+        }
     } else {
         failed(
             res,
