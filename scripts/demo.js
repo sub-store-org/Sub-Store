@@ -21,6 +21,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 13. `test-url` 为测延迟链接, `test-timeout` 为测延迟超时
   // 14. `ports` 为端口跳跃, `hop-interval` 变换端口号的时间间隔
   // 15. `ip-version` 设置节点使用 IP 版本，可选：dual，ipv4，ipv6，ipv4-prefer，ipv6-prefer. 会进行内部转换, 若无法匹配则使用原始值
+  // 16. `sing-box` 支持使用 `_network` 来设置 `network`, 例如 `tcp`, `udp`
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
 
