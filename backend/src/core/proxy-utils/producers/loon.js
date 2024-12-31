@@ -32,7 +32,7 @@ export default function Loon_Producer() {
     return { produce };
 }
 
-function shadowsocks(proxy, includeUnsupportedProxy) {
+function shadowsocks(proxy) {
     const result = new Result(proxy);
     if (
         ![
@@ -56,9 +56,8 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
             'aes-256-gcm',
             'chacha20-ietf-poly1305',
             'xchacha20-ietf-poly1305',
-            ...(includeUnsupportedProxy
-                ? ['2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm']
-                : []),
+            '2022-blake3-aes-128-gcm',
+            '2022-blake3-aes-256-gcm',
         ].includes(proxy.cipher)
     ) {
         throw new Error(`cipher ${proxy.cipher} is not supported`);
