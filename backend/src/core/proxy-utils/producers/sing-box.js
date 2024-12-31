@@ -5,6 +5,10 @@ import { isIPv4, isIPv6 } from '@/utils';
 const detourParser = (proxy, parsedProxy) => {
     parsedProxy.detour = proxy['dialer-proxy'] || proxy.detour;
 };
+const networkParser = (proxy, parsedProxy) => {
+    if (['tcp', 'udp'].includes(proxy._network))
+        parsedProxy.network = proxy._network;
+};
 const tfoParser = (proxy, parsedProxy) => {
     parsedProxy.tcp_fast_open = false;
     if (proxy.tfo) parsedProxy.tcp_fast_open = true;
@@ -305,6 +309,7 @@ const socks5Parser = (proxy = {}) => {
     if (proxy.uot) parsedProxy.udp_over_tcp = true;
     if (proxy['udp-over-tcp']) parsedProxy.udp_over_tcp = true;
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
+    networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     return parsedProxy;
@@ -356,6 +361,7 @@ const ssParser = (proxy = {}) => {
     if (proxy.uot) parsedProxy.udp_over_tcp = true;
     if (proxy['udp-over-tcp']) parsedProxy.udp_over_tcp = true;
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
+    networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
@@ -470,7 +476,7 @@ const vmessParser = (proxy = {}) => {
     if (proxy.network === 'h2') h2Parser(proxy, parsedProxy);
     if (proxy.network === 'http') h1Parser(proxy, parsedProxy);
     if (proxy.network === 'grpc') grpcParser(proxy, parsedProxy);
-
+    networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
@@ -493,7 +499,7 @@ const vlessParser = (proxy = {}) => {
     if (proxy.flow === 'xtls-rprx-vision') parsedProxy.flow = proxy.flow;
     if (proxy.network === 'ws') wsParser(proxy, parsedProxy);
     if (proxy.network === 'grpc') grpcParser(proxy, parsedProxy);
-
+    networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
@@ -514,7 +520,7 @@ const trojanParser = (proxy = {}) => {
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     if (proxy.network === 'grpc') grpcParser(proxy, parsedProxy);
     if (proxy.network === 'ws') wsParser(proxy, parsedProxy);
-
+    networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
@@ -562,6 +568,7 @@ const hysteriaParser = (proxy = {}) => {
                 parsedProxy.disable_mtu_discovery = true;
         }
     }
+    networkParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
@@ -596,6 +603,7 @@ const hysteria2Parser = (proxy = {}, includeUnsupportedProxy) => {
     if (proxy['obfs-password'])
         parsedProxy.obfs.password = proxy['obfs-password'];
     if (!parsedProxy.obfs.type) delete parsedProxy.obfs;
+    networkParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
@@ -626,6 +634,7 @@ const tuic5Parser = (proxy = {}) => {
     if (proxy['udp-over-stream']) parsedProxy.udp_over_stream = true;
     if (proxy['heartbeat-interval'])
         parsedProxy.heartbeat = `${proxy['heartbeat-interval']}ms`;
+    networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
@@ -683,6 +692,7 @@ const wireguardParser = (proxy = {}) => {
             parsedProxy.peers.push(peer);
         }
     }
+    networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
