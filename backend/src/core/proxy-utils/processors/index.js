@@ -10,6 +10,7 @@ import { hex_md5 } from '@/vendor/md5';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { produceArtifact } from '@/restful/sync';
 import { SETTINGS_KEY } from '@/constants';
+import YAML from '@/utils/yaml';
 
 import env from '@/utils/env';
 import {
@@ -21,6 +22,46 @@ import {
     getRmainingDays,
 } from '@/utils/flow';
 
+function isObject(item) {
+    return item && typeof item === 'object' && !Array.isArray(item);
+}
+function trimWrap(str) {
+    if (str.startsWith('<') && str.endsWith('>')) {
+        return str.slice(1, -1);
+    }
+    return str;
+}
+function deepMerge(target, _other) {
+    const other = typeof _other === 'string' ? JSON.parse(_other) : _other;
+    for (const key in other) {
+        if (isObject(other[key])) {
+            if (key.endsWith('!')) {
+                const k = trimWrap(key.slice(0, -1));
+                target[k] = other[key];
+            } else {
+                const k = trimWrap(key);
+                if (!target[k]) Object.assign(target, { [k]: {} });
+                deepMerge(target[k], other[k]);
+            }
+        } else if (Array.isArray(other[key])) {
+            if (key.startsWith('+')) {
+                const k = trimWrap(key.slice(1));
+                if (!target[k]) Object.assign(target, { [k]: [] });
+                target[k] = [...other[key], ...target[k]];
+            } else if (key.endsWith('+')) {
+                const k = trimWrap(key.slice(0, -1));
+                if (!target[k]) Object.assign(target, { [k]: [] });
+                target[k] = [...target[k], ...other[key]];
+            } else {
+                const k = trimWrap(key);
+                Object.assign(target, { [k]: other[key] });
+            }
+        } else {
+            Object.assign(target, { [key]: other[key] });
+        }
+    }
+    return target;
+}
 /**
  The rule "(name CONTAINS "🇨🇳") AND (port IN [80, 443])" can be expressed as follows:
  {
@@ -321,6 +362,33 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
         name: 'Script Operator',
         func: async (proxies) => {
             let output = proxies;
+            if (output?.$file?.type === 'mihomoProfile') {
+                try {
+                    let patch = YAML.safeLoad(script);
+                    if (typeof patch !== 'object') patch = {};
+                    output.$content = ProxyUtils.yaml.safeDump(
+                        deepMerge(
+                            {
+                                proxies: await produceArtifact({
+                                    type:
+                                        output?.$file?.sourceType ||
+                                        'collection',
+                                    name: output?.$file?.sourceName,
+                                    platform: 'mihomo',
+                                    produceType: 'internal',
+                                    produceOpts: {
+                                        'delete-underscore-fields': true,
+                                    },
+                                }),
+                            },
+                            patch,
+                        ),
+                    );
+                    return output;
+                } catch (e) {
+                    // console.log(e);
+                }
+            }
             await (async function () {
                 const operator = createDynamicFunction(
                     'operator',
@@ -339,9 +407,27 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
                     'operator',
                     `async function operator(input = []) {
                         if (input && (input.$files || input.$content)) {
-                            let { $content, $files, $options } = input
-                            ${script}
-                            return { $content, $files, $options }
+                            let { $content, $files, $options, $file } = input
+                            if($file.type === 'mihomoProfile') {
+                                ${script}
+                                if(typeof main === 'function') {
+                                    const config = {
+                                        proxies: await produceArtifact({
+                                            type: $file.sourceType || 'collection',
+                                            name: $file.sourceName,
+                                            platform: 'mihomo',
+                                            produceType: 'internal',
+                                            produceOpts: {
+                                                'delete-underscore-fields': true
+                                            }
+                                        }),
+                                    }
+                                    $content = ProxyUtils.yaml.safeDump(await main(config))
+                                }
+                            } else {
+                                ${script}
+                            }
+                            return { $content, $files, $options, $file }
                         } else {
                             let proxies = input
                             let list = []

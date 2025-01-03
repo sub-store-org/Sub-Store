@@ -67,7 +67,7 @@ async function previewFile(req, res) {
         const processed =
             Array.isArray(file.process) && file.process.length > 0
                 ? await ProxyUtils.process(
-                      { $files: files, $content: filesContent },
+                      { $files: files, $content: filesContent, $file: file },
                       file.process,
                   )
                 : { $content: filesContent, $files: files };

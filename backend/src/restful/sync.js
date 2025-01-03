@@ -512,7 +512,12 @@ async function produceArtifact({
         const processed =
             Array.isArray(file.process) && file.process.length > 0
                 ? await ProxyUtils.process(
-                      { $files: files, $content: filesContent, $options },
+                      {
+                          $files: files,
+                          $content: filesContent,
+                          $options,
+                          $file: file,
+                      },
                       file.process,
                   )
                 : { $content: filesContent, $files: files, $options };
