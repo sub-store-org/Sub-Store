@@ -180,7 +180,7 @@ export default function ClashMeta_Producer() {
                 delete proxy.id;
                 delete proxy.resolved;
                 delete proxy['no-resolve'];
-                if (type !== 'internal') {
+                if (type !== 'internal' || opts['delete-underscore-fields']) {
                     for (const key in proxy) {
                         if (proxy[key] == null || /^_/i.test(key)) {
                             delete proxy[key];
