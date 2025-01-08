@@ -207,7 +207,7 @@ export default async function download(
             if (preprocess) {
                 try {
                     if (clashPreprocessor.test(body)) {
-                        body = clashPreprocessor.parse(body);
+                        body = clashPreprocessor.parse(body, true);
                     }
                 } catch (e) {
                     $.error(`Clash Pre-processor error: ${e}`);
