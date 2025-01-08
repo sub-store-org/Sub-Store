@@ -127,8 +127,6 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
-    // udp-port
-    result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
@@ -160,6 +158,8 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
             `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
             'shadow-tls-sni',
         );
+        // udp-port
+        result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
     } else if (['shadow-tls'].includes(proxy.plugin) && proxy['plugin-opts']) {
         const password = proxy['plugin-opts'].password;
         const host = proxy['plugin-opts'].host;
@@ -177,6 +177,11 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
                 }
                 result.append(`,shadow-tls-version=${version}`);
             }
+            // udp-port
+            result.appendIfPresent(
+                `,udp-port=${proxy['udp-port']}`,
+                'udp-port',
+            );
         }
     }
 
