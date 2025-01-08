@@ -1,5 +1,6 @@
 import { safeLoad } from '@/utils/yaml';
 import { Base64 } from 'js-base64';
+import $ from '@/core/app';
 
 function HTML() {
     const name = 'HTML';
@@ -35,8 +36,15 @@ function Base64Encoded() {
         );
     };
     const parse = function (raw) {
-        raw = Base64.decode(raw);
-        return raw;
+        const decoded = Base64.decode(raw);
+        if (!/^\w+:\/\/\w+/m.test(decoded)) {
+            $.error(
+                `Base64 Pre-processor error: decoded line does not start with protocol`,
+            );
+            return raw;
+        }
+
+        return decoded;
     };
     return { name, test, parse };
 }
