@@ -625,6 +625,15 @@ async function syncArtifacts() {
         const resp = await syncToGist(files);
         const body = JSON.parse(resp.body);
 
+        delete body.history;
+        delete body.forks;
+        delete body.owner;
+        Object.values(body.files).forEach((file) => {
+            delete file.content;
+        });
+        $.info('上传配置响应:');
+        $.info(JSON.stringify(body, null, 2));
+
         for (const artifact of allArtifacts) {
             if (artifact.sync) {
                 artifact.updated = new Date().getTime();
@@ -743,6 +752,16 @@ async function syncArtifact(req, res) {
         });
         artifact.updated = new Date().getTime();
         const body = JSON.parse(resp.body);
+
+        delete body.history;
+        delete body.forks;
+        delete body.owner;
+        Object.values(body.files).forEach((file) => {
+            delete file.content;
+        });
+        $.info('上传配置响应:');
+        $.info(JSON.stringify(body, null, 2));
+
         let files = body.files;
         let isGitLab;
         if (Array.isArray(files)) {
