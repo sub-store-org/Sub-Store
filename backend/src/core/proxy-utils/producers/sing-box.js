@@ -533,6 +533,7 @@ const hysteriaParser = (proxy = {}) => {
         type: 'hysteria',
         server: proxy.server,
         server_port: parseInt(`${proxy.port}`, 10),
+	server_ports: proxy.ports,
         disable_mtu_discovery: false,
         tls: { enabled: true, server_name: proxy.server, insecure: false },
     };
@@ -581,12 +582,24 @@ const hysteria2Parser = (proxy = {}, includeUnsupportedProxy) => {
         type: 'hysteria2',
         server: proxy.server,
         server_port: parseInt(`${proxy.port}`, 10),
+        server_ports: ``,
         password: proxy.password,
         obfs: {},
         tls: { enabled: true, server_name: proxy.server, insecure: false },
     };
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
+    if (proxy.ports != null) {
+        const portRange = proxy.ports.trim();
+        if (portRange) {
+            const [start, end] = portRange.split('-').map(p => parseInt(p, 10));
+            if (start > 65535 || end > 65535) {
+                throw 'invalid port range';
+            }
+            parsedProxy.server_ports = `${start}:${end}`;
+        }
+    }
+
     if (includeUnsupportedProxy) {
         if (proxy['hop-interval'])
             parsedProxy.hop_interval = /^\d+$/.test(proxy['hop-interval'])
