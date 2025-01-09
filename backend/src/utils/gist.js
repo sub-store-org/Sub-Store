@@ -114,15 +114,17 @@ export default class Gist {
                 return;
             });
         } else {
-            return this.http.get('/gists').then((response) => {
-                const gists = JSON.parse(response.body);
-                for (let g of gists) {
-                    if (g.description === this.key) {
-                        return g;
+            return this.http
+                .get('/gists?per_page=100&page=1')
+                .then((response) => {
+                    const gists = JSON.parse(response.body);
+                    for (let g of gists) {
+                        if (g.description === this.key) {
+                            return g;
+                        }
                     }
-                }
-                return;
-            });
+                    return;
+                });
         }
     }
 
