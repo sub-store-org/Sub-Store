@@ -174,6 +174,14 @@ async function doSync() {
 
         const resp = await syncToGist(files);
         const body = JSON.parse(resp.body);
+        delete body.history;
+        delete body.forks;
+        delete body.owner;
+        Object.values(body.files).forEach((file) => {
+            delete file.content;
+        });
+        $.info('上传配置响应:');
+        $.info(JSON.stringify(body, null, 2));
 
         for (const artifact of allArtifacts) {
             if (artifact.sync) {
