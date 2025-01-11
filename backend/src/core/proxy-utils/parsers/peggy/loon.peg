@@ -37,7 +37,7 @@ start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2
     return proxy;
 }
 
-shadowsocksr = tag equals "shadowsocksr"i address method password (ssr_protocol/ssr_protocol_param/obfs_ssr/obfs_ssr_param/obfs_host/obfs_uri/fast_open/udp_relay/others)*{
+shadowsocksr = tag equals "shadowsocksr"i address method password (ssr_protocol/ssr_protocol_param/obfs_ssr/obfs_ssr_param/obfs_host/obfs_uri/fast_open/udp_relay/udp_port/shadow_tls_version/shadow_tls_sni/shadow_tls_password/others)*{
     proxy.type = "ssr";
     // handle ssr obfs
     proxy.obfs = obfs.type;
