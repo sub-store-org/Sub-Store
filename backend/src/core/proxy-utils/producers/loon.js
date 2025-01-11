@@ -9,7 +9,7 @@ export default function Loon_Producer() {
             case 'ss':
                 return shadowsocks(proxy, opts['include-unsupported-proxy']);
             case 'ssr':
-                return shadowsocksr(proxy);
+                return shadowsocksr(proxy, opts['include-unsupported-proxy']);
             case 'trojan':
                 return trojan(proxy);
             case 'vmess':
@@ -143,7 +143,7 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
     return result.toString();
 }
 
-function shadowsocksr(proxy) {
+function shadowsocksr(proxy, includeUnsupportedProxy) {
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"`,
@@ -160,12 +160,61 @@ function shadowsocksr(proxy) {
     result.appendIfPresent(`,obfs=${proxy.obfs}`, 'obfs');
     result.appendIfPresent(`,obfs-param=${proxy['obfs-param']}`, 'obfs-param');
 
+    let isShadowTLS;
+
+    // shadow-tls
+    if (isPresent(proxy, 'shadow-tls-password')) {
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+
+        result.appendIfPresent(
+            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
+            'shadow-tls-version',
+        );
+        result.appendIfPresent(
+            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
+            'shadow-tls-sni',
+        );
+        // udp-port
+        result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
+        isShadowTLS = true;
+    } else if (['shadow-tls'].includes(proxy.plugin) && proxy['plugin-opts']) {
+        const password = proxy['plugin-opts'].password;
+        const host = proxy['plugin-opts'].host;
+        const version = proxy['plugin-opts'].version;
+        if (password) {
+            result.append(`,shadow-tls-password=${password}`);
+            if (host) {
+                result.append(`,shadow-tls-sni=${host}`);
+            }
+            if (version) {
+                if (version < 2) {
+                    throw new Error(
+                        `shadow-tls version ${version} is not supported`,
+                    );
+                }
+                result.append(`,shadow-tls-version=${version}`);
+            }
+            // udp-port
+            result.appendIfPresent(
+                `,udp-port=${proxy['udp-port']}`,
+                'udp-port',
+            );
+            isShadowTLS = true;
+        }
+    }
+
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
+    }
+
+    if (!includeUnsupportedProxy && isShadowTLS) {
+        throw new Error(
+            `shadow-tls is not supported(请使用 includeUnsupportedProxy 参数)`,
+        );
     }
 
     return result.toString();
