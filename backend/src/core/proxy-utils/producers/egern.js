@@ -4,7 +4,7 @@ export default function Egern_Producer() {
         // https://egernapp.com/zh-CN/docs/configuration/proxies
         const list = proxies
             .filter((proxy) => {
-                if (opts['include-unsupported-proxy']) return true;
+                // if (opts['include-unsupported-proxy']) return true;
                 if (
                     ![
                         'http',
@@ -47,6 +47,12 @@ export default function Egern_Producer() {
                                 'salsa20',
                                 'chacha20',
                                 'chacha20-ietf',
+                                ...(opts['include-unsupported-proxy']
+                                    ? [
+                                          '2022-blake3-aes-128-gcm',
+                                          '2022-blake3-aes-256-gcm',
+                                      ]
+                                    : []),
                             ].includes(proxy.cipher))) ||
                     (proxy.type === 'vmess' &&
                         (![
