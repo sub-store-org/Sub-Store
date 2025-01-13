@@ -350,8 +350,8 @@ function vmess(proxy) {
 }
 
 function vless(proxy) {
-    if (proxy['reality-opts']) {
-        throw new Error(`VLESS REALITY is unsupported`);
+    if (typeof proxy.flow !== 'undefined' || proxy['reality-opts']) {
+        throw new Error(`VLESS XTLS/REALITY is not supported`);
     }
     const result = new Result(proxy);
     result.append(
