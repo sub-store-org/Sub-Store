@@ -1,4 +1,7 @@
-import { getPlatformFromHeaders } from '@/utils/user-agent';
+import {
+    getPlatformFromHeaders,
+    shouldIncludeUnsupportedProxy,
+} from '@/utils/user-agent';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
@@ -161,7 +164,19 @@ async function downloadSubscription(req, res) {
     }
     if (includeUnsupportedProxy) {
         includeUnsupportedProxy = decodeURIComponent(includeUnsupportedProxy);
-        $.info(`包含不支持的节点: ${includeUnsupportedProxy}`);
+        $.info(
+            `包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
+        );
+    }
+
+    if (
+        !includeUnsupportedProxy &&
+        shouldIncludeUnsupportedProxy(platform, reqUA)
+    ) {
+        includeUnsupportedProxy = true;
+        $.info(
+            `当前客户端可包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
+        );
     }
 
     if (useMihomoExternal) {
@@ -342,11 +357,9 @@ async function downloadCollection(req, res) {
 
     const allCols = $.read(COLLECTIONS_KEY);
     const collection = findByName(allCols, name);
-
+    const reqUA = req.headers['user-agent'] || req.headers['User-Agent'];
     $.info(
-        `正在下载组合订阅：${name}\n请求 User-Agent: ${
-            req.headers['user-agent'] || req.headers['User-Agent']
-        }\n请求 target: ${req.query.target}\n实际输出: ${platform}`,
+        `正在下载组合订阅：${name}\n请求 User-Agent: ${reqUA}\n请求 target: ${req.query.target}\n实际输出: ${platform}`,
     );
 
     let {
@@ -393,7 +406,18 @@ async function downloadCollection(req, res) {
 
     if (includeUnsupportedProxy) {
         includeUnsupportedProxy = decodeURIComponent(includeUnsupportedProxy);
-        $.info(`包含不支持的节点: ${includeUnsupportedProxy}`);
+        $.info(
+            `包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
+        );
+    }
+    if (
+        !includeUnsupportedProxy &&
+        shouldIncludeUnsupportedProxy(platform, reqUA)
+    ) {
+        includeUnsupportedProxy = true;
+        $.info(
+            `当前客户端可包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
+        );
     }
     if (useMihomoExternal) {
         $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);

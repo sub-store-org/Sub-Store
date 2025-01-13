@@ -33,6 +33,7 @@
     "ms": "^2.1.3",
     "nanoid": "^3.3.3",
     "request": "^2.88.2",
+    "semver": "^7.6.3",
     "static-js-yaml": "^1.0.0"
   },
   "devDependencies": {
