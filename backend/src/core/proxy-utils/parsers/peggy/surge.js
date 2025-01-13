@@ -120,7 +120,6 @@ socks5_tls = tag equals "socks5-tls" address (username password)? (usernamek pas
 direct = tag equals "direct" (udp_relay/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/block_quic/others)* {
     proxy.type = "direct";
 }
-
 address = comma server:server comma port:port {
     proxy.server = server;
     proxy.port = port;
