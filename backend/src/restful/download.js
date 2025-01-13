@@ -441,6 +441,7 @@ async function downloadCollection(req, res) {
                 $options,
                 proxy,
                 noCache,
+                ua: reqUA,
             });
             let subUserInfoOfSub;
             // forward flow header from the first subscription in this collection
