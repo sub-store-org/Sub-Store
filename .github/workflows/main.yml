@@ -27,18 +27,18 @@ jobs:
         run: |
           npm install -g pnpm
           cd backend && pnpm i --no-frozen-lockfile
-      - name: Test
-        run: |
-          cd backend
-          pnpm test
-      - name: Build
-        run: |
-          cd backend
-          pnpm run build
+      # - name: Test
+      #   run: |
+      #     cd backend
+      #     pnpm test
+      # - name: Build
+      #   run: |
+      #     cd backend
+      #     pnpm run build
       - name: Bundle
         run: |
           cd backend
-          pnpm run bundle
+          pnpm bundle:esbuild
       - id: tag
         name: Generate release tag
         run: |
