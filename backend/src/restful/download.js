@@ -547,13 +547,12 @@ async function downloadCollection(req, res) {
             } else {
                 subUserInfoOfCol = collection.subUserinfo;
             }
-            res.set(
-                'subscription-userinfo',
-                [subUserInfoOfCol, subUserInfoOfSub]
-                    .filter((i) => i)
-                    .join('; '),
-            );
-
+            const subUserInfo = [subUserInfoOfCol, subUserInfoOfSub]
+                .filter((i) => i)
+                .join('; ');
+            if (subUserInfo) {
+                res.set('subscription-userinfo', subUserInfo);
+            }
             if (platform === 'JSON') {
                 if (resultFormat === 'nezha') {
                     output = nezhaTransform(output);
