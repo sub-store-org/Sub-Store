@@ -3,6 +3,14 @@ const targetPlatform = 'Loon';
 import { isPresent, Result } from './utils';
 import { isIPv4, isIPv6 } from '@/utils';
 
+const ipVersions = {
+    dual: 'dual',
+    ipv4: 'v4-only',
+    ipv6: 'v6-only',
+    'ipv4-prefer': 'prefer-v4',
+    'ipv6-prefer': 'prefer-v6',
+};
+
 export default function Loon_Producer() {
     const produce = (proxy, type, opts = {}) => {
         switch (proxy.type) {
@@ -139,6 +147,8 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
             `shadow-tls is not supported(请使用 includeUnsupportedProxy 参数)`,
         );
     }
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
     return result.toString();
 }
@@ -216,6 +226,8 @@ function shadowsocksr(proxy, includeUnsupportedProxy) {
             `shadow-tls is not supported(请使用 includeUnsupportedProxy 参数)`,
         );
     }
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
     return result.toString();
 }
@@ -269,6 +281,8 @@ function trojan(proxy) {
     if (proxy.udp) {
         result.append(`,udp=true`);
     }
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
     return result.toString();
 }
@@ -345,6 +359,9 @@ function vmess(proxy) {
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
+        const ip_version =
+            ipVersions[proxy['ip-version']] || proxy['ip-version'];
+        result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
     }
     return result.toString();
 }
@@ -417,6 +434,9 @@ function vless(proxy) {
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
+        const ip_version =
+            ipVersions[proxy['ip-version']] || proxy['ip-version'];
+        result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
     }
     return result.toString();
 }
@@ -439,6 +459,8 @@ function http(proxy) {
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
     return result.toString();
 }
@@ -467,6 +489,8 @@ function socks5(proxy) {
     if (proxy.udp) {
         result.append(`,udp=true`);
     }
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
     return result.toString();
 }
@@ -532,6 +556,8 @@ function wireguard(proxy) {
             presharedKey ?? ''
         }}]`,
     );
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
     return result.toString();
 }
@@ -579,6 +605,8 @@ function hysteria2(proxy) {
     );
 
     result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
     return result.toString();
 }
