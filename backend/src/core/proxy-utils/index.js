@@ -343,6 +343,14 @@ function lastParse(proxy) {
     if (typeof proxy.password === 'number') {
         proxy.password = numberToString(proxy.password);
     }
+    if (
+        ['ss'].includes(proxy.type) &&
+        proxy.cipher === 'none' &&
+        !proxy.password
+    ) {
+        // https://github.com/MetaCubeX/mihomo/issues/1677
+        proxy.password = '';
+    }
     if (proxy.interface) {
         proxy['interface-name'] = proxy.interface;
         delete proxy.interface;
