@@ -37,7 +37,7 @@ function Base64Encoded() {
     };
     const parse = function (raw) {
         const decoded = Base64.decode(raw);
-        if (!/^\w+:\/\/\w+/m.test(decoded)) {
+        if (!/^\w+(:\/\/|\s*?=\s*?)\w+/m.test(decoded)) {
             $.error(
                 `Base64 Pre-processor error: decoded line does not start with protocol`,
             );
