@@ -188,6 +188,10 @@ export default function URI_Producer() {
                 if (proxy.flow) {
                     flow = `&flow=${encodeURIComponent(proxy.flow)}`;
                 }
+                let extra = '';
+                if (proxy.extra) {
+                    extra = `&extra=${encodeURIComponent(proxy.extra)}`;
+                }
                 let vlessType = proxy.network;
                 if (
                     proxy.network === 'ws' &&
@@ -254,7 +258,7 @@ export default function URI_Producer() {
                     proxy.port
                 }?security=${encodeURIComponent(
                     security,
-                )}${vlessTransport}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${pbk}#${encodeURIComponent(
+                )}${vlessTransport}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${pbk}${extra}#${encodeURIComponent(
                     proxy.name,
                 )}`;
                 break;
