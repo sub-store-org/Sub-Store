@@ -14,6 +14,7 @@ export default function Egern_Producer() {
                         'hysteria2',
                         'vless',
                         'vmess',
+                        'tuic',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ((proxy.plugin === 'obfs' &&
@@ -71,7 +72,10 @@ export default function Egern_Producer() {
                         (typeof proxy.flow !== 'undefined' ||
                             proxy['reality-opts'] ||
                             (!['http', 'ws', 'tcp'].includes(proxy.network) &&
-                                proxy.network)))
+                                proxy.network))) ||
+                    (proxy.type === 'tuic' &&
+                        proxy.token &&
+                        proxy.token.length !== 0)
                 ) {
                     return false;
                 }
@@ -152,6 +156,23 @@ export default function Egern_Producer() {
                         proxy.obfs = 'salamander';
                         proxy.obfs_password = proxy['obfs-password'];
                     }
+                } else if (proxy.type === 'tuic') {
+                    proxy = {
+                        type: 'tuic',
+                        name: proxy.name,
+                        server: proxy.server,
+                        port: proxy.port,
+                        uuid: proxy.uuid,
+                        password: proxy.password,
+                        next_hop: proxy.next_hop,
+                        sni: proxy.sni,
+                        alpn: Array.isArray(proxy.alpn)
+                            ? proxy.alpn
+                            : [proxy.alpn || 'h3'],
+                        skip_tls_verify: proxy['skip-cert-verify'],
+                        port_hopping: proxy.ports,
+                        port_hopping_interval: proxy['hop-interval'],
+                    };
                 } else if (proxy.type === 'trojan') {
                     if (proxy.network === 'ws') {
                         proxy.websocket = {
