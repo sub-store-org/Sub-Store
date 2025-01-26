@@ -62,11 +62,26 @@ export function getPlatformFromHeaders(headers) {
 }
 export function shouldIncludeUnsupportedProxy(platform, ua) {
     try {
+        const target = getPlatformFromUserAgent({
+            UA: ua,
+            ua: ua.toLowerCase(),
+        });
+        if (!['Stash', 'Egern'].includes(target)) {
+            return false;
+        }
         const version = coerce(ua).version;
-        if (platform === 'Stash' && gte(version, '2.8.0')) {
+        if (
+            platform === 'Stash' &&
+            target === 'Stash' &&
+            gte(version, '2.8.0')
+        ) {
             return true;
         }
-        if (platform === 'Egern' && gte(version, '1.29.0')) {
+        if (
+            platform === 'Egern' &&
+            target === 'Egern' &&
+            gte(version, '1.29.0')
+        ) {
             return true;
         }
     } catch (e) {
