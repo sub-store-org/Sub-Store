@@ -249,6 +249,8 @@ export default function Egern_Producer() {
                         // sni: proxy.sni,
                         // skip_tls_verify: proxy['skip-cert-verify'],
                     };
+                } else if (proxy.type === 'snell') {
+                    delete proxy.udp;
                 } else if (proxy.type === 'vless') {
                     if (proxy.network === 'ws') {
                         proxy.transport = {
