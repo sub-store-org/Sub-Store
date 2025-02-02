@@ -146,7 +146,10 @@ async function getFile(req, res) {
                         proxy || file.proxy,
                     );
                     if (flowInfo) {
-                        res.set('subscription-userinfo', flowInfo);
+                        res.set(
+                            'subscription-userinfo',
+                            flowInfo.replace(/\s*;\s*;\s*/g, ';'),
+                        );
                     }
                 }
             } catch (err) {

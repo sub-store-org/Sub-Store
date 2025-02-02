@@ -293,7 +293,10 @@ async function downloadSubscription(req, res) {
                 }
                 res.set(
                     'subscription-userinfo',
-                    [subUserInfo, flowInfo].filter((i) => i).join('; '),
+                    [subUserInfo, flowInfo]
+                        .filter((i) => i)
+                        .join('; ')
+                        .replace(/\s*;\s*;\s*/g, ';'),
                 );
             }
 
@@ -551,7 +554,10 @@ async function downloadCollection(req, res) {
                 .filter((i) => i)
                 .join('; ');
             if (subUserInfo) {
-                res.set('subscription-userinfo', subUserInfo);
+                res.set(
+                    'subscription-userinfo',
+                    subUserInfo.replace(/\s*;\s*;\s*/g, ';'),
+                );
             }
             if (platform === 'JSON') {
                 if (resultFormat === 'nezha') {
