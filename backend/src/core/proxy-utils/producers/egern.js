@@ -48,12 +48,8 @@ export default function Egern_Producer() {
                                 'salsa20',
                                 'chacha20',
                                 'chacha20-ietf',
-                                ...(opts['include-unsupported-proxy']
-                                    ? [
-                                          '2022-blake3-aes-128-gcm',
-                                          '2022-blake3-aes-256-gcm',
-                                      ]
-                                    : []),
+                                '2022-blake3-aes-128-gcm',
+                                '2022-blake3-aes-256-gcm',
                             ].includes(proxy.cipher))) ||
                     (proxy.type === 'vmess' &&
                         (![
@@ -249,8 +245,6 @@ export default function Egern_Producer() {
                         // sni: proxy.sni,
                         // skip_tls_verify: proxy['skip-cert-verify'],
                     };
-                } else if (proxy.type === 'snell' && proxy.version < 3) {
-                    delete proxy.udp;
                 } else if (proxy.type === 'vless') {
                     if (proxy.network === 'ws') {
                         proxy.transport = {
