@@ -78,6 +78,9 @@ port = digits:[0-9]+ {
 }
 
 params = "?" head:param tail:("&"@param)* {
+  for (const [key, value] of Object.entries(params)) {
+    params[key] = decodeURIComponent(value);
+  }
   proxy["skip-cert-verify"] = toBool(params["allowInsecure"]);
   proxy.sni = params["sni"] || params["peer"];
   proxy['client-fingerprint'] = params.fp;
@@ -111,6 +114,27 @@ params = "?" head:param tail:("&"@param)* {
       if (httpupgrade) {
         $set(proxy, proxy.network+"-opts.v2ray-http-upgrade", true); 
         $set(proxy, proxy.network+"-opts.v2ray-http-upgrade-fast-open", true); 
+      }
+    }
+    if (['reality'].includes(params.security)) {
+      const opts = {};
+      if (params.pbk) {
+        opts['public-key'] = params.pbk;
+      }
+      if (params.sid) {
+        opts['short-id'] = params.sid;
+      }
+      if (params.spx) {
+        opts['_spider-x'] = params.spx;
+      }
+      if (params.mode) {
+        proxy._mode = params.mode;
+      }
+      if (params.extra) {
+        proxy._extra = params.extra;
+      }
+      if (Object.keys(opts).length > 0) {
+        $set(proxy, params.security+"-opts", opts); 
       }
     }
   }

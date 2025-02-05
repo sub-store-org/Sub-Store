@@ -529,6 +529,9 @@ function URI_VLESS() {
             if (params.sid) {
                 opts['short-id'] = params.sid;
             }
+            if (params.spx) {
+                opts['_spider-x'] = params.spx;
+            }
             if (Object.keys(opts).length > 0) {
                 // proxy[`${params.security}-opts`] = opts;
                 proxy[`${params.security}-opts`] = opts;
@@ -596,8 +599,12 @@ function URI_VLESS() {
                 // mKCP 的伪装头部类型。当前可选值有 none / srtp / utp / wechat-video / dtls / wireguard。省略时默认值为 none，即不使用伪装头部，但不可以为空字符串。
                 proxy.headerType = params.headerType || 'none';
             }
+
+            if (params.mode) {
+                proxy._mode = params.mode;
+            }
             if (params.extra) {
-                proxy.extra = params.extra;
+                proxy._extra = params.extra;
             }
         }
 
