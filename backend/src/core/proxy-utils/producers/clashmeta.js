@@ -32,9 +32,10 @@ export default function ClashMeta_Producer() {
                         isPresent(proxy, 'cipher') &&
                         ![
                             'auto',
+                            'none',
+                            'zero',
                             'aes-128-gcm',
                             'chacha20-poly1305',
-                            'none',
                         ].includes(proxy.cipher)
                     ) {
                         proxy.cipher = 'auto';
