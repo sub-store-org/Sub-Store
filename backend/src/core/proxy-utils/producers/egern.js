@@ -52,15 +52,8 @@ export default function Egern_Producer() {
                                 '2022-blake3-aes-256-gcm',
                             ].includes(proxy.cipher))) ||
                     (proxy.type === 'vmess' &&
-                        (![
-                            'auto',
-                            'aes-128-gcm',
-                            'chacha20-poly1305',
-                            'none',
-                            'zero',
-                        ].includes(proxy.cipher) ||
-                            (!['http', 'ws', 'tcp'].includes(proxy.network) &&
-                                proxy.network))) ||
+                        !['http', 'ws', 'tcp'].includes(proxy.network) &&
+                        proxy.network) ||
                     (proxy.type === 'trojan' &&
                         !['http', 'ws', 'tcp'].includes(proxy.network) &&
                         proxy.network) ||
@@ -191,6 +184,19 @@ export default function Egern_Producer() {
                         websocket: proxy.websocket,
                     };
                 } else if (proxy.type === 'vmess') {
+                    let security = proxy.cipher;
+                    if (
+                        security &&
+                        ![
+                            'auto',
+                            'none',
+                            'zero',
+                            'aes-128-gcm',
+                            'chacha20-poly1305',
+                        ].includes(security)
+                    ) {
+                        security = 'auto';
+                    }
                     if (proxy.network === 'ws') {
                         proxy.transport = {
                             [proxy.tls ? 'wss' : 'ws']: {
@@ -235,7 +241,7 @@ export default function Egern_Producer() {
                         server: proxy.server,
                         port: proxy.port,
                         user_id: proxy.uuid,
-                        security: proxy.cipher,
+                        security,
                         tfo: proxy.tfo || proxy['fast-open'],
                         legacy: proxy.legacy,
                         udp_relay:
