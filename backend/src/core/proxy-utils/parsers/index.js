@@ -11,6 +11,7 @@ import getSurgeParser from './peggy/surge';
 import getLoonParser from './peggy/loon';
 import getQXParser from './peggy/qx';
 import getTrojanURIParser from './peggy/trojan-uri';
+import $ from '@/core/app';
 
 import { Base64 } from 'js-base64';
 
@@ -40,8 +41,21 @@ function URI_PROXY() {
         // eslint-disable-next-line no-unused-vars
         let [__, type, tls, username, password, server, port, query, name] =
             line.match(
-                /^(socks5|http|http)(\+tls|s)?:\/\/(?:(.*?):(.*?)@)?(.*?):(\d+?)(\?.*?)?(?:#(.*?))?$/,
+                /^(socks5|http|http)(\+tls|s)?:\/\/(?:(.*?):(.*?)@)?(.*?)(?::(\d+?))?(\?.*?)?(?:#(.*?))?$/,
             );
+        if (port) {
+            port = parseInt(port, 10);
+        } else {
+            if (tls) {
+                port = 443;
+            } else if (type === 'http') {
+                port = 80;
+            } else {
+                $.error(`port is not present in line: ${line}`);
+                throw new Error(`port is not present in line: ${line}`);
+            }
+            $.info(`port is not present in line: ${line}, set to ${port}`);
+        }
 
         const proxy = {
             name:
