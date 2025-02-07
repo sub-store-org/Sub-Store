@@ -26,7 +26,7 @@ Core functionalities:
 
 ### Supported Input Formats
 
-> ⚠️ Do not use `Shadowrocket` to export URI and then import it as input. It is not a standard URI.
+> ⚠️ Do not use `Shadowrocket` or `NekoBox` to export URI and then import it as input. The URIs exported in this way may not be standard URIs.
 
 - [x] Proxy URI Scheme(`socks5`, `socks5+tls`, `http`, `https`(it's ok))
 
