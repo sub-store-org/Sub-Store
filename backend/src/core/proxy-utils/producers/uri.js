@@ -54,6 +54,11 @@ export default function URI_Producer() {
                                 }${opts.tls ? ';tls' : ''}`,
                             );
                             break;
+                        case 'shadow-tls':
+                            result += encodeURIComponent(
+                                `shadow-tls;host=${opts.host};password=${opts.password};version=${opts.version}`,
+                            );
+                            break;
                         default:
                             throw new Error(
                                 `Unsupported plugin option: ${proxy.plugin}`,
