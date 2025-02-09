@@ -1,6 +1,6 @@
 import { isPresent } from '@/core/proxy-utils/producers/utils';
 
-export default function ShadowRocket_Producer() {
+export default function Shadowrocket_Producer() {
     const type = 'ALL';
     const produce = (proxies, type, opts = {}) => {
         const list = proxies

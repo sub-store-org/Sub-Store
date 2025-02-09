@@ -5,7 +5,7 @@
  *  ╚════██║██║   ██║██╔══██╗╚════╝╚════██║   ██║   ██║   ██║██╔══██╗██╔══╝
  *  ███████║╚██████╔╝██████╔╝      ███████║   ██║   ╚██████╔╝██║  ██║███████╗
  *  ╚══════╝ ╚═════╝ ╚═════╝       ╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝
- * Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket!
+ * Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket!
  * @updated: <%= updated %>
  * @version: <%= pkg.version %>
  * @author: Peng-YM

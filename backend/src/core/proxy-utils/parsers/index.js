@@ -146,11 +146,10 @@ function URI_SS() {
         // }
 
         // handle obfs
-        const idx = content.indexOf('?plugin=');
-        if (idx !== -1) {
+        const pluginMatch = content.match(/[?&]plugin=([^&]+)/);
+        if (pluginMatch) {
             const pluginInfo = (
-                'plugin=' +
-                decodeURIComponent(content.split('?plugin=')[1].split('&')[0])
+                'plugin=' + decodeURIComponent(pluginMatch[1])
             ).split(';');
             const params = {};
             for (const item of pluginInfo) {
@@ -175,6 +174,16 @@ function URI_SS() {
                         tls: getIfPresent(params.tls),
                     };
                     break;
+                case 'shadow-tls': {
+                    proxy.plugin = 'shadow-tls';
+                    const version = getIfNotBlank(params['version']);
+                    proxy['plugin-opts'] = {
+                        host: getIfNotBlank(params['host']),
+                        password: getIfNotBlank(params['password']),
+                        version: version ? parseInt(version, 10) : undefined,
+                    };
+                    break;
+                }
                 default:
                     throw new Error(
                         `Unsupported plugin option: ${params.plugin}`,
