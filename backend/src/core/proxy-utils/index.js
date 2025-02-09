@@ -21,6 +21,7 @@ import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
 import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
 import Gist from '@/utils/gist';
+import { isPresent } from './producers/utils';
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
@@ -571,6 +572,20 @@ function lastParse(proxy) {
     }
     if (!proxy['tls-fingerprint'] && caStr) {
         proxy['tls-fingerprint'] = rs.generateFingerprint(caStr);
+    }
+    if (
+        ['shadowsocks'].includes(proxy.type) &&
+        isPresent(proxy, 'shadow-tls-password')
+    ) {
+        proxy.plugin = 'shadow-tls';
+        proxy['plugin-opts'] = {
+            host: proxy['shadow-tls-sni'],
+            password: proxy['shadow-tls-password'],
+            version: proxy['shadow-tls-version'],
+        };
+        delete proxy['shadow-tls-sni'];
+        delete proxy['shadow-tls-password'];
+        delete proxy['shadow-tls-version'];
     }
     return proxy;
 }

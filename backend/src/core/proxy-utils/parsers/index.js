@@ -128,6 +128,9 @@ function URI_SS() {
             }
             userInfoStr = content.split('@')[0];
             serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
+        } else if (content.includes('?')) {
+            const parsed = content.match(/(\?.*)$/);
+            query = parsed[1];
         }
 
         const serverAndPort = serverAndPortArray[1];
