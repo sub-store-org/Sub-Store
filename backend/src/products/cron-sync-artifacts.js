@@ -84,6 +84,7 @@ async function doSync() {
     const files = {};
 
     try {
+        const valid = [];
         const invalid = [];
         const allSubs = $.read(SUBS_KEY);
         const allCols = $.read(COLLECTIONS_KEY);
@@ -156,19 +157,26 @@ async function doSync() {
                         files[encodeURIComponent(artifact.name)] = {
                             content: output,
                         };
+
+                        valid.push(artifact.name);
                     }
                 } catch (e) {
                     $.error(
-                        `同步配置 ${artifact.name} 发生错误: ${e.message ?? e}`,
+                        `生成同步配置 ${artifact.name} 发生错误: ${
+                            e.message ?? e
+                        }`,
                     );
                     invalid.push(artifact.name);
                 }
             }),
         );
 
-        if (invalid.length > 0) {
+        $.info(`${valid.length} 个同步配置生成成功: ${valid.join(', ')}`);
+        $.info(`${invalid.length} 个同步配置生成失败: ${invalid.join(', ')}`);
+
+        if (valid.length === 0) {
             throw new Error(
-                `同步配置 ${invalid.join(', ')} 发生错误 详情请查看日志`,
+                `同步配置 ${invalid.join(', ')} 生成失败 详情请查看日志`,
             );
         }
 
@@ -184,7 +192,11 @@ async function doSync() {
         $.info(JSON.stringify(body, null, 2));
 
         for (const artifact of allArtifacts) {
-            if (artifact.sync) {
+            if (
+                artifact.sync &&
+                artifact.source &&
+                valid.includes(artifact.name)
+            ) {
                 artifact.updated = new Date().getTime();
                 // extract real url from gist
                 let files = body.files;
@@ -212,9 +224,18 @@ async function doSync() {
         }
 
         $.write(allArtifacts, ARTIFACTS_KEY);
-        $.notify('🌍 Sub-Store', '全部订阅同步成功！');
+        $.info('上传配置成功');
+
+        if (invalid.length > 0) {
+            $.notify(
+                '🌍 Sub-Store',
+                `同步配置成功 ${valid.length} 个, 失败 ${invalid.length} 个, 详情请查看日志`,
+            );
+        } else {
+            $.notify('🌍 Sub-Store', '同步配置完成');
+        }
     } catch (e) {
-        $.notify('🌍 Sub-Store', '同步订阅失败', `原因：${e.message ?? e}`);
-        $.error(`无法同步订阅配置到 Gist，原因：${e}`);
+        $.notify('🌍 Sub-Store', '同步配置失败', `原因：${e.message ?? e}`);
+        $.error(`无法同步配置到 Gist，原因：${e}`);
     }
 }
