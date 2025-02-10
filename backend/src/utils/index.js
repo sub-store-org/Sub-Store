@@ -117,7 +117,17 @@ function numberToString(value) {
         : BigInt(value).toString();
 }
 
+function isValidUUID(uuid) {
+    return (
+        typeof uuid === 'string' &&
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+            uuid,
+        )
+    );
+}
+
 export {
+    isValidUUID,
     ipAddress,
     isIPv4,
     isIPv6,
