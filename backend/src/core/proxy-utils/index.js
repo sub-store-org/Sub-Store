@@ -6,6 +6,7 @@ import {
     isIPv4,
     isIPv6,
     isValidPortNumber,
+    isValidUUID,
     isNotBlank,
     ipAddress,
     getRandomPort,
@@ -76,7 +77,16 @@ function parse(raw) {
             $.error(`Failed to parse line: ${line}`);
         }
     }
-    return proxies;
+    return proxies.filter((proxy) => {
+        if (['vless', 'vmess'].includes(proxy.type)) {
+            const isProxyUUIDValid = isValidUUID(proxy.uuid);
+            if (!isProxyUUIDValid) {
+                $.error(`UUID is invalid: ${proxy.name} ${proxy.uuid}`);
+            }
+            return isProxyUUIDValid;
+        }
+        return true;
+    });
 }
 
 async function processFn(
@@ -215,10 +225,22 @@ function produce(proxies, targetPlatform, type, opts = {}) {
     );
 
     // filter unsupported proxies
-    proxies = proxies.filter(
-        (proxy) =>
-            !(proxy.supported && proxy.supported[targetPlatform] === false),
-    );
+    proxies = proxies.filter((proxy) => {
+        // 检查代理是否支持目标平台
+        if (proxy.supported && proxy.supported[targetPlatform] === false) {
+            return false;
+        }
+
+        // 对于 vless 和 vmess 代理,需要额外验证 UUID
+        if (['vless', 'vmess'].includes(proxy.type)) {
+            const isProxyUUIDValid = isValidUUID(proxy.uuid);
+            if (!isProxyUUIDValid)
+                $.error(`UUID is invalid: ${proxy.name} ${proxy.uuid}`);
+            return isProxyUUIDValid;
+        }
+
+        return true;
+    });
 
     proxies = proxies.map((proxy) => {
         proxy._resolved = proxy.resolved;
