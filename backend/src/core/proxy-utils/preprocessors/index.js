@@ -16,6 +16,7 @@ function Base64Encoded() {
     const keys = [
         'dm1lc3M', // vmess
         'c3NyOi8v', // ssr://
+        'c29ja3M6Ly', // socks://
         'dHJvamFu', // trojan
         'c3M6Ly', // ss:/
         'c3NkOi8v', // ssd://
