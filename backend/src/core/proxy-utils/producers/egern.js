@@ -241,9 +241,12 @@ export default function Egern_Producer() {
                                 skip_tls_verify: proxy['skip-cert-verify'],
                             },
                         };
-                    } else if (proxy.network === 'tcp' || !proxy.network) {
+                    } else if (
+                        (proxy.network === 'tcp' || !proxy.network) &&
+                        proxy.tls
+                    ) {
                         proxy.transport = {
-                            [proxy.tls ? 'tls' : 'tcp']: {
+                            tls: {
                                 sni: proxy.tls ? proxy.sni : undefined,
                                 skip_tls_verify: proxy.tls
                                     ? proxy['skip-cert-verify']
