@@ -76,7 +76,46 @@ function URI_PROXY() {
     };
     return { name, test, parse };
 }
+function URI_SOCKS() {
+    const name = 'URI SOCKS Parser';
+    const test = (line) => {
+        return /^socks:\/\//.test(line);
+    };
+    const parse = (line) => {
+        // parse url
+        // eslint-disable-next-line no-unused-vars
+        let [__, type, auth, server, port, query, name] = line.match(
+            /^(socks)?:\/\/(?:(.*)@)?(.*?)(?::(\d+?))?(\?.*?)?(?:#(.*?))?$/,
+        );
+        if (port) {
+            port = parseInt(port, 10);
+        } else {
+            $.error(`port is not present in line: ${line}`);
+            throw new Error(`port is not present in line: ${line}`);
+        }
+        let username, password;
+        if (auth) {
+            const parsed = Base64.decode(decodeURIComponent(auth)).split(':');
+            username = parsed[0];
+            password = parsed[1];
+        }
 
+        const proxy = {
+            name:
+                name != null
+                    ? decodeURIComponent(name)
+                    : `${type} ${server}:${port}`,
+            type: 'socks5',
+            server,
+            port,
+            username,
+            password,
+        };
+
+        return proxy;
+    };
+    return { name, test, parse };
+}
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
 // reference: https://github.com/shadowsocks/shadowsocks-org/wiki/SIP002-URI-Scheme
 function URI_SS() {
@@ -1467,6 +1506,7 @@ function isIP(ip) {
 
 export default [
     URI_PROXY(),
+    URI_SOCKS(),
     URI_SS(),
     URI_SSR(),
     URI_VMess(),
