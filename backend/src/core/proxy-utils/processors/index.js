@@ -365,7 +365,9 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
             if (output?.$file?.type === 'mihomoProfile') {
                 try {
                     let patch = YAML.safeLoad(script);
-                    if (typeof patch !== 'object') patch = {};
+                    // if (typeof patch !== 'object') patch = {};
+                    if (typeof patch !== 'object')
+                        throw new Error('patch is not an object');
                     output.$content = ProxyUtils.yaml.safeDump(
                         deepMerge(
                             {
