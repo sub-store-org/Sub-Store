@@ -152,6 +152,7 @@ function URI_SS() {
                 query = parsed[2];
             }
             content = Base64.decode(content);
+
             if (query) {
                 if (/(&|\?)v2ray-plugin=/.test(query)) {
                     const parsed = query.match(/(&|\?)v2ray-plugin=(.*?)(&|$)/);
@@ -165,8 +166,8 @@ function URI_SS() {
                 }
                 content = `${content}${query}`;
             }
-            userInfoStr = content.split('@')[0];
-            serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
+            userInfoStr = content.match(/(^.*)@/)?.[1];
+            serverAndPortArray = content.match(/@([^/@]*)(\/|$)/);
         } else if (content.includes('?')) {
             const parsed = content.match(/(\?.*)$/);
             query = parsed[1];
