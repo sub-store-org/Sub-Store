@@ -839,8 +839,11 @@ function URI_TUIC() {
     const parse = (line) => {
         line = line.split(/tuic:\/\//)[1];
         // eslint-disable-next-line no-unused-vars
-        let [__, uuid, password, server, ___, port, ____, addons = '', name] =
-            /^(.*?):(.*?)@(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
+        let [__, auth, server, port, addons = '', name] =
+            /^(.*?)@(.*?)(?::(\d+))?\/?(?:\?(.*?))?(?:#(.*?))?$/.exec(line);
+        auth = decodeURIComponent(auth);
+        let [uuid, ...passwordParts] = auth.split(':');
+        let password = passwordParts.join(':');
         port = parseInt(`${port}`, 10);
         if (isNaN(port)) {
             port = 443;
