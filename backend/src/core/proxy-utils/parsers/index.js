@@ -869,12 +869,14 @@ function URI_TUIC() {
             value = decodeURIComponent(value);
             if (['alpn'].includes(key)) {
                 proxy[key] = value ? value.split(',') : undefined;
-            } else if (['allow-insecure'].includes(key)) {
+            } else if (['allow_insecure'].includes(key)) {
                 proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
-            } else if (['disable-sni', 'reduce-rtt'].includes(key)) {
-                proxy[key] = /(TRUE)|1/i.test(value);
+            } else if (['fast_open'].includes(key)) {
+                proxy.tfo = true;
+            } else if (['disable_sni', 'reduce_rtt'].includes(key)) {
+                proxy[key.replace(/_/g, '-')] = /(TRUE)|1/i.test(value);
             } else {
-                proxy[key] = value;
+                proxy[key.replace(/_/g, '-')] = value;
             }
         }
 

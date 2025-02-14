@@ -521,10 +521,13 @@ export default function URI_Producer() {
                                 ['disable-sni', 'reduce-rtt'].includes(key) &&
                                 proxy[key]
                             ) {
-                                tuicParams.push(`${i}=1`);
+                                tuicParams.push(`${i.replace(/-/g, '_')}=1`);
                             } else if (proxy[key]) {
                                 tuicParams.push(
-                                    `${i}=${encodeURIComponent(proxy[key])}`,
+                                    `${i.replace(
+                                        /-/g,
+                                        '_',
+                                    )}=${encodeURIComponent(proxy[key])}`,
                                 );
                             }
                         }
