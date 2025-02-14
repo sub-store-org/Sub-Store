@@ -27,7 +27,18 @@ export default function register($app) {
             res.set('content-type', 'application/json')
                 .set(
                     'content-disposition',
-                    'attachment; filename="sub-store.json"',
+                    `attachment; filename="${encodeURIComponent(
+                        `sub-store_data_${new Date()
+                            .toLocaleString('zh-CN', {
+                                year: 'numeric',
+                                day: 'numeric',
+                                month: 'numeric',
+                                hour: 'numeric',
+                                minute: 'numeric',
+                                second: 'numeric',
+                            })
+                            .replace(/\D/g, '')}.json`,
+                    )}"`,
                 )
                 .send(
                     $.env.isNode

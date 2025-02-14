@@ -59,7 +59,18 @@ function getCollection(req, res) {
             res.set('content-type', 'application/json')
                 .set(
                     'content-disposition',
-                    `attachment; filename="${encodeURIComponent(name)}.json"`,
+                    `attachment; filename="${encodeURIComponent(
+                        `sub-store_collection_${name}_${new Date()
+                            .toLocaleString('zh-CN', {
+                                year: 'numeric',
+                                day: 'numeric',
+                                month: 'numeric',
+                                hour: 'numeric',
+                                minute: 'numeric',
+                                second: 'numeric',
+                            })
+                            .replace(/\D/g, '')}.json`,
+                    )}"`,
                 )
                 .send(JSON.stringify(collection));
         } else {
