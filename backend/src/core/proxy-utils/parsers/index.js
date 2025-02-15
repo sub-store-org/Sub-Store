@@ -865,18 +865,18 @@ function URI_TUIC() {
 
         for (const addon of addons.split('&')) {
             let [key, value] = addon.split('=');
-            key = key.replace(/_/, '-');
+            key = key.replace(/_/g, '-');
             value = decodeURIComponent(value);
             if (['alpn'].includes(key)) {
                 proxy[key] = value ? value.split(',') : undefined;
-            } else if (['allow_insecure'].includes(key)) {
+            } else if (['allow-insecure'].includes(key)) {
                 proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
-            } else if (['fast_open'].includes(key)) {
+            } else if (['fast-open'].includes(key)) {
                 proxy.tfo = true;
-            } else if (['disable_sni', 'reduce_rtt'].includes(key)) {
-                proxy[key.replace(/_/g, '-')] = /(TRUE)|1/i.test(value);
+            } else if (['disable-sni', 'reduce-rtt'].includes(key)) {
+                proxy[key] = /(TRUE)|1/i.test(value);
             } else {
-                proxy[key.replace(/_/g, '-')] = value;
+                proxy[key] = value;
             }
         }
 
