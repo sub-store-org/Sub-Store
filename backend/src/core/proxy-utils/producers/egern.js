@@ -1,6 +1,8 @@
+import { isPresent } from './utils';
+
 export default function Egern_Producer() {
     const type = 'ALL';
-    const produce = (proxies, type, opts = {}) => {
+    const produce = (proxies, type) => {
         // https://egernapp.com/zh-CN/docs/configuration/proxies
         const list = proxies
             .filter((proxy) => {
@@ -71,6 +73,7 @@ export default function Egern_Producer() {
                 return true;
             })
             .map((proxy) => {
+                const original = { ...proxy };
                 if (proxy.tls && !proxy.sni) {
                     proxy.sni = proxy.server;
                 }
@@ -325,6 +328,39 @@ export default function Egern_Producer() {
                         // sni: proxy.sni,
                         // skip_tls_verify: proxy['skip-cert-verify'],
                     };
+                }
+                if (
+                    [
+                        'http',
+                        'socks5',
+                        'ss',
+                        'trojan',
+                        'vless',
+                        'vmess',
+                    ].includes(original.type)
+                ) {
+                    if (isPresent(original, 'shadow-tls-password')) {
+                        if (original['shadow-tls-version'] != 3)
+                            throw new Error(
+                                `shadow-tls version ${original['shadow-tls-version']} is not supported`,
+                            );
+                        proxy.shadow_tls = {
+                            password: original['shadow-tls-password'],
+                            sni: original['shadow-tls-sni'],
+                        };
+                    } else if (
+                        ['shadow-tls'].includes(original.plugin) &&
+                        original['plugin-opts']
+                    ) {
+                        if (original['plugin-opts'].version != 3)
+                            throw new Error(
+                                `shadow-tls version ${original['plugin-opts'].version} is not supported`,
+                            );
+                        proxy.shadow_tls = {
+                            password: original['plugin-opts'].password,
+                            sni: original['plugin-opts'].host,
+                        };
+                    }
                 }
 
                 delete proxy.subName;
