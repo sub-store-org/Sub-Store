@@ -341,10 +341,9 @@ function vmess(proxy) {
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
-        const ip_version =
-            ipVersions[proxy['ip-version']] || proxy['ip-version'];
-        result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
     }
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
     return result.toString();
 }
 
@@ -416,10 +415,9 @@ function vless(proxy) {
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
-        const ip_version =
-            ipVersions[proxy['ip-version']] || proxy['ip-version'];
-        result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
     }
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
     return result.toString();
 }
 
