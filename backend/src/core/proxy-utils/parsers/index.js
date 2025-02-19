@@ -1010,6 +1010,7 @@ function Clash_All() {
         const proxy = JSON.parse(line);
         if (
             ![
+                'anytls',
                 'mieru',
                 'juicity',
                 'ss',

@@ -8,7 +8,7 @@ export default function Shadowrocket_Producer() {
                 if (opts['include-unsupported-proxy']) return true;
                 if (proxy.type === 'snell' && String(proxy.version) === '4') {
                     return false;
-                } else if (['mieru'].includes(proxy.type)) {
+                } else if (['mieru', 'anytls'].includes(proxy.type)) {
                     return false;
                 }
                 return true;
