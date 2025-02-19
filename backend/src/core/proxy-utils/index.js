@@ -423,9 +423,14 @@ function lastParse(proxy) {
         }
     }
     if (
-        ['trojan', 'tuic', 'hysteria', 'hysteria2', 'juicity'].includes(
-            proxy.type,
-        )
+        [
+            'trojan',
+            'tuic',
+            'hysteria',
+            'hysteria2',
+            'juicity',
+            'anytls',
+        ].includes(proxy.type)
     ) {
         proxy.tls = true;
     }
