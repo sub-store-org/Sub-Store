@@ -247,6 +247,7 @@ export default function Stash_Producer() {
                         'hysteria',
                         'hysteria2',
                         'juicity',
+                        'anytls',
                     ].includes(proxy.type)
                 ) {
                     delete proxy.tls;
