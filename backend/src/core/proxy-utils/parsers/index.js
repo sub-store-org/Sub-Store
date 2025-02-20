@@ -190,6 +190,8 @@ function URI_SS() {
 
         // handle obfs
         const pluginMatch = content.match(/[?&]plugin=([^&]+)/);
+        const shadowTlsMatch = content.match(/[?&]shadow-tls=([^&]+)/);
+
         if (pluginMatch) {
             const pluginInfo = (
                 'plugin=' + decodeURIComponent(pluginMatch[1])
@@ -231,6 +233,25 @@ function URI_SS() {
                     throw new Error(
                         `Unsupported plugin option: ${params.plugin}`,
                     );
+            }
+        }
+        // Shadowrocket
+        if (shadowTlsMatch) {
+            const params = JSON.parse(Base64.decode(shadowTlsMatch[1]));
+            const version = getIfNotBlank(params['version']);
+            const address = getIfNotBlank(params['address']);
+            const port = getIfNotBlank(params['port']);
+            proxy.plugin = 'shadow-tls';
+            proxy['plugin-opts'] = {
+                host: getIfNotBlank(params['host']),
+                password: getIfNotBlank(params['password']),
+                version: version ? parseInt(version, 10) : undefined,
+            };
+            if (address) {
+                proxy.server = address;
+            }
+            if (port) {
+                proxy.port = parseInt(port, 10);
             }
         }
         if (/(&|\?)uot=(1|true)/i.test(query)) {

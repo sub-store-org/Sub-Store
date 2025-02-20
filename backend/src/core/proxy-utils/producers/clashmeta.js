@@ -105,6 +105,9 @@ export default function ClashMeta_Producer() {
                             password: proxy['shadow-tls-password'],
                             version: proxy['shadow-tls-version'],
                         };
+                        delete proxy['shadow-tls-password'];
+                        delete proxy['shadow-tls-sni'];
+                        delete proxy['shadow-tls-version'];
                     }
                 }
 
