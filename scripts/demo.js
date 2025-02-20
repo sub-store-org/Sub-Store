@@ -24,6 +24,10 @@ function operator(proxies = [], targetPlatform, context) {
   // 16. `sing-box` 支持使用 `_network` 来设置 `network`, 例如 `tcp`, `udp`
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
+  // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
+  // const fs = eval(`require("fs")`)
+  // // const path = eval(`require("path")`)
+  // fs.writeFileSync('/tmp/1.txt', $content, "utf8");
 
   // $arguments 为传入的脚本参数
 
@@ -69,6 +73,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     Gist, // Gist 类
   //     download, // 内部的下载方法, 见 backend/src/utils/download.js
   //     MMDB, // Node.js 环境 可用于模拟 Surge/Loon 的 $utils.ipasn, $utils.ipaso, $utils.geoip. 具体见 https://t.me/zhetengsha/1269
+  //     isValidUUID, // 辅助判断是否为有效的 UUID
   // }
 
   // 如果只是为了快速修改或者筛选 可以参考 脚本操作支持节点快捷脚本 https://t.me/zhetengsha/970 和 脚本筛选支持节点快捷脚本 https://t.me/zhetengsha/1009
