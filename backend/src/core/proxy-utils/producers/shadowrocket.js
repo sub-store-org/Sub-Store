@@ -110,6 +110,21 @@ export default function Shadowrocket_Producer() {
                         proxy.servername = proxy.sni;
                         delete proxy.sni;
                     }
+                } else if (proxy.type === 'ss') {
+                    if (
+                        isPresent(proxy, 'shadow-tls-password') &&
+                        !isPresent(proxy, 'plugin')
+                    ) {
+                        proxy.plugin = 'shadow-tls';
+                        proxy['plugin-opts'] = {
+                            host: proxy['shadow-tls-sni'],
+                            password: proxy['shadow-tls-password'],
+                            version: proxy['shadow-tls-version'],
+                        };
+                        delete proxy['shadow-tls-password'];
+                        delete proxy['shadow-tls-sni'];
+                        delete proxy['shadow-tls-version'];
+                    }
                 }
 
                 if (
