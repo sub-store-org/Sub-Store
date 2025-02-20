@@ -218,7 +218,9 @@ export default function Egern_Producer() {
                         proxy.transport = {
                             http1: {
                                 method: proxy['http-opts']?.method,
-                                path: proxy['http-opts']?.path,
+                                path: Array.isArray(proxy['http-opts']?.path)
+                                    ? proxy['http-opts']?.path[0]
+                                    : proxy['http-opts']?.path,
                                 headers: {
                                     Host: Array.isArray(
                                         proxy['http-opts']?.headers?.Host,
@@ -233,7 +235,9 @@ export default function Egern_Producer() {
                         proxy.transport = {
                             http2: {
                                 method: proxy['h2-opts']?.method,
-                                path: proxy['h2-opts']?.path,
+                                path: Array.isArray(proxy['h2-opts']?.path)
+                                    ? proxy['h2-opts']?.path[0]
+                                    : proxy['h2-opts']?.path,
                                 headers: {
                                     Host: Array.isArray(
                                         proxy['h2-opts']?.headers?.Host,
@@ -291,7 +295,9 @@ export default function Egern_Producer() {
                         proxy.transport = {
                             http: {
                                 method: proxy['http-opts']?.method,
-                                path: proxy['http-opts']?.path,
+                                path: Array.isArray(proxy['http-opts']?.path)
+                                    ? proxy['http-opts']?.path[0]
+                                    : proxy['http-opts']?.path,
                                 headers: {
                                     Host: Array.isArray(
                                         proxy['http-opts']?.headers?.Host,
