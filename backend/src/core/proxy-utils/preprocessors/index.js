@@ -63,7 +63,7 @@ function Clash() {
         // 防止 VLESS节点 reality-opts 选项中的 short-id 被解析成 Infinity
         // 匹配 short-id 冒号后面的值(包含空格和引号)
         const afterReplace = raw.replace(
-            /short-id:([ ]*[^,\n}]*)/g,
+            /short-id:([ \t]*[^#\n,}]*)/g,
             (matched, value) => {
                 const afterTrim = value.trim();
 
