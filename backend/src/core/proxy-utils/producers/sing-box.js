@@ -641,6 +641,23 @@ const tuic5Parser = (proxy = {}) => {
     smuxParser(proxy.smux, parsedProxy);
     return parsedProxy;
 };
+const anytlsParser = (proxy = {}) => {
+    const parsedProxy = {
+        tag: proxy.name,
+        type: 'anytls',
+        server: proxy.server,
+        server_port: parseInt(`${proxy.port}`, 10),
+        password: proxy.password,
+        tls: { enabled: true, server_name: proxy.server, insecure: false },
+    };
+    if (/^\d+$/.test(proxy['idle-session-check-interval']))
+        parsedProxy.idle_session_check_interval = `${proxy['idle-session-check-interval']}s`;
+    if (/^\d+$/.test(proxy['idle-session-timeout']))
+        parsedProxy.idle_session_timeout = `${proxy['idle-session-timeout']}s`;
+    detourParser(proxy, parsedProxy);
+    tlsParser(proxy, parsedProxy);
+    return parsedProxy;
+};
 
 const wireguardParser = (proxy = {}) => {
     const local_address = ['ip', 'ipv6']
@@ -828,6 +845,9 @@ export default function singbox_Producer() {
                             break;
                         case 'wireguard':
                             list.push(wireguardParser(proxy));
+                            break;
+                        case 'anytls':
+                            list.push(anytlsParser(proxy));
                             break;
                         default:
                             throw new Error(
