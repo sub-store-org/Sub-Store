@@ -23,6 +23,7 @@ import { produceArtifact } from '@/restful/sync';
 import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
 import Gist from '@/utils/gist';
 import { isPresent } from './producers/utils';
+import { doh } from '@/utils/dns';
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
@@ -327,6 +328,7 @@ export const ProxyUtils = {
     Gist,
     download,
     isValidUUID,
+    doh,
 };
 
 function tryParse(parser, line) {
