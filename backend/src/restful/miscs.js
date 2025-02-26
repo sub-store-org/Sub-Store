@@ -109,6 +109,21 @@ async function gistBackupAction(action) {
     const updated = settings.syncTime;
     switch (action) {
         case 'upload':
+            try {
+                content = $.read('#sub-store');
+                if ($.env.isNode) content = JSON.stringify($.cache, null, `  `);
+                $.info(`下载备份, 与本地内容对比...`);
+                const onlineContent = await gist.download(
+                    GIST_BACKUP_FILE_NAME,
+                );
+                if (onlineContent === content) {
+                    $.info(`内容一致, 无需上传备份`);
+                    return;
+                }
+            } catch (error) {
+                $.error(`${error.message ?? error}`);
+            }
+
             // update syncTime
             settings.syncTime = new Date().getTime();
             $.write(settings, SETTINGS_KEY);

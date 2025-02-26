@@ -118,6 +118,7 @@ export default class Gist {
                 .get('/gists?per_page=100&page=1')
                 .then((response) => {
                     const gists = JSON.parse(response.body);
+                    $.info(`获取到当前 GitHub 用户的 gist: ${gists.length} 个`);
                     for (let g of gists) {
                         if (g.description === this.key) {
                             return g;
