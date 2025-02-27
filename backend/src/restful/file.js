@@ -1,5 +1,5 @@
 import { deleteByName, findByName, updateByName } from '@/utils/database';
-import { getFlowHeaders } from '@/utils/flow';
+import { getFlowHeaders, normalizeFlowHeader } from '@/utils/flow';
 import { FILES_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
@@ -148,7 +148,7 @@ async function getFile(req, res) {
                     if (flowInfo) {
                         res.set(
                             'subscription-userinfo',
-                            flowInfo.replace(/\s*;\s*;\s*/g, ';'),
+                            normalizeFlowHeader(flowInfo),
                         );
                     }
                 }
