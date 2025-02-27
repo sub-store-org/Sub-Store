@@ -5,7 +5,7 @@ import {
 import { ProxyUtils } from '@/core/proxy-utils';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
-import { getFlowHeaders } from '@/utils/flow';
+import { getFlowHeaders, normalizeFlowHeader } from '@/utils/flow';
 import $ from '@/core/app';
 import { failed } from '@/restful/response';
 import { InternalServerError, ResourceNotFoundError } from '@/restful/errors';
@@ -259,7 +259,10 @@ async function downloadSubscription(req, res) {
                             $arguments.flowUrl,
                         );
                         if (flowInfo) {
-                            res.set('subscription-userinfo', flowInfo);
+                            res.set(
+                                'subscription-userinfo',
+                                normalizeFlowHeader(flowInfo),
+                            );
                         }
                     }
                 } catch (err) {
@@ -293,10 +296,9 @@ async function downloadSubscription(req, res) {
                 }
                 res.set(
                     'subscription-userinfo',
-                    [subUserInfo, flowInfo]
-                        .filter((i) => i)
-                        .join('; ')
-                        .replace(/\s*;\s*;\s*/g, ';'),
+                    normalizeFlowHeader(
+                        [subUserInfo, flowInfo].filter((i) => i).join(';'),
+                    ),
                 );
             }
 
@@ -556,7 +558,7 @@ async function downloadCollection(req, res) {
             if (subUserInfo) {
                 res.set(
                     'subscription-userinfo',
-                    subUserInfo.replace(/\s*;\s*;\s*/g, ';'),
+                    normalizeFlowHeader(subUserInfo),
                 );
             }
             if (platform === 'JSON') {
