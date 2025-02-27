@@ -20,6 +20,7 @@ import {
     validCheck,
     flowTransfer,
     getRmainingDays,
+    normalizeFlowHeader,
 } from '@/utils/flow';
 
 function isObject(item) {
@@ -1083,6 +1084,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
         flowTransfer,
         validCheck,
         getRmainingDays,
+        normalizeFlowHeader,
     };
     if ($.env.isLoon) {
         return new Function(

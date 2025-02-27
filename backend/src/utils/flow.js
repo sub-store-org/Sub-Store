@@ -313,3 +313,41 @@ export function getRmainingDays(opt = {}) {
         $.error(`getRmainingDays failed: ${e.message ?? e}`);
     }
 }
+
+export function normalizeFlowHeader(flowHeaders) {
+    try {
+        // 使用 Map 保持顺序并处理重复键
+        const kvMap = new Map();
+
+        flowHeaders
+            .split(';')
+            .map((p) => p.trim())
+            .filter(Boolean)
+            .forEach((pair) => {
+                const eqIndex = pair.indexOf('=');
+                if (eqIndex === -1) return;
+
+                const key = pair.slice(0, eqIndex).trim();
+                const encodedValue = pair.slice(eqIndex + 1).trim();
+
+                // 只保留第一个出现的 key
+                if (!kvMap.has(key)) {
+                    try {
+                        // 解码 URI 组件并保留原始值作为 fallback
+                        const decodedValue = decodeURIComponent(encodedValue);
+                        kvMap.set(key, decodedValue);
+                    } catch (e) {
+                        kvMap.set(key, encodedValue);
+                    }
+                }
+            });
+
+        // 拼接标准化字符串
+        return Array.from(kvMap.entries())
+            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`) // 重新编码保持兼容性
+            .join('; ');
+    } catch (e) {
+        $.error(`normalizeFlowHeader failed: ${e.message ?? e}`);
+        return flowHeaders;
+    }
+}
