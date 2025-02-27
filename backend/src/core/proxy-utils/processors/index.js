@@ -366,12 +366,20 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
             if (output?.$file?.type === 'mihomoProfile') {
                 try {
                     let patch = YAML.safeLoad(script);
+                    let config;
+                    if (output?.$content) {
+                        try {
+                            config = YAML.safeLoad(output?.$content);
+                        } catch (e) {
+                            $.error(e.message ?? e);
+                        }
+                    }
                     // if (typeof patch !== 'object') patch = {};
                     if (typeof patch !== 'object')
                         throw new Error('patch is not an object');
                     output.$content = ProxyUtils.yaml.safeDump(
                         deepMerge(
-                            {
+                            config || {
                                 proxies: await produceArtifact({
                                     type:
                                         output?.$file?.sourceType ||
@@ -414,7 +422,15 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
                             if($file.type === 'mihomoProfile') {
                                 ${script}
                                 if(typeof main === 'function') {
-                                    const config = {
+                                    let config;
+                                    if ($content) {
+                                        try {
+                                            config = ProxyUtils.yaml.safeLoad($content);
+                                        } catch (e) {
+                                            console.log(e.message ?? e);
+                                        }
+                                    }
+                                    $content = ProxyUtils.yaml.safeDump(await main(config || {
                                         proxies: await produceArtifact({
                                             type: $file.sourceType || 'collection',
                                             name: $file.sourceName,
@@ -424,8 +440,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
                                                 'delete-underscore-fields': true
                                             }
                                         }),
-                                    }
-                                    $content = ProxyUtils.yaml.safeDump(await main(config))
+                                    }))
                                 }
                             } else {
                                 ${script}
