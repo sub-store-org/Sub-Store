@@ -2,7 +2,7 @@ import express from '@/vendor/express';
 import $ from '@/core/app';
 import migrate from '@/utils/migration';
 import download from '@/utils/download';
-import { syncArtifacts } from '@/restful/sync';
+import { syncArtifacts, produceArtifact } from '@/restful/sync';
 import { gistBackupAction } from '@/restful/miscs';
 import { TOKENS_KEY } from '@/constants';
 
@@ -74,6 +74,39 @@ export default function serve() {
                 true, // start
                 // 'Asia/Shanghai' // timeZone
             );
+        }
+        // 格式: 0 */2 * * *,sub,a;0 */3 * * *,col,b
+        // 每 2 小时处理一次单条订阅 a, 每 3 小时处理一次组合订阅 b
+        const produce_cron = eval('process.env.SUB_STORE_PRODUCE_CRON');
+        if (produce_cron) {
+            $.info(`[PRODUCE CRON] ${produce_cron} enabled`);
+            const { CronJob } = eval(`require("cron")`);
+            produce_cron.split(/\s*;\s*/).map((item) => {
+                const [cron, type, name] = item.split(/\s*,\s*/);
+                new CronJob(
+                    cron.trim(),
+                    async function () {
+                        try {
+                            $.info(
+                                `[PRODUCE CRON] ${type} ${name} ${cron} started`,
+                            );
+                            await produceArtifact({ type, name });
+                            $.info(
+                                `[PRODUCE CRON] ${type} ${name} ${cron} finished`,
+                            );
+                        } catch (e) {
+                            $.error(
+                                `[PRODUCE CRON] ${type} ${name} ${cron} error: ${
+                                    e.message ?? e
+                                }`,
+                            );
+                        }
+                    }, // onTick
+                    null, // onComplete
+                    true, // start
+                    // 'Asia/Shanghai' // timeZone
+                );
+            });
         }
         const backend_download_cron = eval(
             'process.env.SUB_STORE_BACKEND_DOWNLOAD_CRON',
