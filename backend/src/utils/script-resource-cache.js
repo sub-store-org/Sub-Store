@@ -24,7 +24,7 @@ class ResourceCache {
         this._cleanup();
     }
 
-    _cleanup() {
+    _cleanup(prefix, expires) {
         // clear obsolete cached resource
         let clear = false;
         Object.entries(this.resourceCache).forEach((entry) => {
@@ -35,7 +35,11 @@ class ResourceCache {
                 $.delete(`#${id}`);
                 clear = true;
             }
-            if (new Date().getTime() - updated.time > this.expires) {
+            if (
+                new Date().getTime() - updated.time >
+                    (expires ?? this.expires) ||
+                (prefix && id.startsWith(prefix))
+            ) {
                 delete this.resourceCache[id];
                 clear = true;
             }
@@ -52,10 +56,15 @@ class ResourceCache {
         $.write(JSON.stringify(this.resourceCache), SCRIPT_RESOURCE_CACHE_KEY);
     }
 
-    get(id) {
+    get(id, expires, remove) {
         const updated = this.resourceCache[id] && this.resourceCache[id].time;
-        if (updated && new Date().getTime() - updated <= this.expires) {
-            return this.resourceCache[id].data;
+        if (updated) {
+            if (new Date().getTime() - updated <= (expires ?? this.expires))
+                return this.resourceCache[id].data;
+            if (remove) {
+                delete this.resourceCache[id];
+                this._persist();
+            }
         }
         return null;
     }
