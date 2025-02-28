@@ -43,7 +43,7 @@ async function produceArtifact({
 }) {
     platform = platform || 'JSON';
 
-    if (type === 'subscription') {
+    if (['subscription', 'sub'].includes(type)) {
         let sub;
         if (name) {
             const allSubs = $.read(SUBS_KEY);
@@ -190,7 +190,7 @@ async function produceArtifact({
         }
         // produce
         return ProxyUtils.produce(proxies, platform, produceType, produceOpts);
-    } else if (type === 'collection') {
+    } else if (['collection', 'col'].includes(type)) {
         const allSubs = $.read(SUBS_KEY);
         const allCols = $.read(COLLECTIONS_KEY);
         const collection = findByName(allCols, name);
