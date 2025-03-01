@@ -433,6 +433,9 @@ function ssh(proxy) {
     return result.toString();
 }
 function http(proxy) {
+    if (proxy.headers && Object.keys(proxy.headers).length > 0) {
+        throw new Error(`headers is unsupported`);
+    }
     const result = new Result(proxy);
     const type = proxy.tls ? 'https' : 'http';
     result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
