@@ -379,19 +379,22 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
                         throw new Error('patch is not an object');
                     output.$content = ProxyUtils.yaml.safeDump(
                         deepMerge(
-                            config || {
-                                proxies: await produceArtifact({
-                                    type:
-                                        output?.$file?.sourceType ||
-                                        'collection',
-                                    name: output?.$file?.sourceName,
-                                    platform: 'mihomo',
-                                    produceType: 'internal',
-                                    produceOpts: {
-                                        'delete-underscore-fields': true,
-                                    },
-                                }),
-                            },
+                            config ||
+                                (output?.$file?.sourceType === 'none'
+                                    ? {}
+                                    : {
+                                          proxies: await produceArtifact({
+                                              type:
+                                                  output?.$file?.sourceType ||
+                                                  'collection',
+                                              name: output?.$file?.sourceName,
+                                              platform: 'mihomo',
+                                              produceType: 'internal',
+                                              produceOpts: {
+                                                  'delete-underscore-fields': true,
+                                              },
+                                          }),
+                                      }),
                             patch,
                         ),
                     );
@@ -430,7 +433,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
                                             console.log(e.message ?? e);
                                         }
                                     }
-                                    $content = ProxyUtils.yaml.safeDump(await main(config || {
+                                    $content = ProxyUtils.yaml.safeDump(await main(config || ($file.sourceType === 'none' ? {} : {
                                         proxies: await produceArtifact({
                                             type: $file.sourceType || 'collection',
                                             name: $file.sourceName,
@@ -440,7 +443,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
                                                 'delete-underscore-fields': true
                                             }
                                         }),
-                                    }))
+                                    })))
                                 }
                             } else {
                                 ${script}
