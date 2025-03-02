@@ -849,7 +849,12 @@ function UselessFilter() {
 }
 
 // filter by regions
-function RegionFilter(regions) {
+function RegionFilter(input) {
+    let regions = input?.value || input;
+    if (!Array.isArray(regions)) {
+        regions = [];
+    }
+    const keep = input?.keep ?? true;
     const REGION_MAP = {
         HK: '🇭🇰',
         TW: '🇹🇼',
@@ -866,7 +871,8 @@ function RegionFilter(regions) {
             // this would be high memory usage
             return proxies.map((proxy) => {
                 const flag = getFlag(proxy.name);
-                return regions.some((r) => REGION_MAP[r] === flag);
+                const selected = regions.some((r) => REGION_MAP[r] === flag);
+                return keep ? selected : !selected;
             });
         },
     };
@@ -898,11 +904,19 @@ function buildRegex(str, ...options) {
 }
 
 // filter by proxy types
-function TypeFilter(types) {
+function TypeFilter(input) {
+    let types = input?.value || input;
+    if (!Array.isArray(types)) {
+        types = [];
+    }
+    const keep = input?.keep ?? true;
     return {
         name: 'Type Filter',
         func: (proxies) => {
-            return proxies.map((proxy) => types.some((t) => proxy.type === t));
+            return proxies.map((proxy) => {
+                const selected = types.some((t) => proxy.type === t);
+                return keep ? selected : !selected;
+            });
         },
     };
 }
