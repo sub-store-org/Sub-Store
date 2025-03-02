@@ -185,6 +185,7 @@ async function processFn(
                 }
             } else {
                 script = content;
+                $arguments = item.args.arguments || {};
             }
         }
 
