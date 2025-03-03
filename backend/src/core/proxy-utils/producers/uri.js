@@ -493,6 +493,7 @@ export default function URI_Producer() {
                                 'password',
                                 'server',
                                 'port',
+                                'tls',
                             ].includes(key)
                         ) {
                             const i = key.replace(/-/, '_');
@@ -541,6 +542,50 @@ export default function URI_Producer() {
                         proxy.name,
                     )}`;
                 }
+                break;
+            case 'anytls':
+                let anytlsParams = [];
+                Object.keys(proxy).forEach((key) => {
+                    if (
+                        ![
+                            'name',
+                            'type',
+                            'password',
+                            'server',
+                            'port',
+                            'tls',
+                        ].includes(key)
+                    ) {
+                        const i = key.replace(/-/, '_');
+                        if (['alpn'].includes(key)) {
+                            if (proxy[key]) {
+                                anytlsParams.push(
+                                    `${i}=${encodeURIComponent(
+                                        Array.isArray(proxy[key])
+                                            ? proxy[key][0]
+                                            : proxy[key],
+                                    )}`,
+                                );
+                            }
+                        } else if (['skip-cert-verify'].includes(key)) {
+                            if (proxy[key]) {
+                                anytlsParams.push(`insecure=1`);
+                            }
+                        } else if (proxy[key]) {
+                            anytlsParams.push(
+                                `${i.replace(/-/g, '_')}=${encodeURIComponent(
+                                    proxy[key],
+                                )}`,
+                            );
+                        }
+                    }
+                });
+
+                result = `anytls://${encodeURIComponent(proxy.password)}@${
+                    proxy.server
+                }:${proxy.port}/?${anytlsParams.join('&')}#${encodeURIComponent(
+                    proxy.name,
+                )}`;
                 break;
             case 'wireguard':
                 let wireguardParams = [];

@@ -699,6 +699,52 @@ function URI_VLESS() {
     };
     return { name, test, parse };
 }
+function URI_AnyTLS() {
+    const name = 'URI AnyTLS Parser';
+    const test = (line) => {
+        return /^anytls:\/\//.test(line);
+    };
+    const parse = (line) => {
+        line = line.split(/anytls:\/\//)[1];
+        // eslint-disable-next-line no-unused-vars
+        let [__, password, server, port, addons = '', name] =
+            /^(.*?)@(.*?)(?::(\d+))?\/?(?:\?(.*?))?(?:#(.*?))?$/.exec(line);
+        password = decodeURIComponent(password);
+        port = parseInt(`${port}`, 10);
+        if (isNaN(port)) {
+            port = 443;
+        }
+        password = decodeURIComponent(password);
+        if (name != null) {
+            name = decodeURIComponent(name);
+        }
+        name = name ?? `AnyTLS ${server}:${port}`;
+
+        const proxy = {
+            type: 'anytls',
+            name,
+            server,
+            port,
+            password,
+        };
+
+        for (const addon of addons.split('&')) {
+            let [key, value] = addon.split('=');
+            key = key.replace(/_/g, '-');
+            value = decodeURIComponent(value);
+            if (['alpn'].includes(key)) {
+                proxy[key] = value ? value.split(',') : undefined;
+            } else if (['insecure'].includes(key)) {
+                proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
+            } else {
+                proxy[key] = value;
+            }
+        }
+
+        return proxy;
+    };
+    return { name, test, parse };
+}
 function URI_Hysteria2() {
     const name = 'URI Hysteria2 Parser';
     const test = (line) => {
@@ -1544,6 +1590,7 @@ export default [
     URI_Hysteria(),
     URI_Hysteria2(),
     URI_Trojan(),
+    URI_AnyTLS(),
     Clash_All(),
     Surge_Direct(),
     Surge_SSH(),
