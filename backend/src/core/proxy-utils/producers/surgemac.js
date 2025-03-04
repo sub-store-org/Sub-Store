@@ -141,10 +141,19 @@ function mihomo(proxy, type, opts) {
                         dns: {
                             enable: true,
                             ipv6,
-                            nameserver: [
-                                'https://223.6.6.6/dns-query',
-                                'https://120.53.53.53/dns-query',
-                            ],
+                            'default-nameserver': opts?.defaultNameserver ||
+                                proxy._defaultNameserver || [
+                                    '180.76.76.76',
+                                    '52.80.52.52',
+                                    '119.28.28.28',
+                                    '223.6.6.6',
+                                ],
+                            nameserver: opts?.nameserver ||
+                                proxy._nameserver || [
+                                    'https://doh.pub/dns-query',
+                                    'https://dns.alidns.com/dns-query',
+                                    'https://doh-pure.onedns.net/dns-query',
+                                ],
                         },
                         proxies: [
                             {
