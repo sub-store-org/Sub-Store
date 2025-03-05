@@ -10,6 +10,47 @@ export default function ClashMeta_Producer() {
                     return false;
                 } else if (['juicity'].includes(proxy.type)) {
                     return false;
+                } else if (
+                    ['ss'].includes(proxy.type) &&
+                    ![
+                        'aes-128-ctr',
+                        'aes-192-ctr',
+                        'aes-256-ctr',
+                        'aes-128-cfb',
+                        'aes-192-cfb',
+                        'aes-256-cfb',
+                        'aes-128-gcm',
+                        'aes-192-gcm',
+                        'aes-256-gcm',
+                        'aes-128-ccm',
+                        'aes-192-ccm',
+                        'aes-256-ccm',
+                        'aes-128-gcm-siv',
+                        'aes-256-gcm-siv',
+                        'chacha20-ietf',
+                        'chacha20',
+                        'xchacha20',
+                        'chacha20-ietf-poly1305',
+                        'xchacha20-ietf-poly1305',
+                        'chacha8-ietf-poly1305',
+                        'xchacha8-ietf-poly1305',
+                        '2022-blake3-aes-128-gcm',
+                        '2022-blake3-aes-256-gcm',
+                        '2022-blake3-chacha20-poly1305',
+                        'lea-128-gcm',
+                        'lea-192-gcm',
+                        'lea-256-gcm',
+                        'rabbit128-poly1305',
+                        'aegis-128l',
+                        'aegis-256',
+                        'aez-384',
+                        'deoxys-ii-256-128',
+                        'rc4-md5',
+                        'none',
+                    ].includes(proxy.cipher)
+                ) {
+                    // https://wiki.metacubex.one/config/proxies/ss/#cipher
+                    return false;
                 }
                 return true;
             })
