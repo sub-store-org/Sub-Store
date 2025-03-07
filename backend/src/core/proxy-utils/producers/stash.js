@@ -47,7 +47,11 @@ export default function Stash_Producer() {
                                 : []),
                         ].includes(proxy.cipher)) ||
                     (proxy.type === 'snell' && String(proxy.version) === '4') ||
-                    (proxy.type === 'vless' && proxy['reality-opts'])
+                    (opts['include-unsupported-proxy']
+                        ? proxy.type === 'vless' &&
+                          proxy['reality-opts'] &&
+                          !['xtls-rprx-vision'].includes(proxy.flow)
+                        : proxy.type === 'vless' && proxy['reality-opts'])
                 ) {
                     return false;
                 }
