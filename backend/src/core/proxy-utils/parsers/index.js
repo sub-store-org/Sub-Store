@@ -775,6 +775,7 @@ function URI_Hysteria2() {
         ] = /^(.*?)@(.*?)(:((\d+(-\d+)?)([,;]\d+(-\d+)?)*))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(
             line,
         );
+
         /* eslint-enable no-unused-vars */
         if (/^\d+$/.test(port)) {
             port = parseInt(`${port}`, 10);
@@ -818,12 +819,23 @@ function URI_Hysteria2() {
         if (params.obfs && params.obfs !== 'none') {
             proxy.obfs = params.obfs;
         }
-
-        proxy.ports = params.mport;
+        if (params.mport) {
+            proxy.ports = params.mport;
+        }
         proxy['obfs-password'] = params['obfs-password'];
         proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.insecure);
         proxy.tfo = /(TRUE)|1/i.test(params.fastopen);
         proxy['tls-fingerprint'] = params.pinSHA256;
+        let hop_interval = params['hop-interval'] || params['hop_interval'];
+
+        if (/^\d+$/.test(hop_interval)) {
+            proxy['hop-interval'] = parseInt(`${hop_interval}`, 10);
+        }
+        let keepalive = params['keepalive'];
+
+        if (/^\d+$/.test(keepalive)) {
+            proxy['keepalive'] = parseInt(`${keepalive}`, 10);
+        }
 
         return proxy;
     };

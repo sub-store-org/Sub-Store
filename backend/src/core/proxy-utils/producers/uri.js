@@ -387,6 +387,14 @@ export default function URI_Producer() {
                 break;
             case 'hysteria2':
                 let hysteria2params = [];
+                if (proxy['hop-interval']) {
+                    hysteria2params.push(
+                        `hop-interval=${proxy['hop-interval']}`,
+                    );
+                }
+                if (proxy['keepalive']) {
+                    hysteria2params.push(`keepalive=${proxy['keepalive']}`);
+                }
                 if (proxy['skip-cert-verify']) {
                     hysteria2params.push(`insecure=1`);
                 }
