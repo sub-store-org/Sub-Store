@@ -518,6 +518,14 @@ function lastParse(proxy) {
         proxy['obfs-password'] = proxy.obfs;
         proxy.obfs = 'salamander';
     }
+    if (
+        ['hysteria2'].includes(proxy.type) &&
+        !proxy['obfs-password'] &&
+        proxy['obfs_password']
+    ) {
+        proxy['obfs-password'] = proxy['obfs_password'];
+        delete proxy['obfs_password'];
+    }
     if (['vless'].includes(proxy.type)) {
         // 删除 reality-opts: {}
         if (
