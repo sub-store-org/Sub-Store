@@ -587,16 +587,14 @@ const hysteria2Parser = (proxy = {}, includeUnsupportedProxy) => {
     };
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
-    if (includeUnsupportedProxy) {
-        if (proxy['hop-interval'])
-            parsedProxy.hop_interval = /^\d+$/.test(proxy['hop-interval'])
-                ? `${proxy['hop-interval']}s`
-                : proxy['hop-interval'];
-        if (proxy['ports'])
-            parsedProxy.server_ports = proxy['ports']
-                .split(/\s*,\s*/)
-                .map((p) => p.replace(/\s*-\s*/g, ':'));
-    }
+    if (proxy['hop-interval'])
+        parsedProxy.hop_interval = /^\d+$/.test(proxy['hop-interval'])
+            ? `${proxy['hop-interval']}s`
+            : proxy['hop-interval'];
+    if (proxy['ports'])
+        parsedProxy.server_ports = proxy['ports']
+            .split(/\s*,\s*/)
+            .map((p) => p.replace(/\s*-\s*/g, ':'));
     if (proxy.up) parsedProxy.up_mbps = parseInt(`${proxy.up}`, 10);
     if (proxy.down) parsedProxy.down_mbps = parseInt(`${proxy.down}`, 10);
     if (proxy.obfs === 'salamander') parsedProxy.obfs.type = 'salamander';
