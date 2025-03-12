@@ -411,7 +411,6 @@ async function produceArtifact({
         const file = findByName(allFiles, name);
         if (!file) throw new Error(`找不到文件 ${name}`);
         let raw = '';
-        console.log(file);
         if (file.type !== 'mihomoProfile') {
             if (
                 content &&

@@ -31,7 +31,12 @@ async function previewFile(req, res) {
                         .filter((i) => i.length)
                         .map(async (url) => {
                             try {
-                                return await download(url, file.ua);
+                                return await download(
+                                    url,
+                                    file.ua,
+                                    undefined,
+                                    file.proxy,
+                                );
                             } catch (err) {
                                 errors[url] = err;
                                 $.error(
