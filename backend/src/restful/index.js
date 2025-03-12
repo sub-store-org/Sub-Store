@@ -194,11 +194,12 @@ export default function serve() {
 
             const staticFileMiddleware = express_.static(fe_path);
 
-            let be_share_rewrite = '/share/:type/:name';
-            let be_api_rewrite = '';
-            let be_download_rewrite = '';
             let be_api = '/api/';
             let be_download = '/download/';
+            let be_share = '/share/';
+            let be_download_rewrite = '';
+            let be_api_rewrite = '';
+            let be_share_rewrite = `${be_share}:type/:name`;
             if (fe_be_path) {
                 if (!fe_be_path.startsWith('/')) {
                     throw new Error(
@@ -217,7 +218,7 @@ export default function serve() {
                     createProxyMiddleware({
                         target: `http://127.0.0.1:${port}`,
                         changeOrigin: true,
-                        pathRewrite: (path, req) => {
+                        pathRewrite: async (path, req) => {
                             if (req.method.toLowerCase() !== 'get')
                                 throw new Error('Method not allowed');
                             const tokens = $.read(TOKENS_KEY) || [];
@@ -229,34 +230,26 @@ export default function serve() {
                                     (t.exp == null || t.exp > Date.now()),
                             );
                             if (!token) throw new Error('Forbbiden');
-                            return path;
+                            return req.originalUrl;
                         },
                     }),
                 );
                 app.use(
                     be_api_rewrite,
                     createProxyMiddleware({
-                        target: `http://127.0.0.1:${port}`,
-                        pathRewrite: (path) => {
-                            const newPath = path.startsWith(be_api_rewrite)
-                                ? path.replace(be_api_rewrite, be_api)
-                                : path;
-                            return newPath.includes('?')
-                                ? `${newPath}&share=true`
-                                : `${newPath}?share=true`;
+                        target: `http://127.0.0.1:${port}${be_api}`,
+                        pathRewrite: async (path) => {
+                            return path.includes('?')
+                                ? `${path}&share=true`
+                                : `${path}?share=true`;
                         },
                     }),
                 );
                 app.use(
                     be_download_rewrite,
                     createProxyMiddleware({
-                        target: `http://127.0.0.1:${port}`,
+                        target: `http://127.0.0.1:${port}${be_download}`,
                         changeOrigin: true,
-                        pathRewrite: (path) => {
-                            return path.startsWith(be_download_rewrite)
-                                ? path.replace(be_download_rewrite, be_download)
-                                : path;
-                        },
                     }),
                 );
             }
