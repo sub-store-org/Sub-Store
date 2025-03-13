@@ -23,7 +23,11 @@ export default function URI_Producer() {
         ) {
             delete proxy.tls;
         }
-        if (proxy.server && isIPv6(proxy.server)) {
+        if (
+            !['vmess'].includes(proxy.type) &&
+            proxy.server &&
+            isIPv6(proxy.server)
+        ) {
             proxy.server = `[${proxy.server}]`;
         }
         switch (proxy.type) {
