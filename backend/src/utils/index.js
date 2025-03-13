@@ -126,7 +126,32 @@ function isValidUUID(uuid) {
     );
 }
 
+function formatDateTime(date, format = 'YYYY-MM-DD_HH-mm-ss') {
+    const d = date instanceof Date ? date : new Date(date);
+
+    if (isNaN(d.getTime())) {
+        return '';
+    }
+
+    const pad = (num) => String(num).padStart(2, '0');
+
+    const replacements = {
+        YYYY: d.getFullYear(),
+        MM: pad(d.getMonth() + 1),
+        DD: pad(d.getDate()),
+        HH: pad(d.getHours()),
+        mm: pad(d.getMinutes()),
+        ss: pad(d.getSeconds()),
+    };
+
+    return format.replace(
+        /YYYY|MM|DD|HH|mm|ss/g,
+        (match) => replacements[match],
+    );
+}
+
 export {
+    formatDateTime,
     isValidUUID,
     ipAddress,
     isIPv4,

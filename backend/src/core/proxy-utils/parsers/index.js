@@ -342,7 +342,7 @@ function URI_VMess() {
     };
     const parse = (line) => {
         line = line.split('vmess://')[1];
-        let content = Base64.decode(line);
+        let content = Base64.decode(line.replace(/\?.*?$/, ''));
         if (/=\s*vmess/.test(content)) {
             // Quantumult VMess URI format
             const partitions = content.split(',').map((p) => p.trim());
