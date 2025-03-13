@@ -13,6 +13,7 @@ import {
 } from '@/utils/flow';
 import { success, failed } from './response';
 import $ from '@/core/app';
+import { formatDateTime } from '@/utils';
 
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 
@@ -265,20 +266,9 @@ function getSubscription(req, res) {
                 .set(
                     'content-disposition',
                     `attachment; filename="${encodeURIComponent(
-                        `sub-store_subscription_${name}_${new Date()
-                            .toLocaleString('zh-CN', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                                hour12: false,
-                            })
-                            .replace(
-                                /^(\d+?)\/(\d+?)\/(\d+?)\s*?(\d+?):(\d+?):(\d+?)$/,
-                                '$1-$2-$3_$4-$5-$6',
-                            )}.json`,
+                        `sub-store_subscription_${name}_${formatDateTime(
+                            new Date(),
+                        )}.json`,
                     )}"`,
                 )
                 .send(JSON.stringify(sub));
