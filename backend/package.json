@@ -1,6 +1,6 @@
 {
   "name": "sub-store",
-  "version": "2.17.9",
+  "version": "2.18.0",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.",
   "main": "src/main.js",
   "scripts": {
@@ -17,6 +17,11 @@
   },
   "author": "Peng-YM",
   "license": "GPL-3.0",
+  "pnpm": {
+    "patchedDependencies": {
+      "http-proxy@1.18.1": "patches/http-proxy@1.18.1.patch"
+    }
+  },
   "dependencies": {
     "@maxmind/geoip2-node": "^5.0.0",
     "automerge": "1.0.1-preview.7",
@@ -33,9 +38,9 @@
     "lodash": "^4.17.21",
     "ms": "^2.1.3",
     "nanoid": "^3.3.3",
-    "request": "^2.88.2",
     "semver": "^7.6.3",
-    "static-js-yaml": "^1.0.0"
+    "static-js-yaml": "^1.0.0",
+    "undici": "^7.4.0"
   },
   "devDependencies": {
     "@babel/core": "^7.18.0",
