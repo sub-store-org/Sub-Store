@@ -337,45 +337,89 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 opts: options.opts,
             });
         } else if (isLoon || isSurge || isNode) {
-            worker = new Promise((resolve, reject) => {
-                const request = isNode
-                    ? eval("require('request')")
-                    : $httpClient;
+            worker = new Promise(async (resolve, reject) => {
                 const body = options.body;
                 const opts = JSON.parse(JSON.stringify(options));
                 opts.body = body;
-
-                if (!isNode && opts.timeout) {
+                opts.timeout = opts.timeout || 8000;
+                if (opts.timeout) {
                     opts.timeout++;
-                    let unit = 'ms';
-                    // 这些客户端单位为 s
-                    if (isSurge || isStash || isShadowRocket) {
-                        opts.timeout = Math.ceil(opts.timeout / 1000);
-                        unit = 's';
+                    if (isNaN(opts.timeout)) {
+                        opts.timeout = 8000;
                     }
-                    // Loon 为 ms
-                    // console.log(`[httpClient timeout] ${opts.timeout}${unit}`);
+                    if (!isNode) {
+                        let unit = 'ms';
+                        // 这些客户端单位为 s
+                        if (isSurge || isStash || isShadowRocket) {
+                            opts.timeout = Math.ceil(opts.timeout / 1000);
+                            unit = 's';
+                        }
+                        // Loon 为 ms
+                        // console.log(`[httpClient timeout] ${opts.timeout}${unit}`);
+                    }
                 }
-                request[method.toLowerCase()](opts, (err, response, body) => {
-                    // if (err) {
-                    //     console.log(err);
-                    // } else {
-                    //     console.log({
-                    //         statusCode:
-                    //             response.status || response.statusCode,
-                    //         headers: response.headers,
-                    //         body,
-                    //     });
-                    // }
-
-                    if (err) reject(err);
-                    else
-                        resolve({
-                            statusCode: response.status || response.statusCode,
-                            headers: response.headers,
-                            body,
+                if (isNode) {
+                    const undici = eval("require('undici')");
+                    const { ProxyAgent, EnvHttpProxyAgent, request } = undici;
+                    const agentOpts = {
+                        connect: {
+                            rejectUnauthorized:
+                                opts.strictSSL === false ||
+                                opts.insecure === true
+                                    ? false
+                                    : true,
+                        },
+                        bodyTimeout: opts.timeout,
+                        headersTimeout: opts.timeout,
+                    };
+                    try {
+                        const response = await request(opts.url, {
+                            ...opts,
+                            method: method.toUpperCase(),
+                            dispatcher: opts.proxy
+                                ? new ProxyAgent({
+                                      ...agentOpts,
+                                      uri: opts.proxy,
+                                  })
+                                : new EnvHttpProxyAgent(agentOpts),
                         });
-                });
+                        resolve({
+                            statusCode: response.statusCode,
+                            headers: response.headers,
+                            body:
+                                opts.encoding === null
+                                    ? await response.body.arrayBuffer()
+                                    : await response.body.text(),
+                        });
+                    } catch (e) {
+                        reject(e);
+                    }
+                } else {
+                    $httpClient[method.toLowerCase()](
+                        opts,
+                        (err, response, body) => {
+                            // if (err) {
+                            //     console.log(err);
+                            // } else {
+                            //     console.log({
+                            //         statusCode:
+                            //             response.status || response.statusCode,
+                            //         headers: response.headers,
+                            //         body,
+                            //     });
+                            // }
+
+                            if (err) reject(err);
+                            else
+                                resolve({
+                                    statusCode:
+                                        response.status || response.statusCode,
+                                    headers: response.headers,
+                                    body,
+                                });
+                        },
+                    );
+                }
             });
         } else if (isGUIforCores) {
             worker = new Promise(async (resolve, reject) => {
