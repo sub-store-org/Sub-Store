@@ -63,13 +63,17 @@ function getCollection(req, res) {
                         `sub-store_collection_${name}_${new Date()
                             .toLocaleString('zh-CN', {
                                 year: 'numeric',
-                                day: 'numeric',
-                                month: 'numeric',
-                                hour: 'numeric',
-                                minute: 'numeric',
-                                second: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false,
                             })
-                            .replace(/\D/g, '')}.json`,
+                            .replace(
+                                /^(\d+?)\/(\d+?)\/(\d+?)\s*?(\d+?):(\d+?):(\d+?)$/,
+                                '$1-$2-$3_$4-$5-$6',
+                            )}.json`,
                     )}"`,
                 )
                 .send(JSON.stringify(collection));

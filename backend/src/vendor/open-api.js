@@ -373,6 +373,21 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                         headersTimeout: opts.timeout,
                     };
                     try {
+                        const url = new URL(opts.url);
+                        const auth =
+                            url.username || url.password
+                                ? Buffer.from(
+                                      `${url.username || ''}:${
+                                          url.password || ''
+                                      }`,
+                                  ).toString('base64')
+                                : undefined;
+                        if (auth) {
+                            opts.headers = {
+                                ...(opts.headers || {}),
+                                Authorization: `Basic ${auth}`,
+                            };
+                        }
                         const response = await request(opts.url, {
                             ...opts,
                             method: method.toUpperCase(),
