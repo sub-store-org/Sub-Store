@@ -134,11 +134,15 @@ export async function updateArtifactStore() {
                 settings.artifactStore = url;
                 settings.artifactStoreStatus = 'VALID';
             } else {
-                $.error(`找不到 Sub-Store Gist`);
+                $.error(`找不到 Sub-Store Gist (${ARTIFACT_REPOSITORY_KEY})`);
                 settings.artifactStoreStatus = 'NOT FOUND';
             }
         } catch (err) {
-            $.error(`查找 Sub-Store Gist 时发生错误: ${err.message ?? err}`);
+            $.error(
+                `查找 Sub-Store Gist (${ARTIFACT_REPOSITORY_KEY}) 时发生错误: ${
+                    err.message ?? err
+                }`,
+            );
             settings.artifactStoreStatus = 'ERROR';
         }
         $.write(settings, SETTINGS_KEY);

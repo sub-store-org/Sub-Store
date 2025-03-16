@@ -280,7 +280,7 @@ export default class Gist {
                 return Promise.reject(err);
             }
         } else {
-            return Promise.reject('找不到 Sub-Store Gist');
+            return Promise.reject(`找不到 Sub-Store Gist (${this.key})`);
         }
     }
 }

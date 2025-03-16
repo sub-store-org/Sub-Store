@@ -89,8 +89,10 @@ async function doSync() {
         const allSubs = $.read(SUBS_KEY);
         const allCols = $.read(COLLECTIONS_KEY);
         const subNames = [];
+        let enabledCount = 0;
         allArtifacts.map((artifact) => {
             if (artifact.sync && artifact.source) {
+                enabledCount++;
                 if (artifact.type === 'subscription') {
                     const subName = artifact.source;
                     const sub = findByName(allSubs, subName);
@@ -110,6 +112,13 @@ async function doSync() {
                 }
             }
         });
+
+        if (enabledCount === 0) {
+            $.info(
+                `需同步的配置: ${enabledCount}, 总数: ${allArtifacts.length}`,
+            );
+            return;
+        }
 
         if (subNames.length > 0) {
             await Promise.all(
