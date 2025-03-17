@@ -27,6 +27,7 @@
     "automerge": "1.0.1-preview.7",
     "body-parser": "^1.19.0",
     "buffer": "^6.0.3",
+    "dotenv": "^16.4.7",
     "connect-history-api-fallback": "^2.0.0",
     "cron": "^3.1.6",
     "dns-packet": "^5.6.1",
