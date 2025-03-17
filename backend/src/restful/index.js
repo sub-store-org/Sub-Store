@@ -24,30 +24,31 @@ import registerParserRoutes from './parser';
 export default function serve() {
     let port;
     let host;
-    let prefix;
     if ($.env.isNode) {
-        const dotenv = eval(`require("dotenv")`);
-        dotenv.config();
         port = eval('process.env.SUB_STORE_BACKEND_API_PORT') || 3000;
         host = eval('process.env.SUB_STORE_BACKEND_API_HOST') || '::';
-        prefix = eval('process.env.SUB_STORE_BACKEND_PATH_PREFIX');
-        if (prefix && !prefix.startsWith("/")){
-            prefix = '/${prefix}'
-        }
     }
     const $app = express({ substore: $, port, host });
-    if (prefix && prefix.length >= 2){
-        $app.use((req, res, next) => {
-            if (req.path.startsWith(prefix)) {
-                const newPath = req.url.replace(prefix, '') || '/';
-                req.url = newPath;
-                next();
-            } else {
-                res.status(403).send();
+    if ($.env.isNode) {
+        const be_prefix = eval('process.env.SUB_STORE_BACKEND_PREFIX');
+        const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
+        if (be_prefix) {
+            if(!fe_be_path.startsWith('/')){
+                throw new Error(
+                    'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
+                );
             }
-        });
+            $app.use((req, res, next) => {
+                if (req.path.startsWith(fe_be_path)) {
+                    const newPath = req.url.replace(fe_be_path, '') || '/';
+                    req.url = newPath;
+                    next();
+                } else {
+                    res.status(403).send();
+                }
+            });
+        }
     }
-    
     // register routes
     registerCollectionRoutes($app);
     registerSubscriptionRoutes($app);
@@ -219,6 +220,7 @@ export default function serve() {
             let be_download_rewrite = '';
             let be_api_rewrite = '';
             let be_share_rewrite = `${be_share}:type/:name`;
+            let prefix = eval('process.env.SUB_STORE_BACKEND_PREFIX') ? fe_be_path : '';
             if (fe_be_path) {
                 if (!fe_be_path.startsWith('/')) {
                     throw new Error(

@@ -11,6 +11,7 @@
  * @documentation: https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46
  */
 import { version } from '../package.json';
+import $ from '@/core/app';
 console.log(
     `
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
@@ -18,7 +19,10 @@ console.log(
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 `,
 );
-
+if ($.env.isNode) {
+    const dotenv = eval(`require("dotenv")`);
+    dotenv.config();
+}
 import migrate from '@/utils/migration';
 import serve from '@/restful';
 
