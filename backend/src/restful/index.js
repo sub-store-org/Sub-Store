@@ -24,11 +24,30 @@ import registerParserRoutes from './parser';
 export default function serve() {
     let port;
     let host;
+    let prefix;
     if ($.env.isNode) {
+        const dotenv = eval(`require("dotenv")`);
+        dotenv.config();
         port = eval('process.env.SUB_STORE_BACKEND_API_PORT') || 3000;
         host = eval('process.env.SUB_STORE_BACKEND_API_HOST') || '::';
+        prefix = eval('process.env.SUB_STORE_BACKEND_PATH_PREFIX');
+        if (prefix && !prefix.startsWith("/")){
+            prefix = '/${prefix}'
+        }
     }
     const $app = express({ substore: $, port, host });
+    if (prefix && prefix.length >= 2){
+        $app.use((req, res, next) => {
+            if (req.path.startsWith(prefix)) {
+                const newPath = req.url.replace(prefix, '') || '/';
+                req.url = newPath;
+                next();
+            } else {
+                res.status(403).send();
+            }
+        });
+    }
+    
     // register routes
     registerCollectionRoutes($app);
     registerSubscriptionRoutes($app);
@@ -216,7 +235,7 @@ export default function serve() {
                 app.use(
                     be_share_rewrite,
                     createProxyMiddleware({
-                        target: `http://127.0.0.1:${port}`,
+                        target: `http://127.0.0.1:${port}${prefix}`,
                         changeOrigin: true,
                         pathRewrite: async (path, req) => {
                             if (req.method.toLowerCase() !== 'get')
@@ -237,7 +256,7 @@ export default function serve() {
                 app.use(
                     be_api_rewrite,
                     createProxyMiddleware({
-                        target: `http://127.0.0.1:${port}${be_api}`,
+                        target: `http://127.0.0.1:${port}${prefix}${be_api}`,
                         pathRewrite: async (path) => {
                             return path.includes('?')
                                 ? `${path}&share=true`
@@ -248,7 +267,7 @@ export default function serve() {
                 app.use(
                     be_download_rewrite,
                     createProxyMiddleware({
-                        target: `http://127.0.0.1:${port}${be_download}`,
+                        target: `http://127.0.0.1:${port}${prefix}${be_download}`,
                         changeOrigin: true,
                     }),
                 );
@@ -269,10 +288,10 @@ export default function serve() {
                 $.info(`[FRONTEND] ${fe_address}:${fe_port}`);
                 if (fe_be_path) {
                     $.info(
-                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_api_rewrite} -> http://127.0.0.1:${port}${be_api}`,
+                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_api_rewrite} -> http://127.0.0.1:${port}${prefix}${be_api}`,
                     );
                     $.info(
-                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_download_rewrite} -> http://127.0.0.1:${port}${be_download}`,
+                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_download_rewrite} -> http://127.0.0.1:${port}${prefix}${be_download}`,
                     );
                     $.info(
                         `[SHARE BACKEND] ${fe_address}:${fe_port}${be_share_rewrite}`,
