@@ -33,11 +33,14 @@ export default function serve() {
         const be_prefix = eval('process.env.SUB_STORE_BACKEND_PREFIX');
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
         if (be_prefix) {
-            if(!fe_be_path.startsWith('/')){
+            if (!fe_be_path.startsWith('/')) {
                 throw new Error(
                     'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
                 );
             }
+            $.info(
+                `[BACKEND PREFIX] ${host}:${port}${fe_be_path} -> ${host}:${port}`,
+            );
             $app.use((req, res, next) => {
                 if (req.path.startsWith(fe_be_path)) {
                     const newPath = req.url.replace(fe_be_path, '') || '/';
@@ -220,7 +223,9 @@ export default function serve() {
             let be_download_rewrite = '';
             let be_api_rewrite = '';
             let be_share_rewrite = `${be_share}:type/:name`;
-            let prefix = eval('process.env.SUB_STORE_BACKEND_PREFIX') ? fe_be_path : '';
+            let prefix = eval('process.env.SUB_STORE_BACKEND_PREFIX')
+                ? fe_be_path
+                : '';
             if (fe_be_path) {
                 if (!fe_be_path.startsWith('/')) {
                     throw new Error(
@@ -290,10 +295,10 @@ export default function serve() {
                 $.info(`[FRONTEND] ${fe_address}:${fe_port}`);
                 if (fe_be_path) {
                     $.info(
-                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_api_rewrite} -> http://127.0.0.1:${port}${prefix}${be_api}`,
+                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_api_rewrite} -> ${host}:${port}${prefix}${be_api}`,
                     );
                     $.info(
-                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_download_rewrite} -> http://127.0.0.1:${port}${prefix}${be_download}`,
+                        `[FRONTEND -> BACKEND] ${fe_address}:${fe_port}${be_download_rewrite} -> ${host}:${port}${prefix}${be_download}`,
                     );
                     $.info(
                         `[SHARE BACKEND] ${fe_address}:${fe_port}${be_share_rewrite}`,
