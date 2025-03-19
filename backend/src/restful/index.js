@@ -30,10 +30,12 @@ export default function serve() {
     }
     const $app = express({ substore: $, port, host });
     if ($.env.isNode) {
+        const be_merge = eval('process.env.SUB_STORE_BACKEND_MERGE');
         const be_prefix = eval('process.env.SUB_STORE_BACKEND_PREFIX');
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
-        if (be_prefix) {
-            if (!fe_be_path.startsWith('/')) {
+        const fe_path = eval('process.env.SUB_STORE_FRONTEND_PATH');
+        if (be_prefix || be_merge) {
+            if(!fe_be_path.startsWith('/')){
                 throw new Error(
                     'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
                 );
@@ -43,12 +45,50 @@ export default function serve() {
             );
             $app.use((req, res, next) => {
                 if (req.path.startsWith(fe_be_path)) {
-                    const newPath = req.url.replace(fe_be_path, '') || '/';
-                    req.url = newPath;
+                    req.url = req.url.replace(fe_be_path, '') || '/';
+                    if(be_merge && req.url.startsWith('/api/')){
+                        req.query['share'] = 'true';
+                    }
                     next();
-                } else {
-                    res.status(403).send();
+                    return;
                 }
+                const pathname = req._parsedUrl.pathname || '/';
+                if(be_merge && req.path.startsWith('/share/') && req.query.token){
+                    if (req.method.toLowerCase() !== 'get'){
+                        res.status(405).send('Method not allowed');
+                        return;
+                    }
+                    const tokens = $.read(TOKENS_KEY) || [];
+                    const token = tokens.find(
+                        (t) =>
+                            t.token === req.query.token &&
+                            `/share/${t.type}/${t.name}` === pathname &&
+                            (t.exp == null || t.exp > Date.now()),
+                    );
+                    if (token){
+                        next();
+                        return;
+                    }
+                }
+                if (be_merge && fe_path && req.path.indexOf('/',1) == -1) {
+                    if (req.path.indexOf('.') == -1){
+                        req.url = "/index.html"
+                    }
+                    const express_ = eval(`require("express")`);
+                    const mime_ = eval(`require("mime-types")`);
+                    const staticFileMiddleware = express_.static(fe_path, {
+                        setHeaders: (res, path) => {
+                            const type = mime_.contentType(path);
+                            if (type) {
+                                res.set('Content-Type', type);
+                            }
+                        }
+                    });
+                    staticFileMiddleware(req, res, next);
+                    return;
+                }
+                res.status(403).end('Forbbiden');
+                return;
             });
         }
     }
@@ -198,7 +238,8 @@ export default function serve() {
         const fe_abs_path = path.resolve(
             fe_path || path.join(__dirname, 'frontend'),
         );
-        if (fe_path) {
+        const be_merge = eval('process.env.SUB_STORE_BACKEND_MERGE');
+        if (fe_path && !be_merge) {
             try {
                 fs.accessSync(path.join(fe_abs_path, 'index.html'));
             } catch (e) {
