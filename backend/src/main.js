@@ -19,10 +19,6 @@ console.log(
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
 `,
 );
-if ($.env.isNode) {
-    const dotenv = eval(`require("dotenv")`);
-    dotenv.config();
-}
 import migrate from '@/utils/migration';
 import serve from '@/restful';
 

@@ -18,6 +18,10 @@ export class OpenAPI {
         this.http = HTTP();
         this.env = ENV();
 
+        if (isNode) {
+            const dotenv = eval(`require("dotenv")`);
+            dotenv.config();
+        }
         this.node = (() => {
             if (isNode) {
                 const fs = eval("require('fs')");
