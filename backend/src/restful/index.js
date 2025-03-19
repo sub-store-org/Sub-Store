@@ -76,9 +76,10 @@ export default function serve() {
                     }
                     const express_ = eval(`require("express")`);
                     const mime_ = eval(`require("mime-types")`);
+                    const path_ = eval(`require("path")`);
                     const staticFileMiddleware = express_.static(fe_path, {
                         setHeaders: (res, path) => {
-                            const type = mime_.contentType(path);
+                            const type = mime_.contentType(path_.extname(path));
                             if (type) {
                                 res.set('Content-Type', type);
                             }
