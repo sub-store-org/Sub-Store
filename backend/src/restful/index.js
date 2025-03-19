@@ -40,9 +40,11 @@ export default function serve() {
                     'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
                 );
             }
-            $.info(
-                `[BACKEND PREFIX] ${host}:${port}${fe_be_path} -> ${host}:${port}`,
-            );
+            if (be_merge) {
+                $.info(`[BACKEND] MERGE mode is [ON].`);
+                $.info(`[BACKEND && FRONTEND] ${host}:${port}`);
+            }
+            $.info(`[BACKEND PREFIX] ${host}:${port}${fe_be_path}`);
             $app.use((req, res, next) => {
                 if (req.path.startsWith(fe_be_path)) {
                     req.url = req.url.replace(fe_be_path, '') || '/';
