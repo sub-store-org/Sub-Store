@@ -1,5 +1,5 @@
 import { deleteByName, findByName, updateByName } from '@/utils/database';
-import { COLLECTIONS_KEY, ARTIFACTS_KEY } from '@/constants';
+import { COLLECTIONS_KEY, ARTIFACTS_KEY, FILES_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
 import { RequestInvalidError, ResourceNotFoundError } from '@/restful/errors';
@@ -106,7 +106,18 @@ function updateCollection(req, res) {
                     artifact.source = newCol.name;
                 }
             }
+            // update all files referring this collection
+            const allFiles = $.read(FILES_KEY) || [];
+            for (const file of allFiles) {
+                if (
+                    file.sourceType === 'collection' &&
+                    file.sourceName === oldCol.name
+                ) {
+                    file.sourceName = newCol.name;
+                }
+            }
             $.write(allArtifacts, ARTIFACTS_KEY);
+            $.write(allFiles, FILES_KEY);
         }
 
         updateByName(allCols, name, newCol);
