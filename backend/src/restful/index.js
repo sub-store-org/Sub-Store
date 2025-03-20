@@ -54,7 +54,7 @@ export default function serve() {
                     next();
                     return;
                 }
-                const pathname = req._parsedUrl.pathname || '/';
+                const pathname = decodeURIComponent(req._parsedUrl.pathname) || '/';
                 if(be_merge && req.path.startsWith('/share/') && req.query.token){
                     if (req.method.toLowerCase() !== 'get'){
                         res.status(405).send('Method not allowed');
