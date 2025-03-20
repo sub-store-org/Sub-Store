@@ -5,7 +5,12 @@ import {
     RequestInvalidError,
 } from './errors';
 import { deleteByName, findByName, updateByName } from '@/utils/database';
-import { SUBS_KEY, COLLECTIONS_KEY, ARTIFACTS_KEY } from '@/constants';
+import {
+    SUBS_KEY,
+    COLLECTIONS_KEY,
+    ARTIFACTS_KEY,
+    FILES_KEY,
+} from '@/constants';
 import {
     getFlowHeaders,
     parseFlowHeaders,
@@ -320,9 +325,20 @@ function updateSubscription(req, res) {
                     artifact.source = sub.name;
                 }
             }
+            // update all files referring this subscription
+            const allFiles = $.read(FILES_KEY) || [];
+            for (const file of allFiles) {
+                if (
+                    file.sourceType === 'subscription' &&
+                    file.sourceName == name
+                ) {
+                    file.sourceName = sub.name;
+                }
+            }
 
             $.write(allCols, COLLECTIONS_KEY);
             $.write(allArtifacts, ARTIFACTS_KEY);
+            $.write(allFiles, FILES_KEY);
         }
         updateByName(allSubs, name, newSub);
         $.write(allSubs, SUBS_KEY);
