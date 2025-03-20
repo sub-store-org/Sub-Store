@@ -4,6 +4,8 @@ import {
     SCHEMA_VERSION_KEY,
     ARTIFACTS_KEY,
     RULES_KEY,
+    FILES_KEY,
+    TOKENS_KEY,
 } from '@/constants';
 import $ from '@/core/app';
 
@@ -55,7 +57,17 @@ function doMigrationV2() {
     const newRules = Object.values(rules);
     $.write(newRules, RULES_KEY);
 
-    // 5. delete builtin rules
+    // 5. migrate files
+    const files = $.read(FILES_KEY) || {};
+    const newFiles = Object.values(files);
+    $.write(newFiles, FILES_KEY);
+
+    // 6. migrate tokens
+    const tokens = $.read(TOKENS_KEY) || {};
+    const newTokens = Object.values(tokens);
+    $.write(newTokens, TOKENS_KEY);
+
+    // 7. delete builtin rules
     delete $.cache.builtin;
     $.info('Migration complete!');
 
