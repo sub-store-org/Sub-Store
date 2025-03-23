@@ -613,7 +613,7 @@ function lastParse(proxy) {
         proxy['tls-fingerprint'] = rs.generateFingerprint(caStr);
     }
     if (
-        ['shadowsocks'].includes(proxy.type) &&
+        ['ss'].includes(proxy.type) &&
         isPresent(proxy, 'shadow-tls-password')
     ) {
         proxy.plugin = 'shadow-tls';
