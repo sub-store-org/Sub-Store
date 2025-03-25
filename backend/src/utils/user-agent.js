@@ -47,7 +47,7 @@ export function getPlatformFromUserAgent({ ua, UA, accept }) {
         return 'Clash';
     } else if (ua.indexOf('v2ray') !== -1) {
         return 'V2Ray';
-    } else if (ua.indexOf('sing-box') !== -1) {
+    } else if (ua.indexOf('sing-box') !== -1 || ua.indexOf('singbox') !== -1) {
         return 'sing-box';
     } else if (accept.indexOf('application/json') === 0) {
         return 'JSON';
