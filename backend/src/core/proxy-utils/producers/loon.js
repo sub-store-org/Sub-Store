@@ -23,7 +23,7 @@ export default function Loon_Producer() {
             case 'vmess':
                 return vmess(proxy);
             case 'vless':
-                return vless(proxy);
+                return vless(proxy, opts['include-unsupported-proxy']);
             case 'http':
                 return http(proxy);
             case 'socks5':
@@ -347,9 +347,25 @@ function vmess(proxy) {
     return result.toString();
 }
 
-function vless(proxy) {
-    if (typeof proxy.flow !== 'undefined' || proxy['reality-opts']) {
+function vless(proxy, includeUnsupportedProxy) {
+    if (
+        !includeUnsupportedProxy &&
+        (typeof proxy.flow !== 'undefined' || proxy['reality-opts'])
+    ) {
         throw new Error(`VLESS XTLS/REALITY is not supported`);
+    }
+    let isReality = false;
+    if (includeUnsupportedProxy) {
+        if (
+            proxy['reality-opts'] &&
+            ['xtls-rprx-vision'].includes(proxy.flow)
+        ) {
+            isReality = true;
+        } else if (proxy['reality-opts'] || proxy.flow) {
+            throw new Error(
+                `VLESS XTLS/REALITY with flow(${proxy.flow}) is not supported`,
+            );
+        }
     }
     const result = new Result(proxy);
     result.append(
@@ -399,7 +415,20 @@ function vless(proxy) {
     );
 
     // sni
-    result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+    if (isReality) {
+        result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,public-key="${proxy['reality-opts']['public-key']}"`,
+            'reality-opts.public-key',
+        );
+        result.appendIfPresent(
+            `,short-id=${proxy['reality-opts']['short-id']}`,
+            'reality-opts.short-id',
+        );
+    } else {
+        result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+    }
+
     result.appendIfPresent(
         `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
         'tls-fingerprint',
