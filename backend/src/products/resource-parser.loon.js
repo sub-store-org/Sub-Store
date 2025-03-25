@@ -28,24 +28,28 @@ let resourceUrl = typeof $resourceUrl !== 'undefined' ? $resourceUrl : '';
     } else {
         arg = {};
     }
+    console.log(`arg: ${JSON.stringify(arg)}`);
 
     const RESOURCE_TYPE = {
         PROXY: 1,
         RULE: 2,
     };
-
-    result = resource;
+    if (!arg.resourceUrlOnly) {
+        result = resource;
+    }
 
     if (resourceType === RESOURCE_TYPE.PROXY) {
-        try {
-            let proxies = ProxyUtils.parse(resource);
-            result = ProxyUtils.produce(proxies, 'Loon', undefined, {
-                'include-unsupported-proxy':
-                    arg?.includeUnsupportedProxy || build >= 838,
-            });
-        } catch (e) {
-            console.log('解析器: 使用 resource 出现错误');
-            console.log(e.message ?? e);
+        if (!arg.resourceUrlOnly) {
+            try {
+                let proxies = ProxyUtils.parse(resource);
+                result = ProxyUtils.produce(proxies, 'Loon', undefined, {
+                    'include-unsupported-proxy':
+                        arg?.includeUnsupportedProxy || build >= 838,
+                });
+            } catch (e) {
+                console.log('解析器: 使用 resource 出现错误');
+                console.log(e.message ?? e);
+            }
         }
         if ((!result || /^\s*$/.test(result)) && resourceUrl) {
             console.log(`解析器: 尝试从 ${resourceUrl} 获取订阅`);
@@ -62,18 +66,21 @@ let resourceUrl = typeof $resourceUrl !== 'undefined' ? $resourceUrl : '';
                 );
                 let proxies = ProxyUtils.parse(raw);
                 result = ProxyUtils.produce(proxies, 'Loon', undefined, {
-                    'include-unsupported-proxy': arg?.includeUnsupportedProxy,
+                    'include-unsupported-proxy':
+                        arg?.includeUnsupportedProxy || build >= 838,
                 });
             } catch (e) {
                 console.log(e.message ?? e);
             }
         }
     } else if (resourceType === RESOURCE_TYPE.RULE) {
-        try {
-            const rules = RuleUtils.parse(resource);
-            result = RuleUtils.produce(rules, 'Loon');
-        } catch (e) {
-            console.log(e.message ?? e);
+        if (!arg.resourceUrlOnly) {
+            try {
+                const rules = RuleUtils.parse(resource);
+                result = RuleUtils.produce(rules, 'Loon');
+            } catch (e) {
+                console.log(e.message ?? e);
+            }
         }
         if ((!result || /^\s*$/.test(result)) && resourceUrl) {
             console.log(`解析器: 尝试从 ${resourceUrl} 获取规则`);
