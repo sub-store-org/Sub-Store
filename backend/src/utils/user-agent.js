@@ -66,10 +66,12 @@ export function shouldIncludeUnsupportedProxy(platform, ua) {
             UA: ua,
             ua: ua.toLowerCase(),
         });
-        if (!['Stash', 'Egern'].includes(target)) {
+        if (!['Stash', 'Egern', 'Loon'].includes(target)) {
             return false;
         }
-        const version = coerce(ua).version;
+        const coerceVersion = coerce(ua);
+        $.log(JSON.stringify(coerceVersion, null, 2));
+        const { version } = coerceVersion;
         if (
             platform === 'Stash' &&
             target === 'Stash' &&
@@ -81,6 +83,14 @@ export function shouldIncludeUnsupportedProxy(platform, ua) {
             platform === 'Egern' &&
             target === 'Egern' &&
             gte(version, '1.29.0')
+        ) {
+            return true;
+        }
+        // Loon 的 UA 不规范, version 取出来是 build
+        if (
+            platform === 'Loon' &&
+            target === 'Loon' &&
+            gte(version, '838.0.0')
         ) {
             return true;
         }
