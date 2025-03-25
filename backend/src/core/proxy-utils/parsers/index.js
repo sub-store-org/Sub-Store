@@ -634,6 +634,9 @@ function URI_VLESS() {
         }
         if (!proxy.network && isShadowrocket && params.obfs) {
             proxy.network = params.obfs;
+            if (['none'].includes(proxy.network)) {
+                proxy.network = 'tcp';
+            }
         }
         if (['websocket'].includes(proxy.network)) {
             proxy.network = 'ws';
