@@ -361,10 +361,12 @@ function vless(proxy, includeUnsupportedProxy) {
             ['xtls-rprx-vision'].includes(proxy.flow)
         ) {
             isReality = true;
-        } else if (proxy['reality-opts'] || proxy.flow) {
+        } else if (proxy['reality-opts']) {
             throw new Error(
-                `VLESS XTLS/REALITY with flow(${proxy.flow}) is not supported`,
+                `VLESS REALITY with flow(${proxy.flow}) is not supported`,
             );
+        } else if (proxy.flow) {
+            throw new Error(`VLESS XTLS is not supported`);
         }
     }
     const result = new Result(proxy);
@@ -416,6 +418,7 @@ function vless(proxy, includeUnsupportedProxy) {
 
     // sni
     if (isReality) {
+        result.appendIfPresent(`,flow=${proxy.flow}`, 'flow');
         result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
         result.appendIfPresent(
             `,public-key="${proxy['reality-opts']['public-key']}"`,
