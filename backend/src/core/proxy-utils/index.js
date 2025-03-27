@@ -114,12 +114,7 @@ async function processFn(
         if (item.type.indexOf('Script') !== -1) {
             const { mode, content } = item.args;
             if (mode === 'link') {
-                let noCache;
                 let url = content || '';
-                if (url.endsWith('#noCache')) {
-                    url = url.replace(/#noCache$/, '');
-                    noCache = true;
-                }
                 // extract link arguments
                 const rawArgs = url.split('#');
                 if (rawArgs.length > 1) {
@@ -138,7 +133,14 @@ async function processFn(
                         }
                     }
                 }
-                url = `${url.split('#')[0]}${noCache ? '#noCache' : ''}`;
+                url = `${url.split('#')[0]}${
+                    rawArgs[2]
+                        ? `#${rawArgs[2]}`
+                        : $arguments?.noCache != null ||
+                          $arguments?.insecure != null
+                        ? `#${rawArgs[1]}`
+                        : ''
+                }`;
                 const downloadUrlMatch = url.match(
                     /^\/api\/(file|module)\/(.+)/,
                 );
