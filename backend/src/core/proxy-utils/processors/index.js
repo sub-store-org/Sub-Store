@@ -284,7 +284,15 @@ function SortOperator(order = 'asc') {
 }
 
 // sort by regex
-function RegexSortOperator(expressions) {
+function RegexSortOperator(input) {
+    const order = input.order || 'asc';
+    let expressions = input.expressions;
+    if (Array.isArray(input)) {
+        expressions = input;
+    }
+    if (!Array.isArray(expressions)) {
+        expressions = [];
+    }
     return {
         name: 'Regex Sort Operator',
         func: (proxies) => {
@@ -295,8 +303,13 @@ function RegexSortOperator(expressions) {
                 if (oA && !oB) return -1;
                 if (oB && !oA) return 1;
                 if (oA && oB) return oA < oB ? -1 : 1;
-                if ((!oA && !oB) || (oA && oB && oA === oB))
-                    return a.name < b.name ? -1 : 1; // fallback to normal sort
+                if (order === 'original') {
+                    return 0;
+                } else if (order === 'desc') {
+                    return a.name < b.name ? 1 : -1;
+                } else {
+                    return a.name < b.name ? -1 : 1;
+                }
             });
         },
     };
