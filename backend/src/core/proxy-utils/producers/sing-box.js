@@ -575,7 +575,7 @@ const hysteriaParser = (proxy = {}) => {
     smuxParser(proxy.smux, parsedProxy);
     return parsedProxy;
 };
-const hysteria2Parser = (proxy = {}, includeUnsupportedProxy) => {
+const hysteria2Parser = (proxy = {}) => {
     const parsedProxy = {
         tag: proxy.name,
         type: 'hysteria2',

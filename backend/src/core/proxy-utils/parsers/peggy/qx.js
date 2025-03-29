@@ -145,9 +145,9 @@ port = digits:[0-9]+ {
     }
 }
 
-username = comma "username" equals username:[^=,]+ { proxy.username = username.join("").trim(); }
-password = comma "password" equals password:[^=,]+ { proxy.password = password.join("").trim(); }
-uuid = comma "password" equals uuid:[^=,]+ { proxy.uuid = uuid.join("").trim(); }
+username = comma "username" equals username:[^,]+ { proxy.username = username.join("").trim(); }
+password = comma "password" equals password:[^,]+ { proxy.password = password.join("").trim(); }
+uuid = comma "password" equals uuid:[^,]+ { proxy.uuid = uuid.join("").trim(); }
 
 method = comma "method" equals cipher:cipher { 
     proxy.cipher = cipher;
