@@ -21,7 +21,7 @@ export default function Loon_Producer() {
             case 'trojan':
                 return trojan(proxy);
             case 'vmess':
-                return vmess(proxy);
+                return vmess(proxy, opts['include-unsupported-proxy']);
             case 'vless':
                 return vless(proxy, opts['include-unsupported-proxy']);
             case 'http':
@@ -269,7 +269,17 @@ function trojan(proxy) {
     return result.toString();
 }
 
-function vmess(proxy) {
+function vmess(proxy, includeUnsupportedProxy) {
+    if (!includeUnsupportedProxy && proxy['reality-opts']) {
+        throw new Error(`VMess REALITY is not supported`);
+    }
+
+    let isReality = false;
+    if (includeUnsupportedProxy) {
+        if (proxy['reality-opts']) {
+            isReality = true;
+        }
+    }
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.uuid}"`,
@@ -317,16 +327,28 @@ function vmess(proxy) {
         'skip-cert-verify',
     );
 
-    // sni
-    result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
-    result.appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-    result.appendIfPresent(
-        `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
-        'tls-pubkey-sha256',
-    );
+    if (isReality) {
+        result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,public-key="${proxy['reality-opts']['public-key']}"`,
+            'reality-opts.public-key',
+        );
+        result.appendIfPresent(
+            `,short-id=${proxy['reality-opts']['short-id']}`,
+            'reality-opts.short-id',
+        );
+    } else {
+        // sni
+        result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
+        result.appendIfPresent(
+            `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
+            'tls-pubkey-sha256',
+        );
+    }
 
     // AEAD
     if (isPresent(proxy, 'aead')) {
@@ -354,19 +376,19 @@ function vless(proxy, includeUnsupportedProxy) {
     ) {
         throw new Error(`VLESS XTLS/REALITY is not supported`);
     }
+    let isXtls = false;
     let isReality = false;
     if (includeUnsupportedProxy) {
-        if (
-            proxy['reality-opts'] &&
-            ['xtls-rprx-vision'].includes(proxy.flow)
-        ) {
+        if (proxy['reality-opts']) {
             isReality = true;
-        } else if (proxy['reality-opts']) {
-            throw new Error(
-                `VLESS REALITY with flow(${proxy.flow}) is not supported`,
-            );
-        } else if (proxy.flow) {
-            throw new Error(`VLESS XTLS is not supported`);
+        }
+
+        if (typeof proxy.flow !== 'undefined') {
+            if (['xtls-rprx-vision'].includes(proxy.flow)) {
+                isXtls = true;
+            } else {
+                throw new Error(`VLESS flow(${proxy.flow}) is not supported`);
+            }
         }
     }
     const result = new Result(proxy);
@@ -416,9 +438,10 @@ function vless(proxy, includeUnsupportedProxy) {
         'skip-cert-verify',
     );
 
-    // sni
-    if (isReality) {
+    if (isXtls) {
         result.appendIfPresent(`,flow=${proxy.flow}`, 'flow');
+    }
+    if (isReality) {
         result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
         result.appendIfPresent(
             `,public-key="${proxy['reality-opts']['public-key']}"`,
@@ -429,17 +452,17 @@ function vless(proxy, includeUnsupportedProxy) {
             'reality-opts.short-id',
         );
     } else {
+        // sni
         result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
+        result.appendIfPresent(
+            `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
+            'tls-pubkey-sha256',
+        );
     }
-
-    result.appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-    result.appendIfPresent(
-        `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
-        'tls-pubkey-sha256',
-    );
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');

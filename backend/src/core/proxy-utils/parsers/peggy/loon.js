@@ -54,7 +54,7 @@ shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs
         $set(proxy, "plugin-opts.path", obfs.path);
     }
 }
-vmess = tag equals "vmess"i address method uuid (transport/transport_host/transport_path/over_tls/tls_host/tls_verification/tls_cert_sha256/tls_pubkey_sha256/vmess_alterId/fast_open/udp_relay/ip_mode/others)* {
+vmess = tag equals "vmess"i address method uuid (transport/transport_host/transport_path/over_tls/tls_host/tls_verification/tls_cert_sha256/tls_pubkey_sha256/vmess_alterId/fast_open/udp_relay/ip_mode/public_key/short_id/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "none";
     proxy.alterId = proxy.alterId || 0;

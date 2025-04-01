@@ -90,7 +90,7 @@ export function shouldIncludeUnsupportedProxy(platform, ua) {
         if (
             platform === 'Loon' &&
             target === 'Loon' &&
-            gte(version, '838.0.0')
+            gte(version, '842.0.0')
         ) {
             return true;
         }
