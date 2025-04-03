@@ -75,7 +75,7 @@ export function shouldIncludeUnsupportedProxy(platform, ua) {
         if (
             platform === 'Stash' &&
             target === 'Stash' &&
-            gte(version, '2.8.0')
+            gte(version, '3.1.0')
         ) {
             return true;
         }
