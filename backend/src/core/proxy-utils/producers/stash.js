@@ -39,12 +39,8 @@ export default function Stash_Producer() {
                             'xchacha20',
                             'chacha20-ietf-poly1305',
                             'xchacha20-ietf-poly1305',
-                            ...(opts['include-unsupported-proxy']
-                                ? [
-                                      '2022-blake3-aes-128-gcm',
-                                      '2022-blake3-aes-256-gcm',
-                                  ]
-                                : []),
+                            '2022-blake3-aes-128-gcm',
+                            '2022-blake3-aes-256-gcm',
                         ].includes(proxy.cipher)) ||
                     (proxy.type === 'snell' && String(proxy.version) === '4') ||
                     (opts['include-unsupported-proxy']
