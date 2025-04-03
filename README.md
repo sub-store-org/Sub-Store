@@ -128,3 +128,9 @@ This project is under the GPL V3 LICENSE.
 
 - Special thanks to @KOP-XIAO for his awesome resource-parser. Please give a [star](https://github.com/KOP-XIAO/QuantumultX) for his great work!
 - Special thanks to @Orz-3 and @58xinian for their awesome icons.
+
+## Sponsors
+
+[![image](./support.nodeseek.com_page_promotion_id=8.png)](https://yxvm.com)
+
+[NodeSupport](https://github.com/NodeSeekDev/NodeSupport) sponsored this project.
