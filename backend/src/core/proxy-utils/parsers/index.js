@@ -492,6 +492,11 @@ function URI_VMess() {
                 } catch (e) {}
                 let transportPath = params.path;
 
+                // 补上默认 path
+                if (['ws'].includes(proxy.network)) {
+                    transportPath = transportPath || '/';
+                }
+
                 if (proxy.network === 'http') {
                     if (transportHost) {
                         // 1)http(tcp)->host中间逗号(,)隔开
