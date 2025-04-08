@@ -40,6 +40,16 @@ function operator(proxies = [], targetPlatform, context) {
   // 先这样处理 encodeURIComponent('arg1=a&arg2=b')
   // /api/file/foo?$options=arg1%3Da%26arg2%3Db
 
+  // 默认会带上 _req 字段, 结构为
+  // {
+  //     method,
+  //     url,
+  //     path,
+  //     query,
+  //     params,
+  //     headers,
+  //     body,
+  // }
   // console.log($options)
 
   // targetPlatform 为输出的目标平台
