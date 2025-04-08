@@ -111,7 +111,17 @@ async function downloadSubscription(req, res) {
         proxy,
         noCache,
     } = req.query;
-    let $options = {};
+    let $options = {
+        _req: {
+            method: req.method,
+            url: req.url,
+            path: req.path,
+            query: req.query,
+            params: req.params,
+            headers: req.headers,
+            body: req.body,
+        },
+    };
     if (req.query.$options) {
         try {
             // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
@@ -376,7 +386,17 @@ async function downloadCollection(req, res) {
         noCache,
     } = req.query;
 
-    let $options = {};
+    let $options = {
+        _req: {
+            method: req.method,
+            url: req.url,
+            path: req.path,
+            query: req.query,
+            params: req.params,
+            headers: req.headers,
+            body: req.body,
+        },
+    };
     if (req.query.$options) {
         try {
             // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
