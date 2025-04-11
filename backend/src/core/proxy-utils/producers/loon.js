@@ -133,6 +133,13 @@ function shadowsocks(proxy) {
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
+
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
@@ -360,6 +367,13 @@ function vmess(proxy, includeUnsupportedProxy) {
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
+
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
@@ -467,6 +481,13 @@ function vless(proxy, includeUnsupportedProxy) {
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
+
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
@@ -494,6 +515,14 @@ function http(proxy) {
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
+
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
@@ -519,6 +548,13 @@ function socks5(proxy) {
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
 
     // udp
     if (proxy.udp) {
@@ -594,6 +630,13 @@ function wireguard(proxy) {
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
+
     return result.toString();
 }
 
@@ -627,6 +670,13 @@ function hysteria2(proxy) {
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
+
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
 
     // udp
     if (proxy.udp) {
