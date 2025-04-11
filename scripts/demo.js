@@ -89,6 +89,12 @@ function operator(proxies = [], targetPlatform, context) {
 
   // 其他平台同理, 持久化缓存数据在 JSON 里
 
+  // 当配合脚本使用时, 可以在脚本的前面添加一个脚本操作, 实现保留 1 小时的缓存. 这样比较灵活
+
+  // async function operator() {
+  //     scriptResourceCache._cleanup(undefined, 1 * 3600 * 1000);
+  // }
+
   // ProxyUtils 为节点处理工具
   // 可参考 https://t.me/zhetengsha/1066
   // const ProxyUtils = {
