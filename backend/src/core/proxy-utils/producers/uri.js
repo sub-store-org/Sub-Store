@@ -535,6 +535,12 @@ export default function URI_Producer() {
                                 proxy[key]
                             ) {
                                 tuicParams.push(`${i.replace(/-/g, '_')}=1`);
+                            } else if (
+                                ['congestion-controller'].includes(key)
+                            ) {
+                                tuicParams.push(
+                                    `congestion_control=${proxy[key]}`,
+                                );
                             } else if (proxy[key]) {
                                 tuicParams.push(
                                     `${i.replace(
