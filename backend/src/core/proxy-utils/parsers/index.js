@@ -962,6 +962,9 @@ function URI_TUIC() {
                 proxy.tfo = true;
             } else if (['disable-sni', 'reduce-rtt'].includes(key)) {
                 proxy[key] = /(TRUE)|1/i.test(value);
+            } else if (key === 'congestion-control') {
+                proxy['congestion-controller'] = value;
+                delete proxy[key];
             } else {
                 proxy[key] = value;
             }
