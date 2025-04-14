@@ -359,7 +359,16 @@ const ssParser = (proxy = {}) => {
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy.uot) parsedProxy.udp_over_tcp = true;
-    if (proxy['udp-over-tcp']) parsedProxy.udp_over_tcp = true;
+    if (proxy['udp-over-tcp']) {
+        parsedProxy.udp_over_tcp = {
+            enabled: true,
+            version:
+                !proxy['udp-over-tcp-version'] ||
+                proxy['udp-over-tcp-version'] === 1
+                    ? 1
+                    : 2,
+        };
+    }
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
