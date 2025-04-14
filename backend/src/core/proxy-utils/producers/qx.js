@@ -134,11 +134,15 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
     // udp over tcp
     if (proxy['_ssr_python_uot']) {
         append(`,udp-over-tcp=true`);
-    } else if (
-        proxy['udp-over-tcp'] &&
-        (!proxy['udp-over-tcp-version'] || proxy['udp-over-tcp-version'] === 1)
-    ) {
-        append(`,udp-over-tcp=sp.v1`);
+    } else if (proxy['udp-over-tcp']) {
+        if (
+            !proxy['udp-over-tcp-version'] ||
+            proxy['udp-over-tcp-version'] === 1
+        ) {
+            append(`,udp-over-tcp=sp.v1`);
+        } else if (proxy['udp-over-tcp-version'] === 2) {
+            append(`,udp-over-tcp=sp.v2`);
+        }
     }
 
     // server_check_url

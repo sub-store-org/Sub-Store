@@ -157,7 +157,7 @@ aead = comma "aead" equals flag:bool { proxy.aead = flag; }
 
 udp_relay = comma "udp-relay" equals flag:bool { proxy.udp = flag; }
 udp_over_tcp = comma "udp-over-tcp" equals flag:bool { throw new Error("UDP over TCP is not supported"); }
-udp_over_tcp_new = comma "udp-over-tcp" equals param:$[^=,]+ { if (param === "sp.v1") { proxy["udp-over-tcp"] = true; proxy["udp-over-tcp-version"] = 1; } else if (param === "true") { proxy["_ssr_python_uot"] = true; } else { throw new Error("Invalid value for udp-over-tcp"); } }
+udp_over_tcp_new = comma "udp-over-tcp" equals param:$[^=,]+ { if (param === "sp.v1") { proxy["udp-over-tcp"] = true; proxy["udp-over-tcp-version"] = 1; } else if (param === "sp.v2") { proxy["udp-over-tcp"] = true; proxy["udp-over-tcp-version"] = 2; } else if (param === "true") { proxy["_ssr_python_uot"] = true; } else { throw new Error("Invalid value for udp-over-tcp"); } }
 
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 
