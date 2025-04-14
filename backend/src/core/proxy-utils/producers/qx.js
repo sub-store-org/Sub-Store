@@ -131,6 +131,16 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
     // udp
     appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
+    // udp over tcp
+    if (proxy['_ssr_python_uot']) {
+        append(`,udp-over-tcp=true`);
+    } else if (
+        proxy['udp-over-tcp'] &&
+        (!proxy['udp-over-tcp-version'] || proxy['udp-over-tcp-version'] === 1)
+    ) {
+        append(`,udp-over-tcp=sp.v1`);
+    }
+
     // server_check_url
     result.appendIfPresent(
         `,server_check_url=${proxy['test-url']}`,
