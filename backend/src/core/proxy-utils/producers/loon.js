@@ -210,6 +210,13 @@ function shadowsocksr(proxy, includeUnsupportedProxy) {
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
 
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
+
     // udp
     if (proxy.udp) {
         result.append(`,udp=true`);
@@ -265,6 +272,13 @@ function trojan(proxy) {
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
+
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
 
     // udp
     if (proxy.udp) {
