@@ -151,7 +151,7 @@ function shadowsocks(proxy) {
     return result.toString();
 }
 
-function shadowsocksr(proxy, includeUnsupportedProxy) {
+function shadowsocksr(proxy) {
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=shadowsocksr,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.password}"`,
@@ -290,17 +290,9 @@ function trojan(proxy) {
     return result.toString();
 }
 
-function vmess(proxy, includeUnsupportedProxy) {
-    if (!includeUnsupportedProxy && proxy['reality-opts']) {
-        throw new Error(`VMess REALITY is not supported`);
-    }
+function vmess(proxy) {
+    const isReality = !!proxy['reality-opts'];
 
-    let isReality = false;
-    if (includeUnsupportedProxy) {
-        if (proxy['reality-opts']) {
-            isReality = true;
-        }
-    }
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.uuid}"`,
@@ -397,28 +389,18 @@ function vmess(proxy, includeUnsupportedProxy) {
     return result.toString();
 }
 
-function vless(proxy, includeUnsupportedProxy) {
-    if (
-        !includeUnsupportedProxy &&
-        (typeof proxy.flow !== 'undefined' || proxy['reality-opts'])
-    ) {
-        throw new Error(`VLESS XTLS/REALITY is not supported`);
-    }
+function vless(proxy) {
     let isXtls = false;
-    let isReality = false;
-    if (includeUnsupportedProxy) {
-        if (proxy['reality-opts']) {
-            isReality = true;
-        }
+    const isReality = !!proxy['reality-opts'];
 
-        if (typeof proxy.flow !== 'undefined') {
-            if (['xtls-rprx-vision'].includes(proxy.flow)) {
-                isXtls = true;
-            } else {
-                throw new Error(`VLESS flow(${proxy.flow}) is not supported`);
-            }
+    if (typeof proxy.flow !== 'undefined') {
+        if (['xtls-rprx-vision'].includes(proxy.flow)) {
+            isXtls = true;
+        } else {
+            throw new Error(`VLESS flow(${proxy.flow}) is not supported`);
         }
     }
+
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=vless,${proxy.server},${proxy.port},"${proxy.uuid}"`,
