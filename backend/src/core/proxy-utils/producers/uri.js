@@ -12,7 +12,7 @@ export default function URI_Producer() {
         delete proxy.resolved;
         delete proxy['no-resolve'];
         for (const key in proxy) {
-            if (proxy[key] == null || /^_/i.test(key)) {
+            if (proxy[key] == null) {
                 delete proxy[key];
             }
         }
