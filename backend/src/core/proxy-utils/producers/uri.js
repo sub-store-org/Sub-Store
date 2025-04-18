@@ -589,6 +589,10 @@ export default function URI_Producer() {
                             if (proxy[key]) {
                                 anytlsParams.push(`insecure=1`);
                             }
+                        } else if (['udp'].includes(key)) {
+                            if (proxy[key]) {
+                                anytlsParams.push(`udp=1`);
+                            }
                         } else if (proxy[key]) {
                             anytlsParams.push(
                                 `${i.replace(/-/g, '_')}=${encodeURIComponent(

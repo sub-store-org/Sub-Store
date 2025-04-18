@@ -744,6 +744,8 @@ function URI_AnyTLS() {
                 proxy[key] = value ? value.split(',') : undefined;
             } else if (['insecure'].includes(key)) {
                 proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
+            } else if (['udp'].includes(key)) {
+                proxy[key] = /(TRUE)|1/i.test(value);
             } else {
                 proxy[key] = value;
             }
