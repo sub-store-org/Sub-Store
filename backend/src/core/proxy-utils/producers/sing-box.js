@@ -31,6 +31,21 @@ const smuxParser = (smux, proxy) => {
     if (smux['min-streams'])
         proxy.multiplex.min_streams = parseInt(`${smux['min-streams']}`, 10);
     if (smux.padding) proxy.multiplex.padding = true;
+    if (smux['brutal-opts']?.up || smux['brutal-opts']?.down) {
+        proxy.multiplex.brutal = {
+            enabled: true,
+        };
+        if (smux['brutal-opts']?.up)
+            proxy.multiplex.brutal.up_mbps = parseInt(
+                `${smux['brutal-opts']?.up}`,
+                10,
+            );
+        if (smux['brutal-opts']?.down)
+            proxy.multiplex.brutal.down_mbps = parseInt(
+                `${smux['brutal-opts']?.down}`,
+                10,
+            );
+    }
 };
 
 const wsParser = (proxy, parsedProxy) => {
