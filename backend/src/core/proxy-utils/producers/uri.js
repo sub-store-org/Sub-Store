@@ -478,7 +478,7 @@ export default function URI_Producer() {
                             hysteriaParams.push(`obfsParam=${proxy[key]}`);
                         } else if (['sni'].includes(key)) {
                             hysteriaParams.push(`peer=${proxy[key]}`);
-                        } else if (proxy[key]) {
+                        } else if (proxy[key] && !/^_/i.test(key)) {
                             hysteriaParams.push(
                                 `${i}=${encodeURIComponent(proxy[key])}`,
                             );
@@ -541,7 +541,7 @@ export default function URI_Producer() {
                                 tuicParams.push(
                                     `congestion_control=${proxy[key]}`,
                                 );
-                            } else if (proxy[key]) {
+                            } else if (proxy[key] && !/^_/i.test(key)) {
                                 tuicParams.push(
                                     `${i.replace(
                                         /-/g,
@@ -593,7 +593,7 @@ export default function URI_Producer() {
                             if (proxy[key]) {
                                 anytlsParams.push(`udp=1`);
                             }
-                        } else if (proxy[key]) {
+                        } else if (proxy[key] && !/^_/i.test(key)) {
                             anytlsParams.push(
                                 `${i.replace(/-/g, '_')}=${encodeURIComponent(
                                     proxy[key],
@@ -630,7 +630,7 @@ export default function URI_Producer() {
                             if (proxy[key]) {
                                 wireguardParams.push(`${key}=1`);
                             }
-                        } else if (proxy[key]) {
+                        } else if (proxy[key] && !/^_/i.test(key)) {
                             wireguardParams.push(
                                 `${key}=${encodeURIComponent(proxy[key])}`,
                             );
