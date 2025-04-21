@@ -47,15 +47,22 @@ async function previewFile(req, res) {
                         }),
                 );
 
-                if (
-                    !file.ignoreFailedRemoteFile &&
-                    Object.keys(errors).length > 0
-                ) {
-                    throw new Error(
-                        `文件 ${file.name} 的远程文件 ${Object.keys(
-                            errors,
-                        ).join(', ')} 发生错误, 请查看日志`,
-                    );
+                if (Object.keys(errors).length > 0) {
+                    if (!file.ignoreFailedRemoteFile) {
+                        throw new Error(
+                            `文件 ${file.name} 的远程文件 ${Object.keys(
+                                errors,
+                            ).join(', ')} 发生错误, 请查看日志`,
+                        );
+                    } else if (file.ignoreFailedRemoteFile === 'enabled') {
+                        $.notify(
+                            `🌍 Sub-Store 预览文件失败`,
+                            `❌ ${file.name}`,
+                            `远程文件 ${Object.keys(errors).join(
+                                ', ',
+                            )} 发生错误, 请查看日志`,
+                        );
+                    }
                 }
                 if (file.mergeSources === 'localFirst') {
                     content.unshift(file.content);
@@ -136,12 +143,22 @@ async function compareSub(req, res) {
                     }),
             );
 
-            if (!sub.ignoreFailedRemoteSub && Object.keys(errors).length > 0) {
-                throw new Error(
-                    `订阅 ${sub.name} 的远程订阅 ${Object.keys(errors).join(
-                        ', ',
-                    )} 发生错误, 请查看日志`,
-                );
+            if (Object.keys(errors).length > 0) {
+                if (!sub.ignoreFailedRemoteSub) {
+                    throw new Error(
+                        `订阅 ${sub.name} 的远程订阅 ${Object.keys(errors).join(
+                            ', ',
+                        )} 发生错误, 请查看日志`,
+                    );
+                } else if (sub.ignoreFailedRemoteSub === 'enabled') {
+                    $.notify(
+                        `🌍 Sub-Store 预览订阅失败`,
+                        `❌ ${sub.name}`,
+                        `远程订阅 ${Object.keys(errors).join(
+                            ', ',
+                        )} 发生错误, 请查看日志`,
+                    );
+                }
             }
             if (sub.mergeSources === 'localFirst') {
                 content.unshift(sub.content);
@@ -244,15 +261,25 @@ async function compareCollection(req, res) {
                                     }
                                 }),
                         );
-                        if (
-                            !sub.ignoreFailedRemoteSub &&
-                            Object.keys(errors).length > 0
-                        ) {
-                            throw new Error(
-                                `订阅 ${sub.name} 的远程订阅 ${Object.keys(
-                                    errors,
-                                ).join(', ')} 发生错误, 请查看日志`,
-                            );
+
+                        if (Object.keys(errors).length > 0) {
+                            if (!sub.ignoreFailedRemoteSub) {
+                                throw new Error(
+                                    `订阅 ${sub.name} 的远程订阅 ${Object.keys(
+                                        errors,
+                                    ).join(', ')} 发生错误, 请查看日志`,
+                                );
+                            } else if (
+                                sub.ignoreFailedRemoteSub === 'enabled'
+                            ) {
+                                $.notify(
+                                    `🌍 Sub-Store 预览订阅失败`,
+                                    `❌ ${sub.name}`,
+                                    `远程订阅 ${Object.keys(errors).join(
+                                        ', ',
+                                    )} 发生错误, 请查看日志`,
+                                );
+                            }
                         }
                         if (sub.mergeSources === 'localFirst') {
                             raw.unshift(sub.content);
@@ -284,20 +311,28 @@ async function compareCollection(req, res) {
                     errors[name] = err;
 
                     $.error(
-                        `❌ 处理组合订阅 ${collection.name} 中的子订阅: ${sub.name}时出现错误：${err}！`,
+                        `❌ 处理组合订阅 ${collection.name} 中的子订阅: ${sub.name} 时出现错误：${err}！`,
                     );
                 }
             }),
         );
-        if (
-            !collection.ignoreFailedRemoteSub &&
-            Object.keys(errors).length > 0
-        ) {
-            throw new Error(
-                `组合订阅 ${collection.name} 中的子订阅 ${Object.keys(
-                    errors,
-                ).join(', ')} 发生错误, 请查看日志`,
-            );
+
+        if (Object.keys(errors).length > 0) {
+            if (!collection.ignoreFailedRemoteSub) {
+                throw new Error(
+                    `组合订阅 ${collection.name} 的子订阅 ${Object.keys(
+                        errors,
+                    ).join(', ')} 发生错误, 请查看日志`,
+                );
+            } else if (collection.ignoreFailedRemoteSub === 'enabled') {
+                $.notify(
+                    `🌍 Sub-Store 预览组合订阅失败`,
+                    `❌ ${collection.name}`,
+                    `子订阅 ${Object.keys(errors).join(
+                        ', ',
+                    )} 发生错误, 请查看日志`,
+                );
+            }
         }
         // merge proxies with the original order
         const original = Array.prototype.concat.apply(

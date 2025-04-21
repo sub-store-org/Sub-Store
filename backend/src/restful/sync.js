@@ -89,12 +89,23 @@ async function produceArtifact({
             if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
                 subIgnoreFailedRemoteSub = ignoreFailedRemoteSub;
             }
-            if (!subIgnoreFailedRemoteSub && Object.keys(errors).length > 0) {
-                throw new Error(
-                    `订阅 ${sub.name} 的远程订阅 ${Object.keys(errors).join(
-                        ', ',
-                    )} 发生错误, 请查看日志`,
-                );
+
+            if (Object.keys(errors).length > 0) {
+                if (!subIgnoreFailedRemoteSub) {
+                    throw new Error(
+                        `订阅 ${sub.name} 的远程订阅 ${Object.keys(errors).join(
+                            ', ',
+                        )} 发生错误, 请查看日志`,
+                    );
+                } else if (subIgnoreFailedRemoteSub === 'enabled') {
+                    $.notify(
+                        `🌍 Sub-Store 处理订阅失败`,
+                        `❌ ${sub.name}`,
+                        `远程订阅 ${Object.keys(errors).join(
+                            ', ',
+                        )} 发生错误, 请查看日志`,
+                    );
+                }
             }
             if (mergeSources === 'localFirst') {
                 raw.unshift(content);
@@ -138,12 +149,23 @@ async function produceArtifact({
             if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
                 subIgnoreFailedRemoteSub = ignoreFailedRemoteSub;
             }
-            if (!subIgnoreFailedRemoteSub && Object.keys(errors).length > 0) {
-                throw new Error(
-                    `订阅 ${sub.name} 的远程订阅 ${Object.keys(errors).join(
-                        ', ',
-                    )} 发生错误, 请查看日志`,
-                );
+
+            if (Object.keys(errors).length > 0) {
+                if (!subIgnoreFailedRemoteSub) {
+                    throw new Error(
+                        `订阅 ${sub.name} 的远程订阅 ${Object.keys(errors).join(
+                            ', ',
+                        )} 发生错误, 请查看日志`,
+                    );
+                } else if (subIgnoreFailedRemoteSub === 'enabled') {
+                    $.notify(
+                        `🌍 Sub-Store 处理订阅失败`,
+                        `❌ ${sub.name}`,
+                        `远程订阅 ${Object.keys(errors).join(
+                            ', ',
+                        )} 发生错误, 请查看日志`,
+                    );
+                }
             }
             if (sub.mergeSources === 'localFirst') {
                 raw.unshift(sub.content);
@@ -264,15 +286,25 @@ async function produceArtifact({
                                     }
                                 }),
                         );
-                        if (
-                            !sub.ignoreFailedRemoteSub &&
-                            Object.keys(errors).length > 0
-                        ) {
-                            throw new Error(
-                                `订阅 ${sub.name} 的远程订阅 ${Object.keys(
-                                    errors,
-                                ).join(', ')} 发生错误, 请查看日志`,
-                            );
+
+                        if (Object.keys(errors).length > 0) {
+                            if (!sub.ignoreFailedRemoteSub) {
+                                throw new Error(
+                                    `订阅 ${sub.name} 的远程订阅 ${Object.keys(
+                                        errors,
+                                    ).join(', ')} 发生错误, 请查看日志`,
+                                );
+                            } else if (
+                                sub.ignoreFailedRemoteSub === 'enabled'
+                            ) {
+                                $.notify(
+                                    `🌍 Sub-Store 处理订阅失败`,
+                                    `❌ ${sub.name}`,
+                                    `远程订阅 ${Object.keys(errors).join(
+                                        ', ',
+                                    )} 发生错误, 请查看日志`,
+                                );
+                            }
                         }
                         if (sub.mergeSources === 'localFirst') {
                             raw.unshift(sub.content);
@@ -327,15 +359,23 @@ async function produceArtifact({
         if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
             collectionIgnoreFailedRemoteSub = ignoreFailedRemoteSub;
         }
-        if (
-            !collectionIgnoreFailedRemoteSub &&
-            Object.keys(errors).length > 0
-        ) {
-            throw new Error(
-                `组合订阅 ${name} 中的子订阅 ${Object.keys(errors).join(
-                    ', ',
-                )} 发生错误, 请查看日志`,
-            );
+
+        if (Object.keys(errors).length > 0) {
+            if (!collectionIgnoreFailedRemoteSub) {
+                throw new Error(
+                    `组合订阅 ${collection.name} 的子订阅 ${Object.keys(
+                        errors,
+                    ).join(', ')} 发生错误, 请查看日志`,
+                );
+            } else if (collectionIgnoreFailedRemoteSub === 'enabled') {
+                $.notify(
+                    `🌍 Sub-Store 处理组合订阅失败`,
+                    `❌ ${collection.name}`,
+                    `子订阅 ${Object.keys(errors).join(
+                        ', ',
+                    )} 发生错误, 请查看日志`,
+                );
+            }
         }
 
         // merge proxies with the original order
@@ -505,15 +545,23 @@ async function produceArtifact({
                 ) {
                     fileIgnoreFailedRemoteFile = ignoreFailedRemoteFile;
                 }
-                if (
-                    !fileIgnoreFailedRemoteFile &&
-                    Object.keys(errors).length > 0
-                ) {
-                    throw new Error(
-                        `文件 ${file.name} 的远程文件 ${Object.keys(
-                            errors,
-                        ).join(', ')} 发生错误, 请查看日志`,
-                    );
+
+                if (Object.keys(errors).length > 0) {
+                    if (!fileIgnoreFailedRemoteFile) {
+                        throw new Error(
+                            `文件 ${file.name} 的远程文件 ${Object.keys(
+                                errors,
+                            ).join(', ')} 发生错误, 请查看日志`,
+                        );
+                    } else if (fileIgnoreFailedRemoteFile === 'enabled') {
+                        $.notify(
+                            `🌍 Sub-Store 处理文件失败`,
+                            `❌ ${file.name}`,
+                            `远程文件 ${Object.keys(errors).join(
+                                ', ',
+                            )} 发生错误, 请查看日志`,
+                        );
+                    }
                 }
                 if (file.mergeSources === 'localFirst') {
                     raw.unshift(file.content);
