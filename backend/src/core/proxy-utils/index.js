@@ -1,7 +1,7 @@
 import { Buffer } from 'buffer';
 import rs from '@/utils/rs';
 import YAML from '@/utils/yaml';
-import download from '@/utils/download';
+import download, { downloadFile } from '@/utils/download';
 import {
     isIPv4,
     isIPv6,
@@ -330,6 +330,7 @@ export const ProxyUtils = {
     MMDB,
     Gist,
     download,
+    downloadFile,
     isValidUUID,
     doh,
 };

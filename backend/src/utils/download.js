@@ -273,3 +273,25 @@ export default async function download(
     }
     return result;
 }
+
+export async function downloadFile(url, file) {
+    const undici = eval("require('undici')");
+    const fs = eval("require('fs')");
+    const { pipeline } = eval("require('stream/promises')");
+    const { Agent, interceptors, request } = undici;
+    $.info(`Downloading file...\nURL: ${url}\nFile: ${file}`);
+    const { body, statusCode } = await request(url, {
+        dispatcher: new Agent().compose(
+            interceptors.redirect({
+                maxRedirections: 3,
+                throwOnRedirect: true,
+            }),
+        ),
+    });
+    if (statusCode !== 200)
+        throw new Error(`Failed to download file from ${url}`);
+    const fileStream = fs.createWriteStream(file);
+    await pipeline(body, fileStream);
+    $.info(`File downloaded from ${url} to ${file}`);
+    return file;
+}

@@ -1,7 +1,7 @@
 import express from '@/vendor/express';
 import $ from '@/core/app';
 import migrate from '@/utils/migration';
-import download from '@/utils/download';
+import download, { downloadFile } from '@/utils/download';
 import { syncArtifacts, produceArtifact } from '@/restful/sync';
 import { gistBackupAction } from '@/restful/miscs';
 import { TOKENS_KEY } from '@/constants';
@@ -35,7 +35,7 @@ export default function serve() {
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
         const fe_path = eval('process.env.SUB_STORE_FRONTEND_PATH');
         if (be_prefix || be_merge) {
-            if(!fe_be_path.startsWith('/')){
+            if (!fe_be_path.startsWith('/')) {
                 throw new Error(
                     'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
                 );
@@ -48,15 +48,20 @@ export default function serve() {
             $app.use((req, res, next) => {
                 if (req.path.startsWith(fe_be_path)) {
                     req.url = req.url.replace(fe_be_path, '') || '/';
-                    if(be_merge && req.url.startsWith('/api/')){
+                    if (be_merge && req.url.startsWith('/api/')) {
                         req.query['share'] = 'true';
                     }
                     next();
                     return;
                 }
-                const pathname = decodeURIComponent(req._parsedUrl.pathname) || '/';
-                if(be_merge && req.path.startsWith('/share/') && req.query.token){
-                    if (req.method.toLowerCase() !== 'get'){
+                const pathname =
+                    decodeURIComponent(req._parsedUrl.pathname) || '/';
+                if (
+                    be_merge &&
+                    req.path.startsWith('/share/') &&
+                    req.query.token
+                ) {
+                    if (req.method.toLowerCase() !== 'get') {
                         res.status(405).send('Method not allowed');
                         return;
                     }
@@ -67,14 +72,14 @@ export default function serve() {
                             `/share/${t.type}/${t.name}` === pathname &&
                             (t.exp == null || t.exp > Date.now()),
                     );
-                    if (token){
+                    if (token) {
                         next();
                         return;
                     }
                 }
-                if (be_merge && fe_path && req.path.indexOf('/',1) == -1) {
-                    if (req.path.indexOf('.') == -1){
-                        req.url = "/index.html"
+                if (be_merge && fe_path && req.path.indexOf('/', 1) == -1) {
+                    if (req.path.indexOf('.') == -1) {
+                        req.url = '/index.html';
                     }
                     const express_ = eval(`require("express")`);
                     const mime_ = eval(`require("mime-types")`);
@@ -85,7 +90,7 @@ export default function serve() {
                             if (type) {
                                 res.set('Content-Type', type);
                             }
-                        }
+                        },
                     });
                     staticFileMiddleware(req, res, next);
                     return;
@@ -222,6 +227,60 @@ export default function serve() {
                             `[UPLOAD CRON] ${backend_upload_cron} error: ${
                                 e.message ?? e
                             }`,
+                        );
+                    }
+                }, // onTick
+                null, // onComplete
+                true, // start
+                // 'Asia/Shanghai' // timeZone
+            );
+        }
+        const mmdb_cron = eval('process.env.SUB_STORE_MMDB_CRON');
+        const countryFile = eval('process.env.SUB_STORE_MMDB_COUNTRY_PATH');
+        const countryUrl = eval('process.env.SUB_STORE_MMDB_COUNTRY_URL');
+        const asnFile = eval('process.env.SUB_STORE_MMDB_ASN_PATH');
+        const asnUrl = eval('process.env.SUB_STORE_MMDB_ASN_URL');
+        if (mmdb_cron && ((countryFile && countryUrl) || (asnFile && asnUrl))) {
+            $.info(`[MMDB CRON] ${mmdb_cron} enabled`);
+            const { CronJob } = eval(`require("cron")`);
+            new CronJob(
+                mmdb_cron,
+                async function () {
+                    try {
+                        $.info(`[MMDB CRON] ${mmdb_cron} started`);
+                        if (countryFile && countryUrl) {
+                            try {
+                                $.info(
+                                    `[MMDB CRON] downloading ${countryUrl} to ${countryFile}`,
+                                );
+                                await downloadFile(countryUrl, countryFile);
+                            } catch (e) {
+                                $.error(
+                                    `[MMDB CRON] ${countryUrl} download failed: ${
+                                        e.message ?? e
+                                    }`,
+                                );
+                            }
+                        }
+                        if (asnFile && asnUrl) {
+                            try {
+                                $.info(
+                                    `[MMDB CRON] downloading ${asnUrl} to ${asnFile}`,
+                                );
+                                await downloadFile(asnUrl, asnFile);
+                            } catch (e) {
+                                $.error(
+                                    `[MMDB CRON] ${asnUrl} download failed: ${
+                                        e.message ?? e
+                                    }`,
+                                );
+                            }
+                        }
+
+                        $.info(`[MMDB CRON] ${mmdb_cron} finished`);
+                    } catch (e) {
+                        $.error(
+                            `[MMDB CRON] ${mmdb_cron} error: ${e.message ?? e}`,
                         );
                     }
                 }, // onTick
