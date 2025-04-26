@@ -1,4 +1,5 @@
 import { isPresent } from '@/core/proxy-utils/producers/utils';
+import $ from '@/core/app';
 
 export default function Clash_Producer() {
     const type = 'ALL';
@@ -45,6 +46,11 @@ export default function Clash_Producer() {
                         (typeof proxy.flow !== 'undefined' ||
                             proxy['reality-opts']))
                 ) {
+                    return false;
+                } else if (proxy['underlying-proxy'] || proxy['dialer-proxy']) {
+                    $.error(
+                        `Clash 不支持前置代理字段. 已过滤节点 ${proxy.name}`,
+                    );
                     return false;
                 }
                 return true;
@@ -151,11 +157,6 @@ export default function Clash_Producer() {
                     proxy.fingerprint = proxy['tls-fingerprint'];
                 }
                 delete proxy['tls-fingerprint'];
-
-                if (proxy['underlying-proxy']) {
-                    proxy['dialer-proxy'] = proxy['underlying-proxy'];
-                }
-                delete proxy['underlying-proxy'];
 
                 if (isPresent(proxy, 'tls') && typeof proxy.tls !== 'boolean') {
                     delete proxy.tls;
