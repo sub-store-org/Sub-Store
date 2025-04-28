@@ -134,7 +134,7 @@ function URI_SS() {
         };
         content = content.split('#')[0]; // strip proxy name
         // handle IPV4 and IPV6
-        let serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
+        let serverAndPortArray = content.match(/@([^/?]*)(\/|\?|$)/);
 
         let rawUserInfoStr = decodeURIComponent(content.split('@')[0]); // 其实应该分隔之后, 用户名和密码再 decodeURIComponent. 但是问题不大
         let userInfoStr;
