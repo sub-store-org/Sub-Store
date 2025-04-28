@@ -567,12 +567,13 @@ const hysteriaParser = (proxy = {}) => {
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     // eslint-disable-next-line no-control-regex
     const reg = new RegExp('^[0-9]+[ \t]*[KMGT]*[Bb]ps$');
-    if (reg.test(`${proxy.up}`)) {
+    // sing-box 跟文档不一致, 但是懒得全转, 只处理最常见的 Mbps
+    if (reg.test(`${proxy.up}`) && !`${proxy.up}`.endsWith('Mbps')) {
         parsedProxy.up = `${proxy.up}`;
     } else {
         parsedProxy.up_mbps = parseInt(`${proxy.up}`, 10);
     }
-    if (reg.test(`${proxy.down}`)) {
+    if (reg.test(`${proxy.down}`) && !`${proxy.down}`.endsWith('Mbps')) {
         parsedProxy.down = `${proxy.down}`;
     } else {
         parsedProxy.down_mbps = parseInt(`${proxy.down}`, 10);
