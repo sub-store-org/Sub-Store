@@ -7,7 +7,7 @@ export default function QX_Producer() {
     const produce = (proxy, type, opts = {}) => {
         switch (proxy.type) {
             case 'ss':
-                return shadowsocks(proxy, opts['include-unsupported-proxy']);
+                return shadowsocks(proxy);
             case 'ssr':
                 return shadowsocksr(proxy);
             case 'trojan':
@@ -28,7 +28,7 @@ export default function QX_Producer() {
     return { produce };
 }
 
-function shadowsocks(proxy, includeUnsupportedProxy) {
+function shadowsocks(proxy) {
     const result = new Result(proxy);
     const append = result.append.bind(result);
     const appendIfPresent = result.appendIfPresent.bind(result);
@@ -58,9 +58,8 @@ function shadowsocks(proxy, includeUnsupportedProxy) {
             'aes-256-gcm',
             'chacha20-ietf-poly1305',
             'xchacha20-ietf-poly1305',
-            ...(includeUnsupportedProxy
-                ? ['2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm']
-                : []),
+            '2022-blake3-aes-128-gcm',
+            '2022-blake3-aes-256-gcm',
         ].includes(proxy.cipher)
     ) {
         throw new Error(`cipher ${proxy.cipher} is not supported`);
