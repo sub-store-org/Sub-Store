@@ -120,7 +120,10 @@ function operator(proxies = [], targetPlatform, context) {
   //     downloadFile, // 下载二进制文件, 见 backend/src/utils/download.js
   //     MMDB, // Node.js 环境 可用于模拟 Surge/Loon 的 $utils.ipasn, $utils.ipaso, $utils.geoip. 具体见 https://t.me/zhetengsha/1269
   //     isValidUUID, // 辅助判断是否为有效的 UUID
+  //     Buffer, // https://github.com/feross/buffer
+  //     Base64, // https://github.com/dankogai/js-base64
   // }
+  //  为兼容 https://github.com/xishang0128/sparkle 的 JavaScript 覆写, 也可以直接使用 `b64d`(Base64 解码), `b64e`(Base64 编码), `Buffer`, `yaml`(简单兼容了下 `yaml.parse` 和 `yaml.stringify`)
 
   // 如果只是为了快速修改或者筛选 可以参考 脚本操作支持节点快捷脚本 https://t.me/zhetengsha/970 和 脚本筛选支持节点快捷脚本 https://t.me/zhetengsha/1009
   // ⚠️ 注意: 函数式(即本文件这样的 function operator() {}) 和快捷操作(下面使用 $server) 只能二选一
