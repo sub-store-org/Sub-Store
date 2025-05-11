@@ -34,4 +34,6 @@ export default {
     load,
     safeDump,
     dump,
+    parse: safeLoad,
+    stringify: safeDump,
 };

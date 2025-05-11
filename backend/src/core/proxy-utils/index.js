@@ -1,3 +1,4 @@
+import { Base64 } from 'js-base64';
 import { Buffer } from 'buffer';
 import rs from '@/utils/rs';
 import YAML from '@/utils/yaml';
@@ -333,6 +334,8 @@ export const ProxyUtils = {
     downloadFile,
     isValidUUID,
     doh,
+    Buffer,
+    Base64,
 };
 
 function tryParse(parser, line) {
