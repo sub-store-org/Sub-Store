@@ -365,7 +365,7 @@ function vmess(proxy) {
 
     // AEAD
     if (isPresent(proxy, 'aead')) {
-        result.append(`,alterId=0`);
+        result.append(`,alterId=${proxy.aead ? 0 : 1}`);
     } else {
         result.append(`,alterId=${proxy.alterId}`);
     }
