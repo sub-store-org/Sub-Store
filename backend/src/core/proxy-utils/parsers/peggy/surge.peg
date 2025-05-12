@@ -53,10 +53,11 @@ shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/
 vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/method/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/tls_fingerprint/tls_verification/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "none";
+    // Surfboard 与 Surge 默认不一致, 不管 Surfboard https://getsurfboard.com/docs/profile-format/proxy/external-proxy/vmess
     if (proxy.aead) {
         proxy.alterId = 0;
     } else {
-        proxy.alterId = proxy.alterId || 0;
+        proxy.alterId = 1;
     }
     handleWebsocket();
     handleShadowTLS();
