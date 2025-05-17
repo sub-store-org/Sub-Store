@@ -49,11 +49,17 @@ export default function register($app) {
             success(res);
         });
 
-    // Redirect sub.store to vercel webpage
-    $app.get('/', async (req, res) => {
-        // 302 redirect
-        res.set('location', 'https://sub-store.vercel.app/').status(302).end();
-    });
+    if (ENV().isNode) {
+        $app.get('/', getEnv);
+    } else {
+        // Redirect sub.store to vercel webpage
+        $app.get('/', async (req, res) => {
+            // 302 redirect
+            res.set('location', 'https://sub-store.vercel.app/')
+                .status(302)
+                .end();
+        });
+    }
 
     // handle preflight request for QX
     if (ENV().isQX) {
