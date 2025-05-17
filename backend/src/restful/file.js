@@ -64,6 +64,7 @@ async function getFile(req, res) {
         ignoreFailedRemoteFile,
         proxy,
         noCache,
+        produceType,
     } = req.query;
     let $options = {
         _req: {
@@ -128,6 +129,10 @@ async function getFile(req, res) {
     if (noCache) {
         $.info(`指定不使用缓存: ${noCache}`);
     }
+    if (produceType) {
+        produceType = decodeURIComponent(produceType);
+        $.info(`指定生产类型: ${produceType}`);
+    }
 
     const allFiles = $.read(FILES_KEY);
     const file = findByName(allFiles, name);
@@ -144,6 +149,7 @@ async function getFile(req, res) {
                 $options,
                 proxy,
                 noCache,
+                produceType,
             });
 
             try {
