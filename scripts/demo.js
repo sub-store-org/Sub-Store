@@ -14,10 +14,12 @@ function operator(proxies = [], targetPlatform, context) {
   // 6. `_collectionName` 为组合订阅名, `_collectionDisplayName` 为组合订阅显示名
   // 7. `tls-fingerprint` 为 tls 指纹
   // 8. `underlying-proxy` 为前置代理, 不同平台会自动转换
+  //    例如 $server['underlying-proxy'] = '名称'
   //    只给 mihomo 输出的话, `dialer-proxy` 也行
   //    只给 sing-box 输出的话, `detour` 也行
-  //    只给 egern 输出的话, `prev_hop` 也行
-  //    输出到 Clash/Stash/Shadowrocket 时, 会过滤掉配置了前置代理的节点, 并提示使用对应的功能.
+  //    只给 Egern 输出的话, `prev_hop` 也行
+  //    只给 Shadowrocket 输出的话, `chain` 也行
+  //    输出到 Clash/Stash 时, 会过滤掉配置了前置代理的节点, 并提示使用对应的功能.
   // 9. `trojan`, `tuic`, `hysteria`, `hysteria2`, `juicity` 会在解析时设置 `tls`: true (会使用 tls 类协议的通用逻辑),  输出时删除
   // 10. `sni` 在某些协议里会自动与 `servername` 转换
   // 11. 读取节点的 ca-str 和 _ca (后端文件路径) 字段, 自动计算 fingerprint (参考 https://t.me/zhetengsha/1512)
