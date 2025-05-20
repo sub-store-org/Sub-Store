@@ -17,10 +17,12 @@ export default function express({ substore: $, port, host }) {
         const express_ = eval(`require("express")`);
         const bodyParser = eval(`require("body-parser")`);
         const app = express_();
+        const limit = eval('process.env.SUB_STORE_BODY_JSON_LIMIT') || '1mb';
+        $.info(`[BACKEND] body JSON limit: ${limit}`);
         app.use(
             bodyParser.json({
                 verify: rawBodySaver,
-                limit: eval('process.env.SUB_STORE_BODY_JSON_LIMIT') || '1mb',
+                limit,
             }),
         );
         app.use(
@@ -36,7 +38,7 @@ export default function express({ substore: $, port, host }) {
         app.start = () => {
             const listener = app.listen(port, host, () => {
                 const { address, port } = listener.address();
-                $.info(`[BACKEND] ${address}:${port}`);
+                $.info(`[BACKEND] listening on ${address}:${port}`);
             });
         };
         return app;
