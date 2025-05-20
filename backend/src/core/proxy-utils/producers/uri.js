@@ -33,7 +33,9 @@ export default function URI_Producer() {
         switch (proxy.type) {
             case 'socks5':
                 result = `socks://${encodeURIComponent(
-                    Base64.encode(`${proxy.username}:${proxy.password}`),
+                    Base64.encode(
+                        `${proxy.username ?? ''}:${proxy.password ?? ''}`,
+                    ),
                 )}@${proxy.server}:${proxy.port}#${proxy.name}`;
                 break;
             case 'ss':
