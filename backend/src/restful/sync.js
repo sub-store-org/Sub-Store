@@ -174,7 +174,7 @@ async function produceArtifact({
             }
         }
         if (produceType === 'raw') {
-            return (Array.isArray(raw) ? raw : [raw]).flat();
+            return JSON.stringify((Array.isArray(raw) ? raw : [raw]).flat());
         }
         // parse proxies
         let proxies = (Array.isArray(raw) ? raw : [raw])
@@ -574,7 +574,7 @@ async function produceArtifact({
             }
         }
         if (produceType === 'raw') {
-            return (Array.isArray(raw) ? raw : [raw]).flat();
+            return JSON.stringify((Array.isArray(raw) ? raw : [raw]).flat());
         }
         const files = (Array.isArray(raw) ? raw : [raw]).flat();
         let filesContent = files
