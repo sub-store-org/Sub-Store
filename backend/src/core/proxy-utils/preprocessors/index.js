@@ -50,6 +50,26 @@ function Base64Encoded() {
     return { name, test, parse };
 }
 
+function fallbackBase64Encoded() {
+    const name = 'Fallback Base64 Pre-processor';
+
+    const test = function (raw) {
+        return true;
+    };
+    const parse = function (raw) {
+        const decoded = Base64.decode(raw);
+        if (!/^\w+(:\/\/|\s*?=\s*?)\w+/m.test(decoded)) {
+            $.error(
+                `Fallback Base64 Pre-processor error: decoded line does not start with protocol`,
+            );
+            return raw;
+        }
+
+        return decoded;
+    };
+    return { name, test, parse };
+}
+
 function Clash() {
     const name = 'Clash Pre-processor';
     const test = function (raw) {
@@ -163,4 +183,11 @@ function FullConfig() {
     return { name, test, parse };
 }
 
-export default [HTML(), Clash(), Base64Encoded(), SSD(), FullConfig()];
+export default [
+    HTML(),
+    Clash(),
+    Base64Encoded(),
+    SSD(),
+    FullConfig(),
+    fallbackBase64Encoded(),
+];
