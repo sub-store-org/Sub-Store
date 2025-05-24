@@ -77,7 +77,19 @@ function getEnv(req, res) {
     if (req.query.share) {
         env.feature.share = true;
     }
-    success(res, env);
+    res.set('Content-Type', 'application/json;charset=UTF-8').send(
+        JSON.stringify(
+            {
+                status: 'success',
+                data: {
+                    guide: '⚠️⚠️⚠️ 您当前看到的是后端的响应. 若想配合前端使用, 可访问官方前端 https://sub-store.vercel.app 后自行配置后端地址, 或一键配置后端 https://sub-store.vercel.app?api=https://a.com/xxx (假设 https://a.com 是你后端的域名, /xxx 是自定义路径). 需注意 HTTPS 前端无法请求非本地的 HTTP 后端(部分浏览器上也无法访问本地 HTTP 后端). 请配置反代或在局域网自建 HTTP 前端. 如果还有问题, 可查看此排查说明: https://t.me/zhetengsha/1068',
+                    ...env,
+                },
+            },
+            null,
+            2,
+        ),
+    );
 }
 
 async function refresh(_, res) {
