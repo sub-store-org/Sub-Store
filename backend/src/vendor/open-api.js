@@ -10,6 +10,14 @@ const isEgern = 'object' == typeof egern;
 const isLanceX = 'undefined' != typeof $native;
 const isGUIforCores = typeof $Plugins !== 'undefined';
 
+function isPlainObject(obj) {
+    return (
+        obj !== null &&
+        typeof obj === 'object' &&
+        [null, Object.prototype].includes(Object.getPrototypeOf(obj))
+    );
+}
+
 export class OpenAPI {
     constructor(name = 'untitled', debug = false) {
         this.name = name;
@@ -62,29 +70,50 @@ export class OpenAPI {
             const basePath =
                 eval('process.env.SUB_STORE_DATA_BASE_PATH') || '.';
             let rootPath = `${basePath}/root.json`;
+            const backupRootPath = `${basePath}/root_${Date.now()}.json`;
 
             this.log(`Root path: ${rootPath}`);
-            if (!this.node.fs.existsSync(rootPath)) {
+            if (this.node.fs.existsSync(rootPath)) {
+                try {
+                    this.root = JSON.parse(
+                        this.node.fs.readFileSync(`${rootPath}`),
+                    );
+                } catch (e) {
+                    this.node.fs.copyFileSync(rootPath, backupRootPath);
+                    this.error(
+                        `Failed to parse ${rootPath}: ${e.message}. Backup created at ${backupRootPath}`,
+                    );
+                }
+            }
+            if (!isPlainObject(this.root)) {
                 this.node.fs.writeFileSync(rootPath, JSON.stringify({}), {
-                    flag: 'wx',
+                    flag: 'w',
                 });
                 this.root = {};
-            } else {
-                this.root = JSON.parse(
-                    this.node.fs.readFileSync(`${rootPath}`),
-                );
             }
 
             // create a json file with the given name if not exists
             let fpath = `${basePath}/${this.name}.json`;
+            const backupPath = `${basePath}/${this.name}_${Date.now()}.json`;
+
             this.log(`Data path: ${fpath}`);
-            if (!this.node.fs.existsSync(fpath)) {
+            if (this.node.fs.existsSync(fpath)) {
+                try {
+                    this.cache = JSON.parse(
+                        this.node.fs.readFileSync(`${fpath}`),
+                    );
+                } catch (e) {
+                    this.node.fs.copyFileSync(fpath, backupPath);
+                    this.error(
+                        `Failed to parse ${fpath}: ${e.message}. Backup created at ${backupPath}`,
+                    );
+                }
+            }
+            if (!isPlainObject(this.cache)) {
                 this.node.fs.writeFileSync(fpath, JSON.stringify({}), {
-                    flag: 'wx',
+                    flag: 'w',
                 });
                 this.cache = {};
-            } else {
-                this.cache = JSON.parse(this.node.fs.readFileSync(`${fpath}`));
             }
         }
     }
