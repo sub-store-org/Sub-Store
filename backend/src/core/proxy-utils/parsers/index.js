@@ -473,8 +473,8 @@ function URI_VMess() {
                 ['http'].includes(params.type)
             ) {
                 proxy.network = 'http';
-            } else if (['grpc'].includes(params.net)) {
-                proxy.network = 'grpc';
+            } else if (['grpc', 'kcp', 'quic'].includes(params.net)) {
+                proxy.network = params.net;
             } else if (
                 params.net === 'httpupgrade' ||
                 proxy.network === 'httpupgrade'
@@ -542,6 +542,10 @@ function URI_VMess() {
                         }
                         proxy[`${proxy.network}-opts`] = opts;
                     }
+                } else if (['kcp', 'quic'].includes(proxy.network)) {
+                    proxy[`${proxy.network}-opts`] = {
+                        [`_${proxy.network}-type`]: getIfNotBlank(params.type),
+                    };
                 } else {
                     delete proxy.network;
                 }

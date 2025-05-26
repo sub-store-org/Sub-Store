@@ -156,6 +156,16 @@ export default function URI_Producer() {
                             'gun';
                         result.host =
                             proxy[`${proxy.network}-opts`]?.['_grpc-authority'];
+                    } else if (['kcp', 'quic'].includes(proxy.network)) {
+                        result.path =
+                            proxy[`${proxy.network}-opts`]?.[
+                                'grpc-service-name'
+                            ];
+                        // https://github.com/XTLS/Xray-core/issues/91
+                        result.type =
+                            proxy[`${proxy.network}-opts`]?.[
+                                `_${proxy.network}-type`
+                            ] || 'none';
                     }
                 }
                 result = 'vmess://' + Base64.encode(JSON.stringify(result));
