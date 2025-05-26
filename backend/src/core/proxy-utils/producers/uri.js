@@ -119,12 +119,17 @@ export default function URI_Producer() {
                     v: '2',
                     ps: proxy.name,
                     add: proxy.server,
-                    port: proxy.port,
+                    port: `${proxy.port}`,
                     id: proxy.uuid,
-                    type,
-                    aid: proxy.alterId || 0,
+                    aid: `${proxy.alterId || 0}`,
+                    scy: proxy.cipher,
                     net,
+                    type,
                     tls: proxy.tls ? 'tls' : '',
+                    alpn: Array.isArray(proxy.alpn)
+                        ? proxy.alpn.join(',')
+                        : proxy.alpn,
+                    fp: proxy['client-fingerprint'],
                 };
                 if (proxy.tls && proxy.sni) {
                     result.sni = proxy.sni;
@@ -135,16 +140,7 @@ export default function URI_Producer() {
                         proxy[`${proxy.network}-opts`]?.path;
                     let vmessTransportHost =
                         proxy[`${proxy.network}-opts`]?.headers?.Host;
-                    if (vmessTransportPath) {
-                        result.path = Array.isArray(vmessTransportPath)
-                            ? vmessTransportPath[0]
-                            : vmessTransportPath;
-                    }
-                    if (vmessTransportHost) {
-                        result.host = Array.isArray(vmessTransportHost)
-                            ? vmessTransportHost[0]
-                            : vmessTransportHost;
-                    }
+
                     if (['grpc'].includes(proxy.network)) {
                         result.path =
                             proxy[`${proxy.network}-opts`]?.[
@@ -156,6 +152,31 @@ export default function URI_Producer() {
                             'gun';
                         result.host =
                             proxy[`${proxy.network}-opts`]?.['_grpc-authority'];
+                    } else if (['kcp', 'quic'].includes(proxy.network)) {
+                        // https://github.com/XTLS/Xray-core/issues/91
+                        result.type =
+                            proxy[`${proxy.network}-opts`]?.[
+                                `_${proxy.network}-type`
+                            ] || 'none';
+                        result.host =
+                            proxy[`${proxy.network}-opts`]?.[
+                                `_${proxy.network}-host`
+                            ];
+                        result.path =
+                            proxy[`${proxy.network}-opts`]?.[
+                                `_${proxy.network}-path`
+                            ];
+                    } else {
+                        if (vmessTransportPath) {
+                            result.path = Array.isArray(vmessTransportPath)
+                                ? vmessTransportPath[0]
+                                : vmessTransportPath;
+                        }
+                        if (vmessTransportHost) {
+                            result.host = Array.isArray(vmessTransportHost)
+                                ? vmessTransportHost[0]
+                                : vmessTransportHost;
+                        }
                     }
                 }
                 result = 'vmess://' + Base64.encode(JSON.stringify(result));
