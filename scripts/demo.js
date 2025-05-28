@@ -59,6 +59,15 @@ function operator(proxies = [], targetPlatform, context) {
   // }
   // console.log($options)
 
+  // 若设置 $options._res.headers
+  // 则会在输出文件时设置响应头, 例如:
+
+  // $options._res = {
+  //   headers: {
+  //     'X-Custom': '1'
+  //   }
+  // }
+
   // targetPlatform 为输出的目标平台
 
   // lodash

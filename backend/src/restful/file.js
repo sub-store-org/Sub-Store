@@ -150,6 +150,7 @@ async function getFile(req, res) {
                 proxy,
                 noCache,
                 produceType,
+                all: true,
             });
 
             try {
@@ -184,9 +185,15 @@ async function getFile(req, res) {
                     )}`,
                 );
             }
-            res.set('Content-Type', 'text/plain; charset=utf-8').send(
-                output ?? '',
-            );
+            res.set('Content-Type', 'text/plain; charset=utf-8');
+            if (output?.$options?._res?.headers) {
+                Object.entries(output.$options._res.headers).forEach(
+                    ([key, value]) => {
+                        res.set(key, value);
+                    },
+                );
+            }
+            res.send(output?.$content ?? '');
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载文件失败`,
