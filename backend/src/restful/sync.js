@@ -40,6 +40,7 @@ async function produceArtifact({
     $options,
     proxy,
     noCache,
+    all,
 }) {
     platform = platform || 'JSON';
 
@@ -595,7 +596,7 @@ async function produceArtifact({
                   )
                 : { $content: filesContent, $files: files, $options };
 
-        return processed?.$content ?? '';
+        return (all ? processed : processed?.$content) ?? '';
     }
 }
 
