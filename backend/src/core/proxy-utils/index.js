@@ -174,6 +174,17 @@ async function processFn(
                         );
                         throw new Error(`无法加载 ${type}: ${url}`);
                     }
+                } else if (url?.startsWith('/')) {
+                    try {
+                        const fs = eval(`require("fs")`);
+                        script = fs.readFileSync(url, 'utf8');
+                        // $.info(`Script loaded: >>>\n ${script}`);
+                    } catch (err) {
+                        $.error(
+                            `Error when reading local script: ${item.args.content}.\n Reason: ${err}`,
+                        );
+                        throw new Error(`无法从该路径读取脚本文件: ${url}`);
+                    }
                 } else {
                     // if this is a remote script, download it
                     try {
