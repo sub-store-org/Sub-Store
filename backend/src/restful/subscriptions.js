@@ -140,7 +140,7 @@ async function getFlowInfo(req, res) {
                 }
             }
         }
-        if ($arguments.noFlow) {
+        if ($arguments.noFlow || !/^https?/.test(url)) {
             failed(
                 res,
                 new RequestInvalidError(

@@ -259,7 +259,7 @@ async function downloadSubscription(req, res) {
                             }
                         }
                     }
-                    if (!$arguments.noFlow) {
+                    if (!$arguments.noFlow && /^https?/.test(url)) {
                         // forward flow headers
                         flowInfo = await getFlowHeaders(
                             $arguments?.insecure ? `${url}#insecure` : url,
@@ -506,7 +506,7 @@ async function downloadCollection(req, res) {
                                 }
                             }
                         }
-                        if (!$arguments.noFlow) {
+                        if (!$arguments.noFlow && /^https?:/.test(url)) {
                             subUserInfoOfSub = await getFlowHeaders(
                                 $arguments?.insecure ? `${url}#insecure` : url,
                                 $arguments.flowUserAgent,
