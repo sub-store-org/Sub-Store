@@ -142,9 +142,9 @@ async function processFn(
                         ? `#${rawArgs[1]}`
                         : ''
                 }`;
-                const downloadUrlMatch = url.match(
-                    /^\/api\/(file|module)\/(.+)/,
-                );
+                const downloadUrlMatch = url
+                    .split('#')[0]
+                    .match(/^\/api\/(file|module)\/(.+)/);
                 if (downloadUrlMatch) {
                     let type = '';
                     try {
