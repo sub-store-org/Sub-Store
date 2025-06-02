@@ -49,7 +49,7 @@ export async function getFlowHeaders(
             }
         }
     }
-    if ($arguments?.noFlow) {
+    if ($arguments?.noFlow || !/^https?/.test(url)) {
         return;
     }
     const { isStash, isLoon, isShadowRocket, isQX } = ENV();

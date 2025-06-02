@@ -1,4 +1,4 @@
-import { SETTINGS_KEY } from '@/constants';
+import { SETTINGS_KEY, FILES_KEY, MODULES_KEY } from '@/constants';
 import { HTTP, ENV } from '@/vendor/open-api';
 import { hex_md5 } from '@/vendor/md5';
 import { getPolicyDescriptor } from '@/utils';
@@ -11,6 +11,8 @@ import {
     validCheck,
 } from '@/utils/flow';
 import $ from '@/core/app';
+import { findByName } from '@/utils/database';
+import { produceArtifact } from '@/restful/sync';
 import PROXY_PREPROCESSORS from '@/core/proxy-utils/preprocessors';
 const clashPreprocessor = PROXY_PREPROCESSORS.find(
     (processor) => processor.name === 'Clash Pre-processor',
@@ -130,22 +132,53 @@ export default async function download(
         }
     }
 
-    // const downloadUrlMatch = url.match(/^\/api\/(file|module)\/(.+)/);
-    // if (downloadUrlMatch) {
-    //     let type = downloadUrlMatch?.[1];
-    //     let name = downloadUrlMatch?.[2];
-    //     if (name == null) {
-    //         throw new Error(`本地 ${type} URL 无效: ${url}`);
-    //     }
-    //     name = decodeURIComponent(name);
-    //     const key = type === 'module' ? MODULES_KEY : FILES_KEY;
-    //     const item = findByName($.read(key), name);
-    //     if (!item) {
-    //         throw new Error(`找不到本地 ${type}: ${name}`);
-    //     }
+    const downloadUrlMatch = url
+        .split('#')[0]
+        .match(/^\/api\/(file|module)\/(.+)/);
+    if (downloadUrlMatch) {
+        let type = '';
+        try {
+            type = downloadUrlMatch?.[1];
+            let name = downloadUrlMatch?.[2];
+            if (name == null) {
+                throw new Error(`本地 ${type} URL 无效: ${url}`);
+            }
+            name = decodeURIComponent(name);
+            const key = type === 'module' ? MODULES_KEY : FILES_KEY;
+            const item = findByName($.read(key), name);
+            if (!item) {
+                throw new Error(`找不到 ${type}: ${name}`);
+            }
 
-    //     return item.content;
-    // }
+            if (type === 'module') {
+                return item.content;
+            } else {
+                return await produceArtifact({
+                    type: 'file',
+                    name,
+                });
+            }
+        } catch (err) {
+            $.error(
+                `Error when loading ${type}: ${
+                    url.split('#')[0]
+                }.\n Reason: ${err}`,
+            );
+            throw new Error(`无法加载 ${type}: ${url}`);
+        }
+    } else if (url?.startsWith('/')) {
+        try {
+            const fs = eval(`require("fs")`);
+            return fs.readFileSync(url.split('#')[0], 'utf8');
+        } catch (err) {
+            $.error(
+                `Error when reading local file: ${
+                    url.split('#')[0]
+                }.\n Reason: ${err}`,
+            );
+            throw new Error(`无法从该路径读取文本内容: ${url}`);
+        }
+    }
 
     if (!isNode && tasks.has(id)) {
         return tasks.get(id);
