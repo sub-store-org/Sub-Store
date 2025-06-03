@@ -42,7 +42,7 @@ Core functionalities:
 - [x] Clash.Meta (Direct, SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC, SSH, mieru, AnyTLS)
 - [x] Stash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, TUIC, Juicity, SSH)
 
-Deprecated:
+Deprecated(The frontend doesn't show it, but the backend still supports it, with the query parameter `target=Clash`):
 
 - [x] Clash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard)
 
