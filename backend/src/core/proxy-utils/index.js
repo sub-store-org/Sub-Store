@@ -25,6 +25,7 @@ import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
 import Gist from '@/utils/gist';
 import { isPresent } from './producers/utils';
 import { doh } from '@/utils/dns';
+import JSON5 from 'json5';
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
@@ -347,6 +348,7 @@ export const ProxyUtils = {
     doh,
     Buffer,
     Base64,
+    JSON5,
 };
 
 function tryParse(parser, line) {
