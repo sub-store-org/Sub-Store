@@ -53,6 +53,16 @@ async function signToken(req, res) {
     try {
         const { payload, options } = req.body;
         const ms = eval(`require("ms")`);
+        const type = payload?.type;
+        const name = payload?.name;
+        if (!type || !name)
+            return failed(
+                res,
+                new RequestInvalidError(
+                    'INVALID_PAYLOAD',
+                    `payload type and name are required`,
+                ),
+            );
         let token = payload?.token;
         if (token != null) {
             if (typeof token !== 'string' || token.length < 1) {
@@ -65,7 +75,12 @@ async function signToken(req, res) {
                 );
             }
             const tokens = $.read(TOKENS_KEY) || [];
-            if (tokens.find((t) => t.token === token)) {
+            if (
+                tokens.find(
+                    (t) =>
+                        t.token === token && t.type === type && t.name === name,
+                )
+            ) {
                 return failed(
                     res,
                     new RequestInvalidError(
@@ -75,16 +90,7 @@ async function signToken(req, res) {
                 );
             }
         }
-        const type = payload?.type;
-        const name = payload?.name;
-        if (!type || !name)
-            return failed(
-                res,
-                new RequestInvalidError(
-                    'INVALID_PAYLOAD',
-                    `payload type and name are required`,
-                ),
-            );
+
         if (type === 'col') {
             const collections = $.read(COLLECTIONS_KEY) || [];
             const collection = collections.find((c) => c.name === name);
@@ -153,7 +159,12 @@ async function signToken(req, res) {
         if (!token) {
             do {
                 token = nanoid.customAlphabet(nanoid.urlAlphabet)();
-            } while (tokens.find((t) => t.token === token));
+            } while (
+                tokens.find(
+                    (t) =>
+                        t.token === token && t.type === type && t.name === name,
+                )
+            );
         }
         tokens.push({
             ...payload,
