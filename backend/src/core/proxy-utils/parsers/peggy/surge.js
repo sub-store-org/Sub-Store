@@ -180,7 +180,7 @@ username = & {
         return true;
     }
 } { proxy.username = $.username; }
-password = comma match:[^,]+ { proxy.password = match.join(""); }
+password = comma match:[^,]+ { proxy.password = match.join("").replace(/^"(.*)"$/, '$1'); }
 
 tls = comma "tls" equals flag:bool { proxy.tls = flag; }
 sni = comma "sni" equals sni:("off"/domain) { 
