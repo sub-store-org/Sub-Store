@@ -1,6 +1,6 @@
 {
   "name": "sub-store",
-  "version": "2.19.63",
+  "version": "2.19.64",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.",
   "main": "src/main.js",
   "scripts": {
