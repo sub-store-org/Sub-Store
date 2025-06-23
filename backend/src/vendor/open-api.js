@@ -484,6 +484,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                         url: options.url,
                         headers: options.headers,
                         body: options.body,
+                        autoTransformBody: false,
                         options: {
                             Proxy: options.proxy,
                             Timeout: options.timeout
