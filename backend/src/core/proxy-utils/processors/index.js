@@ -623,9 +623,11 @@ const DOMAIN_RESOLVERS = {
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const resp = await $.http.get({
-            url: `http://223.6.6.6/resolve?edns_client_subnet=${edns}/24&name=${encodeURIComponent(
-                domain,
-            )}&type=${type === 'IPv6' ? 'AAAA' : 'A'}&short=1`,
+            url: `http://223.6.6.6/resolve?edns_client_subnet=${edns}/${
+                isIPv4(edns) ? 24 : 56
+            }&name=${encodeURIComponent(domain)}&type=${
+                type === 'IPv6' ? 'AAAA' : 'A'
+            }&short=1`,
             headers: {
                 accept: 'application/dns-json',
             },
