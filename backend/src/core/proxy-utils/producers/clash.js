@@ -41,7 +41,7 @@ export default function Clash_Producer() {
                             'chacha20-ietf-poly1305',
                             'xchacha20-ietf-poly1305',
                         ].includes(proxy.cipher)) ||
-                    (proxy.type === 'snell' && String(proxy.version) === '4') ||
+                    (proxy.type === 'snell' && proxy.version >= 4) ||
                     (proxy.type === 'vless' &&
                         (typeof proxy.flow !== 'undefined' ||
                             proxy['reality-opts']))
