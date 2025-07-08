@@ -151,6 +151,18 @@ function operator(proxies = [], targetPlatform, context) {
   // });
   // $server.sni = sni
 
+  // 示例: 从 config 文件中读取配置项并进行节点操作
+  // config 的本地内容为
+  // {
+  //   "reuse": false
+  // }
+  // 脚本操作为
+  // const config = (ProxyUtils.JSON5 || JSON).parse(await produceArtifact({
+  //     type: 'file',
+  //     name: 'config' // 文件名
+  // }))
+  // $server.reuse = config.reuse
+
   // 1. Surge 输出 WireGuard 完整配置
 
   // let proxies = await produceArtifact({
