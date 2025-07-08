@@ -377,6 +377,23 @@ export default function Egern_Producer() {
                 delete proxy.id;
                 delete proxy.resolved;
                 delete proxy['no-resolve'];
+
+                if (proxy.transport) {
+                    for (const key in proxy.transport) {
+                        if (
+                            Object.keys(proxy.transport[key]).length === 0 ||
+                            Object.values(proxy.transport[key]).every(
+                                (v) => v == null,
+                            )
+                        ) {
+                            delete proxy.transport[key];
+                        }
+                    }
+                    if (Object.keys(proxy.transport).length === 0) {
+                        delete proxy.transport;
+                    }
+                }
+
                 if (type !== 'internal') {
                     for (const key in proxy) {
                         if (proxy[key] == null || /^_/i.test(key)) {
