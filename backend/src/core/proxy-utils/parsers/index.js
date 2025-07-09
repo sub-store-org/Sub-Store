@@ -12,6 +12,7 @@ import getLoonParser from './peggy/loon';
 import getQXParser from './peggy/qx';
 import getTrojanURIParser from './peggy/trojan-uri';
 import $ from '@/core/app';
+import JSON5 from 'json5';
 
 import { Base64 } from 'js-base64';
 
@@ -1130,14 +1131,14 @@ function Clash_All() {
     const name = 'Clash Parser';
     const test = (line) => {
         try {
-            JSON.parse(line);
+            JSON5.parse(line);
         } catch (e) {
             return false;
         }
         return true;
     };
     const parse = (line) => {
-        const proxy = JSON.parse(line);
+        const proxy = JSON5.parse(line);
         if (
             ![
                 'anytls',
