@@ -521,7 +521,8 @@ const vlessParser = (proxy = {}) => {
         throw 'invalid port';
     if (proxy.xudp) parsedProxy.packet_encoding = 'xudp';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
-    if (proxy.flow === 'xtls-rprx-vision') parsedProxy.flow = proxy.flow;
+    // if (['xtls-rprx-vision', ''].includes(proxy.flow)) parsedProxy.flow = proxy.flow;
+    if (proxy.flow != null) parsedProxy.flow = proxy.flow;
     if (proxy.network === 'ws') wsParser(proxy, parsedProxy);
     if (proxy.network === 'grpc') grpcParser(proxy, parsedProxy);
     networkParser(proxy, parsedProxy);
