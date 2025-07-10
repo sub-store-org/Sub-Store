@@ -338,6 +338,17 @@ const shadowTLSParser = (proxy = {}) => {
         password: proxy.password,
         detour: `${proxy.name}_shadowtls`,
     };
+    if (proxy.uot) ssPart.udp_over_tcp = true;
+    if (proxy['udp-over-tcp']) {
+        ssPart.udp_over_tcp = {
+            enabled: true,
+            version:
+                !proxy['udp-over-tcp-version'] ||
+                proxy['udp-over-tcp-version'] === 1
+                    ? 1
+                    : 2,
+        };
+    }
     const stPart = {
         tag: `${proxy.name}_shadowtls`,
         type: 'shadowtls',
