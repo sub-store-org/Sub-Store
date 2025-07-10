@@ -2,6 +2,26 @@ import ClashMeta_Producer from './clashmeta';
 import $ from '@/core/app';
 import { isIPv4, isIPv6 } from '@/utils';
 
+const ipVersions = {
+    ipv4: 'ipv4_only',
+    ipv6: 'ipv6_only',
+    'v4-only': 'ipv4_only',
+    'v6-only': 'ipv6_only',
+    'ipv4-prefer': 'prefer_ipv4',
+    'ipv6-prefer': 'prefer_ipv6',
+    'prefer-v4': 'prefer_ipv4',
+    'prefer-v6': 'prefer_ipv6',
+};
+
+const ipVersionParser = (proxy, parsedProxy) => {
+    const strategy = ipVersions[proxy['ip-version']];
+    if (proxy._dns_server && strategy) {
+        parsedProxy.domain_resolver = {
+            server: proxy._dns_server,
+            strategy,
+        };
+    }
+};
 const detourParser = (proxy, parsedProxy) => {
     parsedProxy.detour = proxy['dialer-proxy'] || proxy.detour;
 };
@@ -278,6 +298,7 @@ const sshParser = (proxy = {}) => {
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 
@@ -305,6 +326,7 @@ const httpParser = (proxy = {}) => {
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 
@@ -327,6 +349,7 @@ const socks5Parser = (proxy = {}) => {
     networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 
@@ -371,6 +394,7 @@ const shadowTLSParser = (proxy = {}) => {
     tfoParser(proxy, stPart);
     detourParser(proxy, stPart);
     smuxParser(proxy.smux, ssPart);
+    ipVersionParser(proxy, stPart);
     return { type: 'ss-with-st', ssPart, stPart };
 };
 const ssParser = (proxy = {}) => {
@@ -400,6 +424,7 @@ const ssParser = (proxy = {}) => {
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     if (proxy.plugin) {
         const optArr = [];
         if (proxy.plugin === 'obfs') {
@@ -478,6 +503,7 @@ const ssrParser = (proxy = {}) => {
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 
@@ -516,6 +542,7 @@ const vmessParser = (proxy = {}) => {
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 
@@ -541,6 +568,7 @@ const vlessParser = (proxy = {}) => {
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
     tlsParser(proxy, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 const trojanParser = (proxy = {}) => {
@@ -562,6 +590,7 @@ const trojanParser = (proxy = {}) => {
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 const hysteriaParser = (proxy = {}) => {
@@ -611,6 +640,7 @@ const hysteriaParser = (proxy = {}) => {
     detourParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 const hysteria2Parser = (proxy = {}) => {
@@ -644,6 +674,7 @@ const hysteria2Parser = (proxy = {}) => {
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 const tuic5Parser = (proxy = {}) => {
@@ -675,6 +706,7 @@ const tuic5Parser = (proxy = {}) => {
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 const anytlsParser = (proxy = {}) => {
@@ -697,6 +729,7 @@ const anytlsParser = (proxy = {}) => {
         );
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 
@@ -754,6 +787,7 @@ const wireguardParser = (proxy = {}) => {
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
 
