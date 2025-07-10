@@ -1,5 +1,13 @@
 import { isPresent } from '@/core/proxy-utils/producers/utils';
 
+const ipVersions = {
+    dual: 'dual',
+    'v4-only': 'ipv4',
+    'v6-only': 'ipv6',
+    'prefer-v4': 'ipv4-prefer',
+    'prefer-v6': 'ipv6-prefer',
+};
+
 export default function ClashMeta_Producer() {
     const type = 'ALL';
     const produce = (proxies, type, opts = {}) => {
@@ -241,6 +249,11 @@ export default function ClashMeta_Producer() {
                 ) {
                     delete proxy[`${proxy.network}-opts`]['_grpc-type'];
                     delete proxy[`${proxy.network}-opts`]['_grpc-authority'];
+                }
+
+                if (proxy['ip-version']) {
+                    proxy['ip-version'] =
+                        ipVersions[proxy['ip-version']] || proxy['ip-version'];
                 }
                 return proxy;
             });
