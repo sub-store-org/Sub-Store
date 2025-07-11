@@ -370,9 +370,9 @@ function vmess(proxy, includeUnsupportedProxy) {
 function ssh(proxy) {
     const result = new Result(proxy);
     result.append(`${proxy.name}=ssh,${proxy.server},${proxy.port}`);
-    result.appendIfPresent(`,${proxy.username}`, 'username');
+    result.appendIfPresent(`,username="${proxy.username}"`, 'username');
     // 所有的类似的字段都有双引号的问题 暂不处理
-    result.appendIfPresent(`,"${proxy.password}"`, 'password');
+    result.appendIfPresent(`,password="${proxy.password}"`, 'password');
 
     // https://manual.nssurge.com/policy/ssh.html
     // 需配合 Keystore
@@ -439,8 +439,8 @@ function http(proxy) {
     const result = new Result(proxy);
     const type = proxy.tls ? 'https' : 'http';
     result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
-    result.appendIfPresent(`,${proxy.username}`, 'username');
-    result.appendIfPresent(`,"${proxy.password}"`, 'password');
+    result.appendIfPresent(`,username="${proxy.username}"`, 'username');
+    result.appendIfPresent(`,password="${proxy.password}"`, 'password');
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
@@ -565,8 +565,8 @@ function socks5(proxy) {
     const result = new Result(proxy);
     const type = proxy.tls ? 'socks5-tls' : 'socks5';
     result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
-    result.appendIfPresent(`,${proxy.username}`, 'username');
-    result.appendIfPresent(`,"${proxy.password}"`, 'password');
+    result.appendIfPresent(`,username="${proxy.username}"`, 'username');
+    result.appendIfPresent(`,password="${proxy.password}"`, 'password');
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');

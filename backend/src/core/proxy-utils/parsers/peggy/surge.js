@@ -179,8 +179,8 @@ username = & {
         peg$currPos = end;
         return true;
     }
-} { proxy.username = $.username; }
-password = comma match:[^,]+ { proxy.password = match.join("").replace(/^"(.*)"$/, '$1'); }
+} { proxy.username = $.username.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
+password = comma match:[^,]+ { proxy.password = match.join("").replace(/^"(.*)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 
 tls = comma "tls" equals flag:bool { proxy.tls = flag; }
 sni = comma "sni" equals sni:("off"/domain) { 
@@ -196,7 +196,7 @@ tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:
 snell_psk = comma "psk" equals match:[^,]+ { proxy.psk = match.join(""); }
 snell_version = comma "version" equals match:$[0-9]+ { proxy.version = parseInt(match.trim()); }
 
-usernamek = comma "username" equals match:[^,]+ { proxy.username = match.join(""); }
+usernamek = comma "username" equals match:[^,]+ { proxy.username = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 passwordk = comma "password" equals match:[^,]+ { proxy.password = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 vmess_uuid = comma "username" equals match:[^,]+ { proxy.uuid = match.join(""); }
 vmess_aead = comma "vmess-aead" equals flag:bool { proxy.aead = flag; }
