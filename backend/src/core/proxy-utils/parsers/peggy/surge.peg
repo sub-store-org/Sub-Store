@@ -209,11 +209,11 @@ ws_headers = comma "ws-headers" equals headers:$[^,]+ {
     const result = {};
     pairs.forEach(pair => {
         const [key, value] = pair.trim().split(":");
-        result[key.trim()] = value.trim();
+        result[key.trim()] = value.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1');
     })
     obfs["ws-headers"] = result;
 }
-ws_path = comma "ws-path" equals path:uri { obfs.path = path; }
+ws_path = comma "ws-path" equals path:uri { obfs.path = path.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 
 obfs = comma "obfs" equals type:("http"/"tls") { obfs.type = type; }
 obfs_host = comma "obfs-host" equals host:domain { obfs.host = host; };
