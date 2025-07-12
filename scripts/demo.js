@@ -247,14 +247,14 @@ function operator(proxies = [], targetPlatform, context) {
   // 这个历史遗留原因, 是有点复杂. 提供一个例子, 用来取当前脚本所在的组合订阅或单条订阅名称
 
   // let name = ''
-  // for (const [key, value] of Object.entries(env.source)) {
+  // for (const [key, value] of Object.entries(context.source)) {
   //   if (!key.startsWith('_')) {
   //     name = value.displayName || value.name
   //     break
   //   }
   // }
   // if (!name) {
-  //   const collection = env.source._collection
+  //   const collection = context.source._collection
   //   name = collection.displayName || collection.name
   // }
 
