@@ -14,6 +14,8 @@ import $ from '@/core/app';
 import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
 import PROXY_PREPROCESSORS from '@/core/proxy-utils/preprocessors';
+import { ProxyUtils } from '@/core/proxy-utils';
+
 const clashPreprocessor = PROXY_PREPROCESSORS.find(
     (processor) => processor.name === 'Clash Pre-processor',
 );
@@ -261,10 +263,34 @@ export default async function download(
             if (shouldCache) {
                 resourceCache.set(id, body);
                 if (customCacheKey) {
-                    $.info(
-                        `URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`,
-                    );
-                    $.write(body, customCacheKey);
+                    let shouldWriteCustomCacheKey = true;
+                    if (preprocess) {
+                        try {
+                            const proxies = ProxyUtils.parse(body);
+                            if (
+                                !Array.isArray(proxies) ||
+                                proxies.length === 0
+                            ) {
+                                $.error(
+                                    `URL ${url} 不包含有效节点\n不写入自定义缓存 ${$arguments?.cacheKey}`,
+                                );
+                                shouldWriteCustomCacheKey = false;
+                            }
+                        } catch (e) {
+                            $.error(
+                                `URL ${url} 尝试解析节点失败 ${
+                                    e.message ?? e
+                                }\n不写入自定义缓存 ${$arguments?.cacheKey}`,
+                            );
+                            shouldWriteCustomCacheKey = false;
+                        }
+                    }
+                    if (shouldWriteCustomCacheKey) {
+                        $.info(
+                            `URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`,
+                        );
+                        $.write(body, customCacheKey);
+                    }
                 }
             }
 

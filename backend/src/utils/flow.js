@@ -334,7 +334,22 @@ export function normalizeFlowHeader(flowHeaders) {
                 if (!kvMap.has(key)) {
                     try {
                         // 解码 URI 组件并保留原始值作为 fallback
-                        const decodedValue = decodeURIComponent(encodedValue);
+                        let decodedValue = decodeURIComponent(encodedValue);
+                        if (
+                            ['upload', 'download', 'total', 'expire'].includes(
+                                key,
+                            )
+                        ) {
+                            try {
+                                decodedValue = Number(decodedValue).toFixed(0);
+                            } catch (e) {
+                                $.error(
+                                    `Failed to convert value for key "${key}=${encodedValue}": ${
+                                        e.message ?? e
+                                    }`,
+                                );
+                            }
+                        }
                         kvMap.set(key, decodedValue);
                     } catch (e) {
                         kvMap.set(key, encodedValue);
