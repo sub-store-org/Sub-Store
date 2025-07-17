@@ -119,10 +119,11 @@ export default function serve() {
     $app.start();
 
     if ($.env.isNode) {
-        // Deprecated: SUB_STORE_BACKEND_CRON
-        const backend_sync_cron =
-            eval('process.env.SUB_STORE_BACKEND_SYNC_CRON') ||
-            eval('process.env.SUB_STORE_BACKEND_CRON');
+        // Deprecated: SUB_STORE_BACKEND_CRON, SUB_STORE_CRON
+        const backend_sync_cron = eval(
+            'process.env.SUB_STORE_BACKEND_SYNC_CRON',
+        );
+
         if (backend_sync_cron) {
             $.info(`[SYNC CRON] ${backend_sync_cron} enabled`);
             const { CronJob } = eval(`require("cron")`);
@@ -145,6 +146,17 @@ export default function serve() {
                 true, // start
                 // 'Asia/Shanghai' // timeZone
             );
+        } else {
+            if (eval('process.env.SUB_STORE_BACKEND_CRON')) {
+                $.error(
+                    `[SYNC CRON] SUB_STORE_BACKEND_CRON 已弃用, 请使用 SUB_STORE_BACKEND_SYNC_CRON`,
+                );
+            }
+            if (eval('process.env.SUB_STORE_CRON')) {
+                $.error(
+                    `[SYNC CRON] SUB_STORE_CRON 已弃用, 请使用 SUB_STORE_BACKEND_SYNC_CRON`,
+                );
+            }
         }
         // 格式: 0 */2 * * *,sub,a;0 */3 * * *,col,b
         // 每 2 小时处理一次单条订阅 a, 每 3 小时处理一次组合订阅 b
