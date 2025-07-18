@@ -71,7 +71,14 @@ const smuxParser = (smux, proxy) => {
 const wsParser = (proxy, parsedProxy) => {
     const transport = { type: 'ws', headers: {} };
     if (proxy['ws-opts']) {
-        const { path: wsPath = '', headers: wsHeaders = {} } = proxy['ws-opts'];
+        const {
+            path: wsPath = '',
+            headers: wsHeaders = {},
+            'max-early-data': max_early_data,
+            'early-data-header-name': early_data_header_name,
+        } = proxy['ws-opts'];
+        transport.early_data_header_name = early_data_header_name;
+        transport.max_early_data = parseInt(max_early_data, 10);
         if (wsPath !== '') transport.path = `${wsPath}`;
         if (Object.keys(wsHeaders).length > 0) {
             const headers = {};
