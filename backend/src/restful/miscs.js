@@ -128,14 +128,14 @@ async function gistBackupAction(action, keep, encode) {
                 content = $.read('#sub-store');
                 content = content ? JSON.parse(content) : {};
                 if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
-                if (encode === 'base64') {
-                    content = Base64.encode(
-                        JSON.stringify(content, null, `  `),
-                    );
-                } else {
+                if (encode === 'plaintext') {
                     content.settings.gistToken =
                         '恢复后请重新设置 GitHub Token';
                     content = JSON.stringify(content, null, `  `);
+                } else {
+                    content = Base64.encode(
+                        JSON.stringify(content, null, `  `),
+                    );
                 }
 
                 $.info(`下载备份, 与本地内容对比...`);
@@ -156,11 +156,11 @@ async function gistBackupAction(action, keep, encode) {
             content = $.read('#sub-store');
             content = content ? JSON.parse(content) : {};
             if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
-            if (encode) {
-                content = Base64.encode(JSON.stringify(content, null, `  `));
-            } else {
+            if (encode === 'plaintext') {
                 content.settings.gistToken = '恢复后请重新设置 GitHub Token';
                 content = JSON.stringify(content, null, `  `);
+            } else {
+                content = Base64.encode(JSON.stringify(content, null, `  `));
             }
             $.info(`上传备份中...`);
             try {
