@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import express from '@/vendor/express';
 import $ from '@/core/app';
 import migrate from '@/utils/migration';
@@ -304,6 +305,7 @@ export default function serve() {
         const path = eval(`require("path")`);
         const fs = eval(`require("fs")`);
         const data_url = eval('process.env.SUB_STORE_DATA_URL');
+        const data_url_post = eval('process.env.SUB_STORE_DATA_URL_POST');
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
         const fe_port = eval('process.env.SUB_STORE_FRONTEND_PORT') || 3001;
         const fe_host =
@@ -424,10 +426,30 @@ export default function serve() {
         if (data_url) {
             $.info(`[BACKEND] downloading data from ${data_url}`);
             download(data_url)
-                .then((content) => {
-                    $.write(content, '#sub-store');
+                .then(async (content) => {
+                    try {
+                        content = JSON.parse(content);
+                        if (Object.keys(content.settings).length === 0) {
+                            throw new Error(
+                                '备份文件应该至少包含 settings 字段',
+                            );
+                        }
+                    } catch (err) {
+                        $.error(
+                            `Gist 备份文件校验失败, 无法还原\nReason: ${
+                                err.message ?? err
+                            }`,
+                        );
+                        throw new Error('Gist 备份文件校验失败, 无法还原');
+                    }
+                    if (data_url_post) {
+                        $.info('[BACKEND] executing post-processing script');
+                        eval(data_url_post);
+                    }
 
-                    $.cache = JSON.parse(content);
+                    $.write(JSON.stringify(content, null, `  `), '#sub-store');
+
+                    $.cache = content;
                     $.persistCache();
 
                     migrate();
