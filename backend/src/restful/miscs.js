@@ -1,3 +1,4 @@
+import { Base64 } from 'js-base64';
 import _ from 'lodash';
 import $ from '@/core/app';
 import { ENV } from '@/vendor/open-api';
@@ -105,7 +106,7 @@ async function refresh(_, res) {
     success(res);
 }
 
-async function gistBackupAction(action, keep) {
+async function gistBackupAction(action, keep, encode) {
     // read token
     const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
     if (!gistToken) throw new Error('GitHub Token is required for backup!');
@@ -127,8 +128,16 @@ async function gistBackupAction(action, keep) {
                 content = $.read('#sub-store');
                 content = content ? JSON.parse(content) : {};
                 if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
-                content.settings.gistToken = '恢复后请重新设置 GitHub Token';
-                content = JSON.stringify(content, null, `  `);
+                if (encode === 'base64') {
+                    content = Base64.encode(
+                        JSON.stringify(content, null, `  `),
+                    );
+                } else {
+                    content.settings.gistToken =
+                        '恢复后请重新设置 GitHub Token';
+                    content = JSON.stringify(content, null, `  `);
+                }
+
                 $.info(`下载备份, 与本地内容对比...`);
                 const onlineContent = await gist.download(
                     GIST_BACKUP_FILE_NAME,
@@ -147,8 +156,12 @@ async function gistBackupAction(action, keep) {
             content = $.read('#sub-store');
             content = content ? JSON.parse(content) : {};
             if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
-            content.settings.gistToken = '恢复后请重新设置 GitHub Token';
-            content = JSON.stringify(content, null, `  `);
+            if (encode) {
+                content = Base64.encode(JSON.stringify(content, null, `  `));
+            } else {
+                content.settings.gistToken = '恢复后请重新设置 GitHub Token';
+                content = JSON.stringify(content, null, `  `);
+            }
             $.info(`上传备份中...`);
             try {
                 await gist.upload({
@@ -166,17 +179,24 @@ async function gistBackupAction(action, keep) {
             $.info(`还原备份中...`);
             content = await gist.download(GIST_BACKUP_FILE_NAME);
             try {
-                content = JSON.parse(content);
+                content = JSON.parse(Base64.decode(content));
                 if (Object.keys(content.settings).length === 0) {
                     throw new Error('备份文件应该至少包含 settings 字段');
                 }
             } catch (err) {
-                $.error(
-                    `Gist 备份文件校验失败, 无法还原\nReason: ${
-                        err.message ?? err
-                    }`,
-                );
-                throw new Error('Gist 备份文件校验失败, 无法还原');
+                try {
+                    content = JSON.parse(content);
+                    if (Object.keys(content.settings).length === 0) {
+                        throw new Error('备份文件应该至少包含 settings 字段');
+                    }
+                } catch (err) {
+                    $.error(
+                        `Gist 备份文件校验失败, 无法还原\nReason: ${
+                            err.message ?? err
+                        }`,
+                    );
+                    throw new Error('Gist 备份文件校验失败, 无法还原');
+                }
             }
             if (keep) {
                 $.info(`保留原有设置 ${keep}`);
@@ -198,7 +218,7 @@ async function gistBackupAction(action, keep) {
     }
 }
 async function gistBackup(req, res) {
-    const { action, keep } = req.query;
+    const { action, keep, encode } = req.query;
     // read token
     const { gistToken } = $.read(SETTINGS_KEY);
     if (!gistToken) {
@@ -211,7 +231,7 @@ async function gistBackup(req, res) {
         );
     } else {
         try {
-            await gistBackupAction(action, keep);
+            await gistBackupAction(action, keep, encode);
             success(res);
         } catch (err) {
             $.error(

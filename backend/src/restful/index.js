@@ -1,3 +1,4 @@
+import { Base64 } from 'js-base64';
 import _ from 'lodash';
 import express from '@/vendor/express';
 import $ from '@/core/app';
@@ -428,19 +429,28 @@ export default function serve() {
             download(data_url)
                 .then(async (content) => {
                     try {
-                        content = JSON.parse(content);
+                        content = JSON.parse(Base64.decode(content));
                         if (Object.keys(content.settings).length === 0) {
                             throw new Error(
                                 '备份文件应该至少包含 settings 字段',
                             );
                         }
                     } catch (err) {
-                        $.error(
-                            `Gist 备份文件校验失败, 无法还原\nReason: ${
-                                err.message ?? err
-                            }`,
-                        );
-                        throw new Error('Gist 备份文件校验失败, 无法还原');
+                        try {
+                            content = JSON.parse(content);
+                            if (Object.keys(content.settings).length === 0) {
+                                throw new Error(
+                                    '备份文件应该至少包含 settings 字段',
+                                );
+                            }
+                        } catch (err) {
+                            $.error(
+                                `Gist 备份文件校验失败, 无法还原\nReason: ${
+                                    err.message ?? err
+                                }`,
+                            );
+                            throw new Error('Gist 备份文件校验失败, 无法还原');
+                        }
                     }
                     if (data_url_post) {
                         $.info('[BACKEND] executing post-processing script');
