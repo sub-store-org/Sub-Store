@@ -120,7 +120,8 @@ async function gistBackupAction(action) {
     switch (action) {
         case 'upload':
             try {
-                content = JSON.parse($.read('#sub-store'));
+                content = $.read('#sub-store');
+                content = content ? JSON.parse(content) : {};
                 if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
                 content.settings.gistToken = '恢复后请重新设置 GitHub Token';
                 content = JSON.stringify(content, null, `  `);
@@ -139,7 +140,8 @@ async function gistBackupAction(action) {
             // update syncTime
             settings.syncTime = new Date().getTime();
             $.write(settings, SETTINGS_KEY);
-            content = JSON.parse($.read('#sub-store'));
+            content = $.read('#sub-store');
+            content = content ? JSON.parse(content) : {};
             if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
             content.settings.gistToken = '恢复后请重新设置 GitHub Token';
             content = JSON.stringify(content, null, `  `);
