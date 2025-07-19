@@ -9,6 +9,7 @@ const isShadowRocket = 'undefined' !== typeof $rocket;
 const isEgern = 'object' == typeof egern;
 const isLanceX = 'undefined' != typeof $native;
 const isGUIforCores = typeof $Plugins !== 'undefined';
+import { Base64 } from 'js-base64';
 
 function isPlainObject(obj) {
     return (
@@ -120,13 +121,27 @@ export class OpenAPI {
             if (this.node.fs.existsSync(fpath)) {
                 try {
                     this.cache = JSON.parse(
-                        this.node.fs.readFileSync(`${fpath}`),
+                        this.node.fs.readFileSync(`${fpath}`, 'utf-8'),
                     );
+                    if (!isPlainObject(this.cache))
+                        throw new Error('Invalid Data');
                 } catch (e) {
-                    this.node.fs.copyFileSync(fpath, backupPath);
-                    this.error(
-                        `Failed to parse ${fpath}: ${e.message}. Backup created at ${backupPath}`,
-                    );
+                    try {
+                        const str = Base64.decode(
+                            this.node.fs.readFileSync(`${fpath}`, 'utf-8'),
+                        );
+                        this.cache = JSON.parse(str);
+                        this.node.fs.writeFileSync(fpath, str, {
+                            flag: 'w',
+                        });
+                        if (!isPlainObject(this.cache))
+                            throw new Error('Invalid Data');
+                    } catch (e) {
+                        this.node.fs.copyFileSync(fpath, backupPath);
+                        this.error(
+                            `Failed to parse ${fpath}: ${e.message}. Backup created at ${backupPath}`,
+                        );
+                    }
                 }
             }
             if (!isPlainObject(this.cache)) {

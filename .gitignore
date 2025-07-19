@@ -1,6 +1,7 @@
 .DS_Store
 # json config
 sub-store.json
+sub-store_*.json
 root.json
 
 # Logs
