@@ -41,10 +41,30 @@ export default function register($app) {
                 );
         })
         .post((req, res) => {
-            const { content } = req.body;
-            $.write(content, '#sub-store');
+            let { content } = req.body;
+            try {
+                content = JSON.parse(Base64.decode(content));
+                if (Object.keys(content.settings).length === 0) {
+                    throw new Error('备份文件应该至少包含 settings 字段');
+                }
+            } catch (err) {
+                try {
+                    content = JSON.parse(content);
+                    if (Object.keys(content.settings).length === 0) {
+                        throw new Error('备份文件应该至少包含 settings 字段');
+                    }
+                } catch (err) {
+                    $.error(
+                        `备份文件校验失败, 无法还原\nReason: ${
+                            err.message ?? err
+                        }`,
+                    );
+                    throw new Error('备份文件校验失败, 无法还原');
+                }
+            }
+            $.write(JSON.stringify(content, null, `  `), '#sub-store');
             if ($.env.isNode) {
-                $.cache = JSON.parse(content);
+                $.cache = content;
                 $.persistCache();
             }
             migrate();
