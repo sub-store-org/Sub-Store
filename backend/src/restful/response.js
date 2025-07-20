@@ -12,7 +12,9 @@ export function failed(resp, error, statusCode) {
             code: error.code,
             type: error.type,
             message: error.message,
-            details: error.details,
+            details: resp.req?.route?.path?.startsWith('/share/')
+                ? '详情请查看日志'
+                : error.details,
         },
     });
 }

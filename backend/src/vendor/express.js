@@ -36,6 +36,9 @@ export default function express({ substore: $, port, host }) {
 
         // adapter
         app.start = () => {
+            app.get('*', function (req, res) {
+                res.status(404).end();
+            });
             const listener = app.listen(port, host, () => {
                 const { address, port } = listener.address();
                 $.info(`[BACKEND] listening on ${address}:${port}`);
