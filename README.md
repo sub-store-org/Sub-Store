@@ -99,20 +99,14 @@ Go to `backend` directories, install node dependencies:
 pnpm i
 ```
 
-1. In `backend`, run the backend server on http://localhost:3000
-
-babel(old school)
-
-```
-pnpm start
-```
-
-or
-
-esbuild(experimental)
-
 ```
 SUB_STORE_BACKEND_API_PORT=3000 pnpm run --parallel "/^dev:.*/"
+```
+
+### Build
+
+```
+pnpm bundle:esbuild
 ```
 
 ## LICENSE
