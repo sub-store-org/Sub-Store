@@ -371,6 +371,14 @@ export default function Egern_Producer() {
                         };
                     }
                 }
+                if (
+                    ['ss'].includes(original.type) &&
+                    proxy.shadow_tls &&
+                    original['udp-port'] > 0 &&
+                    original['udp-port'] <= 65535
+                ) {
+                    proxy['udp_port'] = original['udp-port'];
+                }
 
                 delete proxy.subName;
                 delete proxy.collectionName;
