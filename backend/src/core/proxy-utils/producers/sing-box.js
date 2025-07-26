@@ -181,7 +181,7 @@ const h1Parser = (proxy, parsedProxy) => {
             host = `${host}`.split(',').map((i) => i.trim());
         if (host.length > 0) transport.host = host;
     }
-    if (!transport.host) return;
+    // if (!transport.host) return;
     if (proxy['http-path'] && proxy['http-path'] !== '') {
         const path = proxy['http-path'];
         if (Array.isArray(path)) {
@@ -190,7 +190,7 @@ const h1Parser = (proxy, parsedProxy) => {
     }
     if (parsedProxy.tls.insecure)
         parsedProxy.tls.server_name = transport.host[0];
-    if (transport.host.length === 1) transport.host = transport.host[0];
+    if (transport.host?.length === 1) transport.host = transport.host[0];
     for (const key of Object.keys(transport.headers)) {
         const value = transport.headers[key];
         if (value.length === 1) transport.headers[key] = value[0];
@@ -569,6 +569,8 @@ const vlessParser = (proxy = {}) => {
     // if (['xtls-rprx-vision', ''].includes(proxy.flow)) parsedProxy.flow = proxy.flow;
     if (proxy.flow != null) parsedProxy.flow = proxy.flow;
     if (proxy.network === 'ws') wsParser(proxy, parsedProxy);
+    if (proxy.network === 'h2') h2Parser(proxy, parsedProxy);
+    if (proxy.network === 'http') h1Parser(proxy, parsedProxy);
     if (proxy.network === 'grpc') grpcParser(proxy, parsedProxy);
     networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
