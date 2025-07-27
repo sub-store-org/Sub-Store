@@ -88,8 +88,6 @@ export default function register($app) {
 
 async function downloadSubscription(req, res) {
     let { name, nezhaIndex } = req.params;
-    name = decodeURIComponent(name);
-    nezhaIndex = decodeURIComponent(nezhaIndex);
 
     const useMihomoExternal = req.query.target === 'SurgeMac';
 
@@ -140,7 +138,6 @@ async function downloadSubscription(req, res) {
         $.info(`传入 $options: ${JSON.stringify($options)}`);
     }
     if (url) {
-        url = decodeURIComponent(url);
         $.info(`指定远程订阅 URL: ${url}`);
         if (!/^https?:\/\//.test(url)) {
             content = url;
@@ -148,32 +145,25 @@ async function downloadSubscription(req, res) {
         }
     }
     if (content) {
-        content = decodeURIComponent(content);
         $.info(`指定本地订阅: ${content}`);
     }
     if (proxy) {
-        proxy = decodeURIComponent(proxy);
         $.info(`指定远程订阅使用代理/策略 proxy: ${proxy}`);
     }
     if (ua) {
-        ua = decodeURIComponent(ua);
         $.info(`指定远程订阅 User-Agent: ${ua}`);
     }
 
     if (mergeSources) {
-        mergeSources = decodeURIComponent(mergeSources);
         $.info(`指定合并来源: ${mergeSources}`);
     }
     if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
-        ignoreFailedRemoteSub = decodeURIComponent(ignoreFailedRemoteSub);
         $.info(`指定忽略失败的远程订阅: ${ignoreFailedRemoteSub}`);
     }
     if (produceType) {
-        produceType = decodeURIComponent(produceType);
         $.info(`指定生产类型: ${produceType}`);
     }
     if (includeUnsupportedProxy) {
-        includeUnsupportedProxy = decodeURIComponent(includeUnsupportedProxy);
         $.info(
             `包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
         );
@@ -362,8 +352,6 @@ async function downloadSubscription(req, res) {
 
 async function downloadCollection(req, res) {
     let { name, nezhaIndex } = req.params;
-    name = decodeURIComponent(name);
-    nezhaIndex = decodeURIComponent(nezhaIndex);
 
     const useMihomoExternal = req.query.target === 'SurgeMac';
 
@@ -416,21 +404,17 @@ async function downloadCollection(req, res) {
     }
 
     if (proxy) {
-        proxy = decodeURIComponent(proxy);
         $.info(`指定远程订阅使用代理/策略 proxy: ${proxy}`);
     }
 
     if (ignoreFailedRemoteSub != null && ignoreFailedRemoteSub !== '') {
-        ignoreFailedRemoteSub = decodeURIComponent(ignoreFailedRemoteSub);
         $.info(`指定忽略失败的远程订阅: ${ignoreFailedRemoteSub}`);
     }
     if (produceType) {
-        produceType = decodeURIComponent(produceType);
         $.info(`指定生产类型: ${produceType}`);
     }
 
     if (includeUnsupportedProxy) {
-        includeUnsupportedProxy = decodeURIComponent(includeUnsupportedProxy);
         $.info(
             `包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
         );

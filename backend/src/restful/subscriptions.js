@@ -39,10 +39,8 @@ export default function register($app) {
 // subscriptions API
 async function getFlowInfo(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     let { url } = req.query;
     if (url) {
-        url = decodeURIComponent(url);
         $.info(`指定远程订阅 URL: ${url}`);
     }
     const allSubs = $.read(SUBS_KEY);
@@ -262,7 +260,6 @@ function createSubscription(req, res) {
 function getSubscription(req, res) {
     let { name } = req.params;
     let { raw } = req.query;
-    name = decodeURIComponent(name);
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
     if (sub) {
@@ -294,7 +291,6 @@ function getSubscription(req, res) {
 
 function updateSubscription(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name); // the original name
     let sub = req.body;
     const allSubs = $.read(SUBS_KEY);
     const oldSub = findByName(allSubs, name);
@@ -357,7 +353,6 @@ function updateSubscription(req, res) {
 
 function deleteSubscription(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     $.info(`删除订阅：${name}...`);
     // delete from subscriptions
     let allSubs = $.read(SUBS_KEY);

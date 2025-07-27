@@ -17,7 +17,6 @@ export default function register($app) {
 
 function deleteToken(req, res) {
     let { token } = req.params;
-    token = decodeURIComponent(token);
     $.info(`正在删除：${token}`);
     let allTokens = $.read(TOKENS_KEY);
     deleteByName(allTokens, token, 'token');

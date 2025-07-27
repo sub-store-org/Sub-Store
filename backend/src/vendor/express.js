@@ -270,7 +270,7 @@ function extractURL(url) {
         let hashes = url.slice(url.indexOf('?') + 1).split('&');
         for (let i = 0; i < hashes.length; i++) {
             const hash = hashes[i].split('=');
-            query[hash[0]] = hash[1];
+            query[hash[0]] = decodeURIComponent(hash[1]);
         }
     }
     return {
@@ -294,7 +294,7 @@ function extractPathParams(pattern, path) {
                 while (path[j] !== '/' && j < path.length) {
                     val.push(path[j++]);
                 }
-                params[key.join('')] = val.join('');
+                params[key.join('')] = decodeURIComponent(val.join(''));
             } else {
                 if (pattern[i] !== path[j]) {
                     return null;

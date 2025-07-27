@@ -52,7 +52,6 @@ function createCollection(req, res) {
 function getCollection(req, res) {
     let { name } = req.params;
     let { raw } = req.query;
-    name = decodeURIComponent(name);
     const allCols = $.read(COLLECTIONS_KEY);
     const collection = findByName(allCols, name);
     if (collection) {
@@ -84,7 +83,6 @@ function getCollection(req, res) {
 
 function updateCollection(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     let collection = req.body;
     const allCols = $.read(COLLECTIONS_KEY);
     const oldCol = findByName(allCols, name);
@@ -137,7 +135,6 @@ function updateCollection(req, res) {
 
 function deleteCollection(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     $.info(`正在删除组合订阅：${name}`);
     let allCols = $.read(COLLECTIONS_KEY);
     deleteByName(allCols, name);

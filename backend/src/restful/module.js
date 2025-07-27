@@ -43,7 +43,6 @@ function createModule(req, res) {
 
 function getModule(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     const allModules = $.read(MODULES_KEY);
     const module = findByName(allModules, name);
     if (module) {
@@ -64,7 +63,6 @@ function getModule(req, res) {
 
 function updateModule(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     let module = req.body;
     const allModules = $.read(MODULES_KEY);
     const oldModule = findByName(allModules, name);
@@ -92,7 +90,6 @@ function updateModule(req, res) {
 
 function deleteModule(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     $.info(`正在删除模块：${name}`);
     let allModules = $.read(MODULES_KEY);
     deleteByName(allModules, name);

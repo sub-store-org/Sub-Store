@@ -112,7 +112,6 @@ function replaceArtifact(req, res) {
 
 async function getArtifact(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const artifact = findByName(allArtifacts, name);
 
@@ -163,7 +162,6 @@ function createArtifact(req, res) {
 function updateArtifact(req, res) {
     const allArtifacts = $.read(ARTIFACTS_KEY);
     let oldName = req.params.name;
-    oldName = decodeURIComponent(oldName);
     const artifact = findByName(allArtifacts, oldName);
     if (artifact) {
         $.info(`正在更新远程配置：${artifact.name}`);
@@ -197,7 +195,6 @@ function updateArtifact(req, res) {
 
 async function deleteArtifact(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     $.info(`正在删除远程配置：${name}`);
     const allArtifacts = $.read(ARTIFACTS_KEY);
     try {

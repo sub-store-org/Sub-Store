@@ -792,7 +792,6 @@ async function syncAllArtifacts(_, res) {
 
 async function syncArtifact(req, res) {
     let { name } = req.params;
-    name = decodeURIComponent(name);
     $.info(`开始同步远程配置 ${name}...`);
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const artifact = findByName(allArtifacts, name);
