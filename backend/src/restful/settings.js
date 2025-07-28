@@ -61,7 +61,7 @@ async function updateSettings(req, res) {
 
 export async function updateAvatar() {
     const settings = $.read(SETTINGS_KEY);
-    const { githubUser: username, syncPlatform } = settings;
+    const { githubUser: username, syncPlatform, githubProxy } = settings;
     if (username) {
         if (syncPlatform === 'gitlab') {
             try {
@@ -92,7 +92,9 @@ export async function updateAvatar() {
             try {
                 const data = await $.http
                     .get({
-                        url: `https://api.github.com/users/${encodeURIComponent(
+                        url: `${
+                            githubProxy ? `${githubProxy}/` : ''
+                        }https://api.github.com/users/${encodeURIComponent(
                             username,
                         )}`,
                         headers: {

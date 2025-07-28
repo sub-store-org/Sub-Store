@@ -9,7 +9,11 @@ import { SETTINGS_KEY } from '@/constants';
 export default class Gist {
     constructor({ token, key, syncPlatform }) {
         const { isStash, isLoon, isShadowRocket, isQX } = ENV();
-        const { defaultProxy, defaultTimeout: timeout } = $.read(SETTINGS_KEY);
+        const {
+            defaultProxy,
+            defaultTimeout: timeout,
+            githubProxy,
+        } = $.read(SETTINGS_KEY);
         let proxy = defaultProxy;
         if ($.env.isNode) {
             proxy =
@@ -63,7 +67,9 @@ export default class Gist {
                     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36',
             };
             this.http = HTTP({
-                baseURL: 'https://api.github.com',
+                baseURL: `${
+                    githubProxy ? `${githubProxy}/` : ''
+                }https://api.github.com`,
                 headers: {
                     ...this.headers,
                     ...(isStash && proxy
