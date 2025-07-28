@@ -230,6 +230,7 @@ async function getFlowInfo(req, res) {
 
 function createSubscription(req, res) {
     const sub = req.body;
+    delete sub.subscriptions;
     $.info(`正在创建订阅： ${sub.name}`);
     if (/\//.test(sub.name)) {
         failed(
@@ -262,6 +263,7 @@ function getSubscription(req, res) {
     let { raw } = req.query;
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
+    delete sub.subscriptions;
     if (sub) {
         if (raw) {
             res.set('content-type', 'application/json')
@@ -292,6 +294,7 @@ function getSubscription(req, res) {
 function updateSubscription(req, res) {
     let { name } = req.params;
     let sub = req.body;
+    delete sub.subscriptions;
     const allSubs = $.read(SUBS_KEY);
     const oldSub = findByName(allSubs, name);
     if (oldSub) {
