@@ -260,37 +260,27 @@ export default async function download(
                     shouldCache = false;
                 }
             }
+            if (preprocess) {
+                try {
+                    const proxies = ProxyUtils.parse(body);
+                    if (!Array.isArray(proxies) || proxies.length === 0) {
+                        $.error(`URL ${url} 不包含有效节点, 不缓存`);
+                        shouldCache = false;
+                    }
+                } catch (e) {
+                    $.error(
+                        `URL ${url} 尝试解析节点失败 ${e.message ?? e}, 不缓存`,
+                    );
+                    shouldCache = false;
+                }
+            }
             if (shouldCache) {
                 resourceCache.set(id, body);
                 if (customCacheKey) {
-                    let shouldWriteCustomCacheKey = true;
-                    if (preprocess) {
-                        try {
-                            const proxies = ProxyUtils.parse(body);
-                            if (
-                                !Array.isArray(proxies) ||
-                                proxies.length === 0
-                            ) {
-                                $.error(
-                                    `URL ${url} 不包含有效节点\n不写入自定义缓存 ${$arguments?.cacheKey}`,
-                                );
-                                shouldWriteCustomCacheKey = false;
-                            }
-                        } catch (e) {
-                            $.error(
-                                `URL ${url} 尝试解析节点失败 ${
-                                    e.message ?? e
-                                }\n不写入自定义缓存 ${$arguments?.cacheKey}`,
-                            );
-                            shouldWriteCustomCacheKey = false;
-                        }
-                    }
-                    if (shouldWriteCustomCacheKey) {
-                        $.info(
-                            `URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`,
-                        );
-                        $.write(body, customCacheKey);
-                    }
+                    $.info(
+                        `URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`,
+                    );
+                    $.write(body, customCacheKey);
                 }
             }
 
