@@ -342,6 +342,12 @@ export function normalizeFlowHeader(flowHeaders) {
                         ) {
                             try {
                                 decodedValue = Number(decodedValue).toFixed(0);
+                                if (
+                                    ['expire'].includes(key) &&
+                                    decodedValue <= 0
+                                ) {
+                                    decodedValue = '';
+                                }
                             } catch (e) {
                                 $.error(
                                     `Failed to convert value for key "${key}=${encodedValue}": ${
