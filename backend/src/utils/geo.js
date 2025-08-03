@@ -46,6 +46,7 @@ const ISOFlags = {
     '🇭🇰': ['HK', 'HKG', 'HKT', 'HKBN', 'HGC', 'WTT', 'CMI'],
     '🇭🇷': ['HR', 'HRV'],
     '🇭🇺': ['HU', 'HUN'],
+    '🇮🇶': ['IQ', 'IRQ'], // 伊拉克
     '🇯🇴': ['JO', 'JOR'],
     '🇯🇵': ['JP', 'JPN', 'TYO'],
     '🇰🇪': ['KE', 'KEN'],
@@ -99,6 +100,7 @@ const ISOFlags = {
     '🇸🇬': ['SG', 'SGP'],
     '🇸🇮': ['SI', 'SVN'],
     '🇸🇰': ['SK', 'SVK'],
+    '🇹🇬': ['TG', 'TGO'], // 多哥
     '🇹🇭': ['TH', 'THA'],
     '🇹🇳': ['TN', 'TUN'],
     '🇹🇷': ['TR', 'TUR'],
@@ -220,6 +222,7 @@ export function getFlag(name) {
         ],
         '🇭🇷': ['Croatia', '克罗地亚', '克羅地亞'],
         '🇭🇺': ['Hungary', '匈牙利'],
+        '🇮🇶': ['Iraq', '伊拉克', '巴格达', 'Baghdad'], // 伊拉克
         '🇯🇴': ['Jordan', '约旦'],
         '🇯🇵': [
             'Japan',
@@ -338,6 +341,7 @@ export function getFlag(name) {
         ],
         '🇸🇮': ['Slovenia', '斯洛文尼亚'],
         '🇸🇰': ['Slovakia', '斯洛伐克'],
+        '🇹🇬': ['Togo', '多哥', '洛美', 'Lomé', 'Lome'], // 多哥
         '🇹🇭': ['Thailand', '泰国', '泰國', '曼谷'],
         '🇹🇳': ['Tunisia', '突尼斯'],
         '🇹🇷': ['Turkey', '土耳其', '伊斯坦布尔', 'Istanbul'],
