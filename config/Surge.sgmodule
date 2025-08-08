@@ -8,10 +8,10 @@
 hostname = %APPEND% sub.store
 
 [Script]
-Sub-Store Core=type=http-request,pattern=^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))),script-path=https://raw.githubusercontent.com/sub-store-org/Sub-Store/release/sub-store-1.min.js,requires-body=true,timeout={{{timeout}}},ability="{{{ability}}}",engine={{{engine}}}
+Sub-Store Core=type=http-request,pattern=^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))),script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js,requires-body=true,timeout={{{timeout}}},ability="{{{ability}}}",engine={{{engine}}}
 
-Sub-Store Simple=type=http-request,pattern=^https?:\/\/sub\.store,script-path=https://raw.githubusercontent.com/sub-store-org/Sub-Store/release/sub-store-0.min.js,requires-body=true,timeout={{{timeout}}},engine={{{engine}}}
+Sub-Store Simple=type=http-request,pattern=^https?:\/\/sub\.store,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js,requires-body=true,timeout={{{timeout}}},engine={{{engine}}}
 
-{{{sync}}}=type=cron,cronexp="{{{cronexp}}}",wake-system=1,timeout={{{timeout}}},script-path=https://raw.githubusercontent.com/sub-store-org/Sub-Store/release/cron-sync-artifacts.min.js,engine={{{engine}}}
+{{{sync}}}=type=cron,cronexp="{{{cronexp}}}",wake-system=1,timeout={{{timeout}}},script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js,engine={{{engine}}}
 
-{{{produce}}}=type=cron,cronexp="{{{produce_cronexp}}}",wake-system=1,timeout={{{timeout}}},script-path=https://raw.githubusercontent.com/sub-store-org/Sub-Store/release/cron-sync-artifacts.min.js,engine={{{engine}}},argument="sub={{{produce_sub}}}&col={{{produce_col}}}"
+{{{produce}}}=type=cron,cronexp="{{{produce_cronexp}}}",wake-system=1,timeout={{{timeout}}},script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js,engine={{{engine}}},argument="sub={{{produce_sub}}}&col={{{produce_col}}}"

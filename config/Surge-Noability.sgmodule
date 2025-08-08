@@ -7,7 +7,7 @@ hostname = %APPEND% sub.store
 
 [Script]
 # 主程序 已经去掉 Sub-Store Core 的参数 [,ability=http-client-policy] 不会爆内存，这个参数在 Surge 非常占用内存； 如果不需要使用指定节点功能 例如[加旗帜脚本或者cname脚本] 则可以使用此脚本
-Sub-Store Core=type=http-request,pattern=^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))),script-path=https://raw.githubusercontent.com/sub-store-org/Sub-Store/release/sub-store-1.min.js,requires-body=true,timeout=120
-Sub-Store Simple=type=http-request,pattern=^https?:\/\/sub\.store,script-path=https://raw.githubusercontent.com/sub-store-org/Sub-Store/release/sub-store-0.min.js,requires-body=true,timeout=120
+Sub-Store Core=type=http-request,pattern=^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))),script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js,requires-body=true,timeout=120
+Sub-Store Simple=type=http-request,pattern=^https?:\/\/sub\.store,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js,requires-body=true,timeout=120
 
-Sub-Store Sync=type=cron,cronexp=55 23 * * *,wake-system=1,timeout=120,script-path=https://raw.githubusercontent.com/sub-store-org/Sub-Store/release/cron-sync-artifacts.min.js
+Sub-Store Sync=type=cron,cronexp=55 23 * * *,wake-system=1,timeout=120,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
