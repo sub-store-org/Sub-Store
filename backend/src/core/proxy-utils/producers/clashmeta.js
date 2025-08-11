@@ -203,6 +203,9 @@ export default function ClashMeta_Producer() {
                     const reg = /^(.*?)(?:\?ed=(\d+))?$/;
                     // eslint-disable-next-line no-unused-vars
                     const [_, path = '', ed = ''] = reg.exec(wsPath);
+                    if (!proxy['ws-opts']) {
+                        proxy['ws-opts'] = {};
+                    }
                     proxy['ws-opts'].path = path;
                     if (ed !== '') {
                         proxy['ws-opts']['early-data-header-name'] =
