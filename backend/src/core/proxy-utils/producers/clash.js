@@ -134,16 +134,25 @@ export default function Clash_Producer() {
                         proxy['h2-opts'].headers.host = [host];
                     }
                 }
-                if (proxy.network === 'ws') {
-                    const wsPath = proxy['ws-opts']?.path;
-                    const reg = /^(.*?)(?:\?ed=(\d+))?$/;
-                    // eslint-disable-next-line no-unused-vars
-                    const [_, path = '', ed = ''] = reg.exec(wsPath);
-                    proxy['ws-opts'].path = path;
-                    if (ed !== '') {
-                        proxy['ws-opts']['early-data-header-name'] =
-                            'Sec-WebSocket-Protocol';
-                        proxy['ws-opts']['max-early-data'] = parseInt(ed, 10);
+                if (['ws'].includes(proxy.network)) {
+                    const networkPath = proxy[`${proxy.network}-opts`]?.path;
+                    if (networkPath) {
+                        const reg = /^(.*?)(?:\?ed=(\d+))?$/;
+                        // eslint-disable-next-line no-unused-vars
+                        const [_, path = '', ed = ''] = reg.exec(networkPath);
+                        proxy[`${proxy.network}-opts`].path = path;
+                        if (ed !== '') {
+                            proxy['ws-opts']['early-data-header-name'] =
+                                'Sec-WebSocket-Protocol';
+                            proxy['ws-opts']['max-early-data'] = parseInt(
+                                ed,
+                                10,
+                            );
+                        }
+                    } else {
+                        proxy[`${proxy.network}-opts`] =
+                            proxy[`${proxy.network}-opts`] || {};
+                        proxy[`${proxy.network}-opts`].path = '/';
                     }
                 }
                 if (proxy['plugin-opts']?.tls) {
