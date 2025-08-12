@@ -1110,9 +1110,9 @@ function handleTransport(result, proxy, includeUnsupportedProxy) {
                     const value = Object.keys(headers)
                         .map((k) => {
                             let v = headers[k];
-                            if (['Host'].includes(k)) {
-                                v = `"${v}"`;
-                            }
+                            // if (['Host'].includes(k)) {
+                            v = `"${v}"`;
+                            // }
                             return `${k}:${v}`;
                         })
                         .join('|');
