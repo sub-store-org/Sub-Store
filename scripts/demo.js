@@ -9,7 +9,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 1. `_no-resolve` 为不解析域名
   // 2. 域名解析后 会多一个 `_resolved` 字段, 表示是否解析成功
   // 3. 域名解析后会有`_IPv4`, `_IPv6`, `_IP`(若有多个步骤, 只取第一次成功的 v4 或 v6 数据), `_IP4P`(若解析类型为 IPv6 且符合 IP4P 类型, 将自动转换), `_domain` 字段, `_resolved_ips` 为解析出的所有 IP
-  // 4. 节点字段 `exec` 为 `ssr-local` 路径, 默认 `/usr/local/bin/ssr-local`; 端口从 10000 开始递增(暂不支持配置)
+  // 4. 节点字段 _exec 为 mihomo 路径, 默认 /usr/local/bin/mihomo; 节点字段 _localPort 端口为初始端口号, 逐个递减, 默认为 65535. _defaultNameserver(默认为 [ '180.76.76.76', '52.80.52.52', '119.28.28.28', '223.6.6.6' ]) 和 _nameserver (默认为 [ 'https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query', 'https://doh-pure.onedns.net/dns-query' ]) 为数组 用于自定义mihomo 的 default-nameserver 和 nameserver, 这个是配置 Surge for macOS 必须手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议. 详见 https://t.me/zhetengsha/1735
   // 5. `_subName` 为单条订阅名, `_subDisplayName` 为单条订阅显示名
   // 6. `_collectionName` 为组合订阅名, `_collectionDisplayName` 为组合订阅显示名
   // 7. `tls-fingerprint` 为 tls 指纹
