@@ -183,6 +183,9 @@ async function getFile(req, res) {
                     },
                 );
             }
+            if (output?.$options?._res?.status) {
+                res.status(output.$options._res.status);
+            }
             res.send(output?.$content ?? '');
         } catch (err) {
             $.notify(
