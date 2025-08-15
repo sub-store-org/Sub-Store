@@ -68,6 +68,25 @@ function operator(proxies = [], targetPlatform, context) {
   //   }
   // }
 
+  // 若设置 $options._res.status
+  // 则会在输出文件时设置响应状态码, 例如:
+
+  // $options._res = {
+  //   status: 404
+  // }
+
+  // 一个示例: 请求来自分享且 ua 符合时, 返回自定义状态码和响应内容
+
+  // const { headers, url, path } = $options._req || {}
+  // const ua = headers?.['user-agent'] || headers?.['User-Agent']
+
+  // if (/^\/share\//.test(url) && !/surge/i.test(ua)) {
+  //   $options._res = {
+  //     status: 418
+  //   }
+  //   $content = `I'm a teapot`
+  // }
+
   // targetPlatform 为输出的目标平台
 
   // lodash
