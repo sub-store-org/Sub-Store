@@ -31,11 +31,15 @@ export async function doh({ url, domain, type = 'A', timeout, edns }) {
             },
         ],
     });
+
+    const b64 = Buffer.from(buf).toString('base64');
+    const b64url = b64
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
     const res = await $.http.get({
-        url: `${url}?dns=${buf
-            .toString('base64')
-            .toString('utf-8')
-            .replace(/=/g, '')}`,
+        url: `${url}?dns=${encodeURIComponent(b64url)}`,
         headers: {
             Accept: 'application/dns-message',
             // 'Content-Type': 'application/dns-message',
