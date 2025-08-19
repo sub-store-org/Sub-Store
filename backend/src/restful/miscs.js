@@ -142,13 +142,18 @@ async function gistBackupAction(action, keep, encode) {
     let content;
     const settings = $.read(SETTINGS_KEY);
     const updated = settings.syncTime;
+
+    const encoding = encode || settings.gistUpload || 'base64';
+    $.info(
+        `Gist backup action: ${action}, keep: ${keep}, encode: ${encode}, settings encode: ${settings.gistUpload}, final encoding: ${encoding}`,
+    );
     switch (action) {
         case 'upload':
             try {
                 content = $.read('#sub-store');
                 content = content ? JSON.parse(content) : {};
                 if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
-                if (encode === 'plaintext') {
+                if (encoding === 'plaintext') {
                     content.settings.gistToken =
                         '恢复后请重新设置 GitHub Token';
                     content = JSON.stringify(content, null, `  `);
@@ -176,7 +181,7 @@ async function gistBackupAction(action, keep, encode) {
             content = $.read('#sub-store');
             content = content ? JSON.parse(content) : {};
             if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
-            if (encode === 'plaintext') {
+            if (encoding === 'plaintext') {
                 content.settings.gistToken = '恢复后请重新设置 GitHub Token';
                 content = JSON.stringify(content, null, `  `);
             } else {

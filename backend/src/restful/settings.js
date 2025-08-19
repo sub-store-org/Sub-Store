@@ -43,8 +43,15 @@ async function updateSettings(req, res) {
             ...req.body,
         };
         $.write(newSettings, SETTINGS_KEY);
-        await updateAvatar();
-        await updateArtifactStore();
+        if (
+            req.body.githubUser ||
+            req.body.gistToken ||
+            req.body.githubProxy ||
+            req.body.defaultProxy
+        ) {
+            await updateAvatar();
+            await updateArtifactStore();
+        }
         success(res, newSettings);
     } catch (e) {
         $.error(`Failed to update settings: ${e.message ?? e}`);
