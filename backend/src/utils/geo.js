@@ -110,6 +110,8 @@ const ISOFlags = {
     '🇺🇦': ['UA', 'UKR'],
     '🇺🇸': ['US', 'USA', 'LAX', 'SFO', 'SJC'],
     '🇺🇾': ['UY', 'URY'],
+    // 新增 梵蒂冈 ISO 代码
+    '🇻🇦': ['VA', 'VAT'],
     '🇻🇪': ['VE', 'VEN'],
     '🇻🇳': ['VN', 'VNM'],
     '🇿🇦': ['ZA', 'ZAF', 'JNB'],
@@ -404,6 +406,8 @@ export function getFlag(name) {
             'Virginia',
         ],
         '🇺🇾': ['Uruguay', '乌拉圭'],
+        // 新增 梵蒂冈 及别名
+        '🇻🇦': ['Vatican', 'Vatican City', 'Holy See', '梵蒂冈', '梵蒂岡'],
         '🇻🇪': ['Venezuela', '委内瑞拉'],
         '🇻🇳': ['Vietnam', '越南', '胡志明'],
         '🇿🇦': ['South Africa', '南非'],
