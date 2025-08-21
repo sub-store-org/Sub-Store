@@ -998,7 +998,7 @@ function URI_TUIC() {
             value = decodeURIComponent(value);
             if (['alpn'].includes(key)) {
                 proxy[key] = value ? value.split(',') : undefined;
-            } else if (['allow-insecure'].includes(key)) {
+            } else if (['allow-insecure', 'insecure'].includes(key)) {
                 proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
             } else if (['fast-open'].includes(key)) {
                 proxy.tfo = true;
