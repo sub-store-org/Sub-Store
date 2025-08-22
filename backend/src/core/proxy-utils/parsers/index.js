@@ -753,6 +753,8 @@ function URI_AnyTLS() {
         return /^anytls:\/\//.test(line);
     };
     const parse = (line) => {
+        const parsed = URI_VLESS().parse(line.replace('anytls', 'vless'));
+        // 偷个懒
         line = line.split(/anytls:\/\//)[1];
         // eslint-disable-next-line no-unused-vars
         let [__, password, server, port, addons = '', name] =
@@ -769,6 +771,8 @@ function URI_AnyTLS() {
         name = name ?? `AnyTLS ${server}:${port}`;
 
         const proxy = {
+            ...parsed,
+            uuid: undefined,
             type: 'anytls',
             name,
             server,
@@ -786,11 +790,14 @@ function URI_AnyTLS() {
                 proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
             } else if (['udp'].includes(key)) {
                 proxy[key] = /(TRUE)|1/i.test(value);
-            } else {
+            } else if (!Object.keys(proxy).includes(key)) {
                 proxy[key] = value;
             }
         }
-
+        if (['tcp'].includes(proxy.network) && !proxy['reality-opts']) {
+            delete proxy.network;
+            delete proxy.security;
+        }
         return proxy;
     };
     return { name, test, parse };
@@ -940,7 +947,7 @@ function URI_Hysteria() {
                 proxy['_obfs'] = value || '';
             } else if (['fast-open', 'peer'].includes(key)) {
                 params[key] = value;
-            } else {
+            } else if (!Object.keys(proxy).includes(key)) {
                 proxy[key] = value;
             }
         }
@@ -1007,7 +1014,7 @@ function URI_TUIC() {
             } else if (key === 'congestion-control') {
                 proxy['congestion-controller'] = value;
                 delete proxy[key];
-            } else {
+            } else if (!Object.keys(proxy).includes(key)) {
                 proxy[key] = value;
             }
         }
@@ -1090,7 +1097,7 @@ function URI_WireGuard() {
                 proxy['private-key'] = value;
             } else if (['udp'].includes(key)) {
                 proxy[key] = /(TRUE)|1/i.test(value);
-            } else if (!['flag'].includes(key)) {
+            } else if (![...Object.keys(proxy), 'flag'].includes(key)) {
                 proxy[key] = value;
             }
         }
