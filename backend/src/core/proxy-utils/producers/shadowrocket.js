@@ -126,6 +126,11 @@ export default function Shadowrocket_Producer() {
                         delete proxy['shadow-tls-sni'];
                         delete proxy['shadow-tls-version'];
                     }
+                } else if (
+                    ['anytls'].includes(proxy.type) &&
+                    proxy['network']
+                ) {
+                    return false;
                 }
 
                 if (

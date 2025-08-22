@@ -59,6 +59,11 @@ export default function ClashMeta_Producer() {
                 ) {
                     // https://wiki.metacubex.one/config/proxies/ss/#cipher
                     return false;
+                } else if (
+                    ['anytls'].includes(proxy.type) &&
+                    proxy['network']
+                ) {
+                    return false;
                 }
                 return true;
             })

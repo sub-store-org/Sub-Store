@@ -1,6 +1,120 @@
 /* eslint-disable no-case-declarations */
 import { Base64 } from 'js-base64';
 import { isIPv6 } from '@/utils';
+import { uuid } from 'automerge';
+
+function vless(proxy) {
+    let security = 'none';
+    const isReality = proxy['reality-opts'];
+    let sid = '';
+    let pbk = '';
+    let spx = '';
+    if (isReality) {
+        security = 'reality';
+        const publicKey = proxy['reality-opts']?.['public-key'];
+        if (publicKey) {
+            pbk = `&pbk=${encodeURIComponent(publicKey)}`;
+        }
+        const shortId = proxy['reality-opts']?.['short-id'];
+        if (shortId) {
+            sid = `&sid=${encodeURIComponent(shortId)}`;
+        }
+        const spiderX = proxy['reality-opts']?.['_spider-x'];
+        if (spiderX) {
+            spx = `&spx=${encodeURIComponent(spiderX)}`;
+        }
+    } else if (proxy.tls) {
+        security = 'tls';
+    }
+    let alpn = '';
+    if (proxy.alpn) {
+        alpn = `&alpn=${encodeURIComponent(
+            Array.isArray(proxy.alpn) ? proxy.alpn : proxy.alpn.join(','),
+        )}`;
+    }
+    let allowInsecure = '';
+    if (proxy['skip-cert-verify']) {
+        allowInsecure = `&allowInsecure=1`;
+    }
+    let sni = '';
+    if (proxy.sni) {
+        sni = `&sni=${encodeURIComponent(proxy.sni)}`;
+    }
+    let fp = '';
+    if (proxy['client-fingerprint']) {
+        fp = `&fp=${encodeURIComponent(proxy['client-fingerprint'])}`;
+    }
+    let flow = '';
+    if (proxy.flow) {
+        flow = `&flow=${encodeURIComponent(proxy.flow)}`;
+    }
+    let extra = '';
+    if (proxy._extra) {
+        extra = `&extra=${encodeURIComponent(proxy._extra)}`;
+    }
+    let mode = '';
+    if (proxy._mode) {
+        mode = `&mode=${encodeURIComponent(proxy._mode)}`;
+    }
+    let vlessType = proxy.network;
+    if (proxy.network === 'ws' && proxy['ws-opts']?.['v2ray-http-upgrade']) {
+        vlessType = 'httpupgrade';
+    }
+
+    let vlessTransport = `&type=${encodeURIComponent(vlessType)}`;
+    if (['grpc'].includes(proxy.network)) {
+        // https://github.com/XTLS/Xray-core/issues/91
+        vlessTransport += `&mode=${encodeURIComponent(
+            proxy[`${proxy.network}-opts`]?.['_grpc-type'] || 'gun',
+        )}`;
+        const authority = proxy[`${proxy.network}-opts`]?.['_grpc-authority'];
+        if (authority) {
+            vlessTransport += `&authority=${encodeURIComponent(authority)}`;
+        }
+    }
+
+    let vlessTransportServiceName =
+        proxy[`${proxy.network}-opts`]?.[`${proxy.network}-service-name`];
+    let vlessTransportPath = proxy[`${proxy.network}-opts`]?.path;
+    let vlessTransportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
+    if (vlessTransportPath) {
+        vlessTransport += `&path=${encodeURIComponent(
+            Array.isArray(vlessTransportPath)
+                ? vlessTransportPath[0]
+                : vlessTransportPath,
+        )}`;
+    }
+    if (vlessTransportHost) {
+        vlessTransport += `&host=${encodeURIComponent(
+            Array.isArray(vlessTransportHost)
+                ? vlessTransportHost[0]
+                : vlessTransportHost,
+        )}`;
+    }
+    if (vlessTransportServiceName) {
+        vlessTransport += `&serviceName=${encodeURIComponent(
+            vlessTransportServiceName,
+        )}`;
+    }
+    if (proxy.network === 'kcp') {
+        if (proxy.seed) {
+            vlessTransport += `&seed=${encodeURIComponent(proxy.seed)}`;
+        }
+        if (proxy.headerType) {
+            vlessTransport += `&headerType=${encodeURIComponent(
+                proxy.headerType,
+            )}`;
+        }
+    }
+
+    return `vless://${proxy.uuid}@${proxy.server}:${
+        proxy.port
+    }?security=${encodeURIComponent(
+        security,
+    )}${vlessTransport}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}#${encodeURIComponent(
+        proxy.name,
+    )}`;
+}
 
 export default function URI_Producer() {
     const type = 'SINGLE';
@@ -182,131 +296,7 @@ export default function URI_Producer() {
                 result = 'vmess://' + Base64.encode(JSON.stringify(result));
                 break;
             case 'vless':
-                let security = 'none';
-                const isReality = proxy['reality-opts'];
-                let sid = '';
-                let pbk = '';
-                let spx = '';
-                if (isReality) {
-                    security = 'reality';
-                    const publicKey = proxy['reality-opts']?.['public-key'];
-                    if (publicKey) {
-                        pbk = `&pbk=${encodeURIComponent(publicKey)}`;
-                    }
-                    const shortId = proxy['reality-opts']?.['short-id'];
-                    if (shortId) {
-                        sid = `&sid=${encodeURIComponent(shortId)}`;
-                    }
-                    const spiderX = proxy['reality-opts']?.['_spider-x'];
-                    if (spiderX) {
-                        spx = `&spx=${encodeURIComponent(spiderX)}`;
-                    }
-                } else if (proxy.tls) {
-                    security = 'tls';
-                }
-                let alpn = '';
-                if (proxy.alpn) {
-                    alpn = `&alpn=${encodeURIComponent(
-                        Array.isArray(proxy.alpn)
-                            ? proxy.alpn
-                            : proxy.alpn.join(','),
-                    )}`;
-                }
-                let allowInsecure = '';
-                if (proxy['skip-cert-verify']) {
-                    allowInsecure = `&allowInsecure=1`;
-                }
-                let sni = '';
-                if (proxy.sni) {
-                    sni = `&sni=${encodeURIComponent(proxy.sni)}`;
-                }
-                let fp = '';
-                if (proxy['client-fingerprint']) {
-                    fp = `&fp=${encodeURIComponent(
-                        proxy['client-fingerprint'],
-                    )}`;
-                }
-                let flow = '';
-                if (proxy.flow) {
-                    flow = `&flow=${encodeURIComponent(proxy.flow)}`;
-                }
-                let extra = '';
-                if (proxy._extra) {
-                    extra = `&extra=${encodeURIComponent(proxy._extra)}`;
-                }
-                let mode = '';
-                if (proxy._mode) {
-                    mode = `&mode=${encodeURIComponent(proxy._mode)}`;
-                }
-                let vlessType = proxy.network;
-                if (
-                    proxy.network === 'ws' &&
-                    proxy['ws-opts']?.['v2ray-http-upgrade']
-                ) {
-                    vlessType = 'httpupgrade';
-                }
-
-                let vlessTransport = `&type=${encodeURIComponent(vlessType)}`;
-                if (['grpc'].includes(proxy.network)) {
-                    // https://github.com/XTLS/Xray-core/issues/91
-                    vlessTransport += `&mode=${encodeURIComponent(
-                        proxy[`${proxy.network}-opts`]?.['_grpc-type'] || 'gun',
-                    )}`;
-                    const authority =
-                        proxy[`${proxy.network}-opts`]?.['_grpc-authority'];
-                    if (authority) {
-                        vlessTransport += `&authority=${encodeURIComponent(
-                            authority,
-                        )}`;
-                    }
-                }
-
-                let vlessTransportServiceName =
-                    proxy[`${proxy.network}-opts`]?.[
-                        `${proxy.network}-service-name`
-                    ];
-                let vlessTransportPath = proxy[`${proxy.network}-opts`]?.path;
-                let vlessTransportHost =
-                    proxy[`${proxy.network}-opts`]?.headers?.Host;
-                if (vlessTransportPath) {
-                    vlessTransport += `&path=${encodeURIComponent(
-                        Array.isArray(vlessTransportPath)
-                            ? vlessTransportPath[0]
-                            : vlessTransportPath,
-                    )}`;
-                }
-                if (vlessTransportHost) {
-                    vlessTransport += `&host=${encodeURIComponent(
-                        Array.isArray(vlessTransportHost)
-                            ? vlessTransportHost[0]
-                            : vlessTransportHost,
-                    )}`;
-                }
-                if (vlessTransportServiceName) {
-                    vlessTransport += `&serviceName=${encodeURIComponent(
-                        vlessTransportServiceName,
-                    )}`;
-                }
-                if (proxy.network === 'kcp') {
-                    if (proxy.seed) {
-                        vlessTransport += `&seed=${encodeURIComponent(
-                            proxy.seed,
-                        )}`;
-                    }
-                    if (proxy.headerType) {
-                        vlessTransport += `&headerType=${encodeURIComponent(
-                            proxy.headerType,
-                        )}`;
-                    }
-                }
-
-                result = `vless://${proxy.uuid}@${proxy.server}:${
-                    proxy.port
-                }?security=${encodeURIComponent(
-                    security,
-                )}${vlessTransport}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}#${encodeURIComponent(
-                    proxy.name,
-                )}`;
+                result = vless(proxy);
                 break;
             case 'trojan':
                 let trojanTransport = '';
@@ -585,6 +575,12 @@ export default function URI_Producer() {
                 }
                 break;
             case 'anytls':
+                result = vless({
+                    ...proxy,
+                    uuid: proxy.password,
+                    network: proxy.network || 'tcp',
+                }).replace('vless', 'anytls');
+                // 偷个懒
                 let anytlsParams = [];
                 Object.keys(proxy).forEach((key) => {
                     if (
@@ -616,7 +612,13 @@ export default function URI_Producer() {
                             if (proxy[key]) {
                                 anytlsParams.push(`udp=1`);
                             }
-                        } else if (proxy[key] && !/^_/i.test(key)) {
+                        } else if (
+                            proxy[key] &&
+                            !/^_|client-fingerprint/i.test(key) &&
+                            ['number', 'string', 'boolean'].includes(
+                                typeof proxy[key],
+                            )
+                        ) {
                             anytlsParams.push(
                                 `${i.replace(/-/g, '_')}=${encodeURIComponent(
                                     proxy[key],
@@ -625,12 +627,45 @@ export default function URI_Producer() {
                         }
                     }
                 });
+                // Parse existing query parameters from result
+                const urlParts = result.split('?');
+                let baseUrl = urlParts[0];
+                let existingParams = {};
 
-                result = `anytls://${encodeURIComponent(proxy.password)}@${
-                    proxy.server
-                }:${proxy.port}/?${anytlsParams.join('&')}#${encodeURIComponent(
-                    proxy.name,
-                )}`;
+                if (urlParts.length > 1) {
+                    const queryString = urlParts[1].split('#')[0]; // Remove fragment if exists
+                    const pairs = queryString.split('&');
+                    pairs.forEach((pair) => {
+                        const [key, value] = pair.split('=');
+                        if (key) {
+                            existingParams[key] = value;
+                        }
+                    });
+                }
+
+                // Merge anytlsParams with existing parameters
+                anytlsParams.forEach((param) => {
+                    const [key, value] = param.split('=');
+                    if (key) {
+                        existingParams[key] = value;
+                    }
+                });
+
+                // Reconstruct query string
+                const newParams = Object.keys(existingParams)
+                    .map((key) => `${key}=${existingParams[key]}`)
+                    .join('&');
+
+                // Get fragment part if exists
+                const fragmentMatch = result.match(/#(.*)$/);
+                const fragment = fragmentMatch ? `#${fragmentMatch[1]}` : '';
+
+                result = `${baseUrl}?${newParams}${fragment}`;
+                // result = `anytls://${encodeURIComponent(proxy.password)}@${
+                //     proxy.server
+                // }:${proxy.port}/?${anytlsParams.join('&')}#${encodeURIComponent(
+                //     proxy.name,
+                // )}`;
                 break;
             case 'wireguard':
                 let wireguardParams = [];
