@@ -278,28 +278,61 @@ export class OpenAPI {
 
             let push = eval('process.env.SUB_STORE_PUSH_SERVICE');
             if (push) {
-                const url = push
-                    .replace(
-                        '[推送标题]',
-                        encodeURIComponent(title || 'Sub-Store'),
-                    )
-                    .replace(
-                        '[推送内容]',
-                        encodeURIComponent(
-                            [subtitle, content_].map((i) => i).join('\n'),
-                        ),
-                    );
-                const $http = HTTP();
-                $http
-                    .get({ url })
-                    .then((resp) => {
-                        console.log(
-                            `[Push Service] URL: ${url}\nRES: ${resp.statusCode} ${resp.body}`,
+                if (/^https?:\/\//.test(push)) {
+                    // 处理 HTTP/HTTPS URL
+                    const url = push
+                        .replace(
+                            '[推送标题]',
+                            encodeURIComponent(title || 'Sub-Store'),
+                        )
+                        .replace(
+                            '[推送内容]',
+                            encodeURIComponent(
+                                [subtitle, content_].map((i) => i).join('\n'),
+                            ),
                         );
-                    })
-                    .catch((e) => {
-                        console.log(`[Push Service] URL: ${url}\nERROR: ${e}`);
-                    });
+                    const $http = HTTP();
+                    $http
+                        .get({ url })
+                        .then((resp) => {
+                            console.log(
+                                `[Push Service] URL: ${url}\nRES: ${resp.statusCode} ${resp.body}`,
+                            );
+                        })
+                        .catch((e) => {
+                            console.log(
+                                `[Push Service] URL: ${url}\nERROR: ${e}`,
+                            );
+                        });
+                } else {
+                    const { execFile } = eval(`require("child_process")`);
+                    execFile(
+                        'shoutrrr',
+                        [
+                            'send',
+                            '--url',
+                            push,
+                            '--message',
+                            `${title}\n${subtitle}\n${content_}`,
+                        ],
+                        (error, stdout, stderr) => {
+                            if (error) {
+                                console.log(
+                                    `[Push Service] URL: ${push}\nERROR: ${error}`,
+                                );
+                                return;
+                            }
+                            if (stderr) {
+                                console.log(
+                                    `[Push Service] URL: ${push}\nstderr: ${stderr}`,
+                                );
+                            }
+                            console.log(
+                                `[Push Service] URL: ${push}\nstdout: ${stdout}`,
+                            );
+                        },
+                    );
+                }
             }
         }
         if (isGUIforCores) {
