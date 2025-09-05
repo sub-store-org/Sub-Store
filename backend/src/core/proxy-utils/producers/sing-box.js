@@ -78,7 +78,9 @@ const wsParser = (proxy, parsedProxy) => {
             'early-data-header-name': early_data_header_name,
         } = proxy['ws-opts'];
         transport.early_data_header_name = early_data_header_name;
-        transport.max_early_data = parseInt(max_early_data, 10);
+        transport.max_early_data = max_early_data
+            ? parseInt(max_early_data, 10)
+            : undefined;
         if (wsPath !== '') transport.path = `${wsPath}`;
         if (Object.keys(wsHeaders).length > 0) {
             const headers = {};
