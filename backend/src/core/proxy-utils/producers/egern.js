@@ -268,6 +268,12 @@ export default function Egern_Producer() {
                             },
                         };
                     }
+                    let legacy;
+                    if (isPresent(proxy, 'aead') && !proxy.aead) {
+                        legacy = true;
+                    } else if (proxy.alterId !== 0) {
+                        legacy = true;
+                    }
                     proxy = {
                         type: 'vmess',
                         name: proxy.name,
@@ -276,7 +282,7 @@ export default function Egern_Producer() {
                         user_id: proxy.uuid,
                         security,
                         tfo: proxy.tfo || proxy['fast-open'],
-                        legacy: !proxy.aead,
+                        legacy,
                         udp_relay:
                             proxy.udp || proxy.udp_relay || proxy.udp_relay,
                         next_hop: proxy.next_hop,
