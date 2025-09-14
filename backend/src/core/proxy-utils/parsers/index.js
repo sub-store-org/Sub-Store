@@ -43,7 +43,7 @@ function URI_PROXY() {
         // eslint-disable-next-line no-unused-vars
         let [__, type, tls, username, password, server, port, query, name] =
             line.match(
-                /^(socks5|http|http)(\+tls|s)?:\/\/(?:(.*?):(.*?)@)?(.*?)(?::(\d+?))?(\?.*?)?(?:#(.*?))?$/,
+                /^(socks5|http|http)(\+tls|s)?:\/\/(?:(.*?):(.*?)@)?(.*?)(?::(\d+?))?\/?(\?.*?)?(?:#(.*?))?$/,
             );
         if (port) {
             port = parseInt(port, 10);
