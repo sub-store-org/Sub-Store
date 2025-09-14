@@ -56,6 +56,14 @@ function vless(proxy) {
     if (proxy._mode) {
         mode = `&mode=${encodeURIComponent(proxy._mode)}`;
     }
+    let pqv = '';
+    if (proxy._pqv) {
+        pqv = `&pqv=${encodeURIComponent(proxy._pqv)}`;
+    }
+    let encryption = '';
+    if (proxy._encryption) {
+        encryption = `&encryption=${encodeURIComponent(proxy._encryption)}`;
+    }
     let vlessType = proxy.network;
     if (proxy.network === 'ws' && proxy['ws-opts']?.['v2ray-http-upgrade']) {
         vlessType = 'httpupgrade';
@@ -111,7 +119,7 @@ function vless(proxy) {
         proxy.port
     }?security=${encodeURIComponent(
         security,
-    )}${vlessTransport}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}#${encodeURIComponent(
+    )}${vlessTransport}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}${pqv}${encryption}#${encodeURIComponent(
         proxy.name,
     )}`;
 }

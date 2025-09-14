@@ -743,6 +743,12 @@ function URI_VLESS() {
             if (params.extra) {
                 proxy._extra = params.extra;
             }
+            if (params.encryption) {
+                proxy._encryption = params.encryption;
+            }
+            if (params.pqv) {
+                proxy._pqv = params.pqv;
+            }
         }
 
         return proxy;
