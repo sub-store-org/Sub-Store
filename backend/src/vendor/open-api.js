@@ -47,10 +47,13 @@ export class OpenAPI {
         this.http = HTTP();
         this.env = ENV();
 
+        const isNode = this.env.isNode && Object.values(this.env).filter((a) => a).length == 1;
+
         if (isNode) {
             const dotenv = eval(`require("dotenv")`);
             dotenv.config();
         }
+
         this.node = (() => {
             if (isNode) {
                 const fs = eval("require('fs')");
@@ -80,13 +83,13 @@ export class OpenAPI {
     initCache() {
         if (isQX)
             this.cache = JSON.parse($prefs.valueForKey(this.name) || '{}');
-        if (isLoon || isSurge)
+        else if (isLoon || isSurge)
             this.cache = JSON.parse($persistentStore.read(this.name) || '{}');
-        if (isGUIforCores)
+        else if (isGUIforCores)
             this.cache = JSON.parse(
                 $Plugins.SubStoreCache.get(this.name) || '{}',
             );
-        if (isNode) {
+        else if (isNode) {
             // create a json for root cache
             const basePath =
                 eval('process.env.SUB_STORE_DATA_BASE_PATH') || '.';
@@ -157,9 +160,9 @@ export class OpenAPI {
     persistCache() {
         const data = JSON.stringify(this.cache, null, 2);
         if (isQX) $prefs.setValueForKey(data, this.name);
-        if (isLoon || isSurge) $persistentStore.write(data, this.name);
-        if (isGUIforCores) $Plugins.SubStoreCache.set(this.name, data);
-        if (isNode) {
+        else if (isLoon || isSurge) $persistentStore.write(data, this.name);
+        else if (isGUIforCores) $Plugins.SubStoreCache.set(this.name, data);
+        else if (isNode) {
             const basePath =
                 eval('process.env.SUB_STORE_DATA_BASE_PATH') || '.';
 
@@ -185,13 +188,13 @@ export class OpenAPI {
             if (isSurge || isLoon) {
                 return $persistentStore.write(data, key);
             }
-            if (isQX) {
+            else if (isQX) {
                 return $prefs.setValueForKey(data, key);
             }
-            if (isNode) {
+            else if (isNode) {
                 this.root[key] = data;
             }
-            if (isGUIforCores) {
+            else if (isGUIforCores) {
                 return $Plugins.SubStoreCache.set(key, data);
             }
         } else {
@@ -207,13 +210,13 @@ export class OpenAPI {
             if (isSurge || isLoon) {
                 return $persistentStore.read(key);
             }
-            if (isQX) {
+            else if (isQX) {
                 return $prefs.valueForKey(key);
             }
-            if (isNode) {
+            else if (isNode) {
                 return this.root[key];
             }
-            if (isGUIforCores) {
+            else if (isGUIforCores) {
                 return $Plugins.SubStoreCache.get(key);
             }
         } else {
@@ -228,13 +231,13 @@ export class OpenAPI {
             if (isSurge || isLoon) {
                 return $persistentStore.write(null, key);
             }
-            if (isQX) {
+            else if (isQX) {
                 return $prefs.removeValueForKey(key);
             }
-            if (isNode) {
+            else if (isNode) {
                 delete this.root[key];
             }
-            if (isGUIforCores) {
+            else if (isGUIforCores) {
                 return $Plugins.SubStoreCache.remove(key);
             }
         } else {
@@ -249,7 +252,7 @@ export class OpenAPI {
         const mediaURL = options['media-url'];
 
         if (isQX) $notify(title, subtitle, content, options);
-        if (isSurge) {
+        else if (isSurge) {
             $notification.post(
                 title,
                 subtitle,
@@ -259,7 +262,7 @@ export class OpenAPI {
                 },
             );
         }
-        if (isLoon) {
+        else if (isLoon) {
             let opts = {};
             if (openURL) opts['openUrl'] = openURL;
             if (mediaURL) opts['mediaUrl'] = mediaURL;
@@ -269,7 +272,7 @@ export class OpenAPI {
                 $notification.post(title, subtitle, content, opts);
             }
         }
-        if (isNode) {
+        else if (isNode) {
             const content_ =
                 content +
                 (openURL ? `\n点击跳转: ${openURL}` : '') +
@@ -335,7 +338,7 @@ export class OpenAPI {
                 }
             }
         }
-        if (isGUIforCores) {
+        else if (isGUIforCores) {
             $Plugins.Notify(title, subtitle + '\n' + content);
         }
     }
