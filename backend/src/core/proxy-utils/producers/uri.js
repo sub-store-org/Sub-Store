@@ -61,8 +61,8 @@ function vless(proxy) {
         pqv = `&pqv=${encodeURIComponent(proxy._pqv)}`;
     }
     let encryption = '';
-    if (proxy._encryption) {
-        encryption = `&encryption=${encodeURIComponent(proxy._encryption)}`;
+    if (proxy.encryption) {
+        encryption = `&encryption=${encodeURIComponent(proxy.encryption)}`;
     }
     let vlessType = proxy.network;
     if (proxy.network === 'ws' && proxy['ws-opts']?.['v2ray-http-upgrade']) {

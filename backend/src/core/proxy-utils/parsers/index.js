@@ -688,6 +688,7 @@ function URI_VLESS() {
         if (['websocket'].includes(proxy.network)) {
             proxy.network = 'ws';
         }
+
         if (proxy.network && !['tcp', 'none'].includes(proxy.network)) {
             const opts = {};
             const host = params.host ?? params.obfsParam;
@@ -743,12 +744,12 @@ function URI_VLESS() {
             if (params.extra) {
                 proxy._extra = params.extra;
             }
-            if (params.encryption) {
-                proxy._encryption = params.encryption;
-            }
-            if (params.pqv) {
-                proxy._pqv = params.pqv;
-            }
+        }
+        if (params.encryption) {
+            proxy.encryption = params.encryption;
+        }
+        if (params.pqv) {
+            proxy._pqv = params.pqv;
         }
 
         return proxy;
