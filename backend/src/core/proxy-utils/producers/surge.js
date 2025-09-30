@@ -920,9 +920,7 @@ private-key = ${proxy['private-key']}`);
         ? proxy.reserved.join('/')
         : proxy.reserved;
     let presharedKey = proxy['preshared-key'] ?? proxy['pre-shared-key'];
-    if (presharedKey) {
-        presharedKey = `,preshared-key="${presharedKey}"`;
-    }
+
     const peer = {
         'public-key': proxy['public-key'],
         'allowed-ips': allowedIps ? `"${allowedIps}"` : undefined,
