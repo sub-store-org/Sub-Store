@@ -98,9 +98,6 @@ importers:
       '@types/gulp':
         specifier: ^4.0.9
         version: 4.0.17
-      axios:
-        specifier: ^0.21.2
-        version: 0.21.4
       babel-plugin-relative-path-import:
         specifier: ^2.0.1
         version: 2.0.1
@@ -1128,9 +1125,6 @@ packages:
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
-
-  axios@0.21.4:
-    resolution: {integrity: sha512-ut5vewkiu8jjGBdqpM44XxjuCjq9LAKeHVmoVfHVzy8eHgxxq8SbAVQNovDA8mVi05kP0Ea/n/UzcSHcTJQfNg==}
 
   b4a@1.6.7:
     resolution: {integrity: sha512-OnAYlL5b7LEkALw87fUVafQw5rVR9RjwGd4KUwNQ6DrrNmaVaUCgLipfVlzrPQ4tWOR9P0IXGNOx50jYCCdSJg==}
@@ -5339,12 +5333,6 @@ snapshots:
   available-typed-arrays@1.0.7:
     dependencies:
       possible-typed-array-names: 1.0.0
-
-  axios@0.21.4:
-    dependencies:
-      follow-redirects: 1.15.9(debug@4.4.0)
-    transitivePeerDependencies:
-      - debug
 
   b4a@1.6.7: {}
 

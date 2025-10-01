@@ -1,6 +1,6 @@
 {
   "name": "sub-store",
-  "version": "2.20.27",
+  "version": "2.20.28",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.",
   "main": "src/main.js",
   "scripts": {
@@ -53,7 +53,6 @@
     "@babel/preset-env": "^7.18.0",
     "@babel/register": "^7.17.7",
     "@types/gulp": "^4.0.9",
-    "axios": "^0.21.2",
     "babel-plugin-relative-path-import": "^2.0.1",
     "babelify": "^10.0.0",
     "browser-pack-flat": "^3.4.2",

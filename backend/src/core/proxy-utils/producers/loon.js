@@ -77,6 +77,14 @@ function shadowsocks(proxy) {
     // obfs
     if (isPresent(proxy, 'plugin')) {
         if (proxy.plugin === 'obfs') {
+            if (
+                proxy['plugin-opts']?.mode &&
+                proxy.cipher.startsWith('2022-')
+            ) {
+                throw new Error(
+                    `${proxy.cipher} ${proxy.plugin} is not supported`,
+                );
+            }
             result.append(`,obfs-name=${proxy['plugin-opts'].mode}`);
             result.appendIfPresent(
                 `,obfs-host=${proxy['plugin-opts'].host}`,
