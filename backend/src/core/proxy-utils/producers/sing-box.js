@@ -271,6 +271,12 @@ const tlsParser = (proxy, parsedProxy) => {
             enabled: true,
             fingerprint: proxy['client-fingerprint'],
         };
+    if (proxy['_fragment']) parsedProxy.tls.fragment = !!proxy['_fragment'];
+    if (proxy['_fragment_fallback_delay'])
+        parsedProxy.tls.fragment_fallback_delay =
+            proxy['_fragment_fallback_delay'];
+    if (proxy['_record_fragment'])
+        parsedProxy.tls.record_fragment = !!proxy['_record_fragment'];
     if (!parsedProxy.tls.enabled) delete parsedProxy.tls;
 };
 
