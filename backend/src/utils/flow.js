@@ -80,7 +80,7 @@ export async function getFlowHeaders(
                     userAgent || ''
                 }, Insecure: ${!!insecure}, Proxy: ${proxy}`,
             );
-            const { body } = await http.get({
+            const { body, statusCode } = await http.get({
                 url: flowUrl,
                 headers: {
                     'User-Agent': userAgent,
@@ -92,6 +92,9 @@ export async function getFlowHeaders(
                 ...(proxy ? getPolicyDescriptor(proxy) : {}),
                 ...(insecure ? insecure : {}),
             });
+            if (statusCode < 200 || statusCode >= 400) {
+                throw new Error(`statusCode: ${statusCode}`);
+            }
             flowInfo = body;
         } else {
             try {
