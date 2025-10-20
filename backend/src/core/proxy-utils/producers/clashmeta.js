@@ -67,6 +67,8 @@ export default function ClashMeta_Producer() {
                             proxy['reality-opts']))
                 ) {
                     return false;
+                } else if (['xhttp'].includes(proxy.network)) {
+                    return false;
                 }
                 return true;
             })

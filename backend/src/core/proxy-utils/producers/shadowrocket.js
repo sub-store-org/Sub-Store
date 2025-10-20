@@ -136,6 +136,8 @@ export default function Shadowrocket_Producer() {
                             proxy['reality-opts']))
                 ) {
                     return false;
+                } else if (['xhttp'].includes(proxy.network)) {
+                    return false;
                 }
 
                 if (
