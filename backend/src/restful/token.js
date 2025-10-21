@@ -17,9 +17,20 @@ export default function register($app) {
 
 function deleteToken(req, res) {
     let { token } = req.params;
-    $.info(`正在删除：${token}`);
+    const { type, name } = req.query;
+    if (!type || !name)
+        return failed(
+            res,
+            new RequestInvalidError(
+                'INVALID_PAYLOAD',
+                `Payload type and name are required. Please update your front-end(version >= 2.15.76)`,
+            ),
+        );
+    $.info(`正在删除...\ntoken: ${token}, 类型：${type}, 名称：${name}`);
     let allTokens = $.read(TOKENS_KEY);
-    deleteByName(allTokens, token, 'token');
+    allTokens = allTokens.filter(
+        (t) => !(t.token === token && t.type === type && t.name === name),
+    );
     $.write(allTokens, TOKENS_KEY);
     success(res);
 }
