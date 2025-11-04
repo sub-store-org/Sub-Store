@@ -14,6 +14,8 @@ Advanced Subscription Manager for QX, Loon, Surge, Stash, Egern and Shadowrocket
 <a href="https://trendshift.io/repositories/4572" target="_blank"><img src="https://trendshift.io/api/badge/repositories/4572" alt="sub-store-org%2FSub-Store | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/PengYM)
 
+[📚 文档/DOC](https://github.com/sub-store-org/Sub-Store/wiki)
+
 Core functionalities:
 
 1. Conversion among various formats.
