@@ -186,7 +186,8 @@ export function parseFlowHeaders(flowHeaders) {
     const uploadMatch = flowHeaders.match(
         /upload=([-+]?)([0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)/,
     );
-    const upload = Number(uploadMatch[1] + uploadMatch[2]);
+    const upload =
+        uploadMatch == null ? 0 : Number(uploadMatch[1] + uploadMatch[2]);
 
     const downloadMatch = flowHeaders.match(
         /download=([-+]?)([0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)/,
