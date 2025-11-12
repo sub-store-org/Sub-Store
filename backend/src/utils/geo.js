@@ -99,6 +99,7 @@ const ISOFlags = {
     '🇷🇪': ['RE', 'REU'],
     '🇷🇺': ['RU', 'RUS'],
     '🇸🇦': ['SA', 'SAU'],
+    '🇼🇸': ['WS', 'WSM'],
     '🇸🇪': ['SE', 'SWE'],
     '🇸🇬': ['SG', 'SGP'],
     '🇸🇮': ['SI', 'SVN'],
@@ -136,6 +137,7 @@ export function getFlag(name) {
         '🇦🇲': ['Armenia', '亚美尼亚'],
         '🇦🇷': ['Argentina', '阿根廷'],
         '🇦🇹': ['Austria', '奥地利', '奧地利', '维也纳'],
+        '🇼🇸': ['Samoa', '萨摩亚', '薩摩亞'],
         '🇦🇺': [
             'Australia',
             '澳大利亚',
