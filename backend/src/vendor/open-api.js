@@ -479,6 +479,9 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                         },
                         bodyTimeout: opts.timeout,
                         headersTimeout: opts.timeout,
+                        maxHeaderSize:
+                            eval('process.env.SUB_STORE_MAX_HEADER_SIZE') ||
+                            32 * 1024,
                     };
                     const tlsOptions = {
                         rejectUnauthorized:
