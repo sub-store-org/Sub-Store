@@ -1122,7 +1122,7 @@ function handleTransport(result, proxy, includeUnsupportedProxy) {
         } else {
             if (includeUnsupportedProxy && ['http'].includes(proxy.network)) {
                 $.info(
-                    `Include Unsupported Proxy: nework ${proxy.network} -> tcp`,
+                    `Include Unsupported Proxy: network ${proxy.network} -> tcp`,
                 );
             } else {
                 throw new Error(`network ${proxy.network} is unsupported`);
