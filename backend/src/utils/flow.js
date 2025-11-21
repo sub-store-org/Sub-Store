@@ -64,7 +64,7 @@ export async function getFlowHeaders(
     if ($.env.isNode) {
         proxy = proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');
     }
-    const userAgent = ua || defaultFlowUserAgent || 'clash';
+    const userAgent = ua || defaultFlowUserAgent || 'clash.meta/v1.19.16';
     const requestTimeout = timeout || defaultTimeout || 8000;
     const id = hex_md5(userAgent + url);
     const cached = headersResourceCache.get(id);
