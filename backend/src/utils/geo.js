@@ -84,6 +84,7 @@ const ISOFlags = {
     '🇳🇴': ['NO', 'NOR'],
     '🇳🇵': ['NP', 'NPL'],
     '🇳🇿': ['NZ', 'NZL'],
+    '🇴🇲': ['OM', 'OMN'], // 阿曼
     '🇵🇦': ['PA', 'PAN'],
     '🇵🇪': ['PE', 'PER'],
     '🇵🇭': ['PH', 'PHL'],
@@ -304,6 +305,7 @@ export function getFlag(name) {
         '🇳🇴': ['Norway', '挪威'],
         '🇳🇵': ['Nepal', '尼泊尔'],
         '🇳🇿': ['New Zealand', '新西兰', '新西蘭'],
+        '🇴🇲': ['Oman', '阿曼', '马斯喀特'],
         '🇵🇦': ['Panama', '巴拿马'],
         '🇵🇪': ['Peru', '秘鲁', '祕魯'],
         '🇵🇭': ['Philippines', '菲律宾', '菲律賓'],
