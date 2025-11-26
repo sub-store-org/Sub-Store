@@ -909,7 +909,7 @@ export default function singbox_Producer() {
                         case 'vmess':
                             if (
                                 !proxy.network ||
-                                ['ws', 'grpc', 'h2', 'http'].includes(
+                                ['tcp', 'ws', 'grpc', 'h2', 'http'].includes(
                                     proxy.network,
                                 )
                             ) {
