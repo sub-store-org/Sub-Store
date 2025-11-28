@@ -1176,6 +1176,7 @@ function Clash_All() {
             ![
                 'anytls',
                 'mieru',
+                'sudoku',
                 'juicity',
                 'ss',
                 'ssr',

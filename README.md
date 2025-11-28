@@ -42,7 +42,7 @@ Core functionalities:
 - [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, WireGuard, VLESS, Hysteria 2)
 - [x] Surge (Direct, SS, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, TUIC, Snell, Hysteria 2, SSH(Password authentication only), External Proxy Program(only for macOS), WireGuard(Surge to Surge))
 - [x] Surfboard (SS, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, WireGuard(Surfboard to Surfboard))
-- [x] Clash.Meta (Direct, SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC, SSH, mieru, AnyTLS)
+- [x] Clash.Meta (Direct, SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC, SSH, mieru, sudoku, AnyTLS)
 - [x] Stash (SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, TUIC, Juicity, SSH)
 
 Deprecated(The frontend doesn't show it, but the backend still supports it, with the query parameter `target=Clash`):
