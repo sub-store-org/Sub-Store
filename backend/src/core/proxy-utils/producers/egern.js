@@ -9,6 +9,7 @@ export default function Egern_Producer() {
                 if (
                     ![
                         'http',
+                        'https',
                         'socks5',
                         'ss',
                         'trojan',
@@ -83,7 +84,7 @@ export default function Egern_Producer() {
 
                 if (proxy.type === 'http') {
                     proxy = {
-                        type: 'http',
+                        type: proxy.tls ? 'https' : 'http',
                         name: proxy.name,
                         server: proxy.server,
                         port: proxy.port,
@@ -91,6 +92,12 @@ export default function Egern_Producer() {
                         password: proxy.password,
                         tfo: proxy.tfo || proxy['fast-open'],
                         next_hop: proxy.next_hop,
+                        ...(proxy.tls
+                            ? {
+                                  sni: proxy.sni,
+                                  skip_tls_verify: proxy['skip-cert-verify'],
+                              }
+                            : {}),
                     };
                 } else if (proxy.type === 'socks5') {
                     proxy = {
@@ -364,6 +371,7 @@ export default function Egern_Producer() {
                 if (
                     [
                         'http',
+                        'https',
                         'socks5',
                         'ss',
                         'trojan',
@@ -392,6 +400,25 @@ export default function Egern_Producer() {
                             password: original['plugin-opts'].password,
                             sni: original['plugin-opts'].host,
                         };
+                    }
+                }
+                if (
+                    ['socks5', 'ss', 'trojan', 'vless', 'vmess'].includes(
+                        original.type,
+                    )
+                ) {
+                    if (
+                        ['on', 'true', true, '1', 1].includes(
+                            original['block-quic'],
+                        )
+                    ) {
+                        proxy.block_quic = true;
+                    } else if (
+                        ['off', 'false', false, '0', 0].includes(
+                            original['block-quic'],
+                        )
+                    ) {
+                        proxy.block_quic = false;
                     }
                 }
                 if (
