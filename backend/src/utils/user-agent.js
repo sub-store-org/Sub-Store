@@ -60,42 +60,42 @@ export function getPlatformFromHeaders(headers) {
     const { UA, ua, accept } = getUserAgentFromHeaders(headers);
     return getPlatformFromUserAgent({ ua, UA, accept });
 }
+
 export function shouldIncludeUnsupportedProxy(platform, ua) {
-    // try {
-    //     const target = getPlatformFromUserAgent({
-    //         UA: ua,
-    //         ua: ua.toLowerCase(),
-    //     });
-    //     if (!['Egern'].includes(target)) {
-    //         return false;
-    //     }
-    //     const coerceVersion = coerce(ua);
-    //     $.log(JSON.stringify(coerceVersion, null, 2));
-    //     const { version } = coerceVersion;
-    //     // if (
-    //     //     platform === 'Stash' &&
-    //     //     target === 'Stash' &&
-    //     //     gte(version, '3.1.0')
-    //     // ) {
-    //     //     return true;
-    //     // }
-    //     if (
-    //         platform === 'Egern' &&
-    //         target === 'Egern' &&
-    //         gte(version, '2.7.0')
-    //     ) {
-    //         return true;
-    //     }
-    //     // Loon 的 UA 不规范, version 取出来是 build
-    //     // if (
-    //     //     platform === 'Loon' &&
-    //     //     target === 'Loon' &&
-    //     //     gte(version, '842.0.0')
-    //     // ) {
-    //     //     return true;
-    //     // }
-    // } catch (e) {
-    //     $.error(`获取版本号失败: ${e}`);
-    // }
+    try {
+        const target = getPlatformFromUserAgent({
+            UA: ua,
+            ua: ua.toLowerCase(),
+        });
+        const coerceVersion = coerce(ua);
+        const { major } = coerceVersion;
+        if (target === 'SurgeMac' && major >= 9860) {
+            return true;
+        }
+        // // if (
+        // //     platform === 'Stash' &&
+        // //     target === 'Stash' &&
+        // //     gte(version, '3.1.0')
+        // // ) {
+        // //     return true;
+        // // }
+        // if (
+        //     platform === 'Egern' &&
+        //     target === 'Egern' &&
+        //     gte(version, '2.7.0')
+        // ) {
+        //     return true;
+        // }
+        // // Loon 的 UA 不规范, version 取出来是 build
+        // // if (
+        // //     platform === 'Loon' &&
+        // //     target === 'Loon' &&
+        // //     gte(version, '842.0.0')
+        // // ) {
+        // //     return true;
+        // // }
+    } catch (e) {
+        // $.error(`获取版本号失败: ${e}`);
+    }
     return false;
 }

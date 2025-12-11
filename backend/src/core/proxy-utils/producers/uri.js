@@ -139,9 +139,14 @@ export default function URI_Producer() {
             }
         }
         if (
-            ['trojan', 'tuic', 'hysteria', 'hysteria2', 'juicity'].includes(
-                proxy.type,
-            )
+            [
+                'trojan',
+                'tuic',
+                'hysteria',
+                'hysteria2',
+                'juicity',
+                'anytls',
+            ].includes(proxy.type)
         ) {
             delete proxy.tls;
         }

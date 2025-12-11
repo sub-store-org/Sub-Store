@@ -1498,6 +1498,14 @@ function Surge_Direct() {
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
+function Surge_Anytls() {
+    const name = 'Surge Anytls Parser';
+    const test = (line) => {
+        return /^.*=\s*anytls/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
 function Surge_SSH() {
     const name = 'Surge SSH Parser';
     const test = (line) => {
@@ -1691,6 +1699,7 @@ export default [
     URI_AnyTLS(),
     Clash_All(),
     Surge_Direct(),
+    Surge_Anytls(),
     Surge_SSH(),
     Surge_SS(),
     Surge_VMess(),
