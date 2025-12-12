@@ -47,6 +47,16 @@ export default function Surge_Producer() {
             return wireguard(proxy);
         }
         if (opts['include-unsupported-proxy'] && proxy.type === 'anytls') {
+            if (
+                proxy.network &&
+                (!['tcp'].includes(proxy.network) ||
+                    (['tcp'].includes(proxy.network) && proxy['reality-opts']))
+            ) {
+                throw new Error(
+                    `Platform ${targetPlatform} does not support proxy type ${proxy.type} with network or reality`,
+                );
+            }
+
             return anytls(proxy);
         }
         throw new Error(
