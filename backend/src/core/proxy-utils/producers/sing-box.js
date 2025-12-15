@@ -670,6 +670,13 @@ const naiveParser = (proxy = {}) => {
     tlsParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
     ipVersionParser(proxy, parsedProxy);
+    if (parsedProxy.tls?.insecure) {
+        $.info(
+            `Platform sing-box: insecure is not supported on naive outbound`,
+        );
+        delete parsedProxy.tls.insecure;
+    }
+
     return parsedProxy;
 };
 const hysteriaParser = (proxy = {}) => {
