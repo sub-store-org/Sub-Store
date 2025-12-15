@@ -169,6 +169,7 @@ export default function Clash_Producer() {
                         'hysteria2',
                         'juicity',
                         'anytls',
+                        'naive',
                     ].includes(proxy.type)
                 ) {
                     delete proxy.tls;

@@ -9,7 +9,7 @@ export default function Shadowrocket_Producer() {
                 if (opts['include-unsupported-proxy']) return true;
                 if (proxy.type === 'snell' && proxy.version >= 4) {
                     return false;
-                } else if (['mieru', 'sudoku'].includes(proxy.type)) {
+                } else if (['mieru', 'sudoku', 'naive'].includes(proxy.type)) {
                     return false;
                 }
                 return true;
@@ -213,6 +213,7 @@ export default function Shadowrocket_Producer() {
                         'hysteria2',
                         'juicity',
                         'anytls',
+                        'naive',
                     ].includes(proxy.type)
                 ) {
                     delete proxy.tls;

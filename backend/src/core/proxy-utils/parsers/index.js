@@ -1174,6 +1174,7 @@ function Clash_All() {
         }
         if (
             ![
+                'naive',
                 'anytls',
                 'mieru',
                 'sudoku',

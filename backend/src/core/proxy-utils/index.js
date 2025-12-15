@@ -453,6 +453,7 @@ function lastParse(proxy) {
             'hysteria2',
             'juicity',
             'anytls',
+            'naive',
         ].includes(proxy.type)
     ) {
         proxy.tls = true;

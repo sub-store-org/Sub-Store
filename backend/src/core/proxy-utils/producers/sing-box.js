@@ -366,7 +366,6 @@ const socks5Parser = (proxy = {}) => {
         type: 'socks',
         server: proxy.server,
         server_port: parseInt(`${proxy.port}`, 10),
-        password: proxy.password,
         version: '5',
     };
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
@@ -374,7 +373,16 @@ const socks5Parser = (proxy = {}) => {
     if (proxy.username) parsedProxy.username = proxy.username;
     if (proxy.password) parsedProxy.password = proxy.password;
     if (proxy.uot) parsedProxy.udp_over_tcp = true;
-    if (proxy['udp-over-tcp']) parsedProxy.udp_over_tcp = true;
+    if (proxy['udp-over-tcp']) {
+        parsedProxy.udp_over_tcp = {
+            enabled: true,
+            version:
+                !proxy['udp-over-tcp-version'] ||
+                proxy['udp-over-tcp-version'] === 1
+                    ? 1
+                    : 2,
+        };
+    }
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
@@ -618,6 +626,45 @@ const trojanParser = (proxy = {}) => {
     if (proxy.network === 'grpc') grpcParser(proxy, parsedProxy);
     if (proxy.network === 'ws') wsParser(proxy, parsedProxy);
     networkParser(proxy, parsedProxy);
+    tfoParser(proxy, parsedProxy);
+    detourParser(proxy, parsedProxy);
+    tlsParser(proxy, parsedProxy);
+    smuxParser(proxy.smux, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
+    return parsedProxy;
+};
+const naiveParser = (proxy = {}) => {
+    const parsedProxy = {
+        tag: proxy.name,
+        type: 'naive',
+        server: proxy.server,
+        server_port: parseInt(`${proxy.port}`, 10),
+        tls: { enabled: true, server_name: proxy.server, insecure: false },
+    };
+    if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
+        throw 'invalid port';
+    if (proxy.username) parsedProxy.username = proxy.username;
+    if (proxy.password) parsedProxy.password = proxy.password;
+    if (proxy.uot) parsedProxy.udp_over_tcp = true;
+    if (proxy['udp-over-tcp']) {
+        parsedProxy.udp_over_tcp = {
+            enabled: true,
+            version:
+                !proxy['udp-over-tcp-version'] ||
+                proxy['udp-over-tcp-version'] === 1
+                    ? 1
+                    : 2,
+        };
+    }
+    const insecure_concurrency = parseInt(
+        `${proxy['insecure-concurrency']}`,
+        10,
+    );
+    if (Number.isInteger(insecure_concurrency) && insecure_concurrency >= 0)
+        parsedProxy.insecure_concurrency = insecure_concurrency;
+    if (proxy['extra-headers'])
+        parsedProxy.extra_headers = proxy['extra-headers'];
+    if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
@@ -940,6 +987,9 @@ export default function singbox_Producer() {
                                     `Platform sing-box does not support proxy type: ${proxy.type} with flow ${proxy.flow}`,
                                 );
                             }
+                            break;
+                        case 'naive':
+                            list.push(naiveParser(proxy));
                             break;
                         case 'hysteria':
                             list.push(hysteriaParser(proxy));
