@@ -84,7 +84,7 @@ function parse(raw) {
         if (['vless', 'vmess'].includes(proxy.type)) {
             const isProxyUUIDValid = isValidUUID(proxy.uuid);
             if (!isProxyUUIDValid) {
-                $.error(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
+                $.info(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
             }
             // return isProxyUUIDValid;
         }
@@ -252,7 +252,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         if (['vless', 'vmess'].includes(proxy.type)) {
             const isProxyUUIDValid = isValidUUID(proxy.uuid);
             if (!isProxyUUIDValid)
-                $.error(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
+                $.info(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
             // return isProxyUUIDValid;
         }
 
