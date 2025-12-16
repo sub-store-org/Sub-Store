@@ -25,7 +25,35 @@ export default function QX_Producer() {
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
         );
     };
-    return { produce };
+    return {
+        produce: (proxy, type, opts = {}) => {
+            console.log(opts);
+            let result = produce(proxy, type, opts);
+            if (opts['include-unsupported-proxy']) {
+                if (proxy.flow === 'xtls-rprx-vision') {
+                    throw new Error(
+                        `Platform ${targetPlatform} does not support flow ${proxy.flow}`,
+                    );
+                }
+                if (proxy['reality-opts']) {
+                    if (proxy['reality-opts']['public-key']) {
+                        result = `${result},reality-base64-pubkey=${proxy['reality-opts']['public-key']}`;
+                    }
+                    if (proxy['reality-opts']['short-id']) {
+                        result = `${result},reality-hex-shortid=${proxy['reality-opts']['short-id']}`;
+                    }
+                }
+            } else if (
+                typeof proxy.flow !== 'undefined' ||
+                proxy['reality-opts']
+            ) {
+                throw new Error(
+                    `Platform ${targetPlatform} does not support XTLS/REALITY`,
+                );
+            }
+            return result;
+        },
+    };
 }
 
 function shadowsocks(proxy) {
@@ -374,10 +402,6 @@ function vmess(proxy) {
     return result.toString();
 }
 function vless(proxy) {
-    if (typeof proxy.flow !== 'undefined' || proxy['reality-opts']) {
-        throw new Error(`VLESS XTLS/REALITY is not supported`);
-    }
-
     const result = new Result(proxy);
     const append = result.append.bind(result);
     const appendIfPresent = result.appendIfPresent.bind(result);
