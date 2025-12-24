@@ -30,7 +30,7 @@ export default function QX_Producer() {
             console.log(opts);
             let result = produce(proxy, type, opts);
             if (opts['include-unsupported-proxy']) {
-                if (proxy.flow === 'xtls-rprx-vision') {
+                if (proxy.flow && proxy.flow !== 'xtls-rprx-vision') {
                     throw new Error(
                         `Platform ${targetPlatform} does not support flow ${proxy.flow}`,
                     );
@@ -480,6 +480,8 @@ function vless(proxy) {
         );
         appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
     }
+
+    appendIfPresent(`,vless-flow=${proxy.flow}`, 'flow');
 
     // tfo
     appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');

@@ -95,7 +95,7 @@ vmess = "vmess" equals address
 }
 
 vless = "vless" equals address
-    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)* {
+    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/vless_flow/others)* {
     proxy.type = "vless";
     proxy.cipher = proxy.cipher || "none";
     handleObfs();
@@ -193,6 +193,7 @@ reality_hex_shortid = comma "reality-hex-shortid" equals param:$[^=,]+ {
     $set(proxy, "reality-opts.short-id", param);
 }
 
+vless_flow = comma "vless-flow" equals param:$[^=,]+ { proxy["flow"] = param; }
 server_check_url = comma "server_check_url" equals param:$[^=,]+ { proxy["test-url"] = param; }
 
 uri = $[^,]+
