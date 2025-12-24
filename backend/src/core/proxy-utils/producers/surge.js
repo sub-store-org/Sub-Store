@@ -157,6 +157,7 @@ function shadowsocks(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -264,6 +265,7 @@ function trojan(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -340,6 +342,7 @@ function anytls(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -418,6 +421,7 @@ function vmess(proxy, includeUnsupportedProxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -498,6 +502,7 @@ function ssh(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -564,6 +569,7 @@ function http(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -626,6 +632,7 @@ function direct(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -692,6 +699,7 @@ function socks5(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -770,6 +778,7 @@ function snell(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -872,6 +881,7 @@ function tuic(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -949,6 +959,7 @@ function wireguard(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -1049,6 +1060,7 @@ function wireguard_surge(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
@@ -1137,6 +1149,7 @@ function hysteria2(proxy) {
         `,interface=${proxy['interface-name']}`,
         'interface-name',
     );
+    result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
