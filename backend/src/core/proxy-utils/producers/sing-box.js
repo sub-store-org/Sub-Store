@@ -664,6 +664,9 @@ const naiveParser = (proxy = {}) => {
         parsedProxy.insecure_concurrency = insecure_concurrency;
     if (proxy['extra-headers'])
         parsedProxy.extra_headers = proxy['extra-headers'];
+    if (proxy.quic) parsedProxy.quic = !!proxy.quic;
+    if (proxy['quic-congestion-control'])
+        parsedProxy.quic_congestion_control = proxy['quic-congestion-control'];
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
