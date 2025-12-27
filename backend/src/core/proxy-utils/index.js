@@ -99,6 +99,7 @@ async function processFn(
     source,
     $options,
 ) {
+    let context = {};
     for (const item of operators) {
         if (item.disabled) {
             $.log(
@@ -222,6 +223,7 @@ async function processFn(
                 $arguments,
                 source,
                 $options,
+                context,
             );
         } else {
             processor = PROXY_PROCESSORS[item.type](item.args || {});

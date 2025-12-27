@@ -257,7 +257,9 @@ function operator(proxies = [], targetPlatform, context) {
   // 可参考:
   // 1. https://t.me/zhetengsha/948
 
-  // context 为传入的上下文
+  // context 为传入的上下文, 可在多个脚本中共享使用
+  // 其中 env 为 环境信息, 包含运行版本和其他后端信息
+
   // 其中 source 为 订阅和组合订阅的数据, 有三种情况, 按需判断 (若只需要取订阅/组合订阅名称 直接用 `_subName` `_subDisplayName` `_collectionName` `_collectionDisplayName` 即可)
 
   // 若存在 `source._collection` 且 `source._collection.subscriptions` 中的 key 在 `source` 上也存在, 说明输出结果为组合订阅, 但是脚本设置在单条订阅上

@@ -371,7 +371,16 @@ function RegexDeleteOperator(regex) {
  1. This function name should be `operator`!
  2. Always declare variables before using them!
  */
-function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
+function ScriptOperator(
+    script,
+    targetPlatform,
+    $arguments,
+    source,
+    $options,
+    context,
+) {
+    context.source = source;
+    context.env = env;
     return {
         name: 'Script Operator',
         func: async (proxies) => {
@@ -423,7 +432,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
                     $arguments,
                     $options,
                 );
-                output = operator(proxies, targetPlatform, { source, ...env });
+                output = operator(proxies, targetPlatform, context);
             })();
             return output;
         },
@@ -432,7 +441,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
             await (async function () {
                 const operator = createDynamicFunction(
                     'operator',
-                    `async function operator(input = []) {
+                    `async function operator(input = [], targetPlatform, context) {
                         if (input && (input.$files || input.$content)) {
                             let { $content, $files, $options, $file } = input
                             if($file.type === 'mihomoProfile') {
@@ -475,7 +484,7 @@ function ScriptOperator(script, targetPlatform, $arguments, source, $options) {
                     $arguments,
                     $options,
                 );
-                output = operator(proxies, targetPlatform, { source, ...env });
+                output = operator(proxies, targetPlatform, context);
             })();
             return output;
         },
@@ -949,7 +958,16 @@ function TypeFilter(input) {
  1. This function name should be `filter`!
  2. Always declare variables before using them!
  */
-function ScriptFilter(script, targetPlatform, $arguments, source, $options) {
+function ScriptFilter(
+    script,
+    targetPlatform,
+    $arguments,
+    source,
+    $options,
+    context,
+) {
+    context.source = source;
+    context.env = env;
     return {
         name: 'Script Filter',
         func: async (proxies) => {
@@ -961,7 +979,7 @@ function ScriptFilter(script, targetPlatform, $arguments, source, $options) {
                     $arguments,
                     $options,
                 );
-                output = filter(proxies, targetPlatform, { source, ...env });
+                output = filter(proxies, targetPlatform, context);
             })();
             return output;
         },
@@ -970,7 +988,7 @@ function ScriptFilter(script, targetPlatform, $arguments, source, $options) {
             await (async function () {
                 const filter = createDynamicFunction(
                     'filter',
-                    `async function filter(input = []) {
+                    `async function filter(input = [], targetPlatform, context) {
                         let proxies = input
                         let list = []
                         const fn = async ($server) => {
@@ -984,7 +1002,7 @@ function ScriptFilter(script, targetPlatform, $arguments, source, $options) {
                     $arguments,
                     $options,
                 );
-                output = filter(proxies, targetPlatform, { source, ...env });
+                output = filter(proxies, targetPlatform, context);
             })();
             return output;
         },
