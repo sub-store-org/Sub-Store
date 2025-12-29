@@ -23,6 +23,7 @@ export default function Stash_Producer() {
                         'hysteria2',
                         'ssh',
                         'juicity',
+                        'anytls',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ![
@@ -53,6 +54,21 @@ export default function Stash_Producer() {
                     $.error(
                         `Stash 暂不支持前置代理字段. 已过滤节点 ${proxy.name}. 请使用 代理的转发链 https://stash.wiki/proxy-protocols/proxy-groups#relay`,
                     );
+                    return false;
+                } else if (
+                    ['anytls'].includes(proxy.type) &&
+                    !opts['include-unsupported-proxy']
+                ) {
+                    return false;
+                } else if (
+                    ['anytls'].includes(proxy.type) &&
+                    proxy.network &&
+                    (!['tcp'].includes(proxy.network) ||
+                        (['tcp'].includes(proxy.network) &&
+                            proxy['reality-opts']))
+                ) {
+                    return false;
+                } else if (['xhttp'].includes(proxy.network)) {
                     return false;
                 }
                 return true;
