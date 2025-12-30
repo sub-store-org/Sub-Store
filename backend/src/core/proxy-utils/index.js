@@ -442,6 +442,10 @@ function lastParse(proxy) {
             delete proxy.network;
         }
     }
+    if (['vmess'].includes(proxy.type)) {
+        proxy.cipher = proxy.cipher || 'none';
+        proxy.alterId = proxy.alterId || 0;
+    }
     if (['vless'].includes(proxy.type)) {
         if (!proxy.network) {
             proxy.network = 'tcp';
