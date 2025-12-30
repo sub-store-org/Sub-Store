@@ -20,7 +20,7 @@ export default function Surge_Producer() {
         }
         switch (proxy.type) {
             case 'ss':
-                return shadowsocks(proxy, opts['include-unsupported-proxy']);
+                return shadowsocks(proxy);
             case 'trojan':
                 return trojan(proxy);
             case 'vmess':
@@ -38,7 +38,7 @@ export default function Surge_Producer() {
             case 'wireguard-surge':
                 return wireguard_surge(proxy);
             case 'hysteria2':
-                return hysteria2(proxy);
+                return hysteria2(proxy, opts['include-unsupported-proxy']);
             case 'ssh':
                 return ssh(proxy);
         }
@@ -1088,10 +1088,17 @@ function wireguard_surge(proxy) {
     return result.toString();
 }
 
-function hysteria2(proxy) {
-    if (proxy.obfs || proxy['obfs-password']) {
-        throw new Error(`obfs is unsupported`);
+function hysteria2(proxy, includeUnsupportedProxy) {
+    if (includeUnsupportedProxy) {
+        if (proxy['obfs-password'] && proxy.obfs != 'salamander') {
+            throw new Error(`only salamander obfs is supported`);
+        }
+    } else {
+        if (proxy.obfs || proxy['obfs-password']) {
+            throw new Error(`obfs is unsupported`);
+        }
     }
+
     const result = new Result(proxy);
     result.append(`${proxy.name}=hysteria2,${proxy.server},${proxy.port}`);
 
@@ -1105,6 +1112,10 @@ function hysteria2(proxy) {
         `,port-hopping-interval=${proxy['hop-interval']}`,
         'hop-interval',
     );
+
+    if (proxy['obfs-password'] && proxy.obfs == 'salamander') {
+        result.append(`,salamander-password="${proxy['obfs-password']}"`);
+    }
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');

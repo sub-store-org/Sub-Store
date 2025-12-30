@@ -105,7 +105,7 @@ wireguard = tag equals "wireguard" (section_name/no_error_alert/ip_version/under
     proxy.type = "wireguard-surge";
     handleShadowTLS();
 }
-hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/sni/tls_verification/passwordk/tls_fingerprint/download_bandwidth/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/port_hopping_interval/others)* {
+hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/sni/tls_verification/passwordk/tls_fingerprint/download_bandwidth/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/port_hopping_interval/salamander_password/others)* {
     proxy.type = "hysteria2";
     handleShadowTLS();
 }
@@ -254,6 +254,7 @@ shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { proxy["sh
 token = comma "token" equals match:[^,]+ { proxy.token = match.join(""); }
 alpn = comma "alpn" equals match:[^,]+ { proxy.alpn = match.join(""); }
 uuidk = comma "uuid" equals match:[^,]+ { proxy.uuid = match.join(""); }
+salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); proxy.obfs = 'salamander'; }
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
 comma = _ "," _
