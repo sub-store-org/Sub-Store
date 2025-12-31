@@ -27,7 +27,6 @@ export default function QX_Producer() {
     };
     return {
         produce: (proxy, type, opts = {}) => {
-            console.log(opts);
             let result = produce(proxy, type, opts);
             if (opts['include-unsupported-proxy']) {
                 if (proxy.flow && proxy.flow !== 'xtls-rprx-vision') {
@@ -402,6 +401,7 @@ function vmess(proxy) {
     return result.toString();
 }
 function vless(proxy) {
+    if (proxy.encryption) throw new Error(`VLESS encryption is not supported`);
     const result = new Result(proxy);
     const append = result.append.bind(result);
     const appendIfPresent = result.appendIfPresent.bind(result);

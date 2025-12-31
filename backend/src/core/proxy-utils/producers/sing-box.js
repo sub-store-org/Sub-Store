@@ -978,6 +978,11 @@ export default function singbox_Producer() {
                             }
                             break;
                         case 'vless':
+                            if (proxy.encryption) {
+                                throw new Error(
+                                    `VLESS encryption is not supported`,
+                                );
+                            }
                             if (
                                 !proxy.flow ||
                                 ['xtls-rprx-vision'].includes(proxy.flow)
