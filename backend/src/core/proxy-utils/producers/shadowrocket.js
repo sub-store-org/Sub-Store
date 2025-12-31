@@ -11,7 +11,7 @@ export default function Shadowrocket_Producer() {
                     return false;
                 } else if (['mieru', 'sudoku', 'naive'].includes(proxy.type)) {
                     return false;
-                } else if (proxy.encryption && ['vless'].includes(proxy.type)) {
+                } else if (proxy.encryption && proxy.encryption !== 'none' && ['vless'].includes(proxy.type)) {
                     return false;
                 }
                 return true;

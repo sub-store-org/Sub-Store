@@ -70,7 +70,7 @@ export default function Stash_Producer() {
                     return false;
                 } else if (['xhttp'].includes(proxy.network)) {
                     return false;
-                } else if (proxy.encryption && ['vless'].includes(proxy.type)) {
+                } else if (proxy.encryption && proxy.encryption !== 'none' && ['vless'].includes(proxy.type)) {
                     return false;
                 }
                 return true;

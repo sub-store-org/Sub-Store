@@ -978,7 +978,7 @@ export default function singbox_Producer() {
                             }
                             break;
                         case 'vless':
-                            if (proxy.encryption) {
+                            if (proxy.encryption && proxy.encryption !== 'none') {
                                 throw new Error(
                                     `VLESS encryption is not supported`,
                                 );

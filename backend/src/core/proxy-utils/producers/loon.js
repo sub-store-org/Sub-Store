@@ -398,7 +398,7 @@ function vmess(proxy) {
 }
 
 function vless(proxy) {
-    if (proxy.encryption) throw new Error(`VLESS encryption is not supported`);
+    if (proxy.encryption && proxy.encryption !== 'none') throw new Error(`VLESS encryption is not supported`);
     let isXtls = false;
     const isReality = !!proxy['reality-opts'];
 

@@ -401,7 +401,7 @@ function vmess(proxy) {
     return result.toString();
 }
 function vless(proxy) {
-    if (proxy.encryption) throw new Error(`VLESS encryption is not supported`);
+    if (proxy.encryption && proxy.encryption !== 'none') throw new Error(`VLESS encryption is not supported`);
     const result = new Result(proxy);
     const append = result.append.bind(result);
     const appendIfPresent = result.appendIfPresent.bind(result);

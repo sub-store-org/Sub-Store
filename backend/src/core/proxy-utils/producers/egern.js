@@ -292,7 +292,7 @@ export default function Egern_Producer() {
                         // skip_tls_verify: proxy['skip-cert-verify'],
                     };
                 } else if (proxy.type === 'vless') {
-                    if (proxy.encryption)
+                    if (proxy.encryption && proxy.encryption !== 'none')
                         throw new Error(`VLESS encryption is not supported`);
                     if (proxy.network === 'ws') {
                         proxy.transport = {
