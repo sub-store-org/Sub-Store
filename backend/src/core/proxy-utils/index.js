@@ -437,15 +437,23 @@ function lastParse(proxy) {
             formatTransportPath(transportPath);
     }
 
+    // network 逻辑有点乱了 可能还牵扯到别的逻辑 以后再优化...
+    // 以 mihomo 为准的话, 其实应该是
+    // network¶
+    // 传输层，支持 ws/grpc，不配置或配置其他值则为 tcp
     if (proxy.type === 'trojan') {
         if (proxy.network === 'tcp') {
             delete proxy.network;
         }
     }
+    // network¶
+    // 传输层，支持 ws/http/h2/grpc，不配置或配置其他值则为 tcp
     if (['vmess'].includes(proxy.type)) {
         proxy.cipher = proxy.cipher || 'none';
         proxy.alterId = proxy.alterId || 0;
     }
+    // network¶
+    // 传输层，支持 ws/http/h2/grpc，不配置或配置其他值则为 tcp
     if (['vless'].includes(proxy.type)) {
         if (!proxy.network) {
             proxy.network = 'tcp';
