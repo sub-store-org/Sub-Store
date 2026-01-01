@@ -219,7 +219,7 @@ function handleTransport(result, proxy) {
                     }
                 }
             }
-        } else {
+        } else if (!['tcp'].includes(proxy.network)) {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
     }
