@@ -1226,7 +1226,12 @@ function handleTransport(result, proxy, includeUnsupportedProxy) {
                 $.info(
                     `Include Unsupported Proxy: network ${proxy.network} -> tcp`,
                 );
-            } else if (!['tcp'].includes(proxy.network)) {
+            } else if (
+                ['tcp'].includes(proxy.network) &&
+                proxy['reality-opts']
+            ) {
+                throw new Error(`reality is unsupported`);
+            } else {
                 throw new Error(`network ${proxy.network} is unsupported`);
             }
         }
