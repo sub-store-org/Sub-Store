@@ -242,7 +242,7 @@ function trojan(proxy) {
                 `,obfs-host=${proxy['ws-opts']?.headers?.Host}`,
                 'ws-opts.headers.Host',
             );
-        } else {
+        } else if (!['tcp'].includes(proxy.network)) {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
     }
@@ -326,7 +326,7 @@ function vmess(proxy) {
             else append(`,obfs=ws`);
         } else if (proxy.network === 'http') {
             append(`,obfs=http`);
-        } else {
+        } else if (!['tcp'].includes(proxy.network)) {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
         let transportPath = proxy[`${proxy.network}-opts`]?.path;
@@ -401,7 +401,8 @@ function vmess(proxy) {
     return result.toString();
 }
 function vless(proxy) {
-    if (proxy.encryption && proxy.encryption !== 'none') throw new Error(`VLESS encryption is not supported`);
+    if (proxy.encryption && proxy.encryption !== 'none')
+        throw new Error(`VLESS encryption is not supported`);
     const result = new Result(proxy);
     const append = result.append.bind(result);
     const appendIfPresent = result.appendIfPresent.bind(result);

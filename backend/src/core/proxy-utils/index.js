@@ -442,22 +442,20 @@ function lastParse(proxy) {
     // network¶
     // 传输层，支持 ws/grpc，不配置或配置其他值则为 tcp
     if (proxy.type === 'trojan') {
-        if (proxy.network === 'tcp') {
-            delete proxy.network;
-        }
+        proxy.network = proxy.network || 'tcp';
     }
     // network¶
     // 传输层，支持 ws/http/h2/grpc，不配置或配置其他值则为 tcp
     if (['vmess'].includes(proxy.type)) {
+        proxy.network = proxy.network || 'tcp';
+
         proxy.cipher = proxy.cipher || 'none';
         proxy.alterId = proxy.alterId || 0;
     }
     // network¶
     // 传输层，支持 ws/http/h2/grpc，不配置或配置其他值则为 tcp
     if (['vless'].includes(proxy.type)) {
-        if (!proxy.network) {
-            proxy.network = 'tcp';
-        }
+        proxy.network = proxy.network || 'tcp';
     }
     if (
         [
