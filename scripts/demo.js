@@ -50,6 +50,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 先这样处理 encodeURIComponent('arg1=a&arg2=b')
   // /api/file/foo?$options=arg1%3Da%26arg2%3Db
 
+  // 注意, 编辑页面左下角那个即可预览只是获取数据 并不是一个真实的请求, 故此时无法使用 $options
   // 默认会带上 _req 字段, 结构为
   // {
   //     method,
@@ -63,27 +64,29 @@ function operator(proxies = [], targetPlatform, context) {
   // console.log($options)
 
   // 若设置 $options._res.headers
-  // 则会在输出文件时设置响应头, 例如:
-
-  // $options._res = {
-  //   headers: {
-  //     'X-Custom': '1'
+  // 则会在输出时设置响应头, 例如:
+  // if ($options) {
+  //   $options._res = {
+  //     headers: {
+  //       'X-Custom': '1'
+  //     }
   //   }
   // }
 
   // 若设置 $options._res.status
-  // 则会在输出文件时设置响应状态码, 例如:
-
-  // $options._res = {
-  //   status: 404
+  // 则会在输出时设置响应状态码, 例如:
+  // if ($options) {
+  //   $options._res = {
+  //     status: 404
+  //   }
   // }
 
   // 一个示例: 请求来自分享且 ua 不符合时, 返回自定义状态码和响应内容
 
-  // const { headers, url, path } = $options._req || {}
+  // const { headers, url, path } = $options?._req || {}
   // const ua = headers?.['user-agent'] || headers?.['User-Agent']
 
-  // if (/^\/share\//.test(url) && !/surge/i.test(ua)) {
+  // if ($options && /^\/share\//.test(url) && !/surge/i.test(ua)) {
   //   $options._res = {
   //     status: 418
   //   }

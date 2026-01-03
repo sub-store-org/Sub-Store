@@ -121,21 +121,23 @@ async function downloadSubscription(req, res) {
         },
     };
     if (req.query.$options) {
+        let options = {};
         try {
             // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
-            $options = JSON.parse(decodeURIComponent(req.query.$options));
+            options = JSON.parse(decodeURIComponent(req.query.$options));
         } catch (e) {
             for (const pair of req.query.$options.split('&')) {
                 const key = pair.split('=')[0];
                 const value = pair.split('=')[1];
                 // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
-                $options[key] =
+                options[key] =
                     value == null || value === ''
                         ? true
                         : decodeURIComponent(value);
             }
         }
-        $.info(`传入 $options: ${JSON.stringify($options)}`);
+        $.info(`传入 $options: ${JSON.stringify(options)}`);
+        Object.assign($options, options);
     }
     if (url) {
         $.info(`指定远程订阅 URL: ${url}`);
@@ -315,12 +317,21 @@ async function downloadSubscription(req, res) {
                         req.query,
                     );
                 }
-                res.set('Content-Type', 'application/json;charset=utf-8').send(
-                    output,
-                );
+                res.set('Content-Type', 'application/json;charset=utf-8');
             } else {
-                res.send(output);
+                res.set('Content-Type', 'text/plain; charset=utf-8');
             }
+            if ($options?._res?.headers) {
+                Object.entries($options._res.headers).forEach(
+                    ([key, value]) => {
+                        res.set(key, value);
+                    },
+                );
+            }
+            if ($options?._res?.status) {
+                res.status($options._res.status);
+            }
+            res.send(output);
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载订阅失败`,
@@ -386,21 +397,23 @@ async function downloadCollection(req, res) {
         },
     };
     if (req.query.$options) {
+        let options = {};
         try {
             // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
-            $options = JSON.parse(decodeURIComponent(req.query.$options));
+            options = JSON.parse(decodeURIComponent(req.query.$options));
         } catch (e) {
             for (const pair of req.query.$options.split('&')) {
                 const key = pair.split('=')[0];
                 const value = pair.split('=')[1];
                 // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
-                $options[key] =
+                options[key] =
                     value == null || value === ''
                         ? true
                         : decodeURIComponent(value);
             }
         }
-        $.info(`传入 $options: ${JSON.stringify($options)}`);
+        $.info(`传入 $options: ${JSON.stringify(options)}`);
+        Object.assign($options, options);
     }
 
     if (proxy) {
@@ -578,12 +591,21 @@ async function downloadCollection(req, res) {
                         req.query,
                     );
                 }
-                res.set('Content-Type', 'application/json;charset=utf-8').send(
-                    output,
-                );
+                res.set('Content-Type', 'application/json;charset=utf-8');
             } else {
-                res.send(output);
+                res.set('Content-Type', 'text/plain; charset=utf-8');
             }
+            if ($options?._res?.headers) {
+                Object.entries($options._res.headers).forEach(
+                    ([key, value]) => {
+                        res.set(key, value);
+                    },
+                );
+            }
+            if ($options?._res?.status) {
+                res.status($options._res.status);
+            }
+            res.send(output);
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载组合订阅失败`,
