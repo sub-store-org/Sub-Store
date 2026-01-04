@@ -1,11 +1,14 @@
 #!name=Sub-Store
-#!desc=高级订阅管理工具. 定时任务默认为每天 23 点 55 分. 定时任务指定时将订阅/文件上传到私有 Gist. 在前端, 叫做 '同步' 或 '同步配置'
+#!desc=高级订阅管理工具. 定时任务默认为每天 23 点 55 分, 可在插件设置中自定义. 定时任务指定时将订阅/文件上传到私有 Gist. 在前端, 叫做 '同步' 或 '同步配置'
 #!openUrl=https://sub.store
 #!author=Peng-YM
 #!homepage=https://github.com/sub-store-org/Sub-Store
 #!icon=https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png
 #!select = 节点缓存有效期,1分钟,5分钟,10分钟,30分钟,1小时,2小时,3小时,6小时,12小时,24小时,48小时,72小时,参数传入
 #!select = 响应头缓存有效期,1分钟,5分钟,10分钟,30分钟,1小时,2小时,3小时,6小时,12小时,24小时,48小时,72小时,参数传入
+
+[Argument]
+cron=input, "55 23 * * *", tag=定时参数, desc=这里需要输入符合CRON表达式的参数
 
 [Rule]
 DOMAIN,sub-store.vercel.app,PROXY
@@ -17,4 +20,4 @@ hostname=sub.store
 http-request ^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))) script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js, requires-body=true, timeout=120, tag=Sub-Store Core
 http-request ^https?:\/\/sub\.store script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js, requires-body=true, timeout=120, tag=Sub-Store Simple
 
-cron "55 23 * * *" script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js, timeout=120, tag=Sub-Store Sync
+cron {cron} script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js, timeout=120, tag=Sub-Store Sync
