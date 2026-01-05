@@ -9,18 +9,21 @@ export function getFlowField(headers) {
     const keys = Object.keys(headers);
     let sub = '';
     let webPage = '';
+    let planName = '';
     for (let k of keys) {
         const lower = k.toLowerCase();
         if (lower === 'subscription-userinfo') {
             sub = headers[k];
         } else if (lower === 'profile-web-page-url') {
             webPage = headers[k];
+        } else if (lower === 'plan-name') {
+            planName = headers[k];
         }
     }
 
     return `${sub || ''}${
         webPage ? `; app_url=${encodeURIComponent(webPage)}` : ''
-    }`;
+    }${planName ? `; plan_name=${encodeURIComponent(planName)}` : ''}`;
 }
 export async function getFlowHeaders(
     rawUrl,
@@ -318,7 +321,7 @@ export function getRmainingDays(opt = {}) {
     }
 }
 
-export function normalizeFlowHeader(flowHeaders) {
+export function normalizeFlowHeader(flowHeaders, splitHeaders) {
     try {
         // 使用 Map 保持顺序并处理重复键
         const kvMap = new Map();
@@ -366,11 +369,29 @@ export function normalizeFlowHeader(flowHeaders) {
                     }
                 }
             });
-
-        // 拼接标准化字符串
-        return Array.from(kvMap.entries())
-            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`) // 重新编码保持兼容性
-            .join('; ');
+        const subscriptionUserinfo = {};
+        const headers = {
+            'subscription-userinfo': '',
+            'profile-web-page-url': '',
+            'plan-name': '',
+        };
+        kvMap.forEach((v, k) => {
+            if (splitHeaders && k === 'app_url') {
+                headers['profile-web-page-url'] = v;
+            } else if (splitHeaders && k === 'plan_name') {
+                headers['plan-name'] = v;
+            } else {
+                subscriptionUserinfo[k] = v;
+            }
+        });
+        if (Object.keys(subscriptionUserinfo).length > 0) {
+            headers['subscription-userinfo'] = Object.entries(
+                subscriptionUserinfo,
+            )
+                .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+                .join('; ');
+        }
+        return splitHeaders ? headers : headers['subscription-userinfo'];
     } catch (e) {
         $.error(`normalizeFlowHeader failed: ${e.message ?? e}`);
         return flowHeaders;

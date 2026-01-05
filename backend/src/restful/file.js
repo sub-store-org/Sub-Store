@@ -156,10 +156,22 @@ async function getFile(req, res) {
                         proxy || file.proxy,
                     );
                     if (flowInfo) {
-                        res.set(
-                            'subscription-userinfo',
-                            normalizeFlowHeader(flowInfo),
-                        );
+                        const headers = normalizeFlowHeader(flowInfo, true);
+                        if (headers?.['subscription-userinfo']) {
+                            res.set(
+                                'subscription-userinfo',
+                                headers['subscription-userinfo'],
+                            );
+                        }
+                        if (headers?.['profile-web-page-url']) {
+                            res.set(
+                                'profile-web-page-url',
+                                headers['profile-web-page-url'],
+                            );
+                        }
+                        if (headers?.['plan-name']) {
+                            res.set('plan-name', headers['plan-name']);
+                        }
                     }
                 }
             } catch (err) {
