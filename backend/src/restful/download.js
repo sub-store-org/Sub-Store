@@ -261,10 +261,19 @@ async function downloadSubscription(req, res) {
                             $arguments.flowUrl,
                         );
                         if (flowInfo) {
-                            res.set(
-                                'subscription-userinfo',
-                                normalizeFlowHeader(flowInfo),
-                            );
+                            const headers = normalizeFlowHeader(flowInfo, true);
+                            if (headers?.['subscription-userinfo']) {
+                                res.set(
+                                    'subscription-userinfo',
+                                    headers['subscription-userinfo'],
+                                );
+                            }
+                            if (headers?.['profile-web-page-url']) {
+                                res.set(
+                                    'profile-web-page-url',
+                                    headers['profile-web-page-url'],
+                                );
+                            }
                         }
                     }
                 } catch (err) {
@@ -296,12 +305,23 @@ async function downloadSubscription(req, res) {
                 } else {
                     subUserInfo = sub.subUserinfo;
                 }
-                res.set(
-                    'subscription-userinfo',
-                    normalizeFlowHeader(
-                        [subUserInfo, flowInfo].filter((i) => i).join(';'),
-                    ),
+
+                const headers = normalizeFlowHeader(
+                    [subUserInfo, flowInfo].filter((i) => i).join(';'),
+                    true,
                 );
+                if (headers?.['subscription-userinfo']) {
+                    res.set(
+                        'subscription-userinfo',
+                        headers['subscription-userinfo'],
+                    );
+                }
+                if (headers?.['profile-web-page-url']) {
+                    res.set(
+                        'profile-web-page-url',
+                        headers['profile-web-page-url'],
+                    );
+                }
             }
 
             if (platform === 'JSON') {
@@ -573,10 +593,19 @@ async function downloadCollection(req, res) {
                 .filter((i) => i)
                 .join('; ');
             if (subUserInfo) {
-                res.set(
-                    'subscription-userinfo',
-                    normalizeFlowHeader(subUserInfo),
-                );
+                const headers = normalizeFlowHeader(subUserInfo, true);
+                if (headers?.['subscription-userinfo']) {
+                    res.set(
+                        'subscription-userinfo',
+                        headers['subscription-userinfo'],
+                    );
+                }
+                if (headers?.['profile-web-page-url']) {
+                    res.set(
+                        'profile-web-page-url',
+                        headers['profile-web-page-url'],
+                    );
+                }
             }
             if (platform === 'JSON') {
                 if (resultFormat === 'nezha') {
