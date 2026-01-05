@@ -343,17 +343,31 @@ export function normalizeFlowHeader(flowHeaders, splitHeaders) {
                         // 解码 URI 组件并保留原始值作为 fallback
                         let decodedValue = decodeURIComponent(encodedValue);
                         if (
-                            ['upload', 'download', 'total', 'expire'].includes(
-                                key,
-                            )
+                            [
+                                'upload',
+                                'download',
+                                'total',
+                                'expire',
+                                'reset_day',
+                            ].includes(key)
                         ) {
                             try {
-                                decodedValue = Number(decodedValue).toFixed(0);
+                                decodedValue = Number(decodedValue);
                                 if (
-                                    ['expire'].includes(key) &&
-                                    decodedValue <= 0
+                                    ['expire', 'reset_day'].includes(key) &&
+                                    (decodedValue <= 0 ||
+                                        !Number.isFinite(decodedValue))
                                 ) {
                                     decodedValue = '';
+                                } else if (
+                                    ['upload', 'download', 'total'].includes(
+                                        key,
+                                    ) &&
+                                    !Number.isFinite(decodedValue) // 有些机场后端会下发负数
+                                ) {
+                                    decodedValue = 0;
+                                } else {
+                                    decodedValue = decodedValue.toFixed(0);
                                 }
                             } catch (e) {
                                 $.error(
