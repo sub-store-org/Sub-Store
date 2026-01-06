@@ -14,6 +14,7 @@ import getTrojanURIParser from './peggy/trojan-uri';
 import $ from '@/core/app';
 import JSON5 from 'json5';
 import YAML from '@/utils/yaml';
+import _ from 'lodash';
 
 import { Base64 } from 'js-base64';
 
@@ -121,7 +122,6 @@ function URI_SOCKS() {
 // Parse SS URI format (only supports new SIP002, legacy format is depreciated).
 // reference: https://github.com/shadowsocks/shadowsocks-org/wiki/SIP002-URI-Scheme
 function URI_SS() {
-    // TODO: 暂不支持 httpupgrade
     const name = 'URI SS Parser';
     const test = (line) => {
         return /^ss:\/\//.test(line);
@@ -174,6 +174,93 @@ function URI_SS() {
             const parsed = content.match(/(\?.*)$/);
             query = parsed[1];
         }
+        const params = {};
+        for (const addon of query.replace(/^\?/, '').split('&')) {
+            if (addon) {
+                const [key, valueRaw] = addon.split('=');
+                let value = valueRaw;
+                value = decodeURIComponent(valueRaw);
+                params[key] = value;
+            }
+        }
+        proxy.tls = params.security && params.security !== 'none';
+        proxy['skip-cert-verify'] = !!params['allowInsecure'];
+        proxy.sni = params['sni'] || params['peer'];
+        proxy['client-fingerprint'] = params.fp;
+        proxy.alpn = params.alpn
+            ? decodeURIComponent(params.alpn).split(',')
+            : undefined;
+
+        if (params['ws']) {
+            proxy.network = 'ws';
+            _.set(proxy, 'ws-opts.path', params['wspath']);
+        }
+
+        if (params['type']) {
+            let httpupgrade;
+            proxy.network = params['type'];
+            if (proxy.network === 'httpupgrade') {
+                proxy.network = 'ws';
+                httpupgrade = true;
+            }
+            if (['grpc'].includes(proxy.network)) {
+                proxy[proxy.network + '-opts'] = {
+                    'grpc-service-name': params['serviceName'],
+                    '_grpc-type': params['mode'],
+                    '_grpc-authority': params['authority'],
+                };
+            } else {
+                if (params['path']) {
+                    _.set(
+                        proxy,
+                        proxy.network + '-opts.path',
+                        decodeURIComponent(params['path']),
+                    );
+                }
+                if (params['host']) {
+                    _.set(
+                        proxy,
+                        proxy.network + '-opts.headers.Host',
+                        decodeURIComponent(params['host']),
+                    );
+                }
+                if (httpupgrade) {
+                    _.set(
+                        proxy,
+                        proxy.network + '-opts.v2ray-http-upgrade',
+                        true,
+                    );
+                    _.set(
+                        proxy,
+                        proxy.network + '-opts.v2ray-http-upgrade-fast-open',
+                        true,
+                    );
+                }
+            }
+            if (['reality'].includes(params.security)) {
+                const opts = {};
+                if (params.pbk) {
+                    opts['public-key'] = params.pbk;
+                }
+                if (params.sid) {
+                    opts['short-id'] = params.sid;
+                }
+                if (params.spx) {
+                    opts['_spider-x'] = params.spx;
+                }
+                if (params.mode) {
+                    proxy._mode = params.mode;
+                }
+                if (params.extra) {
+                    proxy._extra = params.extra;
+                }
+                if (Object.keys(opts).length > 0) {
+                    _.set(proxy, params.security + '-opts', opts);
+                }
+            }
+        }
+
+        proxy.udp = !!params['udp'];
 
         const serverAndPort = serverAndPortArray[1];
         const portIdx = serverAndPort.lastIndexOf(':');

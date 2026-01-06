@@ -174,26 +174,27 @@ export default function URI_Producer() {
                           )}:${encodeURIComponent(proxy.password)}`
                         : Base64.encode(userinfo)
                 }@${proxy.server}:${proxy.port}${proxy.plugin ? '/' : ''}`;
+                let query = '';
                 if (proxy.plugin) {
-                    result += '?plugin=';
+                    query += '&plugin=';
                     const opts = proxy['plugin-opts'];
                     switch (proxy.plugin) {
                         case 'obfs':
-                            result += encodeURIComponent(
+                            query += encodeURIComponent(
                                 `simple-obfs;obfs=${opts.mode}${
                                     opts.host ? ';obfs-host=' + opts.host : ''
                                 }`,
                             );
                             break;
                         case 'v2ray-plugin':
-                            result += encodeURIComponent(
+                            query += encodeURIComponent(
                                 `v2ray-plugin;obfs=${opts.mode}${
                                     opts.host ? ';obfs-host' + opts.host : ''
                                 }${opts.tls ? ';tls' : ''}`,
                             );
                             break;
                         case 'shadow-tls':
-                            result += encodeURIComponent(
+                            query += encodeURIComponent(
                                 `shadow-tls;host=${opts.host};password=${opts.password};version=${opts.version}`,
                             );
                             break;
@@ -204,14 +205,112 @@ export default function URI_Producer() {
                     }
                 }
                 if (proxy['udp-over-tcp']) {
-                    result = `${result}${proxy.plugin ? '&' : '?'}uot=1`;
+                    query += '&uot=1';
                 }
                 if (proxy.tfo) {
-                    result = `${result}${
-                        proxy.plugin || proxy['udp-over-tcp'] ? '&' : '?'
-                    }tfo=1`;
+                    query += '&tfo=1';
                 }
-                result += `#${encodeURIComponent(proxy.name)}`;
+                let ssTransport = '';
+                if (proxy.network) {
+                    let ssType = proxy.network;
+                    if (
+                        proxy.network === 'ws' &&
+                        proxy['ws-opts']?.['v2ray-http-upgrade']
+                    ) {
+                        ssType = 'httpupgrade';
+                    }
+                    ssTransport = `&type=${encodeURIComponent(ssType)}`;
+                    if (['grpc'].includes(proxy.network)) {
+                        let ssTransportServiceName =
+                            proxy[`${proxy.network}-opts`]?.[
+                                `${proxy.network}-service-name`
+                            ];
+                        let ssTransportAuthority =
+                            proxy[`${proxy.network}-opts`]?.['_grpc-authority'];
+                        if (ssTransportServiceName) {
+                            ssTransport += `&serviceName=${encodeURIComponent(
+                                ssTransportServiceName,
+                            )}`;
+                        }
+                        if (ssTransportAuthority) {
+                            ssTransport += `&authority=${encodeURIComponent(
+                                ssTransportAuthority,
+                            )}`;
+                        }
+                        ssTransport += `&mode=${encodeURIComponent(
+                            proxy[`${proxy.network}-opts`]?.['_grpc-type'] ||
+                                'gun',
+                        )}`;
+                    }
+                    let ssTransportPath = proxy[`${proxy.network}-opts`]?.path;
+                    let ssTransportHost =
+                        proxy[`${proxy.network}-opts`]?.headers?.Host;
+                    if (ssTransportPath) {
+                        ssTransport += `&path=${encodeURIComponent(
+                            Array.isArray(ssTransportPath)
+                                ? ssTransportPath[0]
+                                : ssTransportPath,
+                        )}`;
+                    }
+                    if (ssTransportHost) {
+                        ssTransport += `&host=${encodeURIComponent(
+                            Array.isArray(ssTransportHost)
+                                ? ssTransportHost[0]
+                                : ssTransportHost,
+                        )}`;
+                    }
+                }
+                let ssFp = '';
+                if (proxy['client-fingerprint']) {
+                    ssFp = `&fp=${encodeURIComponent(
+                        proxy['client-fingerprint'],
+                    )}`;
+                }
+                let ssAlpn = '';
+                if (proxy.alpn) {
+                    ssAlpn = `&alpn=${encodeURIComponent(
+                        Array.isArray(proxy.alpn)
+                            ? proxy.alpn
+                            : proxy.alpn.join(','),
+                    )}`;
+                }
+                const ssIsReality = proxy['reality-opts'];
+                let ssSid = '';
+                let ssPbk = '';
+                let ssSpx = '';
+                let ssSecurity = proxy.tls ? '&security=tls' : '';
+                let ssMode = '';
+                let ssExtra = '';
+                if (ssIsReality) {
+                    ssSecurity = `&security=reality`;
+                    const publicKey = proxy['reality-opts']?.['public-key'];
+                    if (publicKey) {
+                        ssPbk = `&pbk=${encodeURIComponent(publicKey)}`;
+                    }
+                    const shortId = proxy['reality-opts']?.['short-id'];
+                    if (shortId) {
+                        ssSid = `&sid=${encodeURIComponent(shortId)}`;
+                    }
+                    const spiderX = proxy['reality-opts']?.['_spider-x'];
+                    if (spiderX) {
+                        ssSpx = `&spx=${encodeURIComponent(spiderX)}`;
+                    }
+                    if (proxy._extra) {
+                        ssExtra = `&extra=${encodeURIComponent(proxy._extra)}`;
+                    }
+                    if (proxy._mode) {
+                        ssMode = `&mode=${encodeURIComponent(proxy._mode)}`;
+                    }
+                }
+                if (proxy.tls) {
+                    query += `&sni=${encodeURIComponent(
+                        proxy.sni || proxy.server,
+                    )}${proxy['skip-cert-verify'] ? '&allowInsecure=1' : ''}`;
+                }
+                query += `${ssTransport}${ssAlpn}${ssFp}${ssSecurity}${ssSid}${ssPbk}${ssSpx}${ssMode}${ssExtra}#${encodeURIComponent(
+                    proxy.name,
+                )}`;
+                result += query.replace(/^&/, '?');
                 break;
             case 'ssr':
                 result = `${proxy.server}:${proxy.port}:${proxy.protocol}:${
