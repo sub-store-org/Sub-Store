@@ -111,8 +111,11 @@ function Clash() {
             (includeProxies ? 'proxies:\n' : '') +
             proxies
                 .map((p) => {
-                    // https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config.yaml#L73C1-L73C26
-                    if (globalClientFingerprint && !p['client-fingerprint']) {
+                    if (
+                        globalClientFingerprint &&
+                        ['trojan', 'vmess', 'vless'].includes(p.type) &&
+                        !p['client-fingerprint']
+                    ) {
                         p['client-fingerprint'] = globalClientFingerprint;
                     }
                     return `${includeProxies ? '  - ' : ''}${JSON.stringify(
