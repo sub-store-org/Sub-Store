@@ -27,22 +27,22 @@ let meta = {};
 let feature = {};
 
 try {
-    if (typeof $environment !== 'undefined') {
-        // eslint-disable-next-line no-undef
-        meta.env = $environment;
-    }
-    if (typeof $loon !== 'undefined') {
-        // eslint-disable-next-line no-undef
-        meta.loon = $loon;
-    }
-    if (typeof $script !== 'undefined') {
-        // eslint-disable-next-line no-undef
-        meta.script = $script;
-    }
-    if (typeof $Plugin !== 'undefined') {
-        // eslint-disable-next-line no-undef
-        meta.plugin = $Plugin;
-    }
+    // if (typeof $environment !== 'undefined') {
+    //     // eslint-disable-next-line no-undef
+    //     meta.env = $environment;
+    // }
+    // if (typeof $loon !== 'undefined') {
+    //     // eslint-disable-next-line no-undef
+    //     meta.loon = $loon;
+    // }
+    // if (typeof $script !== 'undefined') {
+    //     // eslint-disable-next-line no-undef
+    //     meta.script = $script;
+    // }
+    // if (typeof $Plugin !== 'undefined') {
+    //     // eslint-disable-next-line no-undef
+    //     meta.plugin = $Plugin;
+    // }
     if (isNode) {
         meta.node = {
             version: eval('process.version'),
