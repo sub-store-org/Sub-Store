@@ -166,32 +166,37 @@ export default function serve() {
         if (produce_cron) {
             $.info(`[PRODUCE CRON] ${produce_cron} enabled`);
             const { CronJob } = eval(`require("cron")`);
-            produce_cron.split(/\s*;\s*/).map((item) => {
-                const [cron, type, name] = item.split(/\s*,\s*/);
-                new CronJob(
-                    cron.trim(),
-                    async function () {
-                        try {
-                            $.info(
-                                `[PRODUCE CRON] ${type} ${name} ${cron} started`,
-                            );
-                            await produceArtifact({ type, name });
-                            $.info(
-                                `[PRODUCE CRON] ${type} ${name} ${cron} finished`,
-                            );
-                        } catch (e) {
-                            $.error(
-                                `[PRODUCE CRON] ${type} ${name} ${cron} error: ${
-                                    e.message ?? e
-                                }`,
-                            );
-                        }
-                    }, // onTick
-                    null, // onComplete
-                    true, // start
-                    // 'Asia/Shanghai' // timeZone
-                );
-            });
+            produce_cron
+                .split(/\s*;\s*/)
+                .map((item) => item.trim())
+                .filter((item) => item.length > 0)
+                .forEach((item) => {
+                    const [cron, type, name] = item.split(/\s*,\s*/);
+                    $.info(`[PRODUCE CRON] ${type} ${name} ${cron} scheduled`);
+                    new CronJob(
+                        cron.trim(),
+                        async function () {
+                            try {
+                                $.info(
+                                    `[PRODUCE CRON] ${type} ${name} ${cron} started`,
+                                );
+                                await produceArtifact({ type, name });
+                                $.info(
+                                    `[PRODUCE CRON] ${type} ${name} ${cron} finished`,
+                                );
+                            } catch (e) {
+                                $.error(
+                                    `[PRODUCE CRON] ${type} ${name} ${cron} error: ${
+                                        e.message ?? e
+                                    }`,
+                                );
+                            }
+                        }, // onTick
+                        null, // onComplete
+                        true, // start
+                        // 'Asia/Shanghai' // timeZone
+                    );
+                });
         }
         const backend_download_cron = eval(
             'process.env.SUB_STORE_BACKEND_DOWNLOAD_CRON',
