@@ -5,6 +5,14 @@ const targetPlatform = 'QX';
 export default function QX_Producer() {
     // eslint-disable-next-line no-unused-vars
     const produce = (proxy, type, opts = {}) => {
+        if (
+            ['ws'].includes(proxy.network) &&
+            proxy['ws-opts']?.['v2ray-http-upgrade']
+        ) {
+            throw new Error(
+                `Platform ${targetPlatform} does not support network ${proxy.network} with http upgrade`,
+            );
+        }
         switch (proxy.type) {
             case 'ss':
                 return shadowsocks(proxy);

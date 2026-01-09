@@ -13,6 +13,14 @@ const ipVersions = {
 
 export default function Loon_Producer() {
     const produce = (proxy, type, opts = {}) => {
+        if (
+            ['ws'].includes(proxy.network) &&
+            proxy['ws-opts']?.['v2ray-http-upgrade']
+        ) {
+            throw new Error(
+                `Platform ${targetPlatform} does not support network ${proxy.network} with http upgrade`,
+            );
+        }
         switch (proxy.type) {
             case 'ss':
                 return shadowsocks(proxy);
@@ -398,7 +406,8 @@ function vmess(proxy) {
 }
 
 function vless(proxy) {
-    if (proxy.encryption && proxy.encryption !== 'none') throw new Error(`VLESS encryption is not supported`);
+    if (proxy.encryption && proxy.encryption !== 'none')
+        throw new Error(`VLESS encryption is not supported`);
     let isXtls = false;
     const isReality = !!proxy['reality-opts'];
 

@@ -14,6 +14,14 @@ const ipVersions = {
 
 export default function Surge_Producer() {
     const produce = (proxy, type, opts = {}) => {
+        if (
+            ['ws'].includes(proxy.network) &&
+            proxy['ws-opts']?.['v2ray-http-upgrade']
+        ) {
+            throw new Error(
+                `Platform ${targetPlatform} does not support network ${proxy.network} with http upgrade`,
+            );
+        }
         proxy.name = proxy.name.replace(/=|,/g, '');
         if (proxy.ports) {
             proxy.ports = String(proxy.ports);

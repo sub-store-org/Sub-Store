@@ -47,6 +47,11 @@ export default function Clash_Producer() {
                             proxy['reality-opts']))
                 ) {
                     return false;
+                } else if (
+                    ['ws'].includes(proxy.network) &&
+                    proxy['ws-opts']?.['v2ray-http-upgrade']
+                ) {
+                    return false;
                 } else if (proxy['underlying-proxy'] || proxy['dialer-proxy']) {
                     $.error(
                         `Clash 不支持前置代理字段. 已过滤节点 ${proxy.name}`,

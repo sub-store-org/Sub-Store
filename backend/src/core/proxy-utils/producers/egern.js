@@ -67,6 +67,11 @@ export default function Egern_Producer() {
                         proxy.token.length !== 0)
                 ) {
                     return false;
+                } else if (
+                    ['ws'].includes(proxy.network) &&
+                    proxy['ws-opts']?.['v2ray-http-upgrade']
+                ) {
+                    return false;
                 }
                 return true;
             })
