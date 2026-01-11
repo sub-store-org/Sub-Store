@@ -49,7 +49,7 @@ function createFile(req, res) {
     success(res, file, 201);
 }
 
-async function getFile(req, res) {
+async function getFile(req, res, next) {
     let { name } = req.params;
     const reqUA = req.headers['user-agent'] || req.headers['User-Agent'];
     $.info(`正在下载文件：${name}\n请求 User-Agent: ${reqUA}`);

@@ -6,7 +6,7 @@ import migrate from '@/utils/migration';
 import download, { downloadFile } from '@/utils/download';
 import { syncArtifacts, produceArtifact } from '@/restful/sync';
 import { gistBackupAction } from '@/restful/miscs';
-import { TOKENS_KEY } from '@/constants';
+import { TOKENS_KEY, SETTINGS_KEY } from '@/constants';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
@@ -71,12 +71,26 @@ export default function serve() {
                     const token = tokens.find(
                         (t) =>
                             t.token === req.query.token &&
-                            `/share/${t.type}/${t.name}` === pathname &&
+                            (`/share/${t.type}/${t.name}` === pathname ||
+                                pathname.startsWith(
+                                    `/share/${t.type}/${t.name}/`,
+                                )) &&
                             (t.exp == null || t.exp > Date.now()),
                     );
                     if (token) {
                         next();
                         return;
+                    } else {
+                        const settings = $.read(SETTINGS_KEY);
+                        if (settings?.appearanceSetting?.invalidShareFakeNode) {
+                            req.query._fakeNode = true;
+                            req.url = req.url.replace(
+                                /\/share\/.*?\//,
+                                '/share/sub/',
+                            );
+                            next();
+                            return;
+                        }
                     }
                 }
                 if (be_merge && fe_path && req.path.indexOf('/', 1) == -1) {
@@ -378,7 +392,22 @@ export default function serve() {
                                     t.name === req.params.name &&
                                     (t.exp == null || t.exp > Date.now()),
                             );
-                            if (!token) throw new Error('Forbbiden');
+                            if (!token) {
+                                const settings = $.read(SETTINGS_KEY);
+                                if (
+                                    settings?.appearanceSetting
+                                        ?.invalidShareFakeNode
+                                ) {
+                                    return req.originalUrl
+                                        .replace(
+                                            /\/share\/.*?\//,
+                                            '/share/sub/',
+                                        )
+                                        .replace('?', '?_fakeNode=true&');
+                                } else {
+                                    return '/404';
+                                }
+                            }
                             return req.originalUrl;
                         },
                     }),

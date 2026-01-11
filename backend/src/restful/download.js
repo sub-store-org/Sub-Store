@@ -108,7 +108,9 @@ async function downloadSubscription(req, res) {
         resultFormat,
         proxy,
         noCache,
+        _fakeNode,
     } = req.query;
+
     let $options = {
         _req: {
             method: req.method,
@@ -190,7 +192,13 @@ async function downloadSubscription(req, res) {
     }
 
     const allSubs = $.read(SUBS_KEY);
-    const sub = findByName(allSubs, name);
+    const fakeSub = {
+        name: 'fakeNodeInfo',
+        source: 'local',
+        content:
+            'invalid share = ss, 1.0.0.1, 80, encrypt-method=aes-128-gcm, password=password',
+    };
+    const sub = _fakeNode ? fakeSub : findByName(allSubs, name);
     if (sub) {
         try {
             const passThroughUA = sub.passThroughUA;
@@ -200,7 +208,7 @@ async function downloadSubscription(req, res) {
                 );
                 ua = reqUA;
             }
-            let output = await produceArtifact({
+            const opt = {
                 type: 'subscription',
                 name,
                 platform,
@@ -217,7 +225,13 @@ async function downloadSubscription(req, res) {
                 $options,
                 proxy,
                 noCache,
-            });
+            };
+            if (_fakeNode) {
+                $.info(`返回假节点信息`);
+                delete opt.name;
+                opt.subscription = fakeSub;
+            }
+            let output = await produceArtifact(opt);
             let flowInfo;
             if (
                 sub.source !== 'local' ||
