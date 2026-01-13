@@ -93,13 +93,19 @@ export default function serve() {
                         }
                     }
                 }
-                if (be_merge && fe_path && req.path.indexOf('/', 1) == -1) {
-                    if (req.path.indexOf('.') == -1) {
-                        req.url = '/index.html';
-                    }
+                const isBackendRoute = /^\/(api|download|share)(\/|$)/.test(
+                    req.path,
+                );
+                if (be_merge && fe_path && !isBackendRoute) {
                     const express_ = eval(`require("express")`);
                     const mime_ = eval(`require("mime-types")`);
                     const path_ = eval(`require("path")`);
+                    const fs_ = eval(`require("fs")`);
+                    // 检查请求的文件是否真实存在，不存在则返回 index.html（SPA 路由）
+                    const filePath = path_.join(fe_path, req.path);
+                    if (!fs_.existsSync(filePath)) {
+                        req.url = '/index.html';
+                    }
                     const staticFileMiddleware = express_.static(fe_path, {
                         setHeaders: (res, path) => {
                             const type = mime_.contentType(path_.extname(path));
