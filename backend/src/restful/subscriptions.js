@@ -298,6 +298,7 @@ function updateSubscription(req, res) {
     const allSubs = $.read(SUBS_KEY);
     const oldSub = findByName(allSubs, name);
     if (oldSub) {
+        if (!sub.name) sub.name = oldSub.name;
         const newSub = {
             ...oldSub,
             ...sub,

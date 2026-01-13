@@ -267,6 +267,7 @@ function updateFile(req, res) {
     const allFiles = $.read(FILES_KEY);
     const oldFile = findByName(allFiles, name);
     if (oldFile) {
+        if (!file.name) file.name = oldFile.name;
         const newFile = {
             ...oldFile,
             ...file,

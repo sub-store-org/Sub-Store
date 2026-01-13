@@ -87,6 +87,7 @@ function updateCollection(req, res) {
     const allCols = $.read(COLLECTIONS_KEY);
     const oldCol = findByName(allCols, name);
     if (oldCol) {
+        if (!collection.name) collection.name = oldCol.name;
         const newCol = {
             ...oldCol,
             ...collection,

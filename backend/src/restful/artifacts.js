@@ -160,14 +160,16 @@ function createArtifact(req, res) {
 }
 
 function updateArtifact(req, res) {
+    let artifact = req.body;
     const allArtifacts = $.read(ARTIFACTS_KEY);
     let oldName = req.params.name;
-    const artifact = findByName(allArtifacts, oldName);
-    if (artifact) {
-        $.info(`正在更新远程配置：${artifact.name}`);
+    const oldArtifact = findByName(allArtifacts, oldName);
+    if (oldArtifact) {
+        if (!artifact.name) artifact.name = oldArtifact.name;
+        $.info(`正在更新远程配置：${oldArtifact.name}`);
         const newArtifact = {
+            ...oldArtifact,
             ...artifact,
-            ...req.body,
         };
         if (!validateArtifactName(newArtifact.name)) {
             failed(
