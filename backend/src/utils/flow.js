@@ -78,27 +78,76 @@ export async function getFlowHeaders(
     } else {
         const http = HTTP();
         if (flowUrl) {
-            $.info(
-                `使用 GET 方法从响应体获取流量信息: ${flowUrl}, User-Agent: ${
-                    userAgent || ''
-                }, Insecure: ${!!insecure}, Proxy: ${proxy}`,
-            );
-            const { body, statusCode } = await http.get({
-                url: flowUrl,
-                headers: {
-                    'User-Agent': userAgent,
-                },
-                timeout: requestTimeout,
-                ...(proxy ? { proxy } : {}),
-                ...(isLoon && proxy ? { node: proxy } : {}),
-                ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
-                ...(proxy ? getPolicyDescriptor(proxy) : {}),
-                ...(insecure ? insecure : {}),
-            });
-            if (statusCode < 200 || statusCode >= 400) {
-                throw new Error(`statusCode: ${statusCode}`);
+            let flowUrlHeaders;
+            try {
+                $.info(
+                    `使用 GET 方法从响应体获取流量信息: ${flowUrl}, User-Agent: ${
+                        userAgent || ''
+                    }, Insecure: ${!!insecure}, Proxy: ${proxy}`,
+                );
+                const { headers, body, statusCode } = await http.get({
+                    url: flowUrl,
+                    headers: {
+                        'User-Agent': userAgent,
+                    },
+                    timeout: requestTimeout,
+                    ...(proxy ? { proxy } : {}),
+                    ...(isLoon && proxy ? { node: proxy } : {}),
+                    ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
+                    ...(proxy ? getPolicyDescriptor(proxy) : {}),
+                    ...(insecure ? insecure : {}),
+                });
+                if (statusCode < 200 || statusCode >= 400) {
+                    throw new Error(`statusCode: ${statusCode}`);
+                }
+                flowUrlHeaders = headers;
+                const parsed = parseFlowHeaders(body);
+                if (
+                    parsed?.total &&
+                    parsed?.usage?.download &&
+                    parsed?.usage?.upload
+                ) {
+                    flowInfo = body;
+                } else {
+                    throw new Error('响应体中未包含合法的流量信息');
+                }
+            } catch (e) {
+                $.error(
+                    `使用 GET 方法从响应体获取流量信息失败: ${flowUrl}, User-Agent: ${
+                        userAgent || ''
+                    }, Insecure: ${!!insecure}, Proxy: ${proxy}: ${
+                        e.message ?? e
+                    }`,
+                );
+                if (flowUrlHeaders) {
+                    try {
+                        const flowField = getFlowField(flowUrlHeaders);
+                        const parsed = parseFlowHeaders(flowField);
+                        if (
+                            parsed?.total &&
+                            parsed?.usage?.download &&
+                            parsed?.usage?.upload
+                        ) {
+                            $.info(
+                                `使用 GET 方法从响应头获取流量信息成功: ${flowUrl}, User-Agent: ${
+                                    userAgent || ''
+                                }, Insecure: ${!!insecure}, Proxy: ${proxy}`,
+                            );
+                            flowInfo = flowField;
+                        } else {
+                            throw new Error('响应体中未包含合法的流量信息');
+                        }
+                    } catch (e) {
+                        $.error(
+                            `使用 GET 方法从响应头获取流量信息失败: ${flowUrl}, User-Agent: ${
+                                userAgent || ''
+                            }, Insecure: ${!!insecure}, Proxy: ${proxy}: ${
+                                e.message ?? e
+                            }`,
+                        );
+                    }
+                }
             }
-            flowInfo = body;
         } else {
             try {
                 $.info(
