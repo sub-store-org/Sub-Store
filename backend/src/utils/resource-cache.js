@@ -1,9 +1,12 @@
 import $ from '@/core/app';
-import { CACHE_EXPIRATION_TIME_MS, RESOURCE_CACHE_KEY } from '@/constants';
+import {
+    RESOURCE_CACHE_KEY,
+    DEFAULT_CACHE_TTL,
+    SETTINGS_KEY,
+} from '@/constants';
 
 class ResourceCache {
-    constructor(expires) {
-        this.expires = expires;
+    constructor() {
         if (!$.read(RESOURCE_CACHE_KEY)) {
             $.write('{}', RESOURCE_CACHE_KEY);
         }
@@ -21,18 +24,15 @@ class ResourceCache {
         this._cleanup();
     }
 
-    _cleanup() {
-        // clear obsolete cached resource
+    _cleanup(prefix, ttl) {
+        const resolvedTTL = normalizeTTL(ttl) ?? 0;
         let clear = false;
+        const now = Date.now();
         Object.entries(this.resourceCache).forEach((entry) => {
-            const [id, updated] = entry;
-            if (!updated.time) {
-                // clear old version cache
-                delete this.resourceCache[id];
-                $.delete(`#${id}`);
-                clear = true;
-            }
-            if (new Date().getTime() - updated.time > this.expires) {
+            const [id, cached] = entry;
+            const shouldDelete =
+                !cached.time || cached.time < now + resolvedTTL;
+            if (shouldDelete && (prefix ? id.startsWith(prefix) : true)) {
                 delete this.resourceCache[id];
                 clear = true;
             }
@@ -49,18 +49,55 @@ class ResourceCache {
         $.write(JSON.stringify(this.resourceCache), RESOURCE_CACHE_KEY);
     }
 
-    get(id) {
-        const updated = this.resourceCache[id] && this.resourceCache[id].time;
-        if (updated && new Date().getTime() - updated <= this.expires) {
-            return this.resourceCache[id].data;
+    gettime(id) {
+        const time = this.resourceCache[id] && this.resourceCache[id].time;
+        if (time && new Date().getTime() <= time) {
+            return this.resourceCache[id].time;
         }
         return null;
     }
 
-    set(id, value) {
-        this.resourceCache[id] = { time: new Date().getTime(), data: value };
+    get(id, ttl, remove) {
+        const resolvedTTL = normalizeTTL(ttl) ?? 0;
+        const cached = this.resourceCache[id];
+        const time = cached && cached.time;
+        if (time) {
+            if (Date.now() + resolvedTTL <= time) return cached.data;
+            if (remove) {
+                delete this.resourceCache[id];
+                this._persist();
+            }
+        }
+        return null;
+    }
+
+    set(id, value, ttl) {
+        const resolvedTTL = normalizeTTL(ttl) ?? getTTL();
+        this.resourceCache[id] = {
+            time: Date.now() + resolvedTTL,
+            data: value,
+        };
         this._persist();
     }
 }
 
-export default new ResourceCache(CACHE_EXPIRATION_TIME_MS);
+function normalizeTTL(ttl) {
+    const value = Number(ttl);
+    if (!isFinite(value)) return null;
+    if (value > 0) return value;
+    return null;
+}
+
+function getTTL() {
+    const settings = $.read(SETTINGS_KEY);
+    let ttl = settings?.resourceCacheTtl;
+    if (ttl) {
+        ttl = Number(ttl);
+        if (isFinite(ttl) && ttl > 0) {
+            return ttl * 1000;
+        }
+    }
+    return DEFAULT_CACHE_TTL;
+}
+
+export default new ResourceCache();

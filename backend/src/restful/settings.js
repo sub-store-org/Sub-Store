@@ -42,6 +42,18 @@ async function updateSettings(req, res) {
             ...settings,
             ...req.body,
         };
+        [
+            'defaultTimeout',
+            'cacheThreshold',
+            'resourceCacheTtl',
+            'headersCacheTtl',
+            'scriptCacheTtl',
+        ].map((key) => {
+            let value = Number(newSettings[key]);
+            if (!isFinite(value) || value <= 0) {
+                delete newSettings[key];
+            }
+        });
         $.write(newSettings, SETTINGS_KEY);
         if (
             req.body.githubUser ||
