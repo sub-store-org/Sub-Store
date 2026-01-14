@@ -1,12 +1,12 @@
 import $ from '@/core/app';
 import {
     SCRIPT_RESOURCE_CACHE_KEY,
-    CSR_EXPIRATION_TIME_KEY,
+    DEFAULT_SCRIPT_CACHE_TTL,
+    SETTINGS_KEY,
 } from '@/constants';
 
 class ResourceCache {
     constructor() {
-        this.expires = getExpiredTime();
         if (!$.read(SCRIPT_RESOURCE_CACHE_KEY)) {
             $.write('{}', SCRIPT_RESOURCE_CACHE_KEY);
         }
@@ -24,22 +24,15 @@ class ResourceCache {
         this._cleanup();
     }
 
-    _cleanup(prefix, expires) {
-        // clear obsolete cached resource
+    _cleanup(prefix, ttl) {
+        const resolvedTTL = normalizeTTL(ttl) ?? 0;
         let clear = false;
+        const now = Date.now();
         Object.entries(this.resourceCache).forEach((entry) => {
-            const [id, updated] = entry;
-            if (!updated.time) {
-                // clear old version cache
-                delete this.resourceCache[id];
-                $.delete(`#${id}`);
-                clear = true;
-            }
-            if (
-                new Date().getTime() - updated.time >
-                    (expires ?? this.expires) ||
-                (prefix && id.startsWith(prefix))
-            ) {
+            const [id, cached] = entry;
+            const shouldDelete =
+                !cached.time || cached.time < now + resolvedTTL;
+            if (shouldDelete && (prefix ? id.startsWith(prefix) : true)) {
                 delete this.resourceCache[id];
                 clear = true;
             }
@@ -56,11 +49,20 @@ class ResourceCache {
         $.write(JSON.stringify(this.resourceCache), SCRIPT_RESOURCE_CACHE_KEY);
     }
 
-    get(id, expires, remove) {
-        const updated = this.resourceCache[id] && this.resourceCache[id].time;
-        if (updated) {
-            if (new Date().getTime() - updated <= (expires ?? this.expires))
-                return this.resourceCache[id].data;
+    gettime(id) {
+        const time = this.resourceCache[id] && this.resourceCache[id].time;
+        if (time && new Date().getTime() <= time) {
+            return this.resourceCache[id].time;
+        }
+        return null;
+    }
+
+    get(id, ttl, remove) {
+        const resolvedTTL = normalizeTTL(ttl) ?? 0;
+        const cached = this.resourceCache[id];
+        const time = cached && cached.time;
+        if (time) {
+            if (Date.now() + resolvedTTL <= time) return cached.data;
             if (remove) {
                 delete this.resourceCache[id];
                 this._persist();
@@ -69,56 +71,33 @@ class ResourceCache {
         return null;
     }
 
-    gettime(id) {
-        const updated = this.resourceCache[id] && this.resourceCache[id].time;
-        if (updated && new Date().getTime() - updated <= this.expires) {
-            return this.resourceCache[id].time;
-        }
-        return null;
-    }
-
-    set(id, value) {
-        this.resourceCache[id] = { time: new Date().getTime(), data: value };
+    set(id, value, ttl) {
+        const resolvedTTL = normalizeTTL(ttl) ?? getTTL();
+        this.resourceCache[id] = {
+            time: Date.now() + resolvedTTL,
+            data: value,
+        };
         this._persist();
     }
 }
 
-function getExpiredTime() {
-    // console.log($.read(CSR_EXPIRATION_TIME_KEY));
-    if (!$.read(CSR_EXPIRATION_TIME_KEY)) {
-        $.write('1728e5', CSR_EXPIRATION_TIME_KEY); // 48 * 3600 * 1000
-    }
-    let expiration = 1728e5;
-    if ($.env.isLoon) {
-        const loont = {
-            // Loon 插件自义定
-            '1\u5206\u949f': 6e4,
-            '5\u5206\u949f': 3e5,
-            '10\u5206\u949f': 6e5,
-            '30\u5206\u949f': 18e5, // "30分钟"
-            '1\u5c0f\u65f6': 36e5,
-            '2\u5c0f\u65f6': 72e5,
-            '3\u5c0f\u65f6': 108e5,
-            '6\u5c0f\u65f6': 216e5,
-            '12\u5c0f\u65f6': 432e5,
-            '24\u5c0f\u65f6': 864e5,
-            '48\u5c0f\u65f6': 1728e5,
-            '72\u5c0f\u65f6': 2592e5, // "72小时"
-            '\u53c2\u6570\u4f20\u5165': 'readcachets', // "参数输入"
-        };
-        let intimed = $.read('#\u8282\u70b9\u7f13\u5b58\u6709\u6548\u671f'); // Loon #节点缓存有效期
-        // console.log(intimed);
-        if (intimed in loont) {
-            expiration = loont[intimed];
-            if (expiration === 'readcachets') {
-                expiration = intimed;
-            }
+function normalizeTTL(ttl) {
+    const value = Number(ttl);
+    if (!isFinite(value)) return null;
+    if (value > 0) return value;
+    return null;
+}
+
+function getTTL() {
+    const settings = $.read(SETTINGS_KEY);
+    let ttl = settings?.scriptCacheTtl;
+    if (ttl) {
+        ttl = Number(ttl);
+        if (isFinite(ttl) && ttl > 0) {
+            return ttl * 1000;
         }
-        return expiration;
-    } else {
-        expiration = $.read(CSR_EXPIRATION_TIME_KEY);
-        return expiration;
     }
+    return DEFAULT_SCRIPT_CACHE_TTL;
 }
 
 export default new ResourceCache();
