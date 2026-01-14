@@ -224,6 +224,11 @@ export default function express({ substore: $, port, host }) {
                 headers[key] = val;
                 return this;
             }
+
+            removeHeader(key) {
+                delete headers[key];
+                return this;
+            }
         })();
     }
 }

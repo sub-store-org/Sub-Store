@@ -193,7 +193,11 @@ async function getFile(req, res, next) {
             if (output?.$options?._res?.headers) {
                 Object.entries(output.$options._res.headers).forEach(
                     ([key, value]) => {
-                        res.set(key, value);
+                        if (value == null) {
+                            res.removeHeader(key);
+                        } else {
+                            res.set(key, value);
+                        }
                     },
                 );
             }

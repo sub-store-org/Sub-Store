@@ -364,7 +364,11 @@ async function downloadSubscription(req, res) {
             if ($options?._res?.headers) {
                 Object.entries($options._res.headers).forEach(
                     ([key, value]) => {
-                        res.set(key, value);
+                        if (value == null) {
+                            res.removeHeader(key);
+                        } else {
+                            res.set(key, value);
+                        }
                     },
                 );
             }
@@ -650,7 +654,11 @@ async function downloadCollection(req, res) {
             if ($options?._res?.headers) {
                 Object.entries($options._res.headers).forEach(
                     ([key, value]) => {
-                        res.set(key, value);
+                        if (value == null) {
+                            res.removeHeader(key);
+                        } else {
+                            res.set(key, value);
+                        }
                     },
                 );
             }
