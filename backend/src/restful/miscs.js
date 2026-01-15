@@ -44,13 +44,13 @@ export default function register($app) {
             let { content } = req.body;
             try {
                 content = JSON.parse(Base64.decode(content));
-                if (Object.keys(content.settings).length === 0) {
+                if (!(Object.keys(content.settings).length >= 0)) {
                     throw new Error('备份文件应该至少包含 settings 字段');
                 }
             } catch (err) {
                 try {
                     content = JSON.parse(content);
-                    if (Object.keys(content.settings).length === 0) {
+                    if (!(Object.keys(content.settings).length >= 0)) {
                         throw new Error('备份文件应该至少包含 settings 字段');
                     }
                 } catch (err) {
@@ -205,13 +205,13 @@ async function gistBackupAction(action, keep, encode) {
             content = await gist.download(GIST_BACKUP_FILE_NAME);
             try {
                 content = JSON.parse(Base64.decode(content));
-                if (Object.keys(content.settings).length === 0) {
+                if (!(Object.keys(content.settings).length >= 0)) {
                     throw new Error('备份文件应该至少包含 settings 字段');
                 }
             } catch (err) {
                 try {
                     content = JSON.parse(content);
-                    if (Object.keys(content.settings).length === 0) {
+                    if (!(Object.keys(content.settings).length >= 0)) {
                         throw new Error('备份文件应该至少包含 settings 字段');
                     }
                 } catch (err) {
