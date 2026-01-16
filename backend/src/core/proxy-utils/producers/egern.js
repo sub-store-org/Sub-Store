@@ -17,6 +17,9 @@ export default function Egern_Producer() {
                         'vless',
                         'vmess',
                         'tuic',
+                        ...(opts['include-unsupported-proxy']
+                            ? ['wireguard']
+                            : []),
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ((proxy.plugin === 'obfs' &&
@@ -374,6 +377,48 @@ export default function Egern_Producer() {
                         // sni: proxy.sni,
                         // skip_tls_verify: proxy['skip-cert-verify'],
                     };
+                } else if (proxy.type === 'wireguard') {
+                    if (Array.isArray(proxy.peers) && proxy.peers.length > 0) {
+                        proxy.server = proxy.peers[0].server;
+                        proxy.port = proxy.peers[0].port;
+                        proxy.ip = proxy.peers[0].ip;
+                        proxy.ipv6 = proxy.peers[0].ipv6;
+                        proxy['public-key'] = proxy.peers[0]['public-key'];
+                        proxy['preshared-key'] =
+                            proxy.peers[0]['pre-shared-key'];
+                        // https://github.com/MetaCubeX/mihomo/blob/0404e35be8736b695eae018a08debb175c1f96e6/docs/config.yaml#L717
+                        proxy['allowed-ips'] = proxy.peers[0]['allowed-ips'];
+                        proxy.reserved = proxy.peers[0].reserved;
+                    }
+                    proxy = {
+                        type: 'wireguard',
+                        name: proxy.name,
+                        local_ipv4: proxy.ip,
+                        local_ipv6: proxy.ipv6,
+                        server: proxy.server,
+                        port: proxy.port,
+                        private_key: proxy['private-key'],
+                        peer_public_key: proxy['public-key'],
+                        preshared_key: proxy['preshared-key'],
+                        reserved: proxy.reserved
+                            ? Array.isArray(proxy.reserved)
+                                ? proxy.reserved
+                                : proxy.reserved
+                                      .split(/\s*\/\s*/)
+                                      .map((item) => item.trim())
+                                      .filter((item) => item.length > 0)
+                            : undefined,
+                        dns_servers: proxy.dns
+                            ? Array.isArray(proxy.dns)
+                                ? proxy.dns
+                                : proxy.dns
+                                      .split(/\s*,\s*/)
+                                      .map((item) => item.trim())
+                                      .filter((item) => item.length > 0)
+                            : undefined,
+                        mtu: proxy.mtu,
+                        keepalive: proxy.keepalive,
+                    };
                 }
                 if (
                     [
@@ -410,9 +455,16 @@ export default function Egern_Producer() {
                     }
                 }
                 if (
-                    ['socks5', 'ss', 'trojan', 'vless', 'vmess'].includes(
-                        original.type,
-                    )
+                    [
+                        'socks5',
+                        'ss',
+                        'trojan',
+                        'vless',
+                        'vmess',
+                        'wireguard',
+                        'tuic',
+                        'hysteria2',
+                    ].includes(original.type)
                 ) {
                     if (
                         ['on', 'true', true, '1', 1].includes(
