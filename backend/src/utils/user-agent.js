@@ -75,6 +75,13 @@ export function shouldIncludeUnsupportedProxy(platform, ua) {
         ) {
             return true;
         }
+        if (
+            platform === 'Egern' &&
+            target === 'Egern' &&
+            ua.match(/build\/(\d+)/i)?.[1] >= 698
+        ) {
+            return true;
+        }
         // // if (
         // //     platform === 'Stash' &&
         // //     target === 'Stash' &&
@@ -82,13 +89,7 @@ export function shouldIncludeUnsupportedProxy(platform, ua) {
         // // ) {
         // //     return true;
         // // }
-        // if (
-        //     platform === 'Egern' &&
-        //     target === 'Egern' &&
-        //     gte(version, '2.7.0')
-        // ) {
-        //     return true;
-        // }
+
         // // Loon 的 UA 不规范, version 取出来是 build
         // // if (
         // //     platform === 'Loon' &&
