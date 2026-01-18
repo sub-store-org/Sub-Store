@@ -61,6 +61,9 @@ function external(proxy) {
         'no-error-alert',
     );
 
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
     // tfo
     if (isPresent(proxy, 'tfo')) {
         result.append(`,tfo=${proxy['tfo']}`);
@@ -129,6 +132,7 @@ function mihomo(proxy, type, opts) {
         const external_proxy = {
             name: proxy.name,
             type: 'external',
+            udp: true,
             exec: proxy._exec || '/usr/local/bin/mihomo',
             'local-port': localPort,
             args: [
