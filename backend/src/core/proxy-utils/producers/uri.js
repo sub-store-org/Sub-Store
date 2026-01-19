@@ -36,6 +36,10 @@ function vless(proxy) {
     if (proxy['skip-cert-verify']) {
         allowInsecure = `&allowInsecure=1`;
     }
+    let pcs = '';
+    if (proxy._pcs) {
+        pcs = `&pcs=${encodeURIComponent(proxy._pcs)}`;
+    }
     let sni = '';
     if (proxy.sni) {
         sni = `&sni=${encodeURIComponent(proxy.sni)}`;
@@ -119,7 +123,7 @@ function vless(proxy) {
         proxy.port
     }?security=${encodeURIComponent(
         security,
-    )}${vlessTransport}${alpn}${allowInsecure}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}${pqv}${encryption}#${encodeURIComponent(
+    )}${vlessTransport}${alpn}${allowInsecure}${pcs}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}${pqv}${encryption}#${encodeURIComponent(
         proxy.name,
     )}`;
 }
