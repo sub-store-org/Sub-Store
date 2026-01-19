@@ -457,6 +457,10 @@ export function normalizeFlowHeader(flowHeaders, splitHeaders) {
         return splitHeaders ? headers : headers['subscription-userinfo'];
     } catch (e) {
         $.error(`normalizeFlowHeader failed: ${e.message ?? e}`);
-        return flowHeaders;
+        return splitHeaders
+            ? {
+                  'subscription-userinfo': flowHeaders,
+              }
+            : flowHeaders;
     }
 }

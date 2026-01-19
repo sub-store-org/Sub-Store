@@ -661,6 +661,14 @@ function lastParse(proxy) {
         delete proxy['shadow-tls-password'];
         delete proxy['shadow-tls-version'];
     }
+    if (['tuic'].includes(proxy.type)) {
+        proxy.alpn = Array.isArray(proxy.alpn)
+            ? proxy.alpn
+            : [proxy.alpn || 'h3'];
+        proxy['congestion-controller'] =
+            proxy['congestion-controller'] || 'cubic';
+        proxy['udp-relay-mode'] = proxy['udp-relay-mode'] || 'native';
+    }
     return proxy;
 }
 
