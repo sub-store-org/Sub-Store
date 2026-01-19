@@ -741,7 +741,9 @@ function URI_VLESS() {
         proxy['client-fingerprint'] = params.fp;
         proxy.alpn = params.alpn ? params.alpn.split(',') : undefined;
         proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.allowInsecure);
+        proxy._ech = getIfPresent(params.ech);
         proxy._pcs = getIfPresent(params.pcs);
+        proxy._h2 = /(TRUE)|1/i.test(params.h2);
 
         if (['reality'].includes(params.security)) {
             const opts = {};
