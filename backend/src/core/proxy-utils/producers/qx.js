@@ -319,12 +319,15 @@ function vmess(proxy) {
     if (needTls(proxy)) {
         proxy.tls = true;
     }
+
     if (isPresent(proxy, 'network')) {
         if (proxy.network === 'ws') {
             if (proxy.tls) append(`,obfs=wss`);
             else append(`,obfs=ws`);
         } else if (proxy.network === 'http') {
             append(`,obfs=http`);
+        } else if (['tcp'].includes(proxy.network)) {
+            if (proxy.tls) append(`,obfs=over-tls`);
         } else if (!['tcp'].includes(proxy.network)) {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
