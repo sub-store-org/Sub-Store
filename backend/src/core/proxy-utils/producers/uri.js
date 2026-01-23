@@ -1,7 +1,6 @@
 /* eslint-disable no-case-declarations */
 import { Base64 } from 'js-base64';
 import { isIPv6 } from '@/utils';
-import { uuid } from 'automerge';
 
 function vless(proxy) {
     let security = 'none';
@@ -45,8 +44,8 @@ function vless(proxy) {
         pcs = `&pcs=${encodeURIComponent(proxy._pcs)}`;
     }
     let ech = '';
-    if (proxy._ech) {
-        ech = `&ech=${encodeURIComponent(proxy._ech)}`;
+    if (proxy._echConfigList) {
+        ech = `&ech=${encodeURIComponent(proxy._echConfigList)}`;
     }
     let sni = '';
     if (proxy.sni) {
