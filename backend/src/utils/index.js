@@ -150,7 +150,15 @@ function formatDateTime(date, format = 'YYYY-MM-DD_HH-mm-ss') {
     );
 }
 
+function isPlainObject(obj) {
+    return (
+        obj !== null &&
+        typeof obj === 'object' &&
+        [null, Object.prototype].includes(Object.getPrototypeOf(obj))
+    );
+}
 export {
+    isPlainObject,
     formatDateTime,
     isValidUUID,
     ipAddress,

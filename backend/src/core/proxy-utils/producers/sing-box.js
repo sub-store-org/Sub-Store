@@ -1,6 +1,6 @@
 import ClashMeta_Producer from './clashmeta';
 import $ from '@/core/app';
-import { isIPv4, isIPv6 } from '@/utils';
+import { isIPv4, isIPv6, isPlainObject } from '@/utils';
 
 const ipVersions = {
     ipv4: 'ipv4_only',
@@ -271,6 +271,9 @@ const tlsParser = (proxy, parsedProxy) => {
             enabled: true,
             fingerprint: proxy['client-fingerprint'],
         };
+    if (proxy._ech && isPlainObject(proxy._ech)) {
+        parsedProxy.tls.ech = proxy._ech;
+    }
     if (proxy['_fragment']) parsedProxy.tls.fragment = !!proxy['_fragment'];
     if (proxy['_fragment_fallback_delay'])
         parsedProxy.tls.fragment_fallback_delay =
@@ -978,7 +981,10 @@ export default function singbox_Producer() {
                             }
                             break;
                         case 'vless':
-                            if (proxy.encryption && proxy.encryption !== 'none') {
+                            if (
+                                proxy.encryption &&
+                                proxy.encryption !== 'none'
+                            ) {
                                 throw new Error(
                                     `VLESS encryption is not supported`,
                                 );
