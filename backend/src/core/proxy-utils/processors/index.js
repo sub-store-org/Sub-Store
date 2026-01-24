@@ -196,12 +196,13 @@ function FlagOperator({ mode, tw }) {
 
 // duplicate handler
 function HandleDuplicateOperator(arg) {
-    const { action, template, link, position } = {
+    const { action, template, link, position, field } = {
         ...{
             action: 'rename',
             template: '0 1 2 3 4 5 6 7 8 9',
             link: '-',
             position: 'back',
+            field: ['name'],
         },
         ...arg,
     };
@@ -211,10 +212,13 @@ function HandleDuplicateOperator(arg) {
             if (action === 'delete') {
                 const chosen = {};
                 return proxies.filter((p) => {
-                    if (chosen[p.name]) {
+                    const key = field
+                        .map((f) => lodash.get(p, f, '-'))
+                        .join('_');
+                    if (chosen[key]) {
                         return false;
                     }
-                    chosen[p.name] = true;
+                    chosen[key] = true;
                     return true;
                 });
             } else if (action === 'rename') {
@@ -223,21 +227,23 @@ function HandleDuplicateOperator(arg) {
                 const counter = {};
                 let maxLen = 0;
                 proxies.forEach((p) => {
-                    if (typeof counter[p.name] === 'undefined')
-                        counter[p.name] = 1;
-                    else counter[p.name]++;
-                    maxLen = Math.max(
-                        counter[p.name].toString().length,
-                        maxLen,
-                    );
+                    const key = field
+                        .map((f) => lodash.get(p, f, '-'))
+                        .join('_');
+                    if (typeof counter[key] === 'undefined') counter[key] = 1;
+                    else counter[key]++;
+                    maxLen = Math.max(counter[key].toString().length, maxLen);
                 });
                 const increment = {};
                 return proxies.map((p) => {
-                    if (counter[p.name] > 1) {
-                        if (typeof increment[p.name] == 'undefined')
-                            increment[p.name] = 1;
+                    const key = field
+                        .map((f) => lodash.get(p, f, '-'))
+                        .join('_');
+                    if (counter[key] > 1) {
+                        if (typeof increment[key] == 'undefined')
+                            increment[key] = 1;
                         let num = '';
-                        let cnt = increment[p.name]++;
+                        let cnt = increment[key]++;
                         let numDigits = 0;
                         while (cnt > 0) {
                             num = numbers[cnt % 10] + num;
