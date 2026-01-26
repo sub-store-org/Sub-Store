@@ -17,9 +17,10 @@ export default function Egern_Producer() {
                         'vless',
                         'vmess',
                         'tuic',
-                        ...(opts['include-unsupported-proxy']
-                            ? ['wireguard']
-                            : []),
+                        'wireguard',
+                        // ...(opts['include-unsupported-proxy']
+                        //     ? ['wireguard']
+                        //     : []),
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ((proxy.plugin === 'obfs' &&
