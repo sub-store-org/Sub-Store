@@ -174,6 +174,7 @@ export default function Clash_Producer() {
                         'hysteria2',
                         'juicity',
                         'anytls',
+                        'trust-tunnel',
                         'naive',
                     ].includes(proxy.type)
                 ) {

@@ -9,7 +9,11 @@ export default function Shadowrocket_Producer() {
                 if (opts['include-unsupported-proxy']) return true;
                 if (proxy.type === 'snell' && proxy.version >= 4) {
                     return false;
-                } else if (['mieru', 'sudoku', 'naive'].includes(proxy.type)) {
+                } else if (
+                    ['trust-tunnel', 'mieru', 'sudoku', 'naive'].includes(
+                        proxy.type,
+                    )
+                ) {
                     return false;
                 } else if (
                     proxy.encryption &&
@@ -219,6 +223,7 @@ export default function Shadowrocket_Producer() {
                         'hysteria2',
                         'juicity',
                         'anytls',
+                        'trust-tunnel',
                         'naive',
                     ].includes(proxy.type)
                 ) {

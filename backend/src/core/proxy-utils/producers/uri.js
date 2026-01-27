@@ -157,6 +157,7 @@ export default function URI_Producer() {
                 'hysteria2',
                 'juicity',
                 'anytls',
+                'trust-tunnel',
             ].includes(proxy.type)
         ) {
             delete proxy.tls;

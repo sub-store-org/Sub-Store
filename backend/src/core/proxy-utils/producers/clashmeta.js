@@ -16,7 +16,9 @@ export default function ClashMeta_Producer() {
                 if (opts['include-unsupported-proxy']) return true;
                 if (proxy.type === 'snell' && proxy.version >= 4) {
                     return false;
-                } else if (['juicity', 'naive'].includes(proxy.type)) {
+                } else if (
+                    ['trust-tunnel', 'juicity', 'naive'].includes(proxy.type)
+                ) {
                     return false;
                 } else if (
                     ['ss'].includes(proxy.type) &&
@@ -249,6 +251,7 @@ export default function ClashMeta_Producer() {
                         'hysteria2',
                         'juicity',
                         'anytls',
+                        'trust-tunnel',
                         'naive',
                     ].includes(proxy.type)
                 ) {
