@@ -103,9 +103,9 @@ export async function getFlowHeaders(
                 flowUrlHeaders = headers;
                 const parsed = parseFlowHeaders(body);
                 if (
-                    parsed?.total &&
-                    parsed?.usage?.download &&
-                    parsed?.usage?.upload
+                    Number.isFinite(parsed?.total) &&
+                    Number.isFinite(parsed?.usage?.download) &&
+                    Number.isFinite(parsed?.usage?.upload)
                 ) {
                     flowInfo = body;
                 } else {
@@ -124,9 +124,9 @@ export async function getFlowHeaders(
                         const flowField = getFlowField(flowUrlHeaders);
                         const parsed = parseFlowHeaders(flowField);
                         if (
-                            parsed?.total &&
-                            parsed?.usage?.download &&
-                            parsed?.usage?.upload
+                            Number.isFinite(parsed?.total) &&
+                            Number.isFinite(parsed?.usage?.download) &&
+                            Number.isFinite(parsed?.usage?.upload)
                         ) {
                             $.info(
                                 `使用 GET 方法从响应头获取流量信息成功: ${flowUrl}, User-Agent: ${
