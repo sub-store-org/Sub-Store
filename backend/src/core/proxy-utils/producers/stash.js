@@ -50,11 +50,6 @@ export default function Stash_Producer() {
                         !['xtls-rprx-vision'].includes(proxy.flow))
                 ) {
                     return false;
-                } else if (proxy['underlying-proxy'] || proxy['dialer-proxy']) {
-                    $.error(
-                        `Stash 暂不支持前置代理字段. 已过滤节点 ${proxy.name}. 请使用 代理的转发链 https://stash.wiki/proxy-protocols/proxy-groups#relay`,
-                    );
-                    return false;
                 } else if (
                     ['anytls'].includes(proxy.type) &&
                     !opts['include-unsupported-proxy']
