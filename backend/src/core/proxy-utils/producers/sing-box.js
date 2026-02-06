@@ -274,6 +274,9 @@ const tlsParser = (proxy, parsedProxy) => {
     if (proxy._ech && isPlainObject(proxy._ech)) {
         parsedProxy.tls.ech = proxy._ech;
     }
+    if (proxy._curve_preferences && Array.isArray(proxy._curve_preferences)) {
+        parsedProxy.tls.curve_preferences = proxy._curve_preferences;
+    }
     if (proxy['_fragment']) parsedProxy.tls.fragment = !!proxy['_fragment'];
     if (proxy['_fragment_fallback_delay'])
         parsedProxy.tls.fragment_fallback_delay =
