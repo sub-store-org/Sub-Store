@@ -1268,6 +1268,7 @@ function Clash_All() {
                 'naive',
                 'anytls',
                 'mieru',
+                'masque',
                 'sudoku',
                 'juicity',
                 'ss',

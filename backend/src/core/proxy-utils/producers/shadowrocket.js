@@ -10,9 +10,13 @@ export default function Shadowrocket_Producer() {
                 if (proxy.type === 'snell' && proxy.version >= 4) {
                     return false;
                 } else if (
-                    ['trust-tunnel', 'mieru', 'sudoku', 'naive'].includes(
-                        proxy.type,
-                    )
+                    [
+                        'trust-tunnel',
+                        'mieru',
+                        'sudoku',
+                        'naive',
+                        'masque',
+                    ].includes(proxy.type)
                 ) {
                     return false;
                 } else if (
