@@ -85,6 +85,8 @@ function shadowsocks(proxy) {
             'salsa20',
             'chacha20',
             'chacha20-ietf',
+            '2022-blake3-aes-128-gcm',
+            '2022-blake3-aes-256-gcm',
         ].includes(proxy.cipher)
     ) {
         throw new Error(`cipher ${proxy.cipher} is not supported`);
