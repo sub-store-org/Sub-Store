@@ -65,8 +65,31 @@ export default async function download(
         proxy = proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');
     }
     const userAgent = ua || defaultUserAgent || 'clash.meta';
+    let customHeaders;
+    if ($arguments?.headers) {
+        try {
+            const parsed = JSON.parse($arguments?.headers);
+            if (
+                parsed &&
+                typeof parsed === 'object' &&
+                !Array.isArray(parsed) &&
+                Object.keys(parsed).length > 0
+            ) {
+                const lowerCaseHeaders = { 'user-agent': userAgent };
+                for (const key in parsed) {
+                    lowerCaseHeaders[key.toLowerCase()] = parsed[key];
+                }
+                customHeaders = lowerCaseHeaders;
+            }
+        } catch (e) {
+            $.error(`解析自定义 headers 失败: ${e}`);
+        }
+    }
+
     const requestTimeout = timeout || defaultTimeout || 8000;
-    const id = hex_md5(userAgent + url);
+    const id = hex_md5(
+        `${customHeaders ? JSON.stringify(customHeaders) : userAgent}${url}`,
+    );
 
     if ($arguments?.cacheKey === true) {
         $.error(`使用自定义缓存时 cacheKey 的值不能为空`);
@@ -188,7 +211,7 @@ export default async function download(
 
     const http = HTTP({
         headers: {
-            'User-Agent': userAgent,
+            ...(customHeaders || { 'User-Agent': userAgent }),
             ...(isStash && proxy
                 ? { 'X-Stash-Selected-Proxy': encodeURIComponent(proxy) }
                 : {}),
@@ -202,7 +225,11 @@ export default async function download(
     // try to find in app cache
     const cached = resourceCache.get(id);
     if (!noCache && !$arguments?.noCache && cached) {
-        $.info(`使用缓存: ${url}, ${userAgent}`);
+        $.info(
+            `使用缓存: ${url}, ${
+                customHeaders ? JSON.stringify(customHeaders) : userAgent
+            }`,
+        );
         result = cached;
         if (customCacheKey) {
             $.info(`URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`);
@@ -215,7 +242,11 @@ export default async function download(
                 : { insecure: true }
             : undefined;
         $.info(
-            `Downloading...\nUser-Agent: ${userAgent}\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nPreprocess: ${preprocess}\nURL: ${url}`,
+            `Downloading...\n${
+                customHeaders
+                    ? JSON.stringify(customHeaders)
+                    : `User-Agent: ${userAgent}`
+            }\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nPreprocess: ${preprocess}\nURL: ${url}`,
         );
         try {
             let { body, headers, statusCode } = await http.get({
