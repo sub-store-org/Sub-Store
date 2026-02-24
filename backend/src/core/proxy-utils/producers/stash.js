@@ -52,11 +52,6 @@ export default function Stash_Producer() {
                     return false;
                 } else if (
                     ['anytls'].includes(proxy.type) &&
-                    !opts['include-unsupported-proxy']
-                ) {
-                    return false;
-                } else if (
-                    ['anytls'].includes(proxy.type) &&
                     proxy.network &&
                     (!['tcp'].includes(proxy.network) ||
                         (['tcp'].includes(proxy.network) &&
