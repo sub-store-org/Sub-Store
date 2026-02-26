@@ -64,8 +64,12 @@ export default function Egern_Producer() {
                         !['http', 'ws', 'tcp'].includes(proxy.network) &&
                         proxy.network) ||
                     (proxy.type === 'vless' &&
-                        !['http', 'ws', 'tcp'].includes(proxy.network) &&
-                        proxy.network) ||
+                        ((!['http', 'ws', 'tcp'].includes(proxy.network) &&
+                            proxy.network) ||
+                            (typeof proxy.flow !== 'undefined' &&
+                                !['xtls-rprx-vision', ''].includes(
+                                    proxy.flow,
+                                )))) ||
                     (proxy.type === 'tuic' &&
                         proxy.token &&
                         proxy.token.length !== 0)
@@ -353,14 +357,8 @@ export default function Egern_Producer() {
                                 reality,
                             },
                         };
-                        if (typeof proxy.flow !== 'undefined') {
-                            if (!['xtls-rprx-vision'].includes(proxy.flow)) {
-                                throw new Error(
-                                    `VLESS flow(${proxy.flow}) is not supported`,
-                                );
-                            }
-                        }
                         flow = proxy.flow;
+                        if (flow === '') flow = undefined;
                     }
                     proxy = {
                         type: 'vless',
