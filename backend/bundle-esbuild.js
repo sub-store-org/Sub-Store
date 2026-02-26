@@ -15,6 +15,10 @@ const { build } = require('esbuild');
             dest: 'dist/sub-store-parser.loon.min.js',
         },
         {
+            src: 'src/products/resource-parser.js',
+            dest: 'dist/sub-store-parser.min.js',
+        },
+        {
             src: 'src/products/cron-sync-artifacts.js',
             dest: 'dist/cron-sync-artifacts.min.js',
         },
