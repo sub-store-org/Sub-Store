@@ -13,15 +13,25 @@ const {
     isGUIforCores,
 } = ENV();
 let backend = 'Node';
-if (isNode) backend = 'Node';
-if (isQX) backend = 'QX';
-if (isLoon) backend = 'Loon';
-if (isSurge) backend = 'Surge';
-if (isStash) backend = 'Stash';
-if (isShadowRocket) backend = 'Shadowrocket';
-if (isEgern) backend = 'Egern';
-if (isLanceX) backend = 'LanceX';
-if (isGUIforCores) backend = 'GUI.for.Cores';
+if (isNode) {
+    backend = 'Node';
+} else if (isQX) {
+    backend = 'QX';
+} else if (isLoon) {
+    backend = 'Loon';
+} else if (isStash) {
+    backend = 'Stash';
+} else if (isShadowRocket) {
+    backend = 'Shadowrocket';
+} else if (isEgern) {
+    backend = 'Egern';
+} else if (isSurge) {
+    backend = 'Surge';
+} else if (isLanceX) {
+    backend = 'LanceX';
+} else if (isGUIforCores) {
+    backend = 'GUI.for.Cores';
+}
 
 let meta = {};
 let feature = {};

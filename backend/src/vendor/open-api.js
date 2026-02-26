@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 const isQX = typeof $task !== 'undefined';
 const isLoon = typeof $loon !== 'undefined';
+// 可能有一些兼容环境依赖于这个, 先不改成 $environment.surge-version
 const isSurge = typeof $httpClient !== 'undefined' && !isLoon;
 const isNode = eval(`typeof process !== "undefined"`); // eval is needed in order to avoid browserify processing
 const isStash =
