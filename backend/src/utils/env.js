@@ -16,10 +16,10 @@ let backend = 'Node';
 if (isNode) backend = 'Node';
 if (isQX) backend = 'QX';
 if (isLoon) backend = 'Loon';
-if (isSurge) backend = 'Surge';
 if (isStash) backend = 'Stash';
 if (isShadowRocket) backend = 'Shadowrocket';
 if (isEgern) backend = 'Egern';
+if (isSurge) backend = 'Surge';
 if (isLanceX) backend = 'LanceX';
 if (isGUIforCores) backend = 'GUI.for.Cores';
 
