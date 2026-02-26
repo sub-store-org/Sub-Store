@@ -1,12 +1,13 @@
 /* eslint-disable no-undef */
 const isQX = typeof $task !== 'undefined';
 const isLoon = typeof $loon !== 'undefined';
+// 可能有一些兼容环境依赖于这个, 先不改成 $environment.surge-version
 const isSurge = typeof $httpClient !== 'undefined' && !isLoon;
 const isNode = eval(`typeof process !== "undefined"`); // eval is needed in order to avoid browserify processing
 const isStash =
     'undefined' !== typeof $environment && $environment['stash-version'];
 const isShadowRocket = 'undefined' !== typeof $rocket;
-const isEgern = 'object' == typeof egern;
+const isEgern = 'undefined' !== typeof Egern && Egern.version;
 const isLanceX = 'undefined' != typeof $native;
 const isGUIforCores = typeof $Plugins !== 'undefined';
 import { Base64 } from 'js-base64';
