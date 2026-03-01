@@ -31,6 +31,42 @@ export default function express({ substore: $, port, host }) {
             bodyParser.urlencoded({ verify: rawBodySaver, extended: true }),
         );
         app.use(bodyParser.raw({ verify: rawBodySaver, type: '*/*' }));
+        app.use((req, res, next) => {
+            const originalSetHeader = res.setHeader.bind(res);
+
+            res.setHeader = function (name, value) {
+                function normalize(v) {
+                    if (typeof v !== 'string') return v;
+
+                    if (['profile-web-page-url'].includes(name.toLowerCase())) {
+                        try {
+                            const url = new URL(v);
+
+                            return url.href; // 自动 punycode + 标准化
+                        } catch {
+                            return v;
+                        }
+                    }
+
+                    return v;
+                }
+
+                try {
+                    if (Array.isArray(value)) {
+                        value = value.map(normalize);
+                    } else {
+                        value = normalize(value);
+                    }
+
+                    return originalSetHeader(name, value);
+                } catch (err) {
+                    console.log(`Invalid header ignored\n${name}: ${value}`);
+                    return this;
+                }
+            };
+
+            next();
+        });
         app.use((_, res, next) => {
             res.set(DEFAULT_HEADERS);
             next();
