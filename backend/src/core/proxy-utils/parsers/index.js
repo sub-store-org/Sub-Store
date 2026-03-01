@@ -1293,7 +1293,7 @@ function Clash_All() {
         }
 
         // handle vmess sni
-        if (['vmess', 'vless'].includes(proxy.type)) {
+        if (['vmess', 'vless'].includes(proxy.type) && proxy.servername) {
             proxy.sni = proxy.servername;
             delete proxy.servername;
         }
