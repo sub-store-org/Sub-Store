@@ -1266,7 +1266,7 @@ function Clash_All() {
         }
         if (
             ![
-                'trust-tunnel',
+                'trusttunnel',
                 'naive',
                 'anytls',
                 'mieru',

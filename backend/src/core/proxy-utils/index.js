@@ -466,7 +466,7 @@ function lastParse(proxy) {
             'hysteria2',
             'juicity',
             'anytls',
-            'trust-tunnel',
+            'trusttunnel',
             'naive',
         ].includes(proxy.type)
     ) {

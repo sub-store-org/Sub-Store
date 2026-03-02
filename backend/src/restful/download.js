@@ -175,7 +175,7 @@ async function downloadSubscription(req, res) {
 
     if (
         !includeUnsupportedProxy &&
-        shouldIncludeUnsupportedProxy(platform, reqUA)
+        shouldIncludeUnsupportedProxy(platform, req.headers)
     ) {
         includeUnsupportedProxy = true;
         $.info(
@@ -478,7 +478,7 @@ async function downloadCollection(req, res) {
     }
     if (
         !includeUnsupportedProxy &&
-        shouldIncludeUnsupportedProxy(platform, reqUA)
+        shouldIncludeUnsupportedProxy(platform, req.headers)
     ) {
         includeUnsupportedProxy = true;
         $.info(
