@@ -24,6 +24,8 @@ export default function Surfboard_Producer() {
                 return vmess(proxy);
             case 'http':
                 return http(proxy);
+            case 'snell':
+                return snell(proxy);
             case 'socks5':
                 return socks5(proxy);
             case 'anytls':
@@ -57,6 +59,41 @@ function anytls(proxy) {
 
     // reuse
     result.appendIfPresent(`,reuse=${proxy['reuse']}`, 'reuse');
+
+    return result.toString();
+}
+function snell(proxy) {
+    if (proxy.version > 3) {
+        throw new Error(
+            `Platform ${targetPlatform} does not support snell version ${proxy.version}`,
+        );
+    }
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,version=${proxy.version}`, 'version');
+    result.appendIfPresent(`,psk=${proxy.psk}`, 'psk');
+
+    // obfs
+    result.appendIfPresent(
+        `,obfs=${proxy['obfs-opts']?.mode}`,
+        'obfs-opts.mode',
+    );
+    result.appendIfPresent(
+        `,obfs-host=${proxy['obfs-opts']?.host}`,
+        'obfs-opts.host',
+    );
+    result.appendIfPresent(
+        `,obfs-uri=${proxy['obfs-opts']?.path}`,
+        'obfs-opts.path',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
+
+    // udp
+    if (proxy.version >= 3) {
+        result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    }
 
     return result.toString();
 }
