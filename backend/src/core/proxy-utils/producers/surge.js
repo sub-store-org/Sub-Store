@@ -67,11 +67,8 @@ export default function Surge_Producer() {
 
             return anytls(proxy);
         }
-        if (
-            opts['include-unsupported-proxy'] &&
-            proxy.type === 'trust-tunnel'
-        ) {
-            return trust_tunnel(proxy);
+        if (opts['include-unsupported-proxy'] && proxy.type === 'trusttunnel') {
+            return trusttunnel(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -372,9 +369,10 @@ function anytls(proxy) {
 
     return result.toString();
 }
-function trust_tunnel(proxy) {
+function trusttunnel(proxy) {
     const result = new Result(proxy);
-    result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
+    result.append(`${proxy.name}=trust-tunnel,${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,username="${proxy.username}"`, 'username');
     result.appendIfPresent(`,password="${proxy.password}"`, 'password');
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];

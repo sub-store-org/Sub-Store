@@ -61,17 +61,17 @@ export function getPlatformFromHeaders(headers) {
     return getPlatformFromUserAgent({ ua, UA, accept });
 }
 
-export function shouldIncludeUnsupportedProxy(platform, ua) {
+export function shouldIncludeUnsupportedProxy(platform, headers) {
     try {
-        const target = getPlatformFromUserAgent({
-            UA: ua,
-            ua: ua.toLowerCase(),
-        });
+        const { UA, ua, accept } = getUserAgentFromHeaders(headers);
+        const target = getPlatformFromUserAgent({ UA, ua, accept });
         const coerceVersion = coerce(ua);
         const { major } = coerceVersion;
         if (
-            (target === 'SurgeMac' && major >= 9860) ||
-            (target === 'Surge' && major >= 3613)
+            (['SurgeMac', 'Surge'].includes(platform) &&
+                target === 'SurgeMac' &&
+                major >= 9860) ||
+            (platform === 'Surge' && target === 'Surge' && major >= 3613)
         ) {
             return true;
         }
@@ -90,7 +90,6 @@ export function shouldIncludeUnsupportedProxy(platform, ua) {
         // //     return true;
         // // }
 
-        // // Loon 的 UA 不规范, version 取出来是 build
         // // if (
         // //     platform === 'Loon' &&
         // //     target === 'Loon' &&

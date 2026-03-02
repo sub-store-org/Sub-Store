@@ -11,7 +11,7 @@ export default function Shadowrocket_Producer() {
                     return false;
                 } else if (
                     [
-                        'trust-tunnel',
+                        'trusttunnel',
                         'mieru',
                         'sudoku',
                         'naive',
@@ -227,7 +227,7 @@ export default function Shadowrocket_Producer() {
                         'hysteria2',
                         'juicity',
                         'anytls',
-                        'trust-tunnel',
+                        'trusttunnel',
                         'naive',
                     ].includes(proxy.type)
                 ) {
