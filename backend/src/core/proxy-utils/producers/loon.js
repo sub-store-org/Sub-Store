@@ -28,6 +28,8 @@ export default function Loon_Producer() {
                 return shadowsocksr(proxy);
             case 'trojan':
                 return trojan(proxy);
+            case 'anytls':
+                return anytls(proxy);
             case 'vmess':
                 return vmess(proxy, opts['include-unsupported-proxy']);
             case 'vless':
@@ -266,6 +268,61 @@ function trojan(proxy) {
             );
         } else {
             throw new Error(`network ${proxy.network} is unsupported`);
+        }
+    }
+
+    // tls verification
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // sni
+    result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+    result.appendIfPresent(
+        `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
+        'tls-pubkey-sha256',
+    );
+
+    // tfo
+    result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
+
+    // block-quic
+    if (proxy['block-quic'] === 'on') {
+        result.append(',block-quic=true');
+    } else if (proxy['block-quic'] === 'off') {
+        result.append(',block-quic=false');
+    }
+
+    // udp
+    if (proxy.udp) {
+        result.append(`,udp=true`);
+    }
+    const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
+
+    return result.toString();
+}
+
+function anytls(proxy) {
+    const result = new Result(proxy);
+    result.append(
+        `${proxy.name}=anytls,${proxy.server},${proxy.port},"${proxy.password}"`,
+    );
+
+    for (const key of [
+        'idle-session-check-interval',
+        'idle-session-timeout',
+        'min-idle-session',
+        'max-stream-count',
+    ]) {
+        // 值为整数 才附加
+        if (isPresent(proxy, key) && Number.isInteger(proxy[key])) {
+            result.append(`,${key}=${proxy[key]}`);
         }
     }
 

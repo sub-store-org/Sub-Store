@@ -1448,6 +1448,15 @@ function Loon_Trojan() {
     const parse = (line) => getLoonParser().parse(line);
     return { name, test, parse };
 }
+function Loon_AnyTLS() {
+    const name = 'Loon AnyTLS Parser';
+    const test = (line) => {
+        return /^.*=\s*anytls/i.test(line.split(',')[0]);
+    };
+
+    const parse = (line) => getLoonParser().parse(line);
+    return { name, test, parse };
+}
 function Loon_Hysteria2() {
     const name = 'Loon Hysteria2 Parser';
     const test = (line) => {
@@ -1593,8 +1602,8 @@ function Surge_Direct() {
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
-function Surge_Anytls() {
-    const name = 'Surge Anytls Parser';
+function Surge_AnyTLS() {
+    const name = 'Surge AnyTLS Parser';
     const test = (line) => {
         return /^.*=\s*anytls/.test(line.split(',')[0]);
     };
@@ -1802,7 +1811,7 @@ export default [
     URI_AnyTLS(),
     Clash_All(),
     Surge_Direct(),
-    Surge_Anytls(),
+    Surge_AnyTLS(),
     Surge_TrustTunnel(),
     Surge_SSH(),
     Surge_SS(),
@@ -1821,6 +1830,7 @@ export default [
     Loon_Vless(),
     Loon_Hysteria2(),
     Loon_Trojan(),
+    Loon_AnyTLS(),
     Loon_Http(),
     Loon_Socks5(),
     Loon_WireGuard(),

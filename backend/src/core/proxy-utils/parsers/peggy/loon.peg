@@ -33,7 +33,7 @@
     }
 }
 
-start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2) {
+start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2/anytls) {
     return proxy;
 }
 
@@ -64,6 +64,10 @@ vless = tag equals "vless"i address uuid (transport/transport_host/transport_pat
 }
 trojan = tag equals "trojan"i address password (transport/transport_host/transport_path/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/fast_open/udp_relay/ip_mode/block_quic/others)* {
     proxy.type = "trojan";
+    handleTransport();
+}
+anytls = tag equals "anytls"i address password (transport/transport_host/transport_path/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/fast_open/udp_relay/ip_mode/block_quic/idle_session_check_interval/idle_session_timeout/min_idle_session/max_stream_count/others)* {
+    proxy.type = "anytls";
     handleTransport();
 }
 hysteria2 = tag equals "hysteria2"i address password (tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/udp_relay/fast_open/download_bandwidth/salamander_password/ecn/ip_mode/block_quic/others)* {
@@ -192,6 +196,11 @@ download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down 
 salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join(""); proxy.obfs = 'salamander'; }
 
 block_quic = comma "block-quic" equals flag:bool { if(flag) proxy["block-quic"] = "on"; else proxy["block-quic"] = "off"; }
+
+idle_session_check_interval = comma "idle-session-check-interval" equals match:$[0-9]+ { proxy["idle-session-check-interval"] = parseInt(match.trim()); }
+idle_session_timeout = comma "idle-session-timeout" equals match:$[0-9]+ { proxy["idle-session-timeout"] = parseInt(match.trim()); }
+min_idle_session = comma "min-idle-session" equals match:$[0-9]+ { proxy["min-idle-session"] = parseInt(match.trim()); }
+max_stream_count = comma "max-stream-count" equals match:$[0-9]+ { proxy["max-stream-count"] = parseInt(match.trim()); }
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
 comma = _ "," _
