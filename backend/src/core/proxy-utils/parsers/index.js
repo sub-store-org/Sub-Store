@@ -303,7 +303,9 @@ function URI_SS() {
                     proxy.plugin = 'v2ray-plugin';
                     proxy['plugin-opts'] = {
                         mode: 'websocket',
-                        host: getIfNotBlank(params['obfs-host']),
+                        host:
+                            getIfNotBlank(params['obfs-host']) ||
+                            getIfNotBlank(params['host']),
                         path: getIfNotBlank(params.path),
                         tls: getIfPresent(params.tls),
                     };
