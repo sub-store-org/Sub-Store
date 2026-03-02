@@ -42,7 +42,7 @@ Core functionalities:
 - [x] Clash Proxy JSON/JSON5/YAML(single line)
   > [NaiveProxy](https://t.me/zhetengsha/4308)
 - [x] QX (SS, SSR, VMess, Trojan, HTTP, SOCKS5, VLESS)
-- [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, WireGuard, VLESS, Hysteria 2)
+- [x] Loon (SS, SSR, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, WireGuard, VLESS, Hysteria 2, AnyTLS)
 - [x] Surge (Direct, SS, VMess, Trojan, HTTP, SOCKS5, SOCKS5-TLS, AnyTLS, TrustTunnel, TUIC, Snell, Hysteria 2, SSH(Password authentication only), External Proxy Program(only for macOS), WireGuard(Surge to Surge))
 - [x] mihomo(Clash.Meta) Compatible (Direct, SS, SSR, VMess, Trojan, HTTP, SOCKS5, Snell, VLESS, WireGuard, Hysteria, Hysteria 2, TUIC, SSH, mieru, sudoku, AnyTLS, MASQUE)
 
