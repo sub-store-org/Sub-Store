@@ -75,13 +75,13 @@ export function shouldIncludeUnsupportedProxy(platform, headers) {
         ) {
             return true;
         }
-        if (
-            platform === 'Egern' &&
-            target === 'Egern' &&
-            ua.match(/build\/(\d+)/i)?.[1] >= 718
-        ) {
-            return true;
-        }
+        // if (
+        //     platform === 'Egern' &&
+        //     target === 'Egern' &&
+        //     ua.match(/build\/(\d+)/i)?.[1] >= 718
+        // ) {
+        //     return true;
+        // }
         // // if (
         // //     platform === 'Stash' &&
         // //     target === 'Stash' &&

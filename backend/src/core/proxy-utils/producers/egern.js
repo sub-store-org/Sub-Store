@@ -2,7 +2,7 @@ import { isPresent } from './utils';
 
 export default function Egern_Producer() {
     const type = 'ALL';
-    const produce = (proxies, type, opts = {}) => {
+    const produce = (proxies, type) => {
         // https://egernapp.com/zh-CN/docs/configuration/proxies
         const list = proxies
             .filter((proxy) => {
@@ -18,9 +18,7 @@ export default function Egern_Producer() {
                         'vmess',
                         'tuic',
                         'wireguard',
-                        ...(opts['include-unsupported-proxy']
-                            ? ['anytls']
-                            : []),
+                        'anytls',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ((proxy.plugin === 'obfs' &&
