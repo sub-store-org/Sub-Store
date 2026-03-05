@@ -3,6 +3,7 @@ import {
     COLLECTIONS_KEY,
     SUBS_KEY,
     FILES_KEY,
+    TOKENS_KEY,
 } from '@/constants';
 import $ from '@/core/app';
 import { success } from '@/restful/response';
@@ -12,6 +13,7 @@ export default function register($app) {
     $app.post('/api/sort/collections', sortCollections);
     $app.post('/api/sort/artifacts', sortArtifacts);
     $app.post('/api/sort/files', sortFiles);
+    $app.post('/api/sort/tokens', sortTokens);
 }
 
 function sortSubs(req, res) {
@@ -46,4 +48,16 @@ function sortFiles(req, res) {
     allFiles.sort((a, b) => orders.indexOf(a.name) - orders.indexOf(b.name));
     $.write(allFiles, FILES_KEY);
     success(res, allFiles);
+}
+
+function sortTokens(req, res) {
+    const orders = req.body;
+    const allTokens = $.read(TOKENS_KEY);
+    allTokens.sort(
+        (a, b) =>
+            orders.indexOf(`${a.type}-${a.name}-${a.token}`) -
+            orders.indexOf(`${b.type}-${b.name}-${b.token}`),
+    );
+    $.write(allTokens, TOKENS_KEY);
+    success(res, allTokens);
 }
