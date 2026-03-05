@@ -1,4 +1,3 @@
-import { deleteByName } from '@/utils/database';
 import { ENV } from '@/vendor/open-api';
 import { TOKENS_KEY, SUBS_KEY, FILES_KEY, COLLECTIONS_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
