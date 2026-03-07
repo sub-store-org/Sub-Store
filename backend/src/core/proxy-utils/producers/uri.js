@@ -151,12 +151,10 @@ export default function URI_Producer() {
         }
         if (
             [
-                'trojan',
                 'tuic',
                 'hysteria',
                 'hysteria2',
                 'juicity',
-                'anytls',
                 'trusttunnel',
             ].includes(proxy.type)
         ) {
