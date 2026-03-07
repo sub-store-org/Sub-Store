@@ -313,11 +313,11 @@ function anytls(proxy) {
     result.append(
         `${proxy.name}=anytls,${proxy.server},${proxy.port},"${proxy.password}"`,
     );
-
+    // 新版删除idle-session-check-interval和min-idle-session 参数，session 改为主动超时机制，由于 anytls-go 不支持一个tcp 并发多个 stream，max-stream-cout 设置大于 1 时会有阻塞，如果有其他支持多路复用的 anytls 服务器实现，可以设置max-stream-cout 大于 1
     for (const key of [
-        'idle-session-check-interval',
+        // 'idle-session-check-interval',
         'idle-session-timeout',
-        'min-idle-session',
+        // 'min-idle-session',
         'max-stream-count',
     ]) {
         // 值为整数 才附加
