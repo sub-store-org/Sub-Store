@@ -2,6 +2,7 @@
 const targetPlatform = 'Loon';
 import { isPresent, Result } from './utils';
 import { isIPv4, isIPv6 } from '@/utils';
+import $ from '@/core/app';
 
 const ipVersions = {
     dual: 'dual',
@@ -144,6 +145,23 @@ function shadowsocks(proxy) {
             result.appendIfPresent(
                 `,udp-port=${proxy['udp-port']}`,
                 'udp-port',
+            );
+        }
+    }
+
+    // udp over tcp
+    if (proxy['udp-over-tcp']) {
+        if (proxy['udp-over-tcp-version'] === 2) {
+            if (proxy.plugin === 'obfs') {
+                $.error(
+                    `Platform ${targetPlatform} shadowsocks udp-over-tcp does not support obfs`,
+                );
+            } else {
+                result.append(`,udp-over-tcp=true`);
+            }
+        } else {
+            $.error(
+                `Platform ${targetPlatform} shadowsocks only supports udp-over-tcp-version 2`,
             );
         }
     }
