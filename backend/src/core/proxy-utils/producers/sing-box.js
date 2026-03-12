@@ -840,7 +840,7 @@ const anytlsParser = (proxy = {}) => {
 };
 
 const wireguardParser = (proxy = {}) => {
-    const local_address = ['ip', 'ipv6']
+    const address = ['ip', 'ipv6']
         .map((i) => proxy[i])
         .map((i) => {
             if (isIPv4(i)) return `${i}/32`;
@@ -848,11 +848,19 @@ const wireguardParser = (proxy = {}) => {
         })
         .filter((i) => i);
     const parsedProxy = {
+        system: !!proxy.system,
+        mtu: proxy.mtu ? parseInt(`${proxy.mtu}`, 10) : undefined,
+        udp_timeout: proxy['udp-timeout']
+            ? parseInt(`${proxy['udp-timeout']}`, 10)
+            : undefined,
+        workers: proxy['workers']
+            ? parseInt(`${proxy['workers']}`, 10)
+            : undefined,
         tag: proxy.name,
         type: 'wireguard',
         server: proxy.server,
         server_port: parseInt(`${proxy.port}`, 10),
-        local_address,
+        address,
         private_key: proxy['private-key'],
         peer_public_key: proxy['public-key'],
         pre_shared_key: proxy['pre-shared-key'],
@@ -868,14 +876,42 @@ const wireguardParser = (proxy = {}) => {
     } else {
         delete parsedProxy.reserved;
     }
+    if (!Array.isArray(proxy.peers) || proxy.peers.length === 0) {
+        proxy.peers = [{}];
+    }
     if (proxy.peers && proxy.peers.length > 0) {
         parsedProxy.peers = [];
         for (const p of proxy.peers) {
+            let address;
+            let port;
+            if (p.server && p.port) {
+                address = p.server;
+                port = parseInt(`${p.port}`, 10);
+            } else {
+                address = parsedProxy.server;
+                port = parseInt(`${parsedProxy.server_port}`, 10);
+            }
             const peer = {
-                server: p.server,
-                server_port: parseInt(`${p.port}`, 10),
-                public_key: p['public-key'],
-                allowed_ips: p['allowed-ips'] || p.allowed_ips,
+                address,
+                port,
+                persistent_keepalive_interval: p[
+                    'persistent-keepalive-interval'
+                ]
+                    ? parseInt(`${p['persistent-keepalive-interval']}`, 10)
+                    : undefined,
+                public_key:
+                    p['public-key'] ||
+                    p['public_key'] ||
+                    parsedProxy.peer_public_key,
+                pre_shared_key:
+                    p['pre-shared-key'] ||
+                    p['pre_shared_key'] ||
+                    parsedProxy.pre_shared_key,
+                allowed_ips: p['allowed-ips'] ||
+                    p.allowed_ips || [
+                        '0.0.0.0/0',
+                        ...(proxy.ipv6 ? ['::/0'] : []),
+                    ],
                 reserved: [],
             };
             if (typeof p.reserved === 'string') {
@@ -885,7 +921,10 @@ const wireguardParser = (proxy = {}) => {
             } else {
                 delete peer.reserved;
             }
-            if (p['pre-shared-key']) peer.pre_shared_key = p['pre-shared-key'];
+            if (!Array.isArray(peer.reserved) || peer.reserved.length === 0) {
+                peer.reserved = parsedProxy.reserved;
+            }
+            // if (p['pre-shared-key']) peer.pre_shared_key = p['pre-shared-key'];
             parsedProxy.peers.push(peer);
         }
     }
@@ -894,6 +933,11 @@ const wireguardParser = (proxy = {}) => {
     detourParser(proxy, parsedProxy);
     smuxParser(proxy.smux, parsedProxy);
     ipVersionParser(proxy, parsedProxy);
+    delete parsedProxy.server;
+    delete parsedProxy.server_port;
+    delete parsedProxy.pre_shared_key;
+    delete parsedProxy.peer_public_key;
+    delete parsedProxy.reserved;
     return parsedProxy;
 };
 
@@ -1052,9 +1096,21 @@ export default function singbox_Producer() {
                 }
             });
 
-        return type === 'internal'
-            ? list
-            : JSON.stringify({ outbounds: list }, null, 2);
+        if (type === 'internal') return list;
+
+        const categorized = list.reduce(
+            (result, item) => {
+                if (['wireguard'].includes(item.type)) {
+                    result.endpoints.push(item);
+                } else {
+                    result.outbounds.push(item);
+                }
+                return result;
+            },
+            { outbounds: [], endpoints: [] },
+        );
+
+        return JSON.stringify(categorized, null, 2);
     };
     return { type, produce };
 }
