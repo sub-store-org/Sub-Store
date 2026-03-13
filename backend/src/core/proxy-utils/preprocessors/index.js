@@ -103,21 +103,11 @@ function Clash() {
             },
         );
 
-        const {
-            proxies,
-            'global-client-fingerprint': globalClientFingerprint,
-        } = safeLoad(afterReplace);
+        const { proxies } = safeLoad(afterReplace);
         return (
             (includeProxies ? 'proxies:\n' : '') +
             proxies
                 .map((p) => {
-                    if (
-                        globalClientFingerprint &&
-                        ['trojan', 'vmess', 'vless'].includes(p.type) &&
-                        !p['client-fingerprint']
-                    ) {
-                        p['client-fingerprint'] = globalClientFingerprint;
-                    }
                     return `${includeProxies ? '  - ' : ''}${JSON.stringify(
                         p,
                     )}\n`;
