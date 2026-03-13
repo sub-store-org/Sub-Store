@@ -247,7 +247,7 @@ function trojan(proxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -324,7 +324,7 @@ function anytls(proxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -390,7 +390,7 @@ function trusttunnel(proxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -469,7 +469,7 @@ function vmess(proxy, includeUnsupportedProxy) {
     result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -617,7 +617,7 @@ function http(proxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -745,7 +745,7 @@ function socks5(proxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -922,7 +922,7 @@ function tuic(proxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -1203,7 +1203,7 @@ function hysteria2(proxy, includeUnsupportedProxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',

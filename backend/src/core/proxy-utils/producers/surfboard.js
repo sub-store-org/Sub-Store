@@ -45,7 +45,7 @@ function anytls(proxy) {
     result.appendIfPresent(`,password="${proxy.password}"`, 'password');
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -166,7 +166,7 @@ function trojan(proxy) {
     result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -200,7 +200,7 @@ function vmess(proxy) {
     result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -220,7 +220,7 @@ function http(proxy) {
     result.appendIfPresent(`,${proxy.password}`, 'password');
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -240,7 +240,7 @@ function socks5(proxy) {
     result.appendIfPresent(`,${proxy.password}`, 'password');
 
     // tls verification
-    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
