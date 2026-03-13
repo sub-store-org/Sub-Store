@@ -671,6 +671,33 @@ function lastParse(proxy) {
             proxy['congestion-controller'] || 'cubic';
         proxy['udp-relay-mode'] = proxy['udp-relay-mode'] || 'native';
     }
+    if (['wireguard'].includes(proxy.type)) {
+        if (Array.isArray(proxy.peers) && proxy.peers.length > 0) {
+            const validPeer =
+                proxy.peers.find((peer) => peer.ip && peer.ipv6) ||
+                proxy.peers.find((peer) => peer.ip || peer.ipv6);
+            if (validPeer) {
+                if (!proxy.ip) {
+                    proxy.ip = proxy.peers[0]?.ip;
+                }
+                if (!proxy.ipv6) {
+                    proxy.ipv6 = proxy.peers[0]?.ipv6;
+                }
+            }
+        }
+        if (proxy.ip?.includes('/')) {
+            const [ip] = proxy.ip.split('/');
+            if (isIPv4(ip)) {
+                proxy.ip = ip;
+            }
+        }
+        if (proxy.ipv6?.includes('/')) {
+            const [ip] = proxy.ipv6.split('/');
+            if (isIPv6(ip)) {
+                proxy.ipv6 = ip;
+            }
+        }
+    }
     return proxy;
 }
 
