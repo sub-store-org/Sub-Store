@@ -191,7 +191,8 @@ username = & {
 password = comma match:[^,]+ { proxy.password = match.join("").replace(/^"(.*)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 
 tls = comma "tls" equals flag:bool { proxy.tls = flag; }
-sni = comma "sni" equals sni:("off"/domain) { 
+sni = comma "sni" equals match:[^,]+ { 
+    const sni = match.join("").replace(/^"(.*)"$/, '$1');
     if (sni === "off") {
         proxy["disable-sni"] = true;
     } else {
@@ -227,7 +228,7 @@ ws_headers = comma "ws-headers" equals headers:$[^,]+ {
 ws_path = comma "ws-path" equals path:uri { obfs.path = path.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 
 obfs = comma "obfs" equals type:("http"/"tls") { obfs.type = type; }
-obfs_host = comma "obfs-host" equals host:domain { obfs.host = host; };
+obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").replace(/^"(.*)"$/, '$1'); };
 obfs_uri = comma "obfs-uri" equals path:uri { obfs.path = path }
 uri = $[^,]+
 

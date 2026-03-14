@@ -162,7 +162,7 @@ udp_over_tcp_new = comma "udp-over-tcp" equals param:$[^=,]+ { if (param === "sp
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
-tls_host = comma "tls-host" equals sni:domain { proxy.sni = sni; }
+tls_host = comma sni:("tls-host") equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1'); }
 tls_verification = comma "tls-verification" equals flag:bool { 
     proxy["skip-cert-verify"] = !flag;
 }
@@ -180,7 +180,7 @@ obfs_ss = comma "obfs" equals type:("http"/"tls"/"wss"/"ws"/"over-tls") { obfs.t
 obfs_ssr = comma "obfs" equals type:("plain"/"http_simple"/"http_post"/"random_head"/"tls1.2_ticket_auth"/"tls1.2_ticket_fastauth") { proxy.type = "ssr"; obfs.type = type; return type; }
 obfs = comma "obfs" equals type:("wss"/"ws"/"over-tls"/"http") { obfs.type = type; return type; };
 
-obfs_host = comma "obfs-host" equals host:domain { obfs.host = host; }
+obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").replace(/^"(.*)"$/, '$1'); }
 obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = uri; }
 
 ssr_protocol = comma "ssr-protocol" equals protocol:("origin"/"auth_sha1_v4"/"auth_aes128_md5"/"auth_aes128_sha1"/"auth_chain_a"/"auth_chain_b") { proxy.protocol = protocol; return protocol; }
