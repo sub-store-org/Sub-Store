@@ -11,6 +11,13 @@ export function normalizeClashYaml(raw) {
         return raw;
     }
 
+    try {
+        const content = safeLoad(raw);
+        if (!Array.isArray(content.proxies) || content.proxies.length === 0)
+            return raw;
+    } catch (e) {
+        return raw;
+    }
     // 防止 VLESS 节点 reality-opts 里的 short-id 被 YAML 标量推断成数字
     // 例如 08 / 0088 在部分内核重新解析时会触发 invalid REALITY short ID
     return raw.replace(/short-id:([ \t]*[^#\n,}]*)/g, (matched, value) => {

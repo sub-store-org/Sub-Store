@@ -5,6 +5,7 @@ import { success, failed } from './response';
 import download from '@/utils/download';
 import { SUBS_KEY } from '@/constants';
 import $ from '@/core/app';
+import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 
 export default function register($app) {
     $app.post('/api/preview/sub', compareSub);
@@ -89,7 +90,7 @@ async function previewFile(req, res) {
         // produce
         success(res, {
             original: filesContent,
-            processed: processed?.$content ?? '',
+            processed: normalizeClashYaml(processed?.$content ?? ''),
         });
     } catch (err) {
         $.error(err.message ?? err);
