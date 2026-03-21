@@ -9,6 +9,7 @@ import {
     InternalServerError,
 } from '@/restful/errors';
 import { produceArtifact } from '@/restful/sync';
+import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 import { formatDateTime } from '@/utils';
 
 export default function register($app) {
@@ -204,7 +205,7 @@ async function getFile(req, res, next) {
             if (output?.$options?._res?.status) {
                 res.status(output.$options._res.status);
             }
-            res.send(output?.$content ?? '');
+            res.send(normalizeClashYaml(output?.$content ?? ''));
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载文件失败`,
