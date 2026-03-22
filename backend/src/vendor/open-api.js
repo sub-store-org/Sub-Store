@@ -463,6 +463,16 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 if (isNode) {
                     const undici = eval("require('undici')");
                     const { socksDispatcher } = eval("require('fetch-socks')");
+                    const defaultMaxHeaderSize = 32 * 1024;
+                    const parsedMaxHeaderSize = Number.parseInt(
+                        eval('process.env.SUB_STORE_MAX_HEADER_SIZE'),
+                        10,
+                    );
+                    const maxHeaderSize =
+                        Number.isInteger(parsedMaxHeaderSize) &&
+                        parsedMaxHeaderSize > 0
+                            ? parsedMaxHeaderSize
+                            : defaultMaxHeaderSize;
                     const {
                         ProxyAgent,
                         EnvHttpProxyAgent,
@@ -480,9 +490,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                         },
                         bodyTimeout: opts.timeout,
                         headersTimeout: opts.timeout,
-                        maxHeaderSize:
-                            eval('process.env.SUB_STORE_MAX_HEADER_SIZE') ||
-                            32 * 1024,
+                        maxHeaderSize,
                     };
                     const tlsOptions = {
                         rejectUnauthorized:
