@@ -1266,6 +1266,7 @@ function Clash_All() {
         }
         if (
             ![
+                'tailscale',
                 'trusttunnel',
                 'naive',
                 'anytls',

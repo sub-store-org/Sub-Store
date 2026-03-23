@@ -66,7 +66,8 @@ export function shouldIncludeUnsupportedProxy(platform, headers) {
         const { UA, ua, accept } = getUserAgentFromHeaders(headers);
         const target = getPlatformFromUserAgent({ UA, ua, accept });
         const coerceVersion = coerce(ua);
-        const { major } = coerceVersion;
+        const { major, version } = coerceVersion;
+
         if (
             (['SurgeMac', 'Surge'].includes(platform) &&
                 target === 'SurgeMac' &&
@@ -82,13 +83,13 @@ export function shouldIncludeUnsupportedProxy(platform, headers) {
         // ) {
         //     return true;
         // }
-        // // if (
-        // //     platform === 'Stash' &&
-        // //     target === 'Stash' &&
-        // //     gte(version, '3.1.0')
-        // // ) {
-        // //     return true;
-        // // }
+        if (
+            platform === 'Stash' &&
+            target === 'Stash' &&
+            gte(version, '3.3.3')
+        ) {
+            return true;
+        }
 
         // // if (
         // //     platform === 'Loon' &&

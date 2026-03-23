@@ -11,6 +11,7 @@ export default function Shadowrocket_Producer() {
                     return false;
                 } else if (
                     [
+                        'tailscale',
                         'trusttunnel',
                         'mieru',
                         'sudoku',
