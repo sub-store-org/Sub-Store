@@ -838,6 +838,49 @@ const anytlsParser = (proxy = {}) => {
     ipVersionParser(proxy, parsedProxy);
     return parsedProxy;
 };
+const tailscaleParser = (proxy = {}) => {
+    const parsedProxy = {
+        tag: proxy.name,
+        type: 'tailscale',
+        udp_timeout: proxy['udp-timeout'],
+        state_directory: proxy['state-directory'],
+        auth_key: proxy['auth-key'],
+        control_url: proxy['control-url'],
+        ephemeral: proxy.ephemeral,
+        hostname: proxy.hostname,
+        accept_routes: proxy['accept-routes'],
+        exit_node: proxy['exit-node'],
+        exit_node_allow_lan_access: proxy['exit-node-allow-lan-access'],
+        advertise_routes: Array.isArray(proxy['advertise-routes'])
+            ? proxy['advertise-routes']
+            : undefined,
+        advertise_exit_node: proxy['advertise-exit-node'],
+        advertise_tags: Array.isArray(proxy['advertise-tags'])
+            ? proxy['advertise-tags']
+            : undefined,
+        relay_server_static_endpoints: Array.isArray(
+            proxy['relay-server-static-endpoints'],
+        )
+            ? proxy['relay-server-static-endpoints']
+            : undefined,
+        system_interface: proxy['system-interface'],
+        system_interface_name: proxy['system-interface-name'],
+    };
+    if (/^\d+$/.test(proxy['system-interface-mtu']))
+        parsedProxy.system_interface_mtu = parseInt(
+            `${proxy['system-interface-mtu']}`,
+            10,
+        );
+    if (/^\d+$/.test(proxy['relay-server-port']))
+        parsedProxy.relay_server_port = parseInt(
+            `${proxy['relay-server-port']}`,
+            10,
+        );
+    networkParser(proxy, parsedProxy);
+    detourParser(proxy, parsedProxy);
+    ipVersionParser(proxy, parsedProxy);
+    return parsedProxy;
+};
 
 const wireguardParser = (proxy = {}) => {
     const address = ['ip', 'ipv6']
@@ -850,9 +893,7 @@ const wireguardParser = (proxy = {}) => {
     const parsedProxy = {
         system: !!proxy.system,
         mtu: proxy.mtu ? parseInt(`${proxy.mtu}`, 10) : undefined,
-        udp_timeout: proxy['udp-timeout']
-            ? parseInt(`${proxy['udp-timeout']}`, 10)
-            : undefined,
+        udp_timeout: proxy['udp-timeout'],
         workers: proxy['workers']
             ? parseInt(`${proxy['workers']}`, 10)
             : undefined,
@@ -1085,6 +1126,9 @@ export default function singbox_Producer() {
                         case 'anytls':
                             list.push(anytlsParser(proxy));
                             break;
+                        case 'tailscale':
+                            list.push(tailscaleParser(proxy));
+                            break;
                         default:
                             throw new Error(
                                 `Platform sing-box does not support proxy type: ${proxy.type}`,
@@ -1100,7 +1144,7 @@ export default function singbox_Producer() {
 
         const categorized = list.reduce(
             (result, item) => {
-                if (['wireguard'].includes(item.type)) {
+                if (['wireguard', 'tailscale'].includes(item.type)) {
                     result.endpoints.push(item);
                 } else {
                     result.outbounds.push(item);
