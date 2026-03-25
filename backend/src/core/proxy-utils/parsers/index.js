@@ -1657,10 +1657,16 @@ function Surge_Trojan() {
     return { name, test, parse };
 }
 
+const LOON_ONLY_OPTIONS =
+    /(^|,)\s*(fast-open|over-tls|tls-name|ip-mode|tls-cert-sha256|tls-pubkey-sha256)\s*=/i;
+
 function Surge_Http() {
     const name = 'Surge HTTP Parser';
     const test = (line) => {
-        return /^.*=\s*https?/.test(line.split(',')[0]);
+        return (
+            /^.*=\s*https?/.test(line.split(',')[0]) &&
+            !LOON_ONLY_OPTIONS.test(line)
+        );
     };
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
@@ -1669,7 +1675,10 @@ function Surge_Http() {
 function Surge_Socks5() {
     const name = 'Surge Socks5 Parser';
     const test = (line) => {
-        return /^.*=\s*socks5(-tls)?/.test(line.split(',')[0]);
+        return (
+            /^.*=\s*socks5(-tls)?/.test(line.split(',')[0]) &&
+            !LOON_ONLY_OPTIONS.test(line)
+        );
     };
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };

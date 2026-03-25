@@ -136,7 +136,6 @@ async function processFn(
                         }
                     }
                 }
-                console.log(rawArgs);
                 url = `${url.split('#')[0]}${
                     rawArgs[2]
                         ? `#${rawArgs[2]}`

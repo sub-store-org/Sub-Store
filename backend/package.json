@@ -1,17 +1,15 @@
 {
   "name": "sub-store",
-  "version": "2.21.56",
+  "version": "2.21.57",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.",
   "main": "src/main.js",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "test": "gulp peggy && npx cross-env BABEL_ENV=test mocha src/test/**/*.spec.js --require @babel/register --recursive",
+    "test": "mocha src/test/**/*.spec.js --require @babel/register --recursive",
     "serve": "node sub-store.min.js",
     "start": "nodemon -w src -w package.json --exec babel-node src/main.js",
     "dev:esbuild": "nodemon -w src -w package.json dev-esbuild.js",
     "dev:run": "nodemon -w sub-store.min.js sub-store.min.js",
-    "build": "gulp",
-    "bundle": "node bundle.js",
     "bundle:esbuild": "node bundle-esbuild.js",
     "changelog": "conventional-changelog -p cli -i CHANGELOG.md -s"
   },
@@ -24,7 +22,6 @@
   },
   "dependencies": {
     "@maxmind/geoip2-node": "^5.0.0",
-    "automerge": "1.0.1-preview.7",
     "body-parser": "^1.19.0",
     "buffer": "^6.0.3",
     "connect-history-api-fallback": "^2.0.0",
@@ -52,26 +49,13 @@
     "@babel/node": "^7.17.10",
     "@babel/preset-env": "^7.18.0",
     "@babel/register": "^7.17.7",
-    "@types/gulp": "^4.0.9",
     "babel-plugin-relative-path-import": "^2.0.1",
-    "babelify": "^10.0.0",
-    "browser-pack-flat": "^3.4.2",
-    "browserify": "^17.0.0",
     "chai": "^4.3.6",
     "esbuild": "^0.19.8",
     "eslint": "^8.16.0",
-    "gulp": "^4.0.2",
-    "gulp-babel": "^8.0.0",
-    "gulp-eslint-new": "^1.4.4",
-    "gulp-file": "^0.4.0",
-    "gulp-header": "^2.0.9",
-    "gulp-prettier": "^4.0.0",
-    "gulp-tap": "^2.0.0",
     "mocha": "^10.0.0",
     "nodemon": "^2.0.16",
     "peggy": "^2.0.1",
-    "prettier": "2.6.2",
-    "prettier-plugin-sort-imports": "^1.6.1",
-    "tinyify": "^3.0.0"
+    "prettier": "2.6.2"
   }
 }
