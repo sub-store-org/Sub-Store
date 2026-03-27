@@ -285,6 +285,10 @@ const tlsParser = (proxy, parsedProxy) => {
         parsedProxy.tls.ech.enabled = proxy["ech-opts"].enable;
         parsedProxy.tls.ech.config = proxy["ech-opts"].config;
         parsedProxy.tls.ech.query_server_name = proxy["ech-opts"]['query-server-name'];
+        parsedProxy.tls.ech.config_path = proxy["ech-opts"]['config-path'];
+        parsedProxy.tls.ech.fragment = proxy["ech-opts"]["fragment"];
+        parsedProxy.tls.ech.fragment_fallback_delay = proxy["ech-opts"]["fragment-fallback-delay"];
+        parsedProxy.tls.ech.record_fragment = proxy["ech-opts"]["record-fragment"];
     }
     if (proxy._curve_preferences && Array.isArray(proxy._curve_preferences)) {
         parsedProxy.tls.curve_preferences = proxy._curve_preferences;
