@@ -521,11 +521,12 @@ function lastParse(proxy) {
             proxy[`${proxy.network}-opts`].path = [transportPath];
         }
     }
-    if (proxy.tls && !proxy.sni) {
-        if (!isIP(proxy.server)) {
-            proxy.sni = proxy.server;
-        }
-        if (!proxy.sni && proxy.network) {
+    // 允许设置 sni 为空字符串且为防止影响其他逻辑, 这里先改成这样判断
+    // 本质上是为了防止本来应该使用 server 作为 sni 的情况下, 若之后进行了域名解析, 导致 server 变成 ip 丢失了 sni
+    // 为了兼容性, 暂时先这么改
+    if (proxy.tls && !proxy.sni && proxy.sni !== '') {
+        // 传输层若有设置就使用
+        if (proxy.network) {
             let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
             transportHost = Array.isArray(transportHost)
                 ? transportHost[0]
@@ -533,6 +534,10 @@ function lastParse(proxy) {
             if (transportHost) {
                 proxy.sni = transportHost;
             }
+        }
+        // 不区分是不是域名, 总之如果到这里还没 sni, 可以设置域名 server 为 sni
+        if (!proxy.sni && !isIP(proxy.server)) {
+            proxy.sni = proxy.server;
         }
     }
     // if (['hysteria', 'hysteria2', 'tuic'].includes(proxy.type)) {
