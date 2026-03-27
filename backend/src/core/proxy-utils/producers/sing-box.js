@@ -281,6 +281,10 @@ const tlsParser = (proxy, parsedProxy) => {
         };
     if (proxy._ech && isPlainObject(proxy._ech)) {
         parsedProxy.tls.ech = proxy._ech;
+    } else if (proxy["ech-opts"] && isPlainObject(proxy["ech-opts"])) {
+        parsedProxy.tls.ech.enabled = proxy["ech-opts"].enable
+        parsedProxy.tls.ech.config = proxy["ech-opts"].config
+        parsedProxy.tls.ech.query_server_name = proxy["ech-opts"]['query_server_name']
     }
     if (proxy._curve_preferences && Array.isArray(proxy._curve_preferences)) {
         parsedProxy.tls.curve_preferences = proxy._curve_preferences;
@@ -394,7 +398,7 @@ const socks5Parser = (proxy = {}) => {
             enabled: true,
             version:
                 !proxy['udp-over-tcp-version'] ||
-                proxy['udp-over-tcp-version'] === 1
+                    proxy['udp-over-tcp-version'] === 1
                     ? 1
                     : 2,
         };
@@ -422,7 +426,7 @@ const shadowTLSParser = (proxy = {}) => {
             enabled: true,
             version:
                 !proxy['udp-over-tcp-version'] ||
-                proxy['udp-over-tcp-version'] === 1
+                    proxy['udp-over-tcp-version'] === 1
                     ? 1
                     : 2,
         };
@@ -470,7 +474,7 @@ const ssParser = (proxy = {}) => {
             enabled: true,
             version:
                 !proxy['udp-over-tcp-version'] ||
-                proxy['udp-over-tcp-version'] === 1
+                    proxy['udp-over-tcp-version'] === 1
                     ? 1
                     : 2,
         };
@@ -674,7 +678,7 @@ const naiveParser = (proxy = {}) => {
             enabled: true,
             version:
                 !proxy['udp-over-tcp-version'] ||
-                proxy['udp-over-tcp-version'] === 1
+                    proxy['udp-over-tcp-version'] === 1
                     ? 1
                     : 2,
         };
