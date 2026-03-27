@@ -64,7 +64,14 @@ function vless(proxy) {
         extra = `&extra=${encodeURIComponent(proxy._extra)}`;
     }
     let mode = '';
-    if (proxy._mode) {
+    if (
+        ['xhttp'].includes(proxy.network) &&
+        proxy[`${proxy.network}-opts`]?.mode
+    ) {
+        mode = `&mode=${encodeURIComponent(
+            proxy[`${proxy.network}-opts`].mode,
+        )}`;
+    } else if (proxy._mode) {
         mode = `&mode=${encodeURIComponent(proxy._mode)}`;
     }
     let pqv = '';

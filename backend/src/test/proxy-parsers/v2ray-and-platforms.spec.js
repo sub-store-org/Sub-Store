@@ -372,6 +372,36 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
+        it('parses xhttp VLESS shares with mihomo transport extras', function () {
+            const extra = JSON.stringify({
+                noGRPCHeader: true,
+                xPaddingBytes: '64-128',
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                _extra: extra,
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'no-grpc-header': true,
+                    'x-padding-bytes': '64-128',
+                },
+            });
+        });
+
         it('parses Shadowrocket VLESS shares', function () {
             const base = Base64.encode(
                 `none:${UUID}@shadowrocket-vless.example.com:443`,

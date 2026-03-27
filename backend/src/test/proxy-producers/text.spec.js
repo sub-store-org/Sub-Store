@@ -211,6 +211,35 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces URI VLESS xhttp links with mihomo transport mode', function () {
+        const extra = JSON.stringify({
+            noGRPCHeader: true,
+            xPaddingBytes: '64-128',
+        });
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            _extra: extra,
+            'xhttp-opts': {
+                path: '/xhttp',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                mode: 'stream-up',
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(extra)}#URI%20XHTTP`,
+        );
+    });
+
     it('produces V2Ray exports as base64 encoded URI lists', function () {
         const output = produceExternal('V2Ray', {
             type: 'vless',

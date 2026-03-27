@@ -1026,6 +1026,10 @@ export default function singbox_Producer() {
             .produce(proxies, 'internal', { 'include-unsupported-proxy': true })
             .map((proxy) => {
                 try {
+                    if (['xhttp'].includes(proxy.network))
+                        throw new Error(
+                            `Platform sing-box does not support network: ${proxy.network}`,
+                        );
                     switch (proxy.type) {
                         case 'ssh':
                             list.push(sshParser(proxy));

@@ -143,6 +143,59 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('emits Mihomo VLESS xhttp proxies and preserves xhttp options', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                mode: 'stream-up',
+                'no-grpc-header': true,
+                'x-padding-bytes': '64-128',
+            },
+            _extra: JSON.stringify({
+                noGRPCHeader: true,
+                xPaddingBytes: '64-128',
+            }),
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        const external = loadProducedYaml('Mihomo', proxy);
+
+        expect(internal).to.have.length(1);
+        expect(external.proxies).to.have.length(1);
+        expectSubset(internal[0], {
+            type: 'vless',
+            name: 'XHTTP',
+            network: 'xhttp',
+            servername: 'sni.example.com',
+            'xhttp-opts': {
+                path: '/xhttp',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                mode: 'stream-up',
+                'no-grpc-header': true,
+                'x-padding-bytes': '64-128',
+            },
+        });
+        expectSubset(external.proxies[0], {
+            type: 'vless',
+            name: 'XHTTP',
+            network: 'xhttp',
+            servername: 'sni.example.com',
+        });
+    });
+
     it('normalizes Stash TUIC defaults and external yaml wrapper', function () {
         const proxy = {
             type: 'tuic',
@@ -295,6 +348,28 @@ describe('Proxy structured producers', function () {
                 max_early_data: 2048,
             },
         });
+    });
+
+    it('omits xhttp proxies from sing-box exports', function () {
+        const output = loadProducedJson('sing-box', {
+            type: 'vless',
+            name: 'XHTTP',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                mode: 'stream-up',
+            },
+        });
+
+        expect(output.outbounds).to.have.length(0);
+        expect(output.endpoints).to.have.length(0);
     });
 
     it('stringifies JSON producer outputs as plain arrays', function () {
