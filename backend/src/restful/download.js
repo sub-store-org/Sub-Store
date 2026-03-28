@@ -1,7 +1,4 @@
-import {
-    getPlatformFromHeaders,
-    shouldIncludeUnsupportedProxy,
-} from '@/utils/user-agent';
+import { getPlatformFromHeaders } from '@/utils/user-agent';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
@@ -170,16 +167,6 @@ async function downloadSubscription(req, res) {
     if (includeUnsupportedProxy) {
         $.info(
             `包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
-        );
-    }
-
-    if (
-        !includeUnsupportedProxy &&
-        shouldIncludeUnsupportedProxy(platform, req.headers)
-    ) {
-        includeUnsupportedProxy = true;
-        $.info(
-            `当前客户端可包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
         );
     }
 
@@ -476,15 +463,7 @@ async function downloadCollection(req, res) {
             `包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
         );
     }
-    if (
-        !includeUnsupportedProxy &&
-        shouldIncludeUnsupportedProxy(platform, req.headers)
-    ) {
-        includeUnsupportedProxy = true;
-        $.info(
-            `当前客户端可包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
-        );
-    }
+
     if (useMihomoExternal) {
         $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
     }

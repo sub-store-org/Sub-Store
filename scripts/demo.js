@@ -168,6 +168,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     downloadFile, // 下载二进制文件, 见 backend/src/utils/download.js
   //     MMDB, // Node.js 环境 可用于模拟 Surge/Loon 的 $utils.ipasn, $utils.ipaso, $utils.geoip. 具体见 https://t.me/zhetengsha/1269
   //     isValidUUID, // 辅助判断是否为有效的 UUID
+  //     doh, // DNS over HTTPS 解析, 源码见 backend/src/utils/dns.js, 使用参考本项目里调用方式 backend/src/core/proxy-utils/processors/index.js
   //     Buffer, // https://github.com/feross/buffer
   //     Base64, // https://github.com/dankogai/js-base64
   //     JSON5, // https://github.com/json5/json5

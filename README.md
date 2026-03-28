@@ -21,6 +21,7 @@ Core functionalities:
 1. Conversion among various formats.
 2. Subscription formatting.
 3. Collect multiple subscriptions in one URL.
+4. Host and modify subscriptions/files
 
 > The following descriptions of features may not be updated in real-time. Please refer to the actual available features for accurate information.
 

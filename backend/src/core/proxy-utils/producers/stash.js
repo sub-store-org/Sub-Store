@@ -24,9 +24,7 @@ export default function Stash_Producer() {
                         'ssh',
                         'juicity',
                         'anytls',
-                        ...(opts['include-unsupported-proxy']
-                            ? ['tailscale']
-                            : []),
+                        'tailscale',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ![

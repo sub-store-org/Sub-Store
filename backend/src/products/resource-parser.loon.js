@@ -19,7 +19,6 @@ let resourceUrl = typeof $resourceUrl !== 'undefined' ? $resourceUrl : '';
     `,
     );
 
-    const build = $loon.match(/\((\d+)\)$/)?.[1];
     let arg;
     if (typeof $argument != 'undefined') {
         arg = Object.fromEntries(
@@ -43,8 +42,7 @@ let resourceUrl = typeof $resourceUrl !== 'undefined' ? $resourceUrl : '';
             try {
                 let proxies = ProxyUtils.parse(resource);
                 result = ProxyUtils.produce(proxies, 'Loon', undefined, {
-                    'include-unsupported-proxy':
-                        arg?.includeUnsupportedProxy || build >= 842,
+                    'include-unsupported-proxy': arg?.includeUnsupportedProxy,
                 });
             } catch (e) {
                 console.log('解析器: 使用 resource 出现错误');
@@ -66,8 +64,7 @@ let resourceUrl = typeof $resourceUrl !== 'undefined' ? $resourceUrl : '';
                 );
                 let proxies = ProxyUtils.parse(raw);
                 result = ProxyUtils.produce(proxies, 'Loon', undefined, {
-                    'include-unsupported-proxy':
-                        arg?.includeUnsupportedProxy || build >= 842,
+                    'include-unsupported-proxy': arg?.includeUnsupportedProxy,
                 });
             } catch (e) {
                 console.log(e.message ?? e);

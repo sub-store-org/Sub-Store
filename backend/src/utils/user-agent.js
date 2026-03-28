@@ -1,7 +1,3 @@
-import gte from 'semver/functions/gte';
-import coerce from 'semver/functions/coerce';
-import $ from '@/core/app';
-
 export function getUserAgentFromHeaders(headers) {
     const keys = Object.keys(headers);
     let UA = '';
@@ -59,47 +55,4 @@ export function getPlatformFromUserAgent({ ua, UA, accept }) {
 export function getPlatformFromHeaders(headers) {
     const { UA, ua, accept } = getUserAgentFromHeaders(headers);
     return getPlatformFromUserAgent({ ua, UA, accept });
-}
-
-export function shouldIncludeUnsupportedProxy(platform, headers) {
-    try {
-        const { UA, ua, accept } = getUserAgentFromHeaders(headers);
-        const target = getPlatformFromUserAgent({ UA, ua, accept });
-        const coerceVersion = coerce(ua);
-        const { major, version } = coerceVersion;
-
-        if (
-            (['SurgeMac', 'Surge'].includes(platform) &&
-                target === 'SurgeMac' &&
-                major >= 9860) ||
-            (platform === 'Surge' && target === 'Surge' && major >= 3613)
-        ) {
-            return true;
-        }
-        // if (
-        //     platform === 'Egern' &&
-        //     target === 'Egern' &&
-        //     ua.match(/build\/(\d+)/i)?.[1] >= 718
-        // ) {
-        //     return true;
-        // }
-        if (
-            platform === 'Stash' &&
-            target === 'Stash' &&
-            gte(version, '3.3.3')
-        ) {
-            return true;
-        }
-
-        // // if (
-        // //     platform === 'Loon' &&
-        // //     target === 'Loon' &&
-        // //     gte(version, '842.0.0')
-        // // ) {
-        // //     return true;
-        // // }
-    } catch (e) {
-        // $.error(`获取版本号失败: ${e}`);
-    }
-    return false;
 }

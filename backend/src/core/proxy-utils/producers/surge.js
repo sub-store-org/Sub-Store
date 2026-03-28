@@ -46,15 +46,17 @@ export default function Surge_Producer() {
             case 'wireguard-surge':
                 return wireguard_surge(proxy);
             case 'hysteria2':
-                return hysteria2(proxy, opts['include-unsupported-proxy']);
+                return hysteria2(proxy);
             case 'ssh':
                 return ssh(proxy);
+            case 'trusttunnel':
+                return trusttunnel(proxy);
         }
 
         if (opts['include-unsupported-proxy'] && proxy.type === 'wireguard') {
             return wireguard(proxy);
         }
-        if (opts['include-unsupported-proxy'] && proxy.type === 'anytls') {
+        if (proxy.type === 'anytls') {
             if (
                 proxy.network &&
                 (!['tcp'].includes(proxy.network) ||
@@ -66,9 +68,6 @@ export default function Surge_Producer() {
             }
 
             return anytls(proxy);
-        }
-        if (opts['include-unsupported-proxy'] && proxy.type === 'trusttunnel') {
-            return trusttunnel(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -1165,15 +1164,9 @@ function wireguard_surge(proxy) {
     return result.toString();
 }
 
-function hysteria2(proxy, includeUnsupportedProxy) {
-    if (includeUnsupportedProxy) {
-        if (proxy['obfs-password'] && proxy.obfs != 'salamander') {
-            throw new Error(`only salamander obfs is supported`);
-        }
-    } else {
-        if (proxy.obfs || proxy['obfs-password']) {
-            throw new Error(`obfs is unsupported`);
-        }
+function hysteria2(proxy) {
+    if (proxy['obfs-password'] && proxy.obfs != 'salamander') {
+        throw new Error(`only salamander obfs is supported`);
     }
 
     const result = new Result(proxy);
