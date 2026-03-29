@@ -5,7 +5,13 @@ import {
     ARTIFACTS_KEY,
     SETTINGS_KEY,
 } from '@/constants';
-import { deleteByName, findByName, updateByName } from '@/utils/database';
+import {
+    deleteByName,
+    findByName,
+    insertByPosition,
+    updateByName,
+} from '@/utils/database';
+import { getCreateItemPosition } from '@/utils/create-item-position';
 import { failed, success } from '@/restful/response';
 import {
     InternalServerError,
@@ -153,7 +159,7 @@ function createArtifact(req, res) {
             ),
         );
     } else {
-        allArtifacts.push(artifact);
+        insertByPosition(allArtifacts, artifact, getCreateItemPosition());
         $.write(allArtifacts, ARTIFACTS_KEY);
         success(res, artifact, 201);
     }

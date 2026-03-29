@@ -3,6 +3,8 @@ import { TOKENS_KEY, SUBS_KEY, FILES_KEY, COLLECTIONS_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
 import { RequestInvalidError, InternalServerError } from '@/restful/errors';
+import { insertByPosition } from '@/utils/database';
+import { getCreateItemPosition } from '@/utils/create-item-position';
 
 export default function register($app) {
     if (!$.read(TOKENS_KEY)) $.write([], TOKENS_KEY);
@@ -175,13 +177,17 @@ async function signToken(req, res) {
                 )
             );
         }
-        tokens.push({
-            ...payload,
-            token,
-            createdAt: Date.now(),
-            expiresIn: expiresIn > 0 ? options?.expiresIn : undefined,
-            exp: expiresIn > 0 ? Date.now() + expiresIn : undefined,
-        });
+        insertByPosition(
+            tokens,
+            {
+                ...payload,
+                token,
+                createdAt: Date.now(),
+                expiresIn: expiresIn > 0 ? options?.expiresIn : undefined,
+                exp: expiresIn > 0 ? Date.now() + expiresIn : undefined,
+            },
+            getCreateItemPosition(),
+        );
 
         $.write(tokens, TOKENS_KEY);
         return success(res, {

@@ -4,7 +4,13 @@ import {
     ResourceNotFoundError,
     RequestInvalidError,
 } from './errors';
-import { deleteByName, findByName, updateByName } from '@/utils/database';
+import {
+    deleteByName,
+    findByName,
+    insertByPosition,
+    updateByName,
+} from '@/utils/database';
+import { getCreateItemPosition } from '@/utils/create-item-position';
 import {
     SUBS_KEY,
     COLLECTIONS_KEY,
@@ -253,7 +259,7 @@ function createSubscription(req, res) {
         );
         return;
     }
-    allSubs.push(sub);
+    insertByPosition(allSubs, sub, getCreateItemPosition());
     $.write(allSubs, SUBS_KEY);
     success(res, sub, 201);
 }

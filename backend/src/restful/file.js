@@ -1,4 +1,10 @@
-import { deleteByName, findByName, updateByName } from '@/utils/database';
+import {
+    deleteByName,
+    findByName,
+    insertByPosition,
+    updateByName,
+} from '@/utils/database';
+import { getCreateItemPosition } from '@/utils/create-item-position';
 import { getFlowHeaders, normalizeFlowHeader } from '@/utils/flow';
 import { FILES_KEY, ARTIFACTS_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
@@ -44,7 +50,7 @@ function createFile(req, res) {
             ),
         );
     }
-    allFiles.push(file);
+    insertByPosition(allFiles, file, getCreateItemPosition());
     $.write(allFiles, FILES_KEY);
     success(res, file, 201);
 }

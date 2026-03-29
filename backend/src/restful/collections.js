@@ -1,4 +1,10 @@
-import { deleteByName, findByName, updateByName } from '@/utils/database';
+import {
+    deleteByName,
+    findByName,
+    insertByPosition,
+    updateByName,
+} from '@/utils/database';
+import { getCreateItemPosition } from '@/utils/create-item-position';
 import { COLLECTIONS_KEY, ARTIFACTS_KEY, FILES_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
@@ -44,7 +50,7 @@ function createCollection(req, res) {
         );
         return;
     }
-    allCols.push(collection);
+    insertByPosition(allCols, collection, getCreateItemPosition());
     $.write(allCols, COLLECTIONS_KEY);
     success(res, collection, 201);
 }
