@@ -22,6 +22,7 @@ import {
     parseFlowHeaders,
     getRmainingDays,
 } from '@/utils/flow';
+import { archiveSubscription } from '@/utils/archive';
 import { success, failed } from './response';
 import $ from '@/core/app';
 import { formatDateTime } from '@/utils';
@@ -235,33 +236,12 @@ async function getFlowInfo(req, res) {
 }
 
 function createSubscription(req, res) {
-    const sub = req.body;
-    delete sub.subscriptions;
-    $.info(`正在创建订阅： ${sub.name}`);
-    if (/\//.test(sub.name)) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'INVALID_NAME',
-                `Subscription ${sub.name} is invalid`,
-            ),
-        );
-        return;
+    try {
+        const sub = createSubscriptionItem(req.body);
+        success(res, sub, 201);
+    } catch (error) {
+        failed(res, error);
     }
-    const allSubs = $.read(SUBS_KEY);
-    if (findByName(allSubs, sub.name)) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'DUPLICATE_KEY',
-                `Subscription ${sub.name} already exists.`,
-            ),
-        );
-        return;
-    }
-    insertByPosition(allSubs, sub, getCreateItemPosition());
-    $.write(allSubs, SUBS_KEY);
-    success(res, sub, 201);
 }
 
 function getSubscription(req, res) {
@@ -362,21 +342,17 @@ function updateSubscription(req, res) {
 }
 
 function deleteSubscription(req, res) {
-    let { name } = req.params;
-    $.info(`删除订阅：${name}...`);
-    // delete from subscriptions
-    let allSubs = $.read(SUBS_KEY);
-    deleteByName(allSubs, name);
-    $.write(allSubs, SUBS_KEY);
-    // delete from collections
-    const allCols = $.read(COLLECTIONS_KEY);
-    for (const collection of allCols) {
-        collection.subscriptions = collection.subscriptions.filter(
-            (s) => s !== name,
-        );
+    try {
+        const { name } = req.params;
+        $.info(`删除订阅：${name}...`);
+        if (shouldArchiveDeletion(req.query.mode)) {
+            archiveSubscription(name);
+        }
+        deleteSubscriptionItem(name);
+        success(res);
+    } catch (error) {
+        failed(res, error);
     }
-    $.write(allCols, COLLECTIONS_KEY);
-    success(res);
 }
 
 function getAllSubscriptions(req, res) {
@@ -389,3 +365,64 @@ function replaceSubscriptions(req, res) {
     $.write(allSubs, SUBS_KEY);
     success(res);
 }
+
+function createSubscriptionItem(rawSub) {
+    const sub = {
+        ...rawSub,
+    };
+    delete sub.subscriptions;
+    $.info(`正在创建订阅： ${sub.name}`);
+    if (/\//.test(sub.name)) {
+        throw new RequestInvalidError(
+            'INVALID_NAME',
+            `Subscription ${sub.name} is invalid`,
+        );
+    }
+    const allSubs = $.read(SUBS_KEY);
+    if (findByName(allSubs, sub.name)) {
+        throw new RequestInvalidError(
+            'DUPLICATE_KEY',
+            `Subscription ${sub.name} already exists.`,
+        );
+    }
+    insertByPosition(allSubs, sub, getCreateItemPosition());
+    $.write(allSubs, SUBS_KEY);
+    return sub;
+}
+
+function deleteSubscriptionItem(name) {
+    const allSubs = $.read(SUBS_KEY);
+    const sub = findByName(allSubs, name);
+    if (!sub) {
+        throw new ResourceNotFoundError(
+            'RESOURCE_NOT_FOUND',
+            `Subscription ${name} does not exist!`,
+        );
+    }
+    deleteByName(allSubs, name);
+    $.write(allSubs, SUBS_KEY);
+
+    const allCols = $.read(COLLECTIONS_KEY) || [];
+    for (const collection of allCols) {
+        collection.subscriptions = collection.subscriptions.filter(
+            (subscriptionName) => subscriptionName !== name,
+        );
+    }
+    $.write(allCols, COLLECTIONS_KEY);
+    return sub;
+}
+
+function shouldArchiveDeletion(mode) {
+    if (mode == null || mode === '' || mode === 'permanent') {
+        return false;
+    }
+    if (mode === 'archive') {
+        return true;
+    }
+    throw new RequestInvalidError(
+        'INVALID_DELETE_MODE',
+        `Unsupported delete mode: ${mode}`,
+    );
+}
+
+export { createSubscriptionItem, deleteSubscriptionItem };

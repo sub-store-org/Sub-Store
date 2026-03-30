@@ -13,6 +13,7 @@ import registerCollectionRoutes from './collections';
 import registerArtifactRoutes from './artifacts';
 import registerFileRoutes from './file';
 import registerTokenRoutes from './token';
+import registerArchiveRoutes from './archives';
 import registerModuleRoutes from './module';
 import registerSyncRoutes from './sync';
 import registerDownloadRoutes from './download';
@@ -132,6 +133,7 @@ export default function serve() {
     registerArtifactRoutes($app);
     registerFileRoutes($app);
     registerTokenRoutes($app);
+    registerArchiveRoutes($app);
     registerModuleRoutes($app);
     registerSyncRoutes($app);
     registerNodeInfoRoutes($app);

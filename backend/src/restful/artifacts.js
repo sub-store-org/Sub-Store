@@ -19,6 +19,7 @@ import {
     ResourceNotFoundError,
 } from '@/restful/errors';
 import Gist from '@/utils/gist';
+import { archiveArtifact } from '@/utils/archive';
 
 export default function register($app) {
     // Initialization
@@ -136,32 +137,11 @@ async function getArtifact(req, res) {
 }
 
 function createArtifact(req, res) {
-    const artifact = req.body;
-    if (!validateArtifactName(artifact.name)) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'INVALID_ARTIFACT_NAME',
-                `Artifact name ${artifact.name} is invalid.`,
-            ),
-        );
-        return;
-    }
-
-    $.info(`正在创建远程配置：${artifact.name}`);
-    const allArtifacts = $.read(ARTIFACTS_KEY);
-    if (findByName(allArtifacts, artifact.name)) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'DUPLICATE_KEY',
-                `Artifact ${artifact.name} already exists.`,
-            ),
-        );
-    } else {
-        insertByPosition(allArtifacts, artifact, getCreateItemPosition());
-        $.write(allArtifacts, ARTIFACTS_KEY);
+    try {
+        const artifact = createArtifactItem(req.body);
         success(res, artifact, 201);
+    } catch (error) {
+        failed(res, error);
     }
 }
 
@@ -202,50 +182,97 @@ function updateArtifact(req, res) {
 }
 
 async function deleteArtifact(req, res) {
-    let { name } = req.params;
-    $.info(`正在删除远程配置：${name}`);
-    const allArtifacts = $.read(ARTIFACTS_KEY);
     try {
-        const artifact = findByName(allArtifacts, name);
-        if (!artifact) throw new Error(`远程配置：${name}不存在！`);
-        if (artifact.updated) {
-            // delete gist
-            const files = {};
-            files[encodeURIComponent(artifact.name)] = {
-                content: '',
-            };
-            if (encodeURIComponent(artifact.name) !== artifact.name) {
-                files[artifact.name] = {
-                    content: '',
-                };
-            }
-
-            // 当别的Sub 删了同步订阅 或 gist里面删了 当前设备没有删除 时 无法删除的bug
-            try {
-                await syncToGist(files);
-            } catch (i) {
-                $.error(`Function syncToGist: ${name} : ${i}`);
-            }
+        let { name } = req.params;
+        $.info(`正在删除远程配置：${name}`);
+        if (shouldArchiveDeletion(req.query.mode)) {
+            archiveArtifact(name);
         }
-        // delete local cache
-        deleteByName(allArtifacts, name);
-        $.write(allArtifacts, ARTIFACTS_KEY);
+        await deleteArtifactItem(name);
         success(res);
     } catch (err) {
-        $.error(`无法删除远程配置：${name}，原因：${err}`);
+        $.error(`无法删除远程配置：${req.params.name}，原因：${err}`);
         failed(
             res,
-            new InternalServerError(
-                `FAILED_TO_DELETE_ARTIFACT`,
-                `Failed to delete artifact ${name}`,
-                `Reason: ${err}`,
-            ),
+            err instanceof InternalServerError ||
+                err instanceof RequestInvalidError ||
+                err instanceof ResourceNotFoundError
+                ? err
+                : new InternalServerError(
+                      `FAILED_TO_DELETE_ARTIFACT`,
+                      `Failed to delete artifact ${req.params.name}`,
+                      `Reason: ${err}`,
+                  ),
         );
     }
 }
 
 function validateArtifactName(name) {
     return /^[a-zA-Z0-9._-]*$/.test(name);
+}
+
+function createArtifactItem(artifact) {
+    if (!validateArtifactName(artifact.name)) {
+        throw new RequestInvalidError(
+            'INVALID_ARTIFACT_NAME',
+            `Artifact name ${artifact.name} is invalid.`,
+        );
+    }
+
+    $.info(`正在创建远程配置：${artifact.name}`);
+    const allArtifacts = $.read(ARTIFACTS_KEY);
+    if (findByName(allArtifacts, artifact.name)) {
+        throw new RequestInvalidError(
+            'DUPLICATE_KEY',
+            `Artifact ${artifact.name} already exists.`,
+        );
+    }
+    insertByPosition(allArtifacts, artifact, getCreateItemPosition());
+    $.write(allArtifacts, ARTIFACTS_KEY);
+    return artifact;
+}
+
+async function deleteArtifactItem(name) {
+    const allArtifacts = $.read(ARTIFACTS_KEY);
+    const artifact = findByName(allArtifacts, name);
+    if (!artifact) {
+        throw new ResourceNotFoundError(
+            'RESOURCE_NOT_FOUND',
+            `Artifact ${name} does not exist!`,
+        );
+    }
+    if (artifact.updated) {
+        const files = {};
+        files[encodeURIComponent(artifact.name)] = {
+            content: '',
+        };
+        if (encodeURIComponent(artifact.name) !== artifact.name) {
+            files[artifact.name] = {
+                content: '',
+            };
+        }
+        try {
+            await syncToGist(files);
+        } catch (error) {
+            $.error(`Function syncToGist: ${name} : ${error}`);
+        }
+    }
+    deleteByName(allArtifacts, name);
+    $.write(allArtifacts, ARTIFACTS_KEY);
+    return artifact;
+}
+
+function shouldArchiveDeletion(mode) {
+    if (mode == null || mode === '' || mode === 'permanent') {
+        return false;
+    }
+    if (mode === 'archive') {
+        return true;
+    }
+    throw new RequestInvalidError(
+        'INVALID_DELETE_MODE',
+        `Unsupported delete mode: ${mode}`,
+    );
 }
 
 async function syncToGist(files) {
@@ -280,3 +307,4 @@ async function syncToGist(files) {
 }
 
 export { syncToGist };
+export { createArtifactItem, deleteArtifactItem };

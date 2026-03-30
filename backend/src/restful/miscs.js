@@ -96,6 +96,8 @@ export default function register($app) {
 }
 
 function getEnv(req, res) {
+    env.feature = env.feature || {};
+    env.feature.archive = true;
     if (req.query.share) {
         env.feature.share = true;
     }

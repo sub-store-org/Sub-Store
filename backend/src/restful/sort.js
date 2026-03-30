@@ -7,6 +7,7 @@ import {
 } from '@/constants';
 import $ from '@/core/app';
 import { success } from '@/restful/response';
+import { sortArchiveEntries } from '@/utils/archive';
 
 export default function register($app) {
     $app.post('/api/sort/subs', sortSubs);
@@ -14,6 +15,7 @@ export default function register($app) {
     $app.post('/api/sort/artifacts', sortArtifacts);
     $app.post('/api/sort/files', sortFiles);
     $app.post('/api/sort/tokens', sortTokens);
+    $app.post('/api/sort/archives', sortArchive);
 }
 
 function sortSubs(req, res) {
@@ -60,4 +62,9 @@ function sortTokens(req, res) {
     );
     $.write(allTokens, TOKENS_KEY);
     success(res, allTokens);
+}
+
+function sortArchive(req, res) {
+    const entries = sortArchiveEntries(req.body);
+    success(res, entries);
 }

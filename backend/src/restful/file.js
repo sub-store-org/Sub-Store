@@ -15,6 +15,7 @@ import {
     InternalServerError,
 } from '@/restful/errors';
 import { produceArtifact } from '@/restful/sync';
+import { archiveFile } from '@/utils/archive';
 import { formatDateTime } from '@/utils';
 
 export default function register($app) {
@@ -35,24 +36,12 @@ export default function register($app) {
 
 // file API
 function createFile(req, res) {
-    const file = req.body;
-    file.name = `${file.name ?? Date.now()}`;
-    $.info(`正在创建文件：${file.name}`);
-    const allFiles = $.read(FILES_KEY);
-    if (findByName(allFiles, file.name)) {
-        return failed(
-            res,
-            new RequestInvalidError(
-                'DUPLICATE_KEY',
-                req.body.name
-                    ? `已存在 name 为 ${file.name} 的文件`
-                    : `无法同时创建相同的文件 可稍后重试`,
-            ),
-        );
+    try {
+        const file = createFileItem(req.body);
+        success(res, file, 201);
+    } catch (error) {
+        failed(res, error);
     }
-    insertByPosition(allFiles, file, getCreateItemPosition());
-    $.write(allFiles, FILES_KEY);
-    success(res, file, 201);
 }
 
 async function getFile(req, res, next) {
@@ -314,12 +303,17 @@ function updateFile(req, res) {
 }
 
 function deleteFile(req, res) {
-    let { name } = req.params;
-    $.info(`正在删除文件：${name}`);
-    let allFiles = $.read(FILES_KEY);
-    deleteByName(allFiles, name);
-    $.write(allFiles, FILES_KEY);
-    success(res);
+    try {
+        let { name } = req.params;
+        $.info(`正在删除文件：${name}`);
+        if (shouldArchiveDeletion(req.query.mode)) {
+            archiveFile(name);
+        }
+        deleteFileItem(name);
+        success(res);
+    } catch (error) {
+        failed(res, error);
+    }
 }
 
 function getAllFiles(req, res) {
@@ -340,3 +334,52 @@ function replaceFile(req, res) {
     $.write(allFiles, FILES_KEY);
     success(res);
 }
+
+function createFileItem(rawFile) {
+    const file = {
+        ...rawFile,
+    };
+    file.name = `${file.name ?? Date.now()}`;
+    $.info(`正在创建文件：${file.name}`);
+    const allFiles = $.read(FILES_KEY);
+    if (findByName(allFiles, file.name)) {
+        throw new RequestInvalidError(
+            'DUPLICATE_KEY',
+            rawFile.name
+                ? `已存在 name 为 ${file.name} 的文件`
+                : `无法同时创建相同的文件 可稍后重试`,
+        );
+    }
+    insertByPosition(allFiles, file, getCreateItemPosition());
+    $.write(allFiles, FILES_KEY);
+    return file;
+}
+
+function deleteFileItem(name) {
+    const allFiles = $.read(FILES_KEY);
+    const file = findByName(allFiles, name);
+    if (!file) {
+        throw new ResourceNotFoundError(
+            'RESOURCE_NOT_FOUND',
+            `File ${name} does not exist!`,
+        );
+    }
+    deleteByName(allFiles, name);
+    $.write(allFiles, FILES_KEY);
+    return file;
+}
+
+function shouldArchiveDeletion(mode) {
+    if (mode == null || mode === '' || mode === 'permanent') {
+        return false;
+    }
+    if (mode === 'archive') {
+        return true;
+    }
+    throw new RequestInvalidError(
+        'INVALID_DELETE_MODE',
+        `Unsupported delete mode: ${mode}`,
+    );
+}
+
+export { createFileItem, deleteFileItem };

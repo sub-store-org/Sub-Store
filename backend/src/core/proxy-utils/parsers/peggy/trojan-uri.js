@@ -1,4 +1,4 @@
-import * as peggy from 'peggy';
+import peggy from 'peggy';
 const grammars = String.raw`
 // global initializer
 {{
