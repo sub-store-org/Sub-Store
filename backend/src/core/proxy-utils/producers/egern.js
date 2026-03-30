@@ -1,3 +1,4 @@
+import $ from '@/core/app';
 import { isPresent } from './utils';
 
 export default function Egern_Producer() {
@@ -90,463 +91,487 @@ export default function Egern_Producer() {
                 return true;
             })
             .map((proxy) => {
-                const original = { ...proxy };
-                let flow;
-                if (proxy.tls && !proxy.sni) {
-                    proxy.sni = proxy.server;
-                }
-                const prev_hop =
-                    proxy.prev_hop ||
-                    proxy['underlying-proxy'] ||
-                    proxy['dialer-proxy'] ||
-                    proxy.detour;
+                const sourceProxy = proxy;
 
-                if (proxy.type === 'http') {
-                    proxy = {
-                        type: proxy.tls ? 'https' : 'http',
-                        name: proxy.name,
-                        server: proxy.server,
-                        port: proxy.port,
-                        username: proxy.username,
-                        password: proxy.password,
-                        tfo: proxy.tfo || proxy['fast-open'],
-                        next_hop: proxy.next_hop,
-                        ...(proxy.tls
-                            ? {
-                                  sni: proxy.sni,
-                                  skip_tls_verify: proxy['skip-cert-verify'],
-                              }
-                            : {}),
-                    };
-                } else if (proxy.type === 'socks5') {
-                    proxy = {
-                        type: 'socks5',
-                        name: proxy.name,
-                        server: proxy.server,
-                        port: proxy.port,
-                        username: proxy.username,
-                        password: proxy.password,
-                        tfo: proxy.tfo || proxy['fast-open'],
-                        udp_relay:
-                            proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                        next_hop: proxy.next_hop,
-                    };
-                } else if (proxy.type === 'ss') {
-                    proxy = {
-                        type: 'shadowsocks',
-                        name: proxy.name,
-                        method:
-                            proxy.cipher === 'chacha20-ietf-poly1305'
-                                ? 'chacha20-poly1305'
-                                : proxy.cipher,
-                        server: proxy.server,
-                        port: proxy.port,
-                        password: proxy.password,
-                        tfo: proxy.tfo || proxy['fast-open'],
-                        udp_relay:
-                            proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                        next_hop: proxy.next_hop,
-                    };
-                    if (original.plugin === 'obfs') {
-                        proxy.obfs = original['plugin-opts'].mode;
-                        proxy.obfs_host = original['plugin-opts'].host;
-                        proxy.obfs_uri = original['plugin-opts'].path;
+                try {
+                    const original = { ...proxy };
+                    let flow;
+                    if (proxy.tls && !proxy.sni) {
+                        proxy.sni = proxy.server;
                     }
-                } else if (proxy.type === 'hysteria2') {
-                    proxy = {
-                        type: 'hysteria2',
-                        name: proxy.name,
-                        server: proxy.server,
-                        port: proxy.port,
-                        auth: proxy.password,
-                        tfo: proxy.tfo || proxy['fast-open'],
-                        udp_relay:
-                            proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                        next_hop: proxy.next_hop,
-                        sni: proxy.sni,
-                        skip_tls_verify: proxy['skip-cert-verify'],
-                        port_hopping: proxy.ports,
-                        port_hopping_interval: proxy['hop-interval'],
-                    };
-                    if (
-                        original['obfs-password'] &&
-                        original.obfs == 'salamander'
-                    ) {
-                        proxy.obfs = 'salamander';
-                        proxy.obfs_password = original['obfs-password'];
-                    }
-                } else if (proxy.type === 'tuic') {
-                    proxy = {
-                        type: 'tuic',
-                        name: proxy.name,
-                        server: proxy.server,
-                        port: proxy.port,
-                        uuid: proxy.uuid,
-                        password: proxy.password,
-                        next_hop: proxy.next_hop,
-                        sni: proxy.sni,
-                        alpn: Array.isArray(proxy.alpn)
-                            ? proxy.alpn
-                            : [proxy.alpn || 'h3'],
-                        skip_tls_verify: proxy['skip-cert-verify'],
-                        port_hopping: proxy.ports,
-                        port_hopping_interval: proxy['hop-interval'],
-                    };
-                } else if (proxy.type === 'trojan') {
-                    if (proxy.network === 'ws') {
-                        proxy.websocket = {
-                            path: proxy['ws-opts']?.path,
-                            host: proxy['ws-opts']?.headers?.Host,
+                    const prev_hop =
+                        proxy.prev_hop ||
+                        proxy['underlying-proxy'] ||
+                        proxy['dialer-proxy'] ||
+                        proxy.detour;
+
+                    if (proxy.type === 'http') {
+                        proxy = {
+                            type: proxy.tls ? 'https' : 'http',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            username: proxy.username,
+                            password: proxy.password,
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            next_hop: proxy.next_hop,
+                            ...(proxy.tls
+                                ? {
+                                      sni: proxy.sni,
+                                      skip_tls_verify:
+                                          proxy['skip-cert-verify'],
+                                  }
+                                : {}),
                         };
-                    }
-                    proxy = {
-                        type: 'trojan',
-                        name: proxy.name,
-                        server: proxy.server,
-                        port: proxy.port,
-                        password: proxy.password,
-                        tfo: proxy.tfo || proxy['fast-open'],
-                        udp_relay:
-                            proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                        next_hop: proxy.next_hop,
-                        sni: proxy.sni,
-                        skip_tls_verify: proxy['skip-cert-verify'],
-                        websocket: proxy.websocket,
-                    };
-                } else if (proxy.type === 'anytls') {
-                    proxy = {
-                        type: 'anytls',
-                        name: proxy.name,
-                        server: proxy.server,
-                        port: proxy.port,
-                        password: proxy.password,
-                        tfo: proxy.tfo || proxy['fast-open'],
-                        udp_relay:
-                            proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                        next_hop: proxy.next_hop,
-                        sni: proxy.sni,
-                        skip_tls_verify: proxy['skip-cert-verify'],
-                    };
-                } else if (proxy.type === 'vmess') {
-                    // Egern：传输层，支持 ws/wss/http1/http2/tls，不配置则为 tcp
-                    let security = proxy.cipher;
-                    if (
-                        security &&
-                        ![
-                            'auto',
-                            'none',
-                            'zero',
-                            'aes-128-gcm',
-                            'chacha20-poly1305',
-                        ].includes(security)
-                    ) {
-                        security = 'auto';
-                    }
-                    if (proxy.network === 'ws') {
-                        proxy.transport = {
-                            [proxy.tls ? 'wss' : 'ws']: {
-                                path: proxy['ws-opts']?.path,
-                                headers: {
-                                    Host: proxy['ws-opts']?.headers?.Host,
-                                },
-                                sni: proxy.tls ? proxy.sni : undefined,
-                                skip_tls_verify: proxy.tls
-                                    ? proxy['skip-cert-verify']
-                                    : undefined,
-                            },
+                    } else if (proxy.type === 'socks5') {
+                        proxy = {
+                            type: 'socks5',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            username: proxy.username,
+                            password: proxy.password,
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            udp_relay:
+                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            next_hop: proxy.next_hop,
                         };
-                    } else if (proxy.network === 'http') {
-                        proxy.transport = {
-                            http1: {
-                                method: proxy['http-opts']?.method,
-                                path: Array.isArray(proxy['http-opts']?.path)
-                                    ? proxy['http-opts']?.path[0]
-                                    : proxy['http-opts']?.path,
-                                headers: {
-                                    Host: Array.isArray(
-                                        proxy['http-opts']?.headers?.Host,
-                                    )
-                                        ? proxy['http-opts']?.headers?.Host[0]
-                                        : proxy['http-opts']?.headers?.Host,
-                                },
-                                skip_tls_verify: proxy['skip-cert-verify'],
-                            },
+                    } else if (proxy.type === 'ss') {
+                        proxy = {
+                            type: 'shadowsocks',
+                            name: proxy.name,
+                            method:
+                                proxy.cipher === 'chacha20-ietf-poly1305'
+                                    ? 'chacha20-poly1305'
+                                    : proxy.cipher,
+                            server: proxy.server,
+                            port: proxy.port,
+                            password: proxy.password,
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            udp_relay:
+                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            next_hop: proxy.next_hop,
                         };
-                    } else if (proxy.network === 'h2') {
-                        proxy.transport = {
-                            http2: {
-                                method: proxy['h2-opts']?.method,
-                                path: Array.isArray(proxy['h2-opts']?.path)
-                                    ? proxy['h2-opts']?.path[0]
-                                    : proxy['h2-opts']?.path,
-                                headers: {
-                                    Host: Array.isArray(
-                                        proxy['h2-opts']?.headers?.Host,
-                                    )
-                                        ? proxy['h2-opts']?.headers?.Host[0]
-                                        : proxy['h2-opts']?.headers?.Host,
-                                },
-                                skip_tls_verify: proxy['skip-cert-verify'],
-                            },
+                        if (original.plugin === 'obfs') {
+                            proxy.obfs = original['plugin-opts'].mode;
+                            proxy.obfs_host = original['plugin-opts'].host;
+                            proxy.obfs_uri = original['plugin-opts'].path;
+                        }
+                    } else if (proxy.type === 'hysteria2') {
+                        proxy = {
+                            type: 'hysteria2',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            auth: proxy.password,
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            udp_relay:
+                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            next_hop: proxy.next_hop,
+                            sni: proxy.sni,
+                            skip_tls_verify: proxy['skip-cert-verify'],
+                            port_hopping: proxy.ports,
+                            port_hopping_interval: proxy['hop-interval'],
                         };
-                    } else if (
-                        (proxy.network === 'tcp' || !proxy.network) &&
-                        proxy.tls
-                    ) {
-                        proxy.transport = {
-                            tls: {
-                                sni: proxy.tls ? proxy.sni : undefined,
-                                skip_tls_verify: proxy.tls
-                                    ? proxy['skip-cert-verify']
-                                    : undefined,
-                            },
-                        };
-                    }
-                    let legacy;
-                    if (isPresent(proxy, 'aead') && !proxy.aead) {
-                        legacy = true;
-                    } else if (proxy.alterId !== 0) {
-                        legacy = true;
-                    }
-                    proxy = {
-                        type: 'vmess',
-                        name: proxy.name,
-                        server: proxy.server,
-                        port: proxy.port,
-                        user_id: proxy.uuid,
-                        security,
-                        tfo: proxy.tfo || proxy['fast-open'],
-                        legacy,
-                        udp_relay:
-                            proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                        next_hop: proxy.next_hop,
-                        transport: proxy.transport,
-                        // sni: proxy.sni,
-                        // skip_tls_verify: proxy['skip-cert-verify'],
-                    };
-                } else if (proxy.type === 'vless') {
-                    if (proxy.encryption && proxy.encryption !== 'none')
-                        throw new Error(`VLESS encryption is not supported`);
-                    if (proxy.network === 'ws') {
-                        proxy.transport = {
-                            [proxy.tls ? 'wss' : 'ws']: {
-                                path: proxy['ws-opts']?.path,
-                                headers: {
-                                    Host: proxy['ws-opts']?.headers?.Host,
-                                },
-                                sni: proxy.tls ? proxy.sni : undefined,
-                                skip_tls_verify: proxy.tls
-                                    ? proxy['skip-cert-verify']
-                                    : undefined,
-                            },
-                        };
-                    } else if (proxy.network === 'http') {
-                        proxy.transport = {
-                            http: {
-                                method: proxy['http-opts']?.method,
-                                path: Array.isArray(proxy['http-opts']?.path)
-                                    ? proxy['http-opts']?.path[0]
-                                    : proxy['http-opts']?.path,
-                                headers: {
-                                    Host: Array.isArray(
-                                        proxy['http-opts']?.headers?.Host,
-                                    )
-                                        ? proxy['http-opts']?.headers?.Host[0]
-                                        : proxy['http-opts']?.headers?.Host,
-                                },
-                                skip_tls_verify: proxy['skip-cert-verify'],
-                            },
-                        };
-                    } else if (proxy.network === 'tcp' || !proxy.network) {
-                        let reality;
                         if (
-                            proxy['reality-opts']?.['short-id'] ||
-                            proxy['reality-opts']?.['public-key']
+                            original['obfs-password'] &&
+                            original.obfs == 'salamander'
                         ) {
-                            reality = {
-                                short_id: proxy['reality-opts']['short-id'],
-                                public_key: proxy['reality-opts']['public-key'],
+                            proxy.obfs = 'salamander';
+                            proxy.obfs_password = original['obfs-password'];
+                        }
+                    } else if (proxy.type === 'tuic') {
+                        proxy = {
+                            type: 'tuic',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            uuid: proxy.uuid,
+                            password: proxy.password,
+                            next_hop: proxy.next_hop,
+                            sni: proxy.sni,
+                            alpn: Array.isArray(proxy.alpn)
+                                ? proxy.alpn
+                                : [proxy.alpn || 'h3'],
+                            skip_tls_verify: proxy['skip-cert-verify'],
+                            port_hopping: proxy.ports,
+                            port_hopping_interval: proxy['hop-interval'],
+                        };
+                    } else if (proxy.type === 'trojan') {
+                        if (proxy.network === 'ws') {
+                            proxy.websocket = {
+                                path: proxy['ws-opts']?.path,
+                                host: proxy['ws-opts']?.headers?.Host,
                             };
                         }
-                        proxy.transport = {
-                            [proxy.tls ? 'tls' : 'tcp']: {
-                                sni: proxy.tls ? proxy.sni : undefined,
-                                skip_tls_verify: proxy.tls
-                                    ? proxy['skip-cert-verify']
-                                    : undefined,
-                                reality,
-                            },
+                        proxy = {
+                            type: 'trojan',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            password: proxy.password,
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            udp_relay:
+                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            next_hop: proxy.next_hop,
+                            sni: proxy.sni,
+                            skip_tls_verify: proxy['skip-cert-verify'],
+                            websocket: proxy.websocket,
                         };
-                        flow = proxy.flow;
-                        if (flow === '') flow = undefined;
-                    }
-                    proxy = {
-                        type: 'vless',
-                        name: proxy.name,
-                        server: proxy.server,
-                        port: proxy.port,
-                        user_id: proxy.uuid,
-                        security: proxy.cipher,
-                        tfo: proxy.tfo || proxy['fast-open'],
-                        udp_relay:
-                            proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                        next_hop: proxy.next_hop,
-                        transport: proxy.transport,
-                        flow,
-                        // sni: proxy.sni,
-                        // skip_tls_verify: proxy['skip-cert-verify'],
-                    };
-                } else if (proxy.type === 'wireguard') {
-                    if (Array.isArray(proxy.peers) && proxy.peers.length > 0) {
-                        proxy.server = proxy.peers[0].server;
-                        proxy.port = proxy.peers[0].port;
-                        proxy.ip = proxy.peers[0].ip;
-                        proxy.ipv6 = proxy.peers[0].ipv6;
-                        proxy['public-key'] = proxy.peers[0]['public-key'];
-                        proxy['preshared-key'] =
-                            proxy.peers[0]['pre-shared-key'];
-                        // https://github.com/MetaCubeX/mihomo/blob/0404e35be8736b695eae018a08debb175c1f96e6/docs/config.yaml#L717
-                        proxy['allowed-ips'] = proxy.peers[0]['allowed-ips'];
-                        proxy.reserved = proxy.peers[0].reserved;
-                    }
-                    proxy = {
-                        type: 'wireguard',
-                        name: proxy.name,
-                        local_ipv4: proxy.ip,
-                        local_ipv6: proxy.ipv6,
-                        server: proxy.server,
-                        port: proxy.port,
-                        private_key: proxy['private-key'],
-                        peer_public_key: proxy['public-key'],
-                        preshared_key: proxy['preshared-key'],
-                        reserved: proxy.reserved
-                            ? Array.isArray(proxy.reserved)
-                                ? proxy.reserved
-                                : proxy.reserved
-                                      .split(/\s*\/\s*/)
-                                      .map((item) => item.trim())
-                                      .filter((item) => item.length > 0)
-                            : undefined,
-                        dns_servers: proxy.dns
-                            ? Array.isArray(proxy.dns)
-                                ? proxy.dns
-                                : proxy.dns
-                                      .split(/\s*,\s*/)
-                                      .map((item) => item.trim())
-                                      .filter((item) => item.length > 0)
-                            : undefined,
-                        mtu: proxy.mtu,
-                        keepalive: proxy.keepalive,
-                    };
-                }
-                if (
-                    [
-                        'http',
-                        'https',
-                        'socks5',
-                        'ss',
-                        'trojan',
-                        'vless',
-                        'vmess',
-                        'anytls',
-                    ].includes(original.type)
-                ) {
-                    if (isPresent(original, 'shadow-tls-password')) {
-                        if (original['shadow-tls-version'] != 3)
-                            throw new Error(
-                                `shadow-tls version ${original['shadow-tls-version']} is not supported`,
-                            );
-                        proxy.shadow_tls = {
-                            password: original['shadow-tls-password'],
-                            sni: original['shadow-tls-sni'],
+                    } else if (proxy.type === 'anytls') {
+                        proxy = {
+                            type: 'anytls',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            password: proxy.password,
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            udp_relay:
+                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            next_hop: proxy.next_hop,
+                            sni: proxy.sni,
+                            skip_tls_verify: proxy['skip-cert-verify'],
                         };
-                    } else if (
-                        ['shadow-tls'].includes(original.plugin) &&
-                        original['plugin-opts']
-                    ) {
-                        if (original['plugin-opts'].version != 3)
-                            throw new Error(
-                                `shadow-tls version ${original['plugin-opts'].version} is not supported`,
-                            );
-                        proxy.shadow_tls = {
-                            password: original['plugin-opts'].password,
-                            sni: original['plugin-opts'].host,
-                        };
-                    }
-                }
-                if (
-                    [
-                        'socks5',
-                        'ss',
-                        'trojan',
-                        'vless',
-                        'vmess',
-                        'wireguard',
-                        'tuic',
-                        'hysteria2',
-                        'anytls',
-                    ].includes(original.type)
-                ) {
-                    if (
-                        ['on', 'true', true, '1', 1].includes(
-                            original['block-quic'],
-                        )
-                    ) {
-                        proxy.block_quic = true;
-                    } else if (
-                        ['off', 'false', false, '0', 0].includes(
-                            original['block-quic'],
-                        )
-                    ) {
-                        proxy.block_quic = false;
-                    }
-                }
-                if (
-                    ['ss'].includes(original.type) &&
-                    proxy.shadow_tls &&
-                    original['udp-port'] > 0 &&
-                    original['udp-port'] <= 65535
-                ) {
-                    proxy['udp_port'] = original['udp-port'];
-                }
-
-                delete proxy.subName;
-                delete proxy.collectionName;
-                delete proxy.id;
-                delete proxy.resolved;
-                delete proxy['no-resolve'];
-
-                if (proxy.transport) {
-                    for (const key in proxy.transport) {
+                    } else if (proxy.type === 'vmess') {
+                        // Egern：传输层，支持 ws/wss/http1/http2/tls，不配置则为 tcp
+                        let security = proxy.cipher;
                         if (
-                            Object.keys(proxy.transport[key]).length === 0 ||
-                            Object.values(proxy.transport[key]).every(
-                                (v) => v == null,
+                            security &&
+                            ![
+                                'auto',
+                                'none',
+                                'zero',
+                                'aes-128-gcm',
+                                'chacha20-poly1305',
+                            ].includes(security)
+                        ) {
+                            security = 'auto';
+                        }
+                        if (proxy.network === 'ws') {
+                            proxy.transport = {
+                                [proxy.tls ? 'wss' : 'ws']: {
+                                    path: proxy['ws-opts']?.path,
+                                    headers: {
+                                        Host: proxy['ws-opts']?.headers?.Host,
+                                    },
+                                    sni: proxy.tls ? proxy.sni : undefined,
+                                    skip_tls_verify: proxy.tls
+                                        ? proxy['skip-cert-verify']
+                                        : undefined,
+                                },
+                            };
+                        } else if (proxy.network === 'http') {
+                            proxy.transport = {
+                                http1: {
+                                    method: proxy['http-opts']?.method,
+                                    path: Array.isArray(
+                                        proxy['http-opts']?.path,
+                                    )
+                                        ? proxy['http-opts']?.path[0]
+                                        : proxy['http-opts']?.path,
+                                    headers: {
+                                        Host: Array.isArray(
+                                            proxy['http-opts']?.headers?.Host,
+                                        )
+                                            ? proxy['http-opts']?.headers
+                                                  ?.Host[0]
+                                            : proxy['http-opts']?.headers?.Host,
+                                    },
+                                    skip_tls_verify: proxy['skip-cert-verify'],
+                                },
+                            };
+                        } else if (proxy.network === 'h2') {
+                            proxy.transport = {
+                                http2: {
+                                    method: proxy['h2-opts']?.method,
+                                    path: Array.isArray(proxy['h2-opts']?.path)
+                                        ? proxy['h2-opts']?.path[0]
+                                        : proxy['h2-opts']?.path,
+                                    headers: {
+                                        Host: Array.isArray(
+                                            proxy['h2-opts']?.headers?.Host,
+                                        )
+                                            ? proxy['h2-opts']?.headers?.Host[0]
+                                            : proxy['h2-opts']?.headers?.Host,
+                                    },
+                                    skip_tls_verify: proxy['skip-cert-verify'],
+                                },
+                            };
+                        } else if (
+                            (proxy.network === 'tcp' || !proxy.network) &&
+                            proxy.tls
+                        ) {
+                            proxy.transport = {
+                                tls: {
+                                    sni: proxy.tls ? proxy.sni : undefined,
+                                    skip_tls_verify: proxy.tls
+                                        ? proxy['skip-cert-verify']
+                                        : undefined,
+                                },
+                            };
+                        }
+                        let legacy;
+                        if (isPresent(proxy, 'aead') && !proxy.aead) {
+                            legacy = true;
+                        } else if (proxy.alterId !== 0) {
+                            legacy = true;
+                        }
+                        proxy = {
+                            type: 'vmess',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            user_id: proxy.uuid,
+                            security,
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            legacy,
+                            udp_relay:
+                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            next_hop: proxy.next_hop,
+                            transport: proxy.transport,
+                        };
+                    } else if (proxy.type === 'vless') {
+                        if (proxy.encryption && proxy.encryption !== 'none')
+                            throw new Error(
+                                `VLESS encryption is not supported`,
+                            );
+                        if (proxy.network === 'ws') {
+                            proxy.transport = {
+                                [proxy.tls ? 'wss' : 'ws']: {
+                                    path: proxy['ws-opts']?.path,
+                                    headers: {
+                                        Host: proxy['ws-opts']?.headers?.Host,
+                                    },
+                                    sni: proxy.tls ? proxy.sni : undefined,
+                                    skip_tls_verify: proxy.tls
+                                        ? proxy['skip-cert-verify']
+                                        : undefined,
+                                },
+                            };
+                        } else if (proxy.network === 'http') {
+                            proxy.transport = {
+                                http: {
+                                    method: proxy['http-opts']?.method,
+                                    path: Array.isArray(
+                                        proxy['http-opts']?.path,
+                                    )
+                                        ? proxy['http-opts']?.path[0]
+                                        : proxy['http-opts']?.path,
+                                    headers: {
+                                        Host: Array.isArray(
+                                            proxy['http-opts']?.headers?.Host,
+                                        )
+                                            ? proxy['http-opts']?.headers
+                                                  ?.Host[0]
+                                            : proxy['http-opts']?.headers?.Host,
+                                    },
+                                    skip_tls_verify: proxy['skip-cert-verify'],
+                                },
+                            };
+                        } else if (proxy.network === 'tcp' || !proxy.network) {
+                            let reality;
+                            if (
+                                proxy['reality-opts']?.['short-id'] ||
+                                proxy['reality-opts']?.['public-key']
+                            ) {
+                                reality = {
+                                    short_id: proxy['reality-opts']['short-id'],
+                                    public_key:
+                                        proxy['reality-opts']['public-key'],
+                                };
+                            }
+                            proxy.transport = {
+                                [proxy.tls ? 'tls' : 'tcp']: {
+                                    sni: proxy.tls ? proxy.sni : undefined,
+                                    skip_tls_verify: proxy.tls
+                                        ? proxy['skip-cert-verify']
+                                        : undefined,
+                                    reality,
+                                },
+                            };
+                            flow = proxy.flow;
+                            if (flow === '') flow = undefined;
+                        }
+                        proxy = {
+                            type: 'vless',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            user_id: proxy.uuid,
+                            security: proxy.cipher,
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            udp_relay:
+                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            next_hop: proxy.next_hop,
+                            transport: proxy.transport,
+                            flow,
+                        };
+                    } else if (proxy.type === 'wireguard') {
+                        if (
+                            Array.isArray(proxy.peers) &&
+                            proxy.peers.length > 0
+                        ) {
+                            proxy.server = proxy.peers[0].server;
+                            proxy.port = proxy.peers[0].port;
+                            proxy.ip = proxy.peers[0].ip;
+                            proxy.ipv6 = proxy.peers[0].ipv6;
+                            proxy['public-key'] = proxy.peers[0]['public-key'];
+                            proxy['preshared-key'] =
+                                proxy.peers[0]['pre-shared-key'];
+                            proxy['allowed-ips'] =
+                                proxy.peers[0]['allowed-ips'];
+                            proxy.reserved = proxy.peers[0].reserved;
+                        }
+                        proxy = {
+                            type: 'wireguard',
+                            name: proxy.name,
+                            local_ipv4: proxy.ip,
+                            local_ipv6: proxy.ipv6,
+                            server: proxy.server,
+                            port: proxy.port,
+                            private_key: proxy['private-key'],
+                            peer_public_key: proxy['public-key'],
+                            preshared_key: proxy['preshared-key'],
+                            reserved: proxy.reserved
+                                ? Array.isArray(proxy.reserved)
+                                    ? proxy.reserved
+                                    : proxy.reserved
+                                          .split(/\s*\/\s*/)
+                                          .map((item) => item.trim())
+                                          .filter((item) => item.length > 0)
+                                : undefined,
+                            dns_servers: proxy.dns
+                                ? Array.isArray(proxy.dns)
+                                    ? proxy.dns
+                                    : proxy.dns
+                                          .split(/\s*,\s*/)
+                                          .map((item) => item.trim())
+                                          .filter((item) => item.length > 0)
+                                : undefined,
+                            mtu: proxy.mtu,
+                            keepalive: proxy.keepalive,
+                        };
+                    }
+                    if (
+                        [
+                            'http',
+                            'https',
+                            'socks5',
+                            'ss',
+                            'trojan',
+                            'vless',
+                            'vmess',
+                            'anytls',
+                        ].includes(original.type)
+                    ) {
+                        if (isPresent(original, 'shadow-tls-password')) {
+                            if (original['shadow-tls-version'] != 3)
+                                throw new Error(
+                                    `shadow-tls version ${original['shadow-tls-version']} is not supported`,
+                                );
+                            proxy.shadow_tls = {
+                                password: original['shadow-tls-password'],
+                                sni: original['shadow-tls-sni'],
+                            };
+                        } else if (
+                            ['shadow-tls'].includes(original.plugin) &&
+                            original['plugin-opts']
+                        ) {
+                            if (original['plugin-opts'].version != 3)
+                                throw new Error(
+                                    `shadow-tls version ${original['plugin-opts'].version} is not supported`,
+                                );
+                            proxy.shadow_tls = {
+                                password: original['plugin-opts'].password,
+                                sni: original['plugin-opts'].host,
+                            };
+                        }
+                    }
+                    if (
+                        [
+                            'socks5',
+                            'ss',
+                            'trojan',
+                            'vless',
+                            'vmess',
+                            'wireguard',
+                            'tuic',
+                            'hysteria2',
+                            'anytls',
+                        ].includes(original.type)
+                    ) {
+                        if (
+                            ['on', 'true', true, '1', 1].includes(
+                                original['block-quic'],
                             )
                         ) {
-                            delete proxy.transport[key];
+                            proxy.block_quic = true;
+                        } else if (
+                            ['off', 'false', false, '0', 0].includes(
+                                original['block-quic'],
+                            )
+                        ) {
+                            proxy.block_quic = false;
                         }
                     }
-                    if (Object.keys(proxy.transport).length === 0) {
-                        delete proxy.transport;
+                    if (
+                        ['ss'].includes(original.type) &&
+                        proxy.shadow_tls &&
+                        original['udp-port'] > 0 &&
+                        original['udp-port'] <= 65535
+                    ) {
+                        proxy['udp_port'] = original['udp-port'];
                     }
-                }
 
-                if (type !== 'internal') {
-                    for (const key in proxy) {
-                        if (proxy[key] == null || /^_/i.test(key)) {
-                            delete proxy[key];
+                    delete proxy.subName;
+                    delete proxy.collectionName;
+                    delete proxy.id;
+                    delete proxy.resolved;
+                    delete proxy['no-resolve'];
+
+                    if (proxy.transport) {
+                        for (const key in proxy.transport) {
+                            if (
+                                Object.keys(proxy.transport[key]).length ===
+                                    0 ||
+                                Object.values(proxy.transport[key]).every(
+                                    (value) => value == null,
+                                )
+                            ) {
+                                delete proxy.transport[key];
+                            }
+                        }
+                        if (Object.keys(proxy.transport).length === 0) {
+                            delete proxy.transport;
                         }
                     }
+
+                    if (type !== 'internal') {
+                        for (const key in proxy) {
+                            if (proxy[key] == null || /^_/i.test(key)) {
+                                delete proxy[key];
+                            }
+                        }
+                    }
+                    return {
+                        [proxy.type]: {
+                            ...proxy,
+                            type: undefined,
+                            prev_hop,
+                        },
+                    };
+                } catch (err) {
+                    $.error(
+                        `Cannot produce proxy: ${JSON.stringify(
+                            sourceProxy,
+                            null,
+                            2,
+                        )}\nReason: ${err}`,
+                    );
+                    return null;
                 }
-                return {
-                    [proxy.type]: {
-                        ...proxy,
-                        type: undefined,
-                        prev_hop,
-                    },
-                };
-            });
+            })
+            .filter(Boolean);
         return type === 'internal'
             ? list
             : 'proxies:\n' +

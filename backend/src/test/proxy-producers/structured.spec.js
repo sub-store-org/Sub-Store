@@ -295,6 +295,44 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('skips invalid Egern nodes and keeps the rest of the subscription', function () {
+        const proxies = [
+            {
+                type: 'vless',
+                name: 'Invalid VLESS',
+                server: 'invalid.example.com',
+                port: 443,
+                uuid: UUID,
+                encryption: 'aes-128-gcm',
+            },
+            {
+                type: 'ss',
+                name: 'Healthy SS',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+            },
+        ];
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        expect(internal).to.have.length(1);
+        expect(external.proxies).to.have.length(1);
+        expectSubset(internal[0], {
+            shadowsocks: {
+                name: 'Healthy SS',
+                method: 'aes-128-gcm',
+            },
+        });
+        expectSubset(external.proxies[0], {
+            shadowsocks: {
+                name: 'Healthy SS',
+            },
+        });
+    });
+
     it('emits sing-box outbounds with reality tls and websocket transport', function () {
         const output = loadProducedJson('sing-box', {
             type: 'vless',
