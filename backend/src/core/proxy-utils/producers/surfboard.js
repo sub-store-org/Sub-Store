@@ -30,6 +30,8 @@ export default function Surfboard_Producer() {
                 return socks5(proxy);
             case 'anytls':
                 return anytls(proxy);
+            case 'hysteria2':
+                return hysteria2(proxy);
             case 'wireguard-surge':
                 return wireguard(proxy);
         }
@@ -38,6 +40,43 @@ export default function Surfboard_Producer() {
         );
     };
     return { produce };
+}
+function hysteria2(proxy) {
+    if (proxy.obfs || proxy['obfs-password']) {
+        throw new Error(`Surfboard Hysteria2 does not support obfs`);
+    }
+
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=hysteria2,${proxy.server},${proxy.port}`);
+
+    result.appendIfPresent(`,password="${proxy.password}"`, 'password');
+
+    if (isPresent(proxy, 'ports')) {
+        result.append(`,port-hopping="${proxy.ports.replace(/,/g, ';')}"`);
+    }
+
+    result.appendIfPresent(
+        `,port-hopping-interval=${proxy['hop-interval']}`,
+        'hop-interval',
+    );
+
+    // tls verification
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // download-bandwidth
+    result.appendIfPresent(
+        `,download-bandwidth=${`${proxy['down']}`.match(/\d+/)?.[0] || 0}`,
+        'down',
+    );
+
+    // udp
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    return result.toString();
 }
 function anytls(proxy) {
     const result = new Result(proxy);

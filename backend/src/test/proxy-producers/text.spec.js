@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { Base64 } from 'js-base64';
 import { describe, it } from 'mocha';
 
+import { ProxyUtils } from '@/core/proxy-utils';
 import { produceExternal, UUID } from './helpers';
 
 describe('Proxy text producers', function () {
@@ -129,6 +130,46 @@ describe('Proxy text producers', function () {
         expect(output).to.equal(
             'Trojan=trojan,trojan.example.com,443,password=secret,ws=true,ws-path=/ws,ws-headers=Host:"cdn.example.com",tls=true,sni="sni.example.com"',
         );
+    });
+
+    it('produces Surfboard Hysteria2 lines', function () {
+        const output = produceExternal('Surfboard', {
+            type: 'hysteria2',
+            name: 'Surfboard Hysteria2',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            ports: '8443,8445-8447',
+            'hop-interval': 30,
+            sni: 'peer.example.com',
+            'skip-cert-verify': true,
+            down: '100 Mbps',
+            udp: true,
+        });
+
+        expect(output).to.equal(
+            'Surfboard Hysteria2=hysteria2,hy2.example.com,443,password="secret",port-hopping="8443;8445-8447",port-hopping-interval=30,sni="peer.example.com",skip-cert-verify=true,download-bandwidth=100,udp-relay=true',
+        );
+    });
+
+    it('omits Surfboard Hysteria2 lines when obfs is present', function () {
+        const output = ProxyUtils.produce(
+            [
+                {
+                    type: 'hysteria2',
+                    name: 'Surfboard Hysteria2 Obfs',
+                    server: 'hy2.example.com',
+                    port: 443,
+                    password: 'secret',
+                    obfs: 'salamander',
+                    'obfs-password': 'mask',
+                },
+            ],
+            'Surfboard',
+            'external',
+        );
+
+        expect(output).to.equal('');
     });
 
     it('produces SurgeMac external lines', function () {
