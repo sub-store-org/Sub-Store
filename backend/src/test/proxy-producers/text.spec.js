@@ -219,6 +219,28 @@ describe('Proxy text producers', function () {
         expect(output).to.include('udp-relay=true');
     });
 
+    it('forces SurgeMac nodes with _mihomoExternal to use Mihomo external mode', function () {
+        const output = produceExternal(
+            'SurgeMac',
+            {
+                type: 'tuic',
+                name: 'Forced Mihomo',
+                server: 'tuic.example.com',
+                port: 443,
+                uuid: UUID,
+                password: 'secret',
+                sni: 'sni.example.com',
+                _mihomoExternal: true,
+            },
+            { localPort: 17777 },
+        );
+
+        expect(output).to.include(
+            'Forced Mihomo=external,exec="/usr/local/bin/mihomo",local-port=17777',
+        );
+        expect(output).to.not.include('Forced Mihomo=tuic-v5');
+    });
+
     it('produces URI VLESS reality websocket links', function () {
         const output = produceExternal('URI', {
             type: 'vless',

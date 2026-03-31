@@ -11,6 +11,9 @@ const surge_Producer = Surge_Producer();
 
 export default function SurgeMac_Producer() {
     const produce = (proxy, type, opts = {}) => {
+        if (proxy._mihomoExternal) {
+            return mihomo(proxy, type, opts);
+        }
         switch (proxy.type) {
             case 'external':
                 return external(proxy);
