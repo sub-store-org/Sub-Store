@@ -844,6 +844,11 @@ function URI_VLESS() {
                             `Failed to parse extra field as JSON: ${proxy._extra}`,
                         );
                     }
+                    if (extra.downloadSettings) {
+                        $.error(
+                            'It is too complex to convert the downloadSettings in extra into the Mihomo format, so it is not supported.',
+                        );
+                    }
                     proxy[`${proxy.network}-opts`] = {
                         'no-grpc-header': extra['noGRPCHeader'],
                         'x-padding-bytes': extra['xPaddingBytes'],
