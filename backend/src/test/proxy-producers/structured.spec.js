@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
+import { ProxyUtils } from '@/core/proxy-utils';
 import {
     UUID,
     expectSubset,
@@ -223,6 +224,230 @@ describe('Proxy structured producers', function () {
             alpn: ['h3'],
             'fast-open': true,
             version: 5,
+        });
+    });
+
+    it('emits Stash VLESS TCP REALITY proxies without validating flow values', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'Stash Reality Custom Flow',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            network: 'tcp',
+            flow: 'xtls-rprx-unknown',
+            sni: 'sni.example.com',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+        };
+
+        const internal = produceInternal('Stash', proxy);
+        const external = loadProducedYaml('Stash', proxy);
+
+        expect(internal).to.have.length(1);
+        expect(external.proxies).to.have.length(1);
+        expectSubset(internal[0], {
+            type: 'vless',
+            name: 'Stash Reality Custom Flow',
+            network: 'tcp',
+            flow: 'xtls-rprx-unknown',
+            servername: 'sni.example.com',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+        });
+        expectSubset(external.proxies[0], {
+            type: 'vless',
+            name: 'Stash Reality Custom Flow',
+            network: 'tcp',
+            flow: 'xtls-rprx-unknown',
+            servername: 'sni.example.com',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+        });
+    });
+
+    it('keeps default-tcp Stash VLESS REALITY proxies when network is omitted', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'Implicit TCP Reality',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+        };
+
+        const internal = produceInternal('Stash', proxy);
+        const external = loadProducedYaml('Stash', proxy);
+
+        expect(internal).to.have.length(1);
+        expect(external.proxies).to.have.length(1);
+        expectSubset(internal[0], {
+            type: 'vless',
+            name: 'Implicit TCP Reality',
+            servername: 'sni.example.com',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+        });
+        expect(external.proxies[0]).to.not.have.property('network');
+    });
+
+    it('keeps Stash VLESS TCP REALITY proxies when URI input omits flow', function () {
+        const proxies = ProxyUtils.parse(
+            `vless://${UUID}@vless.example.com:443?type=tcp&security=reality&sni=sni.example.com&pbk=pubkey&sid=08#No%20Flow`,
+        );
+
+        const internal = produceInternal('Stash', proxies);
+        const external = loadProducedYaml('Stash', proxies);
+
+        expect(internal).to.have.length(1);
+        expect(external.proxies).to.have.length(1);
+        expect(internal[0]).to.not.have.property('flow');
+        expectSubset(internal[0], {
+            type: 'vless',
+            name: 'No Flow',
+            network: 'tcp',
+            servername: 'sni.example.com',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+        });
+        expectSubset(external.proxies[0], {
+            type: 'vless',
+            name: 'No Flow',
+            network: 'tcp',
+            servername: 'sni.example.com',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+        });
+    });
+
+    it('keeps Stash VLESS TCP REALITY nodes while still filtering non-tcp and unsupported variants', function () {
+        const proxies = [
+            {
+                type: 'vless',
+                name: 'Supported Reality',
+                server: 'vless.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'tcp',
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+            },
+            {
+                type: 'vless',
+                name: 'Custom Flow',
+                server: 'unsupported-flow.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'tcp',
+                flow: 'xtls-rprx-unknown',
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+            },
+            {
+                type: 'vless',
+                name: 'Reality WS',
+                server: 'vless-ws.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+            },
+            {
+                type: 'vless',
+                name: 'XHTTP',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': {
+                    path: '/xhttp',
+                },
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+            },
+            {
+                type: 'vless',
+                name: 'Encrypted VLESS',
+                server: 'encrypted.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'tcp',
+                encryption: 'aes-128-gcm',
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+            },
+        ];
+
+        const internal = produceInternal('Stash', proxies);
+        const external = loadProducedYaml('Stash', proxies);
+
+        expect(internal).to.have.length(2);
+        expect(external.proxies).to.have.length(2);
+        expect(internal.map((proxy) => proxy.name)).to.deep.equal([
+            'Supported Reality',
+            'Custom Flow',
+        ]);
+        expect(external.proxies.map((proxy) => proxy.name)).to.deep.equal([
+            'Supported Reality',
+            'Custom Flow',
+        ]);
+        expectSubset(internal[0], {
+            type: 'vless',
+            name: 'Supported Reality',
+        });
+        expectSubset(internal[1], {
+            type: 'vless',
+            name: 'Custom Flow',
+            flow: 'xtls-rprx-unknown',
+        });
+        expectSubset(external.proxies[0], {
+            type: 'vless',
+            name: 'Supported Reality',
+        });
+        expectSubset(external.proxies[1], {
+            type: 'vless',
+            name: 'Custom Flow',
+            flow: 'xtls-rprx-unknown',
         });
     });
 

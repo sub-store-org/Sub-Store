@@ -45,10 +45,14 @@ export default function Stash_Producer() {
                             '2022-blake3-aes-128-gcm',
                             '2022-blake3-aes-256-gcm',
                         ].includes(proxy.cipher)) ||
-                    (proxy.type === 'snell' && proxy.version >= 4) ||
-                    (proxy.type === 'vless' &&
-                        proxy['reality-opts'] &&
-                        !['xtls-rprx-vision'].includes(proxy.flow))
+                    (proxy.type === 'snell' && proxy.version >= 4)
+                ) {
+                    return false;
+                } else if (
+                    ['vless'].includes(proxy.type) &&
+                    proxy['reality-opts'] &&
+                    proxy.network &&
+                    !['tcp'].includes(proxy.network)
                 ) {
                     return false;
                 } else if (
