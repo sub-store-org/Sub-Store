@@ -97,6 +97,33 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
+        it('parses v2ray-plugin paths containing escaped equals signs', function () {
+            const userInfo = encodeURIComponent(
+                Base64.encode('aes-128-gcm:secret'),
+            );
+            const plugin = encodeURIComponent(
+                'v2ray-plugin;mode=websocket;host=cdn.example.com;path=/?enc\\=aes-128-gcm',
+            );
+            const proxy = parseOne(
+                `ss://${userInfo}@ss.example.com:8080?plugin=${plugin}#SS%20Escaped%20Path`,
+            );
+
+            expectSubset(proxy, {
+                type: 'ss',
+                name: 'SS Escaped Path',
+                server: 'ss.example.com',
+                port: 8080,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+                plugin: 'v2ray-plugin',
+                'plugin-opts': {
+                    mode: 'websocket',
+                    host: 'cdn.example.com',
+                    path: '/?enc=aes-128-gcm',
+                },
+            });
+        });
+
         it('parses shadowsocks shadow-tls compatibility payloads', function () {
             const userInfo = Base64.encode('aes-256-gcm:shadow-pass');
             const payload = Base64.encode(

@@ -287,8 +287,14 @@ function URI_SS() {
             ).split(';');
             const params = {};
             for (const item of pluginInfo) {
-                const [key, val] = item.split('=');
-                if (key) params[key] = val || true; // some options like "tls" will not have value
+                const separatorIndex = item.indexOf('=');
+                if (separatorIndex === -1) {
+                    if (item) params[item] = true; // some options like "tls" will not have value
+                    continue;
+                }
+                const key = item.slice(0, separatorIndex);
+                const val = item.slice(separatorIndex + 1).replace(/\\=/g, '=');
+                if (key) params[key] = val || true;
             }
             switch (params.plugin) {
                 case 'obfs-local':
@@ -308,6 +314,8 @@ function URI_SS() {
                             getIfNotBlank(params['host']),
                         path: getIfNotBlank(params.path),
                         tls: getIfPresent(params.tls),
+                        // mux 目前有问题 v2rayN 有 bug...开了 mux 导出时也是 0, 如果改成 1 导入它就报错
+                        // 有需求的自己用脚本操作吧
                     };
                     break;
                 case 'shadow-tls': {
