@@ -102,8 +102,23 @@ function operator(proxies = [], targetPlatform, context) {
   // lodash
 
   // $substore 为 OpenAPI
-  // 参考 https://github.com/Peng-YM/QuanX/blob/master/Tools/OpenAPI/README.md
-
+  // 源码 https://raw.githubusercontent.com/sub-store-org/Sub-Store/refs/heads/master/backend/src/vendor/open-api.js
+  // 一个发请求的例子
+  // const $ = $substore
+  // const { body, statusCode } = await $.http.post({
+  //   url: 'https://httpbingo.org/anything',
+  //   headers: {
+  //     'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0',
+  //     'content-type': 'application/json; charset=utf-8',
+  //   },
+  //   timeout: 5000,
+  //   body: JSON.stringify({
+  //     a: 1
+  //   }),
+  // })
+  // $.info(statusCode)
+  // $.info(body)
+  // const obj = JSON.parse(body)
   // scriptResourceCache 缓存
   // 可参考 https://t.me/zhetengsha/1003
   // const cache = scriptResourceCache
