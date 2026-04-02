@@ -8,8 +8,7 @@
     "test": "mocha src/test/**/*.spec.js --require @babel/register --recursive",
     "serve": "node sub-store.min.js",
     "start": "nodemon -w src -w package.json --exec babel-node src/main.js",
-    "dev:esbuild": "nodemon -w src -w package.json dev-esbuild.js",
-    "dev:run": "nodemon -w sub-store.min.js sub-store.min.js",
+    "dev": "node dev-esbuild.js",
     "bundle:esbuild": "node bundle-esbuild.js",
     "changelog": "conventional-changelog -p cli -i CHANGELOG.md -s"
   },

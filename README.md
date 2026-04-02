@@ -104,7 +104,7 @@ pnpm i
 ```
 
 ```
-SUB_STORE_BACKEND_API_PORT=3000 pnpm run --parallel "/^dev:.*/"
+SUB_STORE_BACKEND_API_PORT=3000 pnpm dev
 ```
 
 ### Build
