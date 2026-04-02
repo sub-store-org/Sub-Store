@@ -26,6 +26,7 @@ import Gist from '@/utils/gist';
 import { isPresent } from './producers/utils';
 import { doh } from '@/utils/dns';
 import JSON5 from 'json5';
+import { hex_md5 } from '@/vendor/md5';
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
@@ -351,6 +352,7 @@ export const ProxyUtils = {
     Buffer,
     Base64,
     JSON5,
+    hex_md5,
 };
 
 function tryParse(parser, line) {

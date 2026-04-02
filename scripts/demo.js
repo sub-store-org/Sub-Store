@@ -188,6 +188,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     Buffer, // https://github.com/feross/buffer
   //     Base64, // https://github.com/dankogai/js-base64
   //     JSON5, // https://github.com/json5/json5
+  //     hex_md5, // backend/src/vendor/md5.js
   // }
   //  为兼容 https://github.com/xishang0128/sparkle 的 JavaScript 覆写, 也可以直接使用 `b64d`(Base64 解码), `b64e`(Base64 编码), `Buffer`, `yaml`(简单兼容了下 `yaml.parse` 和 `yaml.stringify`)
 
