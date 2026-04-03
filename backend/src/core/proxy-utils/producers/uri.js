@@ -209,7 +209,14 @@ export default function URI_Producer() {
                                     opts.host ? ';obfs-host=' + opts.host : ''
                                 }${opts.host ? ';host=' + opts.host : ''}${
                                     opts.path ? ';path=' + opts.path : ''
-                                }${opts.tls ? ';tls' : ''}`,
+                                }${opts.tls ? ';tls' : ''}${
+                                    opts.sni ? ';sni=' + opts.sni : ''
+                                }${
+                                    opts['skip-cert-verify']
+                                        ? ';skip-cert-verify=' +
+                                          opts['skip-cert-verify']
+                                        : ''
+                                }${opts.mux != null ? ';mux=' + opts.mux : ''}`,
                             );
                             break;
                         case 'shadow-tls':
