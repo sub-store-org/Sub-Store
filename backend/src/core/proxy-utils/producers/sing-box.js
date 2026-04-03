@@ -540,6 +540,7 @@ const ssParser = (proxy = {}) => {
                     case 'mux':
                         if (proxy['plugin-opts'].mux)
                             parsedProxy.multiplex = { enabled: true };
+                        optArr.push(`mux=${proxy['plugin-opts'].mux}`);
                         break;
                     default:
                         optArr.push(`${k}=${proxy['plugin-opts'][k]}`);

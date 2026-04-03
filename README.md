@@ -104,7 +104,13 @@ pnpm i
 ```
 
 ```
-SUB_STORE_BACKEND_API_PORT=3000 pnpm dev
+SUB_STORE_BACKEND_API_PORT=3000 pnpm esbuild:dev
+```
+
+or this one if you're using `Termux`
+
+```
+SUB_STORE_BACKEND_API_PORT=3000 pnpm run --parallel "/^dev:.*/"
 ```
 
 ### Build

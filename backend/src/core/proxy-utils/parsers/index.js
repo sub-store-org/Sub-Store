@@ -319,7 +319,9 @@ function URI_SS() {
                         'skip-cert-verify': ['1', 'true', 1, true].includes(
                             params['skip-cert-verify'],
                         ),
-                        mux: params.mux,
+                        mux: /^\d+$/.test(params.mux)
+                            ? parseInt(params.mux, 10)
+                            : undefined,
                     };
                     break;
                 case 'shadow-tls': {
