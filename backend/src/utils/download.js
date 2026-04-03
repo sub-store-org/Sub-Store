@@ -22,6 +22,42 @@ const clashPreprocessor = PROXY_PREPROCESSORS.find(
 
 const tasks = new Map();
 
+function buildDownloadRegex(pattern = '') {
+    const trimmed = `${pattern}`.trim();
+    if (!trimmed) return null;
+    return new RegExp(trimmed, 'i');
+}
+
+function maybePrefixGithubProxyUrl(url, githubProxy, githubProxyRegex) {
+    if (!githubProxy || !githubProxyRegex || typeof url !== 'string') {
+        return url;
+    }
+
+    if (!/^https?:\/\//i.test(url)) {
+        return url;
+    }
+
+    const prefix = `${githubProxy}/`;
+    if (url.startsWith(prefix)) {
+        return url;
+    }
+
+    let regex;
+    try {
+        regex = buildDownloadRegex(githubProxyRegex);
+    } catch (e) {
+        $.error(`GitHub 加速代理匹配正则无效: ${e.message ?? e}`);
+        return url;
+    }
+
+    if (!regex?.test(url)) {
+        return url;
+    }
+
+    $.info(`GitHub 加速代理命中下载链接: ${url}`);
+    return `${githubProxy}/${url}`;
+}
+
 export default async function download(
     rawUrl = '',
     ua,
@@ -54,6 +90,8 @@ export default async function download(
     }
     const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
     const {
+        githubProxy,
+        githubProxyRegex,
         defaultProxy,
         defaultUserAgent,
         defaultTimeout,
@@ -87,6 +125,7 @@ export default async function download(
     }
 
     const requestTimeout = timeout || defaultTimeout || 8000;
+    url = maybePrefixGithubProxyUrl(url, githubProxy, githubProxyRegex);
     const id = hex_md5(
         `${customHeaders ? JSON.stringify(customHeaders) : userAgent}${url}`,
     );

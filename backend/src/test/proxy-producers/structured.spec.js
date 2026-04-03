@@ -713,6 +713,39 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('normalizes sing-box ech PEM config strings with escaped newlines', function () {
+        const output = loadProducedJson('sing-box', {
+            type: 'vless',
+            name: 'ECH PEM',
+            server: 'ech.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            'ech-opts': {
+                enable: true,
+                config: [
+                    '-----BEGIN ECH CONFIGS-----\\nZWNoLWNvbmZpZw==\\n-----END ECH CONFIGS-----',
+                ],
+            },
+        });
+
+        expectSubset(output.outbounds[0], {
+            tag: 'ECH PEM',
+            tls: {
+                enabled: true,
+                server_name: 'ech.example.com',
+                ech: {
+                    enabled: true,
+                    config: [
+                        '-----BEGIN ECH CONFIGS-----',
+                        'ZWNoLWNvbmZpZw==',
+                        '-----END ECH CONFIGS-----',
+                    ],
+                },
+            },
+        });
+    });
+
     it('omits xhttp proxies from sing-box exports', function () {
         const output = loadProducedJson('sing-box', {
             type: 'vless',
