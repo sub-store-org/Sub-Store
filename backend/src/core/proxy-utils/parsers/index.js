@@ -6,6 +6,7 @@ import {
     isNotBlank,
     getIfPresent,
     getRandomPort,
+    isPlainObject,
 } from '@/utils';
 import getSurgeParser from './peggy/surge';
 import getLoonParser from './peggy/loon';
@@ -314,6 +315,10 @@ function URI_SS() {
                             getIfNotBlank(params['host']),
                         path: getIfNotBlank(params.path),
                         tls: getIfPresent(params.tls),
+                        sni: getIfPresent(params.sni),
+                        'skip-cert-verify': ['1', 'true', 1, true].includes(
+                            params['skip-cert-verify'],
+                        ),
                         // mux 目前有问题 v2rayN 有 bug...开了 mux 导出时也是 0, 如果改成 1 导入它就报错
                         // 有需求的自己用脚本操作吧
                     };
@@ -852,14 +857,14 @@ function URI_VLESS() {
                             `Failed to parse extra field as JSON: ${proxy._extra}`,
                         );
                     }
-                    if (extra.downloadSettings) {
+                    if (extra?.downloadSettings) {
                         $.error(
                             'It is too complex to convert the downloadSettings in extra into the Mihomo format, so it is not supported.',
                         );
                     }
                     proxy[`${proxy.network}-opts`] = {
-                        'no-grpc-header': extra['noGRPCHeader'],
-                        'x-padding-bytes': extra['xPaddingBytes'],
+                        'no-grpc-header': extra?.['noGRPCHeader'],
+                        'x-padding-bytes': extra?.['xPaddingBytes'],
                         // 'sc-max-each-post-bytes': extra['scMaxEachPostBytes'],
                         // 'sc-min-posts-interval-ms': extra['scMinPostsIntervalMs'],
                         mode: params.mode,
