@@ -520,6 +520,57 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('normalizes numeric v2ray-plugin mux values across Clash-family YAML producers', function () {
+        const buildProxy = (name, mux) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            'skip-cert-verify': false,
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+                'skip-cert-verify': true,
+                mux,
+            },
+        });
+
+        for (const platform of [
+            'Clash',
+            'ClashMeta',
+            'Shadowrocket',
+            'Stash',
+        ]) {
+            const internal = produceInternal(platform, [
+                buildProxy(`${platform} Mux On`, 1),
+                buildProxy(`${platform} Mux Off`, 0),
+            ]);
+
+            expect(internal, platform).to.have.length(2);
+            expectSubset(internal[0], {
+                name: `${platform} Mux On`,
+                'plugin-opts': {
+                    tls: true,
+                    'skip-cert-verify': true,
+                    mux: true,
+                },
+            });
+            expectSubset(internal[1], {
+                name: `${platform} Mux Off`,
+                'plugin-opts': {
+                    tls: true,
+                    'skip-cert-verify': true,
+                    mux: false,
+                },
+            });
+        }
+    });
+
     it('skips invalid Egern nodes and keeps the rest of the subscription', function () {
         const proxies = [
             {
@@ -556,6 +607,55 @@ describe('Proxy structured producers', function () {
                 name: 'Healthy SS',
             },
         });
+    });
+
+    it('keeps normalized v2ray-plugin mux state in sing-box plugin opts', function () {
+        const buildProxy = (name, mux) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+                mux,
+            },
+        });
+
+        const output = loadProducedJson('sing-box', [
+            buildProxy('Sing-box Mux On', 1),
+            buildProxy('Sing-box Mux Off', 0),
+        ]);
+        const muxOn = output.outbounds.find(
+            (outbound) => outbound.tag === 'Sing-box Mux On',
+        );
+        const muxOff = output.outbounds.find(
+            (outbound) => outbound.tag === 'Sing-box Mux Off',
+        );
+
+        expect(output.outbounds).to.have.length(2);
+        expectSubset(muxOn, {
+            tag: 'Sing-box Mux On',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+            multiplex: {
+                enabled: true,
+            },
+        });
+        expect(muxOn.plugin_opts).to.include('mux=true');
+
+        expectSubset(muxOff, {
+            tag: 'Sing-box Mux Off',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+        });
+        expect(muxOff).to.not.have.property('multiplex');
+        expect(muxOff.plugin_opts).to.include('mux=false');
     });
 
     it('emits sing-box outbounds with reality tls and websocket transport', function () {

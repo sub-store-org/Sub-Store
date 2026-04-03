@@ -97,6 +97,37 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
+        it('parses shadowsocks v2ray-plugin URI flags for sni, skip-cert-verify, and mux', function () {
+            const userInfo = encodeURIComponent(
+                Base64.encode('aes-128-gcm:secret'),
+            );
+            const plugin = encodeURIComponent(
+                'v2ray-plugin;obfs=websocket;host=cdn.example.com;path=/socket;tls;sni=sni.example.com;skip-cert-verify=1;mux=1',
+            );
+            const proxy = parseOne(
+                `ss://${userInfo}@ss.example.com:443/?plugin=${plugin}#SS%20V2ray%20Flags`,
+            );
+
+            expectSubset(proxy, {
+                type: 'ss',
+                name: 'SS V2ray Flags',
+                server: 'ss.example.com',
+                port: 443,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+                plugin: 'v2ray-plugin',
+                'plugin-opts': {
+                    mode: 'websocket',
+                    host: 'cdn.example.com',
+                    path: '/socket',
+                    tls: true,
+                    sni: 'sni.example.com',
+                    'skip-cert-verify': true,
+                    mux: 1,
+                },
+            });
+        });
+
         it('parses v2ray-plugin paths containing escaped equals signs', function () {
             const userInfo = encodeURIComponent(
                 Base64.encode('aes-128-gcm:secret'),

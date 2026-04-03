@@ -241,6 +241,36 @@ describe('Proxy text producers', function () {
         expect(output).to.not.include('Forced Mihomo=tuic-v5');
     });
 
+    it('produces URI shadowsocks links with v2ray-plugin mux and tls flags', function () {
+        const plugin = encodeURIComponent(
+            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;sni=sni.example.com;skip-cert-verify=true;mux=0',
+        );
+        const output = produceExternal('URI', {
+            type: 'ss',
+            name: 'SS V2ray Flags',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                mux: 0,
+            },
+        });
+
+        expect(output).to.equal(
+            `ss://${Base64.encode(
+                'aes-128-gcm:secret',
+            )}@ss.example.com:443/?plugin=${plugin}#SS%20V2ray%20Flags`,
+        );
+    });
+
     it('produces URI VLESS reality websocket links', function () {
         const output = produceExternal('URI', {
             type: 'vless',
