@@ -107,6 +107,7 @@ async function downloadSubscription(req, res) {
         noCache,
         _fakeNode,
     } = req.query;
+    const prettyYaml = req.query.prettyYaml ?? req.query['pretty-yaml'];
 
     let $options = {
         _req: {
@@ -169,6 +170,9 @@ async function downloadSubscription(req, res) {
             `包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
         );
     }
+    if (prettyYaml) {
+        $.info(`指定输出易读 YAML: ${prettyYaml}`);
+    }
 
     if (useMihomoExternal) {
         $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
@@ -208,6 +212,7 @@ async function downloadSubscription(req, res) {
                 produceOpts: {
                     'include-unsupported-proxy': includeUnsupportedProxy,
                     useMihomoExternal,
+                    prettyYaml,
                 },
                 $options,
                 proxy,
@@ -415,6 +420,7 @@ async function downloadCollection(req, res) {
         proxy,
         noCache,
     } = req.query;
+    const prettyYaml = req.query.prettyYaml ?? req.query['pretty-yaml'];
 
     let $options = {
         _req: {
@@ -463,6 +469,9 @@ async function downloadCollection(req, res) {
             `包含官方/商店版/未续费订阅不支持的协议: ${includeUnsupportedProxy}`,
         );
     }
+    if (prettyYaml) {
+        $.info(`指定输出易读 YAML: ${prettyYaml}`);
+    }
 
     if (useMihomoExternal) {
         $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
@@ -482,6 +491,7 @@ async function downloadCollection(req, res) {
                 produceOpts: {
                     'include-unsupported-proxy': includeUnsupportedProxy,
                     useMihomoExternal,
+                    prettyYaml,
                 },
                 $options,
                 proxy,

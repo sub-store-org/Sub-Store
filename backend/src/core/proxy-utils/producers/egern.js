@@ -1,9 +1,9 @@
 import $ from '@/core/app';
-import { isPresent } from './utils';
+import { isPresent, produceProxyListOutput } from './utils';
 
 export default function Egern_Producer() {
     const type = 'ALL';
-    const produce = (proxies, type) => {
+    const produce = (proxies, type, opts = {}) => {
         // https://egernapp.com/zh-CN/docs/configuration/proxies
         const list = proxies
             .filter((proxy) => {
@@ -572,12 +572,7 @@ export default function Egern_Producer() {
                 }
             })
             .filter(Boolean);
-        return type === 'internal'
-            ? list
-            : 'proxies:\n' +
-                  list
-                      .map((proxy) => '  - ' + JSON.stringify(proxy) + '\n')
-                      .join('');
+        return produceProxyListOutput(list, type, opts);
     };
     return { type, produce };
 }

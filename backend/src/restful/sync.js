@@ -684,6 +684,7 @@ async function syncArtifacts() {
                                 'include-unsupported-proxy':
                                     artifact.includeUnsupportedProxy,
                                 useMihomoExternal,
+                                prettyYaml: artifact.prettyYaml,
                             },
                         });
 
@@ -838,6 +839,7 @@ async function syncArtifact(req, res) {
             produceOpts: {
                 'include-unsupported-proxy': artifact.includeUnsupportedProxy,
                 useMihomoExternal,
+                prettyYaml: artifact.prettyYaml,
             },
         });
 

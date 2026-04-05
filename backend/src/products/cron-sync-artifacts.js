@@ -157,6 +157,7 @@ async function doSync() {
                                 'include-unsupported-proxy':
                                     artifact.includeUnsupportedProxy,
                                 useMihomoExternal,
+                                prettyYaml: artifact.prettyYaml,
                             },
                         });
 

@@ -258,6 +258,9 @@ function operator(proxies = [], targetPlatform, context) {
   //     type: 'subscription',
   //     name: 'sub',
   //     platform: 'ClashMeta',
+  //     produceOpts: {
+  //         prettyYaml: true // 输出更易读的块状 YAML, 默认仍是单行 JSON 风格
+  //     },
   //     produceType: 'internal' // 'internal' produces an Array, otherwise produces a String( ProxyUtils.yaml.safeLoad('YAML String').proxies )
   // })
 

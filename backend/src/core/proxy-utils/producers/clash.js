@@ -1,4 +1,7 @@
-import { isPresent } from '@/core/proxy-utils/producers/utils';
+import {
+    isPresent,
+    produceProxyListOutput,
+} from '@/core/proxy-utils/producers/utils';
 import $ from '@/core/app';
 
 export default function Clash_Producer() {
@@ -213,12 +216,7 @@ export default function Clash_Producer() {
                 }
                 return proxy;
             });
-        return type === 'internal'
-            ? list
-            : 'proxies:\n' +
-                  list
-                      .map((proxy) => '  - ' + JSON.stringify(proxy) + '\n')
-                      .join('');
+        return produceProxyListOutput(list, type, opts);
     };
     return { type, produce };
 }

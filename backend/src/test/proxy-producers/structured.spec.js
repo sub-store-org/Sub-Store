@@ -7,6 +7,7 @@ import {
     expectSubset,
     loadProducedJson,
     loadProducedYaml,
+    produceExternal,
     produceInternal,
 } from './helpers';
 
@@ -568,6 +569,71 @@ describe('Proxy structured producers', function () {
                     mux: 0,
                 },
             });
+        }
+    });
+
+    it('keeps legacy single-line proxy output by default for Clash-style YAML producers', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Legacy YAML',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+        };
+
+        for (const platform of [
+            'Clash',
+            'ClashMeta',
+            'Shadowrocket',
+            'Stash',
+            'Egern',
+        ]) {
+            const output = produceExternal(platform, proxy);
+
+            expect(output, platform).to.match(/\n  - \{/);
+        }
+    });
+
+    it('emits pretty yaml for Clash-style YAML producers when prettyYaml is enabled', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Real YAML',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+        };
+
+        for (const platform of [
+            'Clash',
+            'ClashMeta',
+            'Shadowrocket',
+            'Stash',
+            'Egern',
+        ]) {
+            const output = produceExternal(platform, proxy, {
+                prettyYaml: true,
+            });
+            const external = loadProducedYaml(platform, proxy, {
+                prettyYaml: true,
+            });
+
+            expect(output, platform).to.not.match(/\n  - \{/);
+            expect(external.proxies, platform).to.have.length(1);
+
+            if (platform === 'Egern') {
+                expectSubset(external.proxies[0], {
+                    shadowsocks: {
+                        name: 'Real YAML',
+                    },
+                });
+            } else {
+                expectSubset(external.proxies[0], {
+                    type: 'ss',
+                    name: 'Real YAML',
+                });
+            }
         }
     });
 
