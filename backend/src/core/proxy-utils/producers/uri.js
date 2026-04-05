@@ -1,6 +1,7 @@
 /* eslint-disable no-case-declarations */
 import { Base64 } from 'js-base64';
 import { isIPv6 } from '@/utils';
+import { normalizePluginMuxValue } from './utils';
 
 function vless(proxy) {
     let security = 'none';
@@ -204,6 +205,7 @@ export default function URI_Producer() {
                             );
                             break;
                         case 'v2ray-plugin':
+                            const mux = normalizePluginMuxValue(opts.mux);
                             query += encodeURIComponent(
                                 `v2ray-plugin;obfs=${opts.mode}${
                                     opts.host ? ';obfs-host=' + opts.host : ''
@@ -216,7 +218,7 @@ export default function URI_Producer() {
                                         ? ';skip-cert-verify=' +
                                           opts['skip-cert-verify']
                                         : ''
-                                }${opts.mux != null ? ';mux=' + opts.mux : ''}`,
+                                }${mux != null ? ';mux=' + mux : ''}`,
                             );
                             break;
                         case 'shadow-tls':

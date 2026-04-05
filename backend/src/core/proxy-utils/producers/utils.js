@@ -30,6 +30,17 @@ export function isPresent(obj, attr) {
     return typeof data !== 'undefined' && data !== null;
 }
 
+export function normalizePluginMuxValue(mux) {
+    if (typeof mux === 'boolean') return Number(mux);
+    if (typeof mux === 'string') {
+        const normalized = mux.trim().toLowerCase();
+        if (normalized === 'true') return 1;
+        if (normalized === 'false') return 0;
+        if (/^\d+$/.test(normalized)) return parseInt(normalized, 10);
+    }
+    return mux;
+}
+
 export function produceProxyListOutput(list, type, opts = {}) {
     if (type === 'internal') return list;
 

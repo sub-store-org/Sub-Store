@@ -591,7 +591,7 @@ describe('Proxy structured producers', function () {
         ]) {
             const output = produceExternal(platform, proxy);
 
-            expect(output, platform).to.match(/\n  - \{/);
+            expect(output, platform).to.match(/\n {2}- \{/);
         }
     });
 
@@ -619,7 +619,7 @@ describe('Proxy structured producers', function () {
                 prettyYaml: true,
             });
 
-            expect(output, platform).to.not.match(/\n  - \{/);
+            expect(output, platform).to.not.match(/\n {2}- \{/);
             expect(external.proxies, platform).to.have.length(1);
 
             if (platform === 'Egern') {
@@ -722,6 +722,190 @@ describe('Proxy structured producers', function () {
         });
         expect(muxOff).to.not.have.property('multiplex');
         expect(muxOff.plugin_opts).to.include('mux=0');
+    });
+
+    it('normalizes boolean v2ray-plugin mux state in sing-box plugin opts', function () {
+        const buildProxy = (name, mux) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+                mux,
+            },
+        });
+
+        const output = loadProducedJson('sing-box', [
+            buildProxy('Sing-box Boolean Mux On', true),
+            buildProxy('Sing-box Boolean Mux Off', false),
+        ]);
+        const muxOn = output.outbounds.find(
+            (outbound) => outbound.tag === 'Sing-box Boolean Mux On',
+        );
+        const muxOff = output.outbounds.find(
+            (outbound) => outbound.tag === 'Sing-box Boolean Mux Off',
+        );
+
+        expectSubset(muxOn, {
+            tag: 'Sing-box Boolean Mux On',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+            multiplex: {
+                enabled: true,
+            },
+        });
+        expect(muxOn.plugin_opts).to.include('mux=1');
+
+        expectSubset(muxOff, {
+            tag: 'Sing-box Boolean Mux Off',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+        });
+        expect(muxOff).to.not.have.property('multiplex');
+        expect(muxOff.plugin_opts).to.include('mux=0');
+    });
+
+    it('round-trips Clash-style boolean v2ray-plugin mux flags into sing-box exports', function () {
+        const proxies = ProxyUtils.parse(`proxies:
+  - name: Clash Boolean Mux On
+    type: ss
+    server: ss.example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      host: cdn.example.com
+      path: /socket
+      tls: true
+      mux: true
+  - name: Clash Boolean Mux Off
+    type: ss
+    server: ss.example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      host: cdn.example.com
+      path: /socket
+      tls: true
+      mux: false
+`);
+
+        const output = loadProducedJson('sing-box', proxies);
+        const muxOn = output.outbounds.find(
+            (outbound) => outbound.tag === 'Clash Boolean Mux On',
+        );
+        const muxOff = output.outbounds.find(
+            (outbound) => outbound.tag === 'Clash Boolean Mux Off',
+        );
+
+        expectSubset(muxOn, {
+            tag: 'Clash Boolean Mux On',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+            multiplex: {
+                enabled: true,
+            },
+        });
+        expect(muxOn.plugin_opts).to.include('mux=1');
+
+        expectSubset(muxOff, {
+            tag: 'Clash Boolean Mux Off',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+        });
+        expect(muxOff).to.not.have.property('multiplex');
+        expect(muxOff.plugin_opts).to.include('mux=0');
+    });
+
+    it('round-trips Clash-style string boolean v2ray-plugin mux flags into sing-box exports', function () {
+        const proxies = ProxyUtils.parse(`proxies:
+  - name: Clash String Mux On
+    type: ss
+    server: ss.example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      host: cdn.example.com
+      path: /socket
+      tls: true
+      mux: ' TRUE '
+  - name: Clash String Mux Off
+    type: ss
+    server: ss.example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      host: cdn.example.com
+      path: /socket
+      tls: true
+      mux: ' false '
+`);
+
+        const output = loadProducedJson('sing-box', proxies);
+        const muxOn = output.outbounds.find(
+            (outbound) => outbound.tag === 'Clash String Mux On',
+        );
+        const muxOff = output.outbounds.find(
+            (outbound) => outbound.tag === 'Clash String Mux Off',
+        );
+
+        expectSubset(muxOn, {
+            tag: 'Clash String Mux On',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+            multiplex: {
+                enabled: true,
+            },
+        });
+        expect(muxOn.plugin_opts).to.include('mux=1');
+
+        expectSubset(muxOff, {
+            tag: 'Clash String Mux Off',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+        });
+        expect(muxOff).to.not.have.property('multiplex');
+        expect(muxOff.plugin_opts).to.include('mux=0');
+    });
+
+    it('treats string v2ray-plugin mux values from legacy JSON payloads as disabled in sing-box exports', function () {
+        const legacy = 'YWVzLTEyOC1nY206c2VjcmV0QHNzLmV4YW1wbGUuY29tOjgzODg=';
+        const plugin =
+            'eyJtb2RlIjoid2Vic29ja2V0IiwiaG9zdCI6ImNkbi5leGFtcGxlLmNvbSIsInBhdGgiOiIvc29ja2V0IiwidGxzIjp0cnVlLCJtdXgiOiIwIn0=';
+
+        const proxies = ProxyUtils.parse(
+            `ss://${legacy}?v2ray-plugin=${plugin}#Legacy%20JSON%20Mux%20Off`,
+        );
+        const output = loadProducedJson('sing-box', proxies);
+        const outbound = output.outbounds.find(
+            (item) => item.tag === 'Legacy JSON Mux Off',
+        );
+
+        expectSubset(outbound, {
+            tag: 'Legacy JSON Mux Off',
+            type: 'shadowsocks',
+            plugin: 'v2ray-plugin',
+        });
+        expect(outbound).to.not.have.property('multiplex');
+        expect(outbound.plugin_opts).to.include('mux=0');
     });
 
     it('emits sing-box outbounds with reality tls and websocket transport', function () {

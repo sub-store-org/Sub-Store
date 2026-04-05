@@ -271,6 +271,150 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('normalizes boolean v2ray-plugin mux values to integers in URI links', function () {
+        const muxOnPlugin = encodeURIComponent(
+            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
+        );
+        const muxOffPlugin = encodeURIComponent(
+            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
+        );
+
+        const muxOnOutput = produceExternal('URI', {
+            type: 'ss',
+            name: 'SS Boolean Mux On',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+                mux: true,
+            },
+        });
+        const muxOffOutput = produceExternal('URI', {
+            type: 'ss',
+            name: 'SS Boolean Mux Off',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                host: 'cdn.example.com',
+                path: '/socket',
+                mux: false,
+            },
+        });
+
+        expect(muxOnOutput).to.equal(
+            `ss://${Base64.encode(
+                'aes-128-gcm:secret',
+            )}@ss.example.com:443/?plugin=${muxOnPlugin}#SS%20Boolean%20Mux%20On`,
+        );
+        expect(muxOffOutput).to.equal(
+            `ss://${Base64.encode(
+                'aes-128-gcm:secret',
+            )}@ss.example.com:443/?plugin=${muxOffPlugin}#SS%20Boolean%20Mux%20Off`,
+        );
+    });
+
+    it('round-trips Clash-style boolean v2ray-plugin mux flags into URI links', function () {
+        const proxies = ProxyUtils.parse(`proxies:
+  - name: Clash Boolean Mux On
+    type: ss
+    server: ss.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      host: cdn.example.com
+      path: /socket
+      tls: true
+      mux: true
+  - name: Clash Boolean Mux Off
+    type: ss
+    server: ss.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      host: cdn.example.com
+      path: /socket
+      mux: false
+`);
+
+        const output = produceExternal('URI', proxies);
+        const userInfo = Base64.encode('aes-128-gcm:secret');
+        const muxOnPlugin = encodeURIComponent(
+            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
+        );
+        const muxOffPlugin = encodeURIComponent(
+            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
+        );
+
+        expect(output).to.equal(
+            [
+                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOnPlugin}#Clash%20Boolean%20Mux%20On`,
+                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOffPlugin}#Clash%20Boolean%20Mux%20Off`,
+            ].join('\n'),
+        );
+    });
+
+    it('round-trips Clash-style string boolean v2ray-plugin mux flags into URI links', function () {
+        const proxies = ProxyUtils.parse(`proxies:
+  - name: Clash String Mux On
+    type: ss
+    server: ss.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      host: cdn.example.com
+      path: /socket
+      tls: true
+      mux: ' TRUE '
+  - name: Clash String Mux Off
+    type: ss
+    server: ss.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      host: cdn.example.com
+      path: /socket
+      mux: ' false '
+`);
+
+        const output = produceExternal('URI', proxies);
+        const userInfo = Base64.encode('aes-128-gcm:secret');
+        const muxOnPlugin = encodeURIComponent(
+            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
+        );
+        const muxOffPlugin = encodeURIComponent(
+            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
+        );
+
+        expect(output).to.equal(
+            [
+                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOnPlugin}#Clash%20String%20Mux%20On`,
+                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOffPlugin}#Clash%20String%20Mux%20Off`,
+            ].join('\n'),
+        );
+    });
+
     it('produces URI VLESS reality websocket links', function () {
         const output = produceExternal('URI', {
             type: 'vless',
