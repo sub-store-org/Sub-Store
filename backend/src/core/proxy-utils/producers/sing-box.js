@@ -265,11 +265,7 @@ const normalizePemLines = (value, label) => {
     if (lines.some((line) => /^-----BEGIN [A-Za-z0-9 -]+-----$/.test(line))) {
         return lines;
     }
-    return [
-        `-----BEGIN ${label}-----`,
-        ...lines,
-        `-----END ${label}-----`,
-    ];
+    return [`-----BEGIN ${label}-----`, ...lines, `-----END ${label}-----`];
 };
 
 const tlsParser = (proxy, parsedProxy) => {

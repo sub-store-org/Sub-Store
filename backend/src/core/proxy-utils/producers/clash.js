@@ -160,10 +160,7 @@ export default function Clash_Producer() {
                         proxy[`${proxy.network}-opts`].path = '/';
                     }
                 }
-                let mux = proxy['plugin-opts']?.mux;
-                if (mux != null && typeof mux !== 'boolean') {
-                    proxy['plugin-opts'].mux = mux > 0 ? true : false;
-                }
+
                 if (proxy['plugin-opts']?.tls) {
                     if (isPresent(proxy, 'skip-cert-verify')) {
                         proxy['plugin-opts']['skip-cert-verify'] =

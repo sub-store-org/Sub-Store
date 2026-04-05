@@ -520,7 +520,7 @@ describe('Proxy structured producers', function () {
         });
     });
 
-    it('normalizes numeric v2ray-plugin mux values across Clash-family YAML producers', function () {
+    it('preserves numeric v2ray-plugin mux values across Clash-family YAML producers', function () {
         const buildProxy = (name, mux) => ({
             type: 'ss',
             name,
@@ -557,7 +557,7 @@ describe('Proxy structured producers', function () {
                 'plugin-opts': {
                     tls: true,
                     'skip-cert-verify': true,
-                    mux: true,
+                    mux: 1,
                 },
             });
             expectSubset(internal[1], {
@@ -565,7 +565,7 @@ describe('Proxy structured producers', function () {
                 'plugin-opts': {
                     tls: true,
                     'skip-cert-verify': true,
-                    mux: false,
+                    mux: 0,
                 },
             });
         }
@@ -609,7 +609,7 @@ describe('Proxy structured producers', function () {
         });
     });
 
-    it('keeps normalized v2ray-plugin mux state in sing-box plugin opts', function () {
+    it('keeps numeric v2ray-plugin mux state in sing-box plugin opts', function () {
         const buildProxy = (name, mux) => ({
             type: 'ss',
             name,
@@ -647,7 +647,7 @@ describe('Proxy structured producers', function () {
                 enabled: true,
             },
         });
-        expect(muxOn.plugin_opts).to.include('mux=true');
+        expect(muxOn.plugin_opts).to.include('mux=1');
 
         expectSubset(muxOff, {
             tag: 'Sing-box Mux Off',
@@ -655,7 +655,7 @@ describe('Proxy structured producers', function () {
             plugin: 'v2ray-plugin',
         });
         expect(muxOff).to.not.have.property('multiplex');
-        expect(muxOff.plugin_opts).to.include('mux=false');
+        expect(muxOff.plugin_opts).to.include('mux=0');
     });
 
     it('emits sing-box outbounds with reality tls and websocket transport', function () {

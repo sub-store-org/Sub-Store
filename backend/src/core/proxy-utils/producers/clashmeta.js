@@ -239,10 +239,6 @@ export default function ClashMeta_Producer() {
                     }
                 }
 
-                let mux = proxy['plugin-opts']?.mux;
-                if (mux != null && typeof mux !== 'boolean') {
-                    proxy['plugin-opts'].mux = mux > 0 ? true : false;
-                }
                 if (proxy['plugin-opts']?.tls) {
                     if (isPresent(proxy, 'skip-cert-verify')) {
                         proxy['plugin-opts']['skip-cert-verify'] =
