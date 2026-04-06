@@ -376,6 +376,14 @@ describe('VMess and VLESS parser coverage', function () {
             const extra = JSON.stringify({
                 noGRPCHeader: true,
                 xPaddingBytes: '64-128',
+                scMaxEachPostBytes: 1000000,
+                xmux: {
+                    maxConnections: 0,
+                    maxConcurrency: '16-32',
+                    cMaxReuseTimes: '64-128',
+                    hMaxRequestTimes: '600-900',
+                    hMaxReusableSecs: '1800-3000',
+                },
             });
             const proxy = parseOne(
                 `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP`,
@@ -398,6 +406,14 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                     'no-grpc-header': true,
                     'x-padding-bytes': '64-128',
+                    'sc-max-each-post-bytes': 1000000,
+                    'reuse-settings': {
+                        'max-connections': '0',
+                        'max-concurrency': '16-32',
+                        'c-max-reuse-times': '64-128',
+                        'h-max-request-times': '600-900',
+                        'h-max-reusable-secs': '1800-3000',
+                    },
                 },
             });
         });

@@ -863,14 +863,50 @@ function URI_VLESS() {
                             'It is too complex to convert the downloadSettings in extra into the Mihomo format, so it is not supported.',
                         );
                     }
-                    proxy[`${proxy.network}-opts`] = {
-                        'no-grpc-header': extra?.['noGRPCHeader'],
-                        'x-padding-bytes': extra?.['xPaddingBytes'],
-                        // 'sc-max-each-post-bytes': extra['scMaxEachPostBytes'],
-                        // 'sc-min-posts-interval-ms': extra['scMinPostsIntervalMs'],
-                        mode: params.mode,
+                    const xhttpOpts = {
                         ...proxy[`${proxy.network}-opts`],
+                        mode: params.mode,
                     };
+                    if (extra?.['noGRPCHeader'] === true) {
+                        xhttpOpts['no-grpc-header'] = true;
+                    }
+                    if (isNotBlank(extra?.['xPaddingBytes'])) {
+                        xhttpOpts['x-padding-bytes'] = extra['xPaddingBytes'];
+                    }
+                    if (
+                        typeof extra?.['scMaxEachPostBytes'] === 'number' &&
+                        Number.isFinite(extra['scMaxEachPostBytes'])
+                    ) {
+                        xhttpOpts['sc-max-each-post-bytes'] =
+                            extra['scMaxEachPostBytes'];
+                    }
+                    if (isPlainObject(extra?.xmux)) {
+                        const reuseSettings = {};
+                        const xmuxFieldMap = {
+                            maxConnections: 'max-connections',
+                            maxConcurrency: 'max-concurrency',
+                            cMaxReuseTimes: 'c-max-reuse-times',
+                            hMaxRequestTimes: 'h-max-request-times',
+                            hMaxReusableSecs: 'h-max-reusable-secs',
+                        };
+                        for (const [sourceKey, targetKey] of Object.entries(
+                            xmuxFieldMap,
+                        )) {
+                            const value = extra.xmux[sourceKey];
+                            if (typeof value === 'string' && value !== '') {
+                                reuseSettings[targetKey] = value;
+                            } else if (
+                                typeof value === 'number' &&
+                                Number.isFinite(value)
+                            ) {
+                                reuseSettings[targetKey] = `${value}`;
+                            }
+                        }
+                        if (Object.keys(reuseSettings).length > 0) {
+                            xhttpOpts['reuse-settings'] = reuseSettings;
+                        }
+                    }
+                    proxy[`${proxy.network}-opts`] = xhttpOpts;
                 } else {
                     proxy._mode = params.mode;
                 }
