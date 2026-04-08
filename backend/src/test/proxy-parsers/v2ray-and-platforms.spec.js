@@ -1,4 +1,5 @@
 import { Base64 } from 'js-base64';
+import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
 import { UUID, expectSubset, parseOne } from './helpers';
@@ -416,6 +417,149 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                 },
             });
+        });
+
+        it('parses xhttp VLESS shares with range-form scMaxEachPostBytes', function () {
+            const extra = JSON.stringify({
+                noGRPCHeader: true,
+                xPaddingBytes: '64-128',
+                scMaxEachPostBytes: '500000 - 1000000',
+                xmux: {
+                    maxConnections: 0,
+                    maxConcurrency: '16-32',
+                    cMaxReuseTimes: '64-128',
+                    hMaxRequestTimes: '600-900',
+                    hMaxReusableSecs: '1800-3000',
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20Range`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Range',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                _extra: extra,
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'no-grpc-header': true,
+                    'x-padding-bytes': '64-128',
+                    'sc-max-each-post-bytes': 1000000,
+                    'reuse-settings': {
+                        'max-connections': '0',
+                        'max-concurrency': '16-32',
+                        'c-max-reuse-times': '64-128',
+                        'h-max-request-times': '600-900',
+                        'h-max-reusable-secs': '1800-3000',
+                    },
+                },
+            });
+        });
+
+        it('parses xhttp VLESS shares with string-form scMaxEachPostBytes', function () {
+            const extra = JSON.stringify({
+                noGRPCHeader: true,
+                xPaddingBytes: '64-128',
+                scMaxEachPostBytes: '1000000',
+                xmux: {
+                    maxConnections: 0,
+                    maxConcurrency: '16-32',
+                    cMaxReuseTimes: '64-128',
+                    hMaxRequestTimes: '600-900',
+                    hMaxReusableSecs: '1800-3000',
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20String`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP String',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                _extra: extra,
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'no-grpc-header': true,
+                    'x-padding-bytes': '64-128',
+                    'sc-max-each-post-bytes': 1000000,
+                    'reuse-settings': {
+                        'max-connections': '0',
+                        'max-concurrency': '16-32',
+                        'c-max-reuse-times': '64-128',
+                        'h-max-request-times': '600-900',
+                        'h-max-reusable-secs': '1800-3000',
+                    },
+                },
+            });
+        });
+
+        it('ignores invalid xhttp VLESS scMaxEachPostBytes values', function () {
+            const invalidValues = ['1.5', 1.5, '0', 0, 'fast', '10-1'];
+
+            for (const value of invalidValues) {
+                const extra = JSON.stringify({
+                    noGRPCHeader: true,
+                    xPaddingBytes: '64-128',
+                    scMaxEachPostBytes: value,
+                    xmux: {
+                        maxConnections: 0,
+                        maxConcurrency: '16-32',
+                        cMaxReuseTimes: '64-128',
+                        hMaxRequestTimes: '600-900',
+                        hMaxReusableSecs: '1800-3000',
+                    },
+                });
+                const proxy = parseOne(
+                    `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20Invalid`,
+                );
+
+                expectSubset(proxy, {
+                    type: 'vless',
+                    server: 'vless-xhttp.example.com',
+                    port: 443,
+                    uuid: UUID,
+                    tls: true,
+                    network: 'xhttp',
+                    _extra: extra,
+                    'xhttp-opts': {
+                        mode: 'stream-up',
+                        path: '/xhttp',
+                        headers: {
+                            Host: 'cdn.example.com',
+                        },
+                        'no-grpc-header': true,
+                        'x-padding-bytes': '64-128',
+                        'reuse-settings': {
+                            'max-connections': '0',
+                            'max-concurrency': '16-32',
+                            'c-max-reuse-times': '64-128',
+                            'h-max-request-times': '600-900',
+                            'h-max-reusable-secs': '1800-3000',
+                        },
+                    },
+                });
+                expect(proxy['xhttp-opts']).to.not.have.property(
+                    'sc-max-each-post-bytes',
+                );
+            }
         });
 
         it('parses Shadowrocket VLESS shares', function () {

@@ -873,12 +873,32 @@ function URI_VLESS() {
                     if (isNotBlank(extra?.['xPaddingBytes'])) {
                         xhttpOpts['x-padding-bytes'] = extra['xPaddingBytes'];
                     }
+                    const scMaxEachPostBytes =
+                        extra?.['scMaxEachPostBytes'];
                     if (
-                        typeof extra?.['scMaxEachPostBytes'] === 'number' &&
-                        Number.isFinite(extra['scMaxEachPostBytes'])
+                        typeof scMaxEachPostBytes === 'string' ||
+                        typeof scMaxEachPostBytes === 'number'
                     ) {
-                        xhttpOpts['sc-max-each-post-bytes'] =
-                            extra['scMaxEachPostBytes'];
+                        const normalizedValue = `${scMaxEachPostBytes}`;
+                        if (/^\s*[1-9]\d*\s*$/.test(normalizedValue)) {
+                            xhttpOpts['sc-max-each-post-bytes'] = parseInt(
+                                normalizedValue,
+                                10,
+                            );
+                        } else {
+                            const rangeMatch = normalizedValue.match(
+                                /^\s*([1-9]\d*)\s*-\s*([1-9]\d*)\s*$/,
+                            );
+                            if (rangeMatch) {
+                                const lowerBound = parseInt(rangeMatch[1], 10);
+                                const upperBound = parseInt(rangeMatch[2], 10);
+
+                                if (upperBound >= lowerBound) {
+                                    xhttpOpts['sc-max-each-post-bytes'] =
+                                        upperBound;
+                                }
+                            }
+                        }
                     }
                     if (isPlainObject(extra?.xmux)) {
                         const reuseSettings = {};
