@@ -88,6 +88,13 @@ function parse(raw) {
                 $.info(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
             }
             // return isProxyUUIDValid;
+        } else if (['hysteria2'].includes(proxy.type)) {
+            if (proxy.obfs && !proxy['obfs-password']) {
+                $.error(
+                    `Proxy ${proxy.name} has obfs ${proxy.obfs} but missing obfs-password`,
+                );
+                return false;
+            }
         }
         return true;
     });

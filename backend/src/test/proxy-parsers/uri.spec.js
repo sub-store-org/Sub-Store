@@ -2,7 +2,7 @@ import { Base64 } from 'js-base64';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
-import { UUID, parseOne, expectSubset } from './helpers';
+import { UUID, parseAll, parseOne, expectSubset } from './helpers';
 
 describe('Proxy URI parser coverage', function () {
     describe('generic URIs', function () {
@@ -295,6 +295,14 @@ describe('Proxy URI parser coverage', function () {
                 ports: '9000,9002-9004',
                 password: 'hy2-secret',
             });
+        });
+
+        it('rejects Hysteria2 salamander obfs without obfs-password', function () {
+            const proxies = parseAll(
+                'hy2://hy2-secret@hy2.example.com:443?obfs=salamander#Hy2%20Missing%20Password',
+            );
+
+            expect(proxies).to.deep.equal([]);
         });
 
         it('parses TUIC URIs with colon-containing passwords and booleans', function () {
