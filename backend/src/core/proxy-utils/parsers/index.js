@@ -693,6 +693,115 @@ function URI_VLESS() {
         return /^vless:\/\//.test(line);
     };
     const parse = (line) => {
+        const mapXmuxToReuseSettings = (xmux) => {
+            if (!isPlainObject(xmux)) {
+                return undefined;
+            }
+
+            const reuseSettings = {};
+            const xmuxFieldMap = {
+                maxConnections: 'max-connections',
+                maxConcurrency: 'max-concurrency',
+                cMaxReuseTimes: 'c-max-reuse-times',
+                hMaxRequestTimes: 'h-max-request-times',
+                hMaxReusableSecs: 'h-max-reusable-secs',
+            };
+
+            for (const [sourceKey, targetKey] of Object.entries(
+                xmuxFieldMap,
+            )) {
+                const value = xmux[sourceKey];
+                if (typeof value === 'string' && value !== '') {
+                    reuseSettings[targetKey] = value;
+                } else if (
+                    typeof value === 'number' &&
+                    Number.isFinite(value)
+                ) {
+                    reuseSettings[targetKey] = `${value}`;
+                }
+            }
+
+            return Object.keys(reuseSettings).length > 0
+                ? reuseSettings
+                : undefined;
+        };
+
+        const parseDownloadSettings = (downloadSettings) => {
+            if (!isPlainObject(downloadSettings)) {
+                return undefined;
+            }
+
+            const parsedDownloadSettings = {};
+            if (isNotBlank(downloadSettings.address)) {
+                parsedDownloadSettings.server = downloadSettings.address;
+            }
+
+            if (
+                typeof downloadSettings.port === 'number' &&
+                Number.isFinite(downloadSettings.port)
+            ) {
+                parsedDownloadSettings.port = parseInt(
+                    `${downloadSettings.port}`,
+                    10,
+                );
+            }
+
+            if (
+                typeof downloadSettings.security === 'string' &&
+                downloadSettings.security.toLowerCase() === 'tls'
+            ) {
+                parsedDownloadSettings.tls = true;
+            }
+
+            if (isPlainObject(downloadSettings.tlsSettings)) {
+                if (isNotBlank(downloadSettings.tlsSettings.serverName)) {
+                    parsedDownloadSettings.servername =
+                        downloadSettings.tlsSettings.serverName;
+                }
+                if (isNotBlank(downloadSettings.tlsSettings.fingerprint)) {
+                    parsedDownloadSettings['client-fingerprint'] =
+                        downloadSettings.tlsSettings.fingerprint;
+                }
+                if (Array.isArray(downloadSettings.tlsSettings.alpn)) {
+                    const alpn = downloadSettings.tlsSettings.alpn.filter(
+                        (item) => typeof item === 'string' && item !== '',
+                    );
+                    if (alpn.length > 0) {
+                        parsedDownloadSettings.alpn = alpn;
+                    }
+                }
+            }
+
+            if (isPlainObject(downloadSettings.xhttpSettings)) {
+                if (isNotBlank(downloadSettings.xhttpSettings.path)) {
+                    parsedDownloadSettings.path =
+                        downloadSettings.xhttpSettings.path;
+                }
+                if (isNotBlank(downloadSettings.xhttpSettings.host)) {
+                    parsedDownloadSettings.host =
+                        downloadSettings.xhttpSettings.host;
+                }
+                if (downloadSettings.xhttpSettings.noGRPCHeader === true) {
+                    parsedDownloadSettings['no-grpc-header'] = true;
+                }
+                if (isNotBlank(downloadSettings.xhttpSettings.xPaddingBytes)) {
+                    parsedDownloadSettings['x-padding-bytes'] =
+                        downloadSettings.xhttpSettings.xPaddingBytes;
+                }
+
+                const reuseSettings = mapXmuxToReuseSettings(
+                    downloadSettings.xhttpSettings.extra?.xmux,
+                );
+                if (reuseSettings) {
+                    parsedDownloadSettings['reuse-settings'] = reuseSettings;
+                }
+            }
+
+            return Object.keys(parsedDownloadSettings).length > 0
+                ? parsedDownloadSettings
+                : undefined;
+        };
+
         line = line.split('vless://')[1];
         let isShadowrocket;
         let parsed = /^(.*?)@(.*?):(\d+)\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
@@ -721,6 +830,7 @@ function URI_VLESS() {
             server,
             port,
             uuid,
+            udp: true,
         };
         const params = {};
         for (const addon of addons.split('&')) {
@@ -761,6 +871,17 @@ function URI_VLESS() {
         proxy._pcs = getIfPresent(params.pcs);
         proxy._h2 = /(TRUE)|1/i.test(params.h2);
 
+        switch (`${params.packetEncoding || ''}`.toLowerCase()) {
+            case 'none':
+                break;
+            case 'packet':
+                proxy['packet-addr'] = true;
+                break;
+            default:
+                proxy.xudp = true;
+                break;
+        }
+
         if (['reality'].includes(params.security)) {
             const opts = {};
             if (params.pbk) {
@@ -778,14 +899,16 @@ function URI_VLESS() {
             }
         }
         let httpupgrade = false;
-        proxy.network = params.type;
+        proxy.network = params.type || 'tcp';
         if (proxy.network === 'tcp' && params.headerType === 'http') {
             proxy.network = 'http';
+        } else if (proxy.network === 'http') {
+            proxy.network = 'h2';
         } else if (proxy.network === 'httpupgrade') {
             proxy.network = 'ws';
             httpupgrade = true;
         }
-        if (!proxy.network && isShadowrocket && params.obfs) {
+        if (!params.type && isShadowrocket && params.obfs) {
             proxy.network = params.obfs;
             if (['none'].includes(proxy.network)) {
                 proxy.network = 'tcp';
@@ -824,6 +947,9 @@ function URI_VLESS() {
             if (params.path) {
                 opts.path = params.path;
             }
+            if (proxy.network === 'http' && params.method) {
+                opts.method = params.method;
+            }
             // https://github.com/XTLS/Xray-core/issues/91
             if (['grpc'].includes(proxy.network)) {
                 opts['_grpc-type'] = params.mode || 'gun';
@@ -831,6 +957,30 @@ function URI_VLESS() {
             if (httpupgrade) {
                 opts['v2ray-http-upgrade'] = true;
                 opts['v2ray-http-upgrade-fast-open'] = true;
+            }
+            if (params.ed) {
+                const maxEarlyDataRaw = `${params.ed}`;
+                if (!/^\d+$/.test(maxEarlyDataRaw)) {
+                    throw new Error(
+                        `bad WebSocket max early data size: ${params.ed}`,
+                    );
+                }
+                const maxEarlyData = parseInt(maxEarlyDataRaw, 10);
+                if (!Number.isSafeInteger(maxEarlyData)) {
+                    throw new Error(
+                        `bad WebSocket max early data size: ${params.ed}`,
+                    );
+                }
+                if (httpupgrade) {
+                    opts['max-early-data'] = maxEarlyData;
+                } else if (proxy.network === 'ws') {
+                    opts['max-early-data'] = maxEarlyData;
+                    opts['early-data-header-name'] =
+                        params.eh || 'Sec-WebSocket-Protocol';
+                }
+            }
+            if (params.eh && (proxy.network === 'ws' || httpupgrade)) {
+                opts['early-data-header-name'] = params.eh;
             }
             if (Object.keys(opts).length > 0) {
                 proxy[`${proxy.network}-opts`] = opts;
@@ -846,90 +996,70 @@ function URI_VLESS() {
             if (params.extra) {
                 proxy._extra = params.extra;
             }
-            // 太麻烦了 暂时 extra 原封不动
-            // 单独解析一下
-            if (params.mode) {
-                if (['xhttp'].includes(proxy.network)) {
-                    let extra = {};
-                    try {
-                        extra = proxy._extra ? JSON.parse(proxy._extra) : {};
-                    } catch (e) {
-                        $.error(
-                            `Failed to parse extra field as JSON: ${proxy._extra}`,
-                        );
-                    }
-                    if (extra?.downloadSettings) {
-                        $.error(
-                            'It is too complex to convert the downloadSettings in extra into the Mihomo format, so it is not supported.',
-                        );
-                    }
-                    const xhttpOpts = {
-                        ...proxy[`${proxy.network}-opts`],
-                        mode: params.mode,
-                    };
-                    if (extra?.['noGRPCHeader'] === true) {
-                        xhttpOpts['no-grpc-header'] = true;
-                    }
-                    if (isNotBlank(extra?.['xPaddingBytes'])) {
-                        xhttpOpts['x-padding-bytes'] = extra['xPaddingBytes'];
-                    }
-                    const scMaxEachPostBytes =
-                        extra?.['scMaxEachPostBytes'];
-                    if (
-                        typeof scMaxEachPostBytes === 'string' ||
-                        typeof scMaxEachPostBytes === 'number'
-                    ) {
-                        const normalizedValue = `${scMaxEachPostBytes}`;
-                        if (/^\s*[1-9]\d*\s*$/.test(normalizedValue)) {
-                            xhttpOpts['sc-max-each-post-bytes'] = parseInt(
-                                normalizedValue,
-                                10,
-                            );
-                        } else {
-                            const rangeMatch = normalizedValue.match(
-                                /^\s*([1-9]\d*)\s*-\s*([1-9]\d*)\s*$/,
-                            );
-                            if (rangeMatch) {
-                                const lowerBound = parseInt(rangeMatch[1], 10);
-                                const upperBound = parseInt(rangeMatch[2], 10);
-
-                                if (upperBound >= lowerBound) {
-                                    xhttpOpts['sc-max-each-post-bytes'] =
-                                        upperBound;
-                                }
-                            }
-                        }
-                    }
-                    if (isPlainObject(extra?.xmux)) {
-                        const reuseSettings = {};
-                        const xmuxFieldMap = {
-                            maxConnections: 'max-connections',
-                            maxConcurrency: 'max-concurrency',
-                            cMaxReuseTimes: 'c-max-reuse-times',
-                            hMaxRequestTimes: 'h-max-request-times',
-                            hMaxReusableSecs: 'h-max-reusable-secs',
-                        };
-                        for (const [sourceKey, targetKey] of Object.entries(
-                            xmuxFieldMap,
-                        )) {
-                            const value = extra.xmux[sourceKey];
-                            if (typeof value === 'string' && value !== '') {
-                                reuseSettings[targetKey] = value;
-                            } else if (
-                                typeof value === 'number' &&
-                                Number.isFinite(value)
-                            ) {
-                                reuseSettings[targetKey] = `${value}`;
-                            }
-                        }
-                        if (Object.keys(reuseSettings).length > 0) {
-                            xhttpOpts['reuse-settings'] = reuseSettings;
-                        }
-                    }
-                    proxy[`${proxy.network}-opts`] = xhttpOpts;
-                } else {
-                    proxy._mode = params.mode;
+            if (['xhttp'].includes(proxy.network)) {
+                let extra = {};
+                try {
+                    extra = proxy._extra ? JSON.parse(proxy._extra) : {};
+                } catch (e) {
+                    $.error(
+                        `Failed to parse extra field as JSON: ${proxy._extra}`,
+                    );
                 }
+                const xhttpOpts = {
+                    ...(proxy[`${proxy.network}-opts`] || {}),
+                };
+                if (params.mode) {
+                    xhttpOpts.mode = params.mode;
+                }
+                if (extra?.['noGRPCHeader'] === true) {
+                    xhttpOpts['no-grpc-header'] = true;
+                }
+                if (isNotBlank(extra?.['xPaddingBytes'])) {
+                    xhttpOpts['x-padding-bytes'] = extra['xPaddingBytes'];
+                }
+                const scMaxEachPostBytes = extra?.['scMaxEachPostBytes'];
+                if (
+                    typeof scMaxEachPostBytes === 'string' ||
+                    typeof scMaxEachPostBytes === 'number'
+                ) {
+                    const normalizedValue = `${scMaxEachPostBytes}`;
+                    if (/^\s*[1-9]\d*\s*$/.test(normalizedValue)) {
+                        xhttpOpts['sc-max-each-post-bytes'] = parseInt(
+                            normalizedValue,
+                            10,
+                        );
+                    } else {
+                        const rangeMatch = normalizedValue.match(
+                            /^\s*([1-9]\d*)\s*-\s*([1-9]\d*)\s*$/,
+                        );
+                        if (rangeMatch) {
+                            const lowerBound = parseInt(rangeMatch[1], 10);
+                            const upperBound = parseInt(rangeMatch[2], 10);
+
+                            if (upperBound >= lowerBound) {
+                                xhttpOpts['sc-max-each-post-bytes'] =
+                                    upperBound;
+                            }
+                        }
+                    }
+                }
+                if (isPlainObject(extra?.xmux)) {
+                    const reuseSettings = mapXmuxToReuseSettings(extra.xmux);
+                    if (reuseSettings) {
+                        xhttpOpts['reuse-settings'] = reuseSettings;
+                    }
+                }
+                const downloadSettings = parseDownloadSettings(
+                    extra?.downloadSettings,
+                );
+                if (downloadSettings) {
+                    xhttpOpts['download-settings'] = downloadSettings;
+                }
+                if (Object.keys(xhttpOpts).length > 0) {
+                    proxy[`${proxy.network}-opts`] = xhttpOpts;
+                }
+            } else if (params.mode) {
+                proxy._mode = params.mode;
             }
         }
         if (params.encryption) {

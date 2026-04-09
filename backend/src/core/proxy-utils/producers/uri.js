@@ -3,6 +3,159 @@ import { Base64 } from 'js-base64';
 import { isIPv6 } from '@/utils';
 import { normalizePluginMuxValue } from './utils';
 
+function isObject(value) {
+    return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function getTransportHost(network, transportOpts = {}) {
+    if (network === 'h2') {
+        return (
+            transportOpts.host ??
+            transportOpts.headers?.host ??
+            transportOpts.headers?.Host
+        );
+    }
+    if (network === 'xhttp') {
+        return (
+            transportOpts.host ??
+            transportOpts.headers?.Host ??
+            transportOpts.headers?.host
+        );
+    }
+    return (
+        transportOpts.headers?.Host ??
+        transportOpts.headers?.host ??
+        transportOpts.host
+    );
+}
+
+function mapReuseSettingsToXmux(reuseSettings) {
+    if (!isObject(reuseSettings)) {
+        return undefined;
+    }
+
+    const xmux = {};
+    const reuseFieldMap = {
+        'max-connections': 'maxConnections',
+        'max-concurrency': 'maxConcurrency',
+        'c-max-reuse-times': 'cMaxReuseTimes',
+        'h-max-request-times': 'hMaxRequestTimes',
+        'h-max-reusable-secs': 'hMaxReusableSecs',
+    };
+
+    for (const [sourceKey, targetKey] of Object.entries(reuseFieldMap)) {
+        const value = reuseSettings[sourceKey];
+        if (typeof value === 'string' && value !== '') {
+            xmux[targetKey] = value;
+        } else if (typeof value === 'number' && Number.isFinite(value)) {
+            xmux[targetKey] = `${value}`;
+        }
+    }
+
+    return Object.keys(xmux).length > 0 ? xmux : undefined;
+}
+
+function buildXhttpDownloadSettings(downloadSettings) {
+    if (!isObject(downloadSettings)) {
+        return undefined;
+    }
+
+    const result = {};
+    if (downloadSettings.server) {
+        result.address = downloadSettings.server;
+    }
+    if (
+        downloadSettings.port != null &&
+        !Number.isNaN(parseInt(`${downloadSettings.port}`, 10))
+    ) {
+        result.port = parseInt(`${downloadSettings.port}`, 10);
+    }
+    if (downloadSettings.tls) {
+        result.security = 'tls';
+    }
+
+    const tlsSettings = {};
+    if (downloadSettings.servername) {
+        tlsSettings.serverName = downloadSettings.servername;
+    }
+    if (downloadSettings['client-fingerprint']) {
+        tlsSettings.fingerprint = downloadSettings['client-fingerprint'];
+    }
+    if (downloadSettings.alpn) {
+        tlsSettings.alpn = Array.isArray(downloadSettings.alpn)
+            ? downloadSettings.alpn
+            : [downloadSettings.alpn];
+    }
+    if (Object.keys(tlsSettings).length > 0) {
+        result.tlsSettings = tlsSettings;
+    }
+
+    const xhttpSettings = {};
+    if (downloadSettings.path) {
+        xhttpSettings.path = downloadSettings.path;
+    }
+    if (downloadSettings.host) {
+        xhttpSettings.host = downloadSettings.host;
+    }
+    if (downloadSettings['no-grpc-header']) {
+        xhttpSettings.noGRPCHeader = true;
+    }
+    if (downloadSettings['x-padding-bytes']) {
+        xhttpSettings.xPaddingBytes = downloadSettings['x-padding-bytes'];
+    }
+
+    const xmux = mapReuseSettingsToXmux(downloadSettings['reuse-settings']);
+    if (xmux) {
+        xhttpSettings.extra = { xmux };
+    }
+    if (Object.keys(xhttpSettings).length > 0) {
+        result.xhttpSettings = xhttpSettings;
+    }
+
+    return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function buildStructuredVlessExtra(proxy) {
+    const xhttpOpts = proxy['xhttp-opts'] || {};
+    const extra = {};
+
+    if (xhttpOpts['no-grpc-header'] === true) {
+        extra.noGRPCHeader = true;
+    }
+    if (xhttpOpts['x-padding-bytes']) {
+        extra.xPaddingBytes = xhttpOpts['x-padding-bytes'];
+    }
+    if (xhttpOpts['sc-max-each-post-bytes'] != null) {
+        extra.scMaxEachPostBytes = xhttpOpts['sc-max-each-post-bytes'];
+    }
+
+    const xmux = mapReuseSettingsToXmux(xhttpOpts['reuse-settings']);
+    if (xmux) {
+        extra.xmux = xmux;
+    }
+
+    const downloadSettings = buildXhttpDownloadSettings(
+        xhttpOpts['download-settings'],
+    );
+    if (downloadSettings) {
+        extra.downloadSettings = downloadSettings;
+    }
+
+    return Object.keys(extra).length > 0 ? JSON.stringify(extra) : '';
+}
+
+function buildVlessExtra(proxy) {
+    if (proxy.network !== 'xhttp') {
+        return proxy._extra || '';
+    }
+
+    if (proxy._extra) {
+        return proxy._extra;
+    }
+
+    return buildStructuredVlessExtra(proxy);
+}
+
 function vless(proxy) {
     let security = 'none';
     const isReality = proxy['reality-opts'];
@@ -61,8 +214,9 @@ function vless(proxy) {
         flow = `&flow=${encodeURIComponent(proxy.flow)}`;
     }
     let extra = '';
-    if (proxy._extra) {
-        extra = `&extra=${encodeURIComponent(proxy._extra)}`;
+    const extraPayload = buildVlessExtra(proxy);
+    if (extraPayload) {
+        extra = `&extra=${encodeURIComponent(extraPayload)}`;
     }
     let mode = '';
     if (
@@ -86,9 +240,16 @@ function vless(proxy) {
     let vlessType = proxy.network;
     if (proxy.network === 'ws' && proxy['ws-opts']?.['v2ray-http-upgrade']) {
         vlessType = 'httpupgrade';
+    } else if (proxy.network === 'http') {
+        vlessType = 'tcp';
+    } else if (proxy.network === 'h2') {
+        vlessType = 'http';
     }
 
     let vlessTransport = `&type=${encodeURIComponent(vlessType)}`;
+    if (proxy.network === 'http') {
+        vlessTransport += '&headerType=http';
+    }
     if (['grpc'].includes(proxy.network)) {
         // https://github.com/XTLS/Xray-core/issues/91
         vlessTransport += `&mode=${encodeURIComponent(
@@ -100,10 +261,11 @@ function vless(proxy) {
         }
     }
 
+    const transportOpts = proxy[`${proxy.network}-opts`] || {};
     let vlessTransportServiceName =
-        proxy[`${proxy.network}-opts`]?.[`${proxy.network}-service-name`];
-    let vlessTransportPath = proxy[`${proxy.network}-opts`]?.path;
-    let vlessTransportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
+        transportOpts?.[`${proxy.network}-service-name`];
+    let vlessTransportPath = transportOpts?.path;
+    let vlessTransportHost = getTransportHost(proxy.network, transportOpts);
     if (vlessTransportPath) {
         vlessTransport += `&path=${encodeURIComponent(
             Array.isArray(vlessTransportPath)
@@ -123,6 +285,11 @@ function vless(proxy) {
             vlessTransportServiceName,
         )}`;
     }
+    if (proxy.network === 'http' && proxy['http-opts']?.method) {
+        vlessTransport += `&method=${encodeURIComponent(
+            proxy['http-opts'].method,
+        )}`;
+    }
     if (proxy.network === 'kcp') {
         if (proxy.seed) {
             vlessTransport += `&seed=${encodeURIComponent(proxy.seed)}`;
@@ -133,12 +300,46 @@ function vless(proxy) {
             )}`;
         }
     }
+    if (
+        proxy.network === 'ws' &&
+        !proxy['ws-opts']?.['v2ray-http-upgrade'] &&
+        proxy['ws-opts']?.['max-early-data'] != null
+    ) {
+        vlessTransport += `&ed=${encodeURIComponent(
+            proxy['ws-opts']['max-early-data'],
+        )}`;
+    }
+    if (
+        proxy.network === 'ws' &&
+        proxy['ws-opts']?.['v2ray-http-upgrade'] &&
+        proxy['ws-opts']?.['max-early-data'] != null
+    ) {
+        vlessTransport += `&ed=${encodeURIComponent(
+            proxy['ws-opts']['max-early-data'],
+        )}`;
+    }
+    const earlyDataHeaderName = proxy['ws-opts']?.['early-data-header-name'];
+    if (
+        earlyDataHeaderName &&
+        (proxy['ws-opts']?.['v2ray-http-upgrade'] ||
+            proxy['ws-opts']?.['max-early-data'] == null ||
+            earlyDataHeaderName !== 'Sec-WebSocket-Protocol')
+    ) {
+        vlessTransport += `&eh=${encodeURIComponent(earlyDataHeaderName)}`;
+    }
+
+    let packetEncoding = '';
+    if (proxy['packet-addr']) {
+        packetEncoding = '&packetEncoding=packet';
+    } else if (proxy.udp === true && !proxy.xudp) {
+        packetEncoding = '&packetEncoding=none';
+    }
 
     return `vless://${proxy.uuid}@${proxy.server}:${
         proxy.port
     }?security=${encodeURIComponent(
         security,
-    )}${vlessTransport}${alpn}${allowInsecure}${pcs}${ech}${h2}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}${pqv}${encryption}#${encodeURIComponent(
+    )}${vlessTransport}${packetEncoding}${alpn}${allowInsecure}${pcs}${ech}${h2}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}${pqv}${encryption}#${encodeURIComponent(
         proxy.name,
     )}`;
 }

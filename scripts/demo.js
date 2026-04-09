@@ -36,6 +36,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 22. `sing-box` 支持使用完整的 `_curve_preferences` 结构设置 `tls` 的 `curve_preferences`
   // 23. `interface-name` 指定流量出站接口 只给 Surge 用的话, `interface` 也可以
   // 24. Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议. 设置节点字段 `_mihomoExternal` 为 `true` 可强制指定使用 mihomo External Proxy Program 输出该节点
+  // 25. VLESS URI extra 字段复杂且其他客户端不一定跟进, 所以输出 URI 时, 若存在原始的 `_extra` 字段, 则直接使用该字段的值输出到 URI 的 extra 部分, 而不进行解析和重组
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件

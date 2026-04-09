@@ -444,7 +444,107 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            `vless://${UUID}@vless.example.com:443?security=reality&type=ws&path=%2Fws&host=cdn.example.com&alpn=h2&sni=sni.example.com&fp=chrome&flow=xtls-rprx-vision&sid=08&spx=%2Fspider&pbk=pubkey#URI%20Reality`,
+            `vless://${UUID}@vless.example.com:443?security=reality&type=ws&path=%2Fws&host=cdn.example.com&ed=2048&alpn=h2&sni=sni.example.com&fp=chrome&flow=xtls-rprx-vision&sid=08&spx=%2Fspider&pbk=pubkey#URI%20Reality`,
+        );
+    });
+
+    it('produces URI VLESS websocket links with packet encoding and custom early data headers', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI WS Early',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            udp: true,
+            'packet-addr': true,
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'max-early-data': 2048,
+                'early-data-header-name': 'X-Data',
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless.example.com:443?security=tls&type=ws&path=%2Fws&host=cdn.example.com&ed=2048&eh=X-Data&packetEncoding=packet&sni=sni.example.com#URI%20WS%20Early`,
+        );
+    });
+
+    it('produces URI VLESS fake-http links with method and headerType', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI HTTP',
+            server: 'vless-http.example.com',
+            port: 80,
+            uuid: UUID,
+            network: 'http',
+            udp: true,
+            'http-opts': {
+                path: ['/edge'],
+                method: 'GET',
+                headers: {
+                    Host: ['http.example.com'],
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-http.example.com:80?security=none&type=tcp&headerType=http&path=%2Fedge&host=http.example.com&method=GET&packetEncoding=none#URI%20HTTP`,
+        );
+    });
+
+    it('produces URI VLESS httpupgrade links with early data metadata', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI Upgrade',
+            server: 'vless-upgrade.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            network: 'ws',
+            'ws-opts': {
+                path: '/upgrade',
+                headers: {
+                    Host: 'upgrade.example.com',
+                },
+                'v2ray-http-upgrade': true,
+                'v2ray-http-upgrade-fast-open': true,
+                'max-early-data': 1024,
+                'early-data-header-name': 'X-Upgrade',
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-upgrade.example.com:443?security=tls&type=httpupgrade&path=%2Fupgrade&host=upgrade.example.com&ed=1024&eh=X-Upgrade#URI%20Upgrade`,
+        );
+    });
+
+    it('produces URI VLESS h2 links using share-link http transport type', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI H2',
+            server: 'vless-h2.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            udp: true,
+            network: 'h2',
+            _h2: true,
+            'h2-opts': {
+                path: '/h2',
+                headers: {
+                    host: ['h2.example.com'],
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-h2.example.com:443?security=tls&type=http&path=%2Fh2&host=h2.example.com&packetEncoding=none&h2=1#URI%20H2`,
         );
     });
 
@@ -474,6 +574,116 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(extra)}#URI%20XHTTP`,
+        );
+    });
+
+    it('prefers raw _extra over structured xhttp fields when producing URI VLESS links', function () {
+        const extra = JSON.stringify({
+            customField: 'keep-me',
+            downloadSettings: {
+                address: 'old.example.com',
+                port: 443,
+            },
+        });
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Raw Extra',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            _extra: extra,
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'no-grpc-header': true,
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(extra)}#URI%20XHTTP%20Raw%20Extra`,
+        );
+    });
+
+    it('produces URI VLESS xhttp links from structured download settings', function () {
+        const extra = JSON.stringify({
+            noGRPCHeader: true,
+            xPaddingBytes: '64-128',
+            xmux: {
+                maxConnections: '8',
+            },
+            downloadSettings: {
+                address: 'download.example.com',
+                port: 8443,
+                security: 'tls',
+                tlsSettings: {
+                    serverName: 'download-sni.example.com',
+                    fingerprint: 'chrome',
+                    alpn: ['h2', 'http/1.1'],
+                },
+                xhttpSettings: {
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    noGRPCHeader: true,
+                    xPaddingBytes: '32-64',
+                    extra: {
+                        xmux: {
+                            maxConcurrency: '16-32',
+                        },
+                    },
+                },
+            },
+        });
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Download',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'no-grpc-header': true,
+                'x-padding-bytes': '64-128',
+                'reuse-settings': {
+                    'max-connections': '8',
+                },
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    servername: 'download-sni.example.com',
+                    'client-fingerprint': 'chrome',
+                    alpn: ['h2', 'http/1.1'],
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    'no-grpc-header': true,
+                    'x-padding-bytes': '32-64',
+                    'reuse-settings': {
+                        'max-concurrency': '16-32',
+                    },
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(extra)}#URI%20XHTTP%20Download`,
         );
     });
 

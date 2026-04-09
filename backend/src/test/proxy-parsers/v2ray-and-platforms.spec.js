@@ -2,7 +2,7 @@ import { Base64 } from 'js-base64';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
-import { UUID, expectSubset, parseOne } from './helpers';
+import { UUID, expectSubset, parseAll, parseOne } from './helpers';
 
 describe('VMess and VLESS parser coverage', function () {
     describe('VMess URIs', function () {
@@ -245,6 +245,8 @@ describe('VMess and VLESS parser coverage', function () {
                 'skip-cert-verify': true,
                 'client-fingerprint': 'chrome',
                 alpn: ['h2'],
+                udp: true,
+                xudp: true,
                 network: 'ws',
                 'ws-opts': {
                     path: '/ws',
@@ -253,6 +255,49 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                 },
             });
+        });
+
+        it('parses websocket VLESS shares with packet encoding and early data', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-ws.example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws&packetEncoding=packet&ed=2048&eh=X-Data#VLESS%20WS%20Early`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS WS Early',
+                server: 'vless-ws.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                udp: true,
+                'packet-addr': true,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'max-early-data': 2048,
+                    'early-data-header-name': 'X-Data',
+                },
+            });
+            expect(proxy).to.not.have.property('xudp');
+        });
+
+        it('rejects websocket VLESS shares with malformed early data size', function () {
+            expect(
+                parseAll(
+                    `vless://${UUID}@vless-ws.example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws&ed=2048foo#VLESS%20WS%20Broken`,
+                ),
+            ).to.have.length(0);
+        });
+
+        it('rejects websocket VLESS shares with oversized early data size', function () {
+            expect(
+                parseAll(
+                    `vless://${UUID}@vless-ws.example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws&ed=999999999999999999999#VLESS%20WS%20Too%20Large`,
+                ),
+            ).to.have.length(0);
         });
 
         it('parses grpc reality VLESS shares', function () {
@@ -288,7 +333,7 @@ describe('VMess and VLESS parser coverage', function () {
 
         it('parses tcp http-header VLESS shares', function () {
             const proxy = parseOne(
-                `vless://${UUID}@vless-http.example.com:80?type=tcp&headerType=http&host=http.example.com&path=%2Fedge#VLESS%20HTTP`,
+                `vless://${UUID}@vless-http.example.com:80?type=tcp&headerType=http&host=http.example.com&path=%2Fedge&method=GET#VLESS%20HTTP`,
             );
 
             expectSubset(proxy, {
@@ -301,6 +346,7 @@ describe('VMess and VLESS parser coverage', function () {
                     headers: {
                         Host: ['http.example.com'],
                     },
+                    method: 'GET',
                     path: ['/edge'],
                 },
             });
@@ -324,6 +370,30 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                     'v2ray-http-upgrade': true,
                     'v2ray-http-upgrade-fast-open': true,
+                },
+            });
+        });
+
+        it('parses httpupgrade VLESS shares with early data metadata', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-upgrade.example.com:443?type=httpupgrade&host=upgrade.example.com&path=%2Fupgrade&ed=1024&eh=X-Upgrade#VLESS%20Upgrade%20Early`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS Upgrade Early',
+                server: 'vless-upgrade.example.com',
+                port: 443,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/upgrade',
+                    headers: {
+                        Host: 'upgrade.example.com',
+                    },
+                    'v2ray-http-upgrade': true,
+                    'v2ray-http-upgrade-fast-open': true,
+                    'max-early-data': 1024,
+                    'early-data-header-name': 'X-Upgrade',
                 },
             });
         });
@@ -352,9 +422,9 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
-        it('parses h2 VLESS shares', function () {
+        it('parses h2 VLESS shares from share-link http transport', function () {
             const proxy = parseOne(
-                `vless://${UUID}@vless-h2.example.com:443?type=h2&host=h2.example.com&path=%2Fh2&h2=1#VLESS%20H2`,
+                `vless://${UUID}@vless-h2.example.com:443?type=http&host=h2.example.com&path=%2Fh2&h2=1&packetEncoding=none#VLESS%20H2`,
             );
 
             expectSubset(proxy, {
@@ -362,6 +432,7 @@ describe('VMess and VLESS parser coverage', function () {
                 name: 'VLESS H2',
                 server: 'vless-h2.example.com',
                 port: 443,
+                udp: true,
                 network: 'h2',
                 _h2: true,
                 'h2-opts': {
@@ -371,6 +442,7 @@ describe('VMess and VLESS parser coverage', function () {
                     path: '/h2',
                 },
             });
+            expect(proxy).to.not.have.property('xudp');
         });
 
         it('parses xhttp VLESS shares with mihomo transport extras', function () {
@@ -417,6 +489,110 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                 },
             });
+        });
+
+        it('parses xhttp VLESS shares with downloadSettings extra', function () {
+            const extra = JSON.stringify({
+                downloadSettings: {
+                    address: 'download.example.com',
+                    port: 8443,
+                    security: 'tls',
+                    tlsSettings: {
+                        serverName: 'download-sni.example.com',
+                        fingerprint: 'chrome',
+                        alpn: ['h2', 'http/1.1'],
+                    },
+                    xhttpSettings: {
+                        path: '/download',
+                        host: 'download-host.example.com',
+                        noGRPCHeader: true,
+                        xPaddingBytes: '32-64',
+                        extra: {
+                            xmux: {
+                                maxConnections: '8',
+                                hMaxReusableSecs: '900',
+                            },
+                        },
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20Download`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Download',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                _extra: extra,
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'download-settings': {
+                        server: 'download.example.com',
+                        port: 8443,
+                        tls: true,
+                        servername: 'download-sni.example.com',
+                        'client-fingerprint': 'chrome',
+                        alpn: ['h2', 'http/1.1'],
+                        path: '/download',
+                        host: 'download-host.example.com',
+                        'no-grpc-header': true,
+                        'x-padding-bytes': '32-64',
+                        'reuse-settings': {
+                            'max-connections': '8',
+                            'h-max-reusable-secs': '900',
+                        },
+                    },
+                },
+            });
+        });
+
+        it('parses xhttp VLESS shares with downloadSettings extra without mode', function () {
+            const extra = JSON.stringify({
+                downloadSettings: {
+                    address: 'download.example.com',
+                    port: 8443,
+                    security: 'tls',
+                    tlsSettings: {
+                        serverName: 'download-sni.example.com',
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20Download%20No%20Mode`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Download No Mode',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                _extra: extra,
+                'xhttp-opts': {
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'download-settings': {
+                        server: 'download.example.com',
+                        port: 8443,
+                        tls: true,
+                        servername: 'download-sni.example.com',
+                    },
+                },
+            });
+            expect(proxy['xhttp-opts']).to.not.have.property('mode');
         });
 
         it('parses xhttp VLESS shares with range-form scMaxEachPostBytes', function () {
