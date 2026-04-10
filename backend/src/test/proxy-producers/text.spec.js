@@ -475,6 +475,30 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces URI VLESS websocket links with pcs from tls fingerprint', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI WS PCS',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            'tls-fingerprint': 'fingerprint',
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless.example.com:443?security=tls&type=ws&path=%2Fws&host=cdn.example.com&pcs=fingerprint&sni=sni.example.com#URI%20WS%20PCS`,
+        );
+    });
+
     it('produces URI VLESS fake-http links with method and headerType', function () {
         const output = produceExternal('URI', {
             type: 'vless',
@@ -684,6 +708,30 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(extra)}#URI%20XHTTP%20Download`,
+        );
+    });
+
+    it('produces URI Trojan websocket links with pcs from tls fingerprint', function () {
+        const output = produceExternal('URI', {
+            type: 'trojan',
+            name: 'URI Trojan PCS',
+            server: 'trojan.example.com',
+            port: 443,
+            password: 'secret',
+            tls: true,
+            sni: 'sni.example.com',
+            'tls-fingerprint': 'fingerprint',
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            'trojan://secret@trojan.example.com:443?sni=sni.example.com&type=ws&path=%2Fws&host=cdn.example.com&pcs=fingerprint#URI%20Trojan%20PCS',
         );
     });
 

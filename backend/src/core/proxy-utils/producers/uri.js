@@ -194,8 +194,8 @@ function vless(proxy) {
         h2 = `&h2=1`;
     }
     let pcs = '';
-    if (proxy._pcs) {
-        pcs = `&pcs=${encodeURIComponent(proxy._pcs)}`;
+    if (proxy['tls-fingerprint']) {
+        pcs = `&pcs=${encodeURIComponent(proxy['tls-fingerprint'])}`;
     }
     let ech = '';
     if (proxy._echConfigList) {
@@ -697,6 +697,12 @@ export default function URI_Producer() {
                         proxy['client-fingerprint'],
                     )}`;
                 }
+                let trojanPcs = '';
+                if (proxy['tls-fingerprint']) {
+                    trojanPcs = `&pcs=${encodeURIComponent(
+                        proxy['tls-fingerprint'],
+                    )}`;
+                }
                 let trojanAlpn = '';
                 if (proxy.alpn) {
                     trojanAlpn = `&alpn=${encodeURIComponent(
@@ -739,7 +745,7 @@ export default function URI_Producer() {
                     proxy.port
                 }?sni=${encodeURIComponent(proxy.sni || proxy.server)}${
                     proxy['skip-cert-verify'] ? '&allowInsecure=1' : ''
-                }${trojanTransport}${trojanAlpn}${trojanFp}${trojanSecurity}${trojanSid}${trojanPbk}${trojanSpx}${trojanMode}${trojanExtra}#${encodeURIComponent(
+                }${trojanTransport}${trojanAlpn}${trojanFp}${trojanPcs}${trojanSecurity}${trojanSid}${trojanPbk}${trojanSpx}${trojanMode}${trojanExtra}#${encodeURIComponent(
                     proxy.name,
                 )}`;
                 break;

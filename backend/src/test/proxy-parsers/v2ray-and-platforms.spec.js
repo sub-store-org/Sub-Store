@@ -284,6 +284,31 @@ describe('VMess and VLESS parser coverage', function () {
             expect(proxy).to.not.have.property('xudp');
         });
 
+        it('parses websocket VLESS shares with pcs as tls fingerprint', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-ws.example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws&pcs=fingerprint#VLESS%20WS%20PCS`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS WS PCS',
+                server: 'vless-ws.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                udp: true,
+                xudp: true,
+                'tls-fingerprint': 'fingerprint',
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+            });
+        });
+
         it('rejects websocket VLESS shares with malformed early data size', function () {
             expect(
                 parseAll(

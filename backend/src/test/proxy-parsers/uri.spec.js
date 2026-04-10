@@ -367,6 +367,28 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
+        it('parses Trojan URIs with pcs as tls fingerprint', function () {
+            const proxy = parseOne(
+                'trojan://trojan-pass@trojan-ws.example.com?type=ws&host=ws.example.com&path=%2Fws&pcs=fingerprint#Trojan%20WS%20PCS',
+            );
+
+            expectSubset(proxy, {
+                type: 'trojan',
+                name: 'Trojan WS PCS',
+                server: 'trojan-ws.example.com',
+                port: 443,
+                password: 'trojan-pass',
+                'tls-fingerprint': 'fingerprint',
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'ws.example.com',
+                    },
+                },
+            });
+        });
+
         it('parses Trojan URIs with grpc reality metadata', function () {
             const proxy = parseOne(
                 'trojan://trojan-pass@trojan-grpc.example.com?type=grpc&serviceName=grpc-service&authority=grpc.example.com&mode=multi&security=reality&pbk=pubkey&sid=08&spx=%2Fspider&udp=1&tfo=1#Trojan%20Reality',

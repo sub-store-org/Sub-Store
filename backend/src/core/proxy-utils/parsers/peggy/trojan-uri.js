@@ -86,6 +86,7 @@ params = "?" head:param tail:("&"@param)* {
   proxy["skip-cert-verify"] = toBool(params["allowInsecure"]);
   proxy.sni = params["sni"] || params["peer"];
   proxy['client-fingerprint'] = params.fp;
+  proxy['tls-fingerprint'] = params.pcs;
   proxy.alpn = params.alpn ? decodeURIComponent(params.alpn).split(',') : undefined;
 
   if (toBool(params["ws"])) {

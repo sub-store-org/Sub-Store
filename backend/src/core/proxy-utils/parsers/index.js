@@ -868,7 +868,7 @@ function URI_VLESS() {
         proxy.alpn = params.alpn ? params.alpn.split(',') : undefined;
         proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.allowInsecure);
         proxy._echConfigList = getIfPresent(params.ech);
-        proxy._pcs = getIfPresent(params.pcs);
+        proxy['tls-fingerprint'] = getIfPresent(params.pcs);
         proxy._h2 = /(TRUE)|1/i.test(params.h2);
 
         switch (`${params.packetEncoding || ''}`.toLowerCase()) {
