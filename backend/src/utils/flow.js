@@ -226,7 +226,13 @@ export async function getFlowHeaders(
             flowInfo = flowInfo.trim();
         }
         if (flowInfo) {
-            headersResourceCache.set(id, flowInfo);
+            headersResourceCache.set(
+                id,
+                flowInfo,
+                $arguments?.headersCacheTtl
+                    ? $arguments?.headersCacheTtl * 1000
+                    : undefined,
+            );
         }
     }
 
