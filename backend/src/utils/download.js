@@ -102,7 +102,7 @@ export default async function download(
     if ($.env.isNode) {
         proxy = proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');
     }
-    const userAgent = ua || defaultUserAgent || 'clash.meta';
+    const userAgent = ua || defaultUserAgent || 'clash.meta/v1.19.23';
     let customHeaders;
     if ($arguments?.headers) {
         try {
