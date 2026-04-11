@@ -261,7 +261,7 @@ async function downloadSubscription(req, res) {
                         // forward flow headers
                         flowInfo = await getFlowHeaders(
                             $arguments?.insecure ? `${url}#insecure` : url,
-                            $arguments.flowUserAgent,
+                            $arguments.flowUserAgent || sub.ua,
                             undefined,
                             proxy || sub.proxy,
                             $arguments.flowUrl,
@@ -539,7 +539,7 @@ async function downloadCollection(req, res) {
                         if (!$arguments.noFlow && /^https?:/.test(url)) {
                             subUserInfoOfSub = await getFlowHeaders(
                                 $arguments?.insecure ? `${url}#insecure` : url,
-                                $arguments.flowUserAgent,
+                                $arguments.flowUserAgent || sub.ua,
                                 undefined,
                                 proxy || sub.proxy || collection.proxy,
                                 $arguments.flowUrl,

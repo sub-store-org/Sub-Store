@@ -391,7 +391,7 @@ export default async function download(
             parseFlowHeaders(
                 await getFlowHeaders(
                     url,
-                    $arguments.flowUserAgent,
+                    userAgent,
                     undefined,
                     proxy,
                     $arguments.flowUrl,

@@ -158,7 +158,7 @@ async function getFlowInfo(req, res) {
         }
         const flowHeaders = await getFlowHeaders(
             $arguments?.insecure ? `${url}#insecure` : url,
-            $arguments.flowUserAgent,
+            $arguments.flowUserAgent || sub.ua,
             undefined,
             sub.proxy,
             $arguments.flowUrl,
@@ -329,6 +329,7 @@ function updateSubscription(req, res) {
         updateByName(allSubs, name, newSub);
         $.write(allSubs, SUBS_KEY);
         success(res, newSub);
+        $.info(`更新订阅成功： ${name}`);
     } else {
         failed(
             res,
