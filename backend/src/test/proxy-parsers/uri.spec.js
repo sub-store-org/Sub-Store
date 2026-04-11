@@ -282,6 +282,38 @@ describe('Proxy URI parser coverage', function () {
             expect(proxy.port).to.be.within(8443, 8445);
         });
 
+        it('splits Hysteria2 URI hop-interval ranges during normalization', function () {
+            const proxy = parseOne(
+                'hy2://hy2-secret@hy2.example.com:443?hop-interval=15-30#Hy2%20Hop%20Range',
+            );
+
+            expectSubset(proxy, {
+                type: 'hysteria2',
+                name: 'Hy2 Hop Range',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'hy2-secret',
+                'hop-interval': 15,
+                'hop-interval-max': 30,
+            });
+        });
+
+        it('drops invalid Hysteria2 URI hop-interval values during normalization', function () {
+            const proxy = parseOne(
+                'hy2://hy2-secret@hy2.example.com:443?hop-interval=30-15#Hy2%20Invalid%20Hop',
+            );
+
+            expectSubset(proxy, {
+                type: 'hysteria2',
+                name: 'Hy2 Invalid Hop',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'hy2-secret',
+            });
+            expect(proxy).to.not.have.property('hop-interval');
+            expect(proxy).to.not.have.property('hop-interval-max');
+        });
+
         it('parses Hysteria2 URIs with mport overrides', function () {
             const proxy = parseOne(
                 'hy2://hy2-secret@hy2.example.com:443?mport=9000,9002-9004#Hy2%20Mport',
