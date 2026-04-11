@@ -400,6 +400,38 @@ function lastParse(proxy) {
     if (typeof proxy.password === 'number') {
         proxy.password = numberToString(proxy.password);
     }
+    if (proxy['hop-interval'] != null) {
+        const hopInterval = `${proxy['hop-interval']}`.trim();
+        const hopIntervalRangeMatch = hopInterval.match(/^(\d+)\s*-\s*(\d+)$/);
+
+        if (hopIntervalRangeMatch) {
+            const hopIntervalMin = parseInt(hopIntervalRangeMatch[1], 10);
+            const hopIntervalMax = parseInt(hopIntervalRangeMatch[2], 10);
+
+            if (hopIntervalMin > 0 && hopIntervalMin <= hopIntervalMax) {
+                // 暂时只在统一收口阶段拆分 mihomo 的 hop-interval 区间写法，
+                // 不对其他客户端做进一步转换，等 mihomo / sing-box 新版覆盖率上来后再统一处理。
+                proxy['hop-interval'] = hopIntervalMin;
+                proxy['hop-interval-max'] = hopIntervalMax;
+            } else {
+                delete proxy['hop-interval'];
+                delete proxy['hop-interval-max'];
+            }
+        } else if (/^\d+$/.test(hopInterval)) {
+            const parsedHopInterval = parseInt(hopInterval, 10);
+
+            if (parsedHopInterval > 0) {
+                proxy['hop-interval'] = parsedHopInterval;
+                delete proxy['hop-interval-max'];
+            } else {
+                delete proxy['hop-interval'];
+                delete proxy['hop-interval-max'];
+            }
+        } else {
+            delete proxy['hop-interval'];
+            delete proxy['hop-interval-max'];
+        }
+    }
     if (
         ['ss'].includes(proxy.type) &&
         proxy.cipher === 'none' &&

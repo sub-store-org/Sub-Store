@@ -1215,8 +1215,8 @@ function URI_Hysteria2() {
         proxy['tls-fingerprint'] = params.pinSHA256;
         let hop_interval = params['hop-interval'] || params['hop_interval'];
 
-        if (/^\d+$/.test(hop_interval)) {
-            proxy['hop-interval'] = parseInt(`${hop_interval}`, 10);
+        if (hop_interval != null) {
+            proxy['hop-interval'] = hop_interval;
         }
         let keepalive = params['keepalive'];
 

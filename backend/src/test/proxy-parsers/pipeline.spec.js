@@ -142,6 +142,66 @@ FINAL,DIRECT
         });
     });
 
+    it('splits mihomo hop-interval ranges for Clash-style object inputs', function () {
+        const proxy = parseOne(
+            JSON.stringify({
+                name: 'hy2-range-inline',
+                type: 'hysteria2',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'secret',
+                'hop-interval': '15-30',
+            }),
+        );
+
+        expectSubset(proxy, {
+            name: 'hy2-range-inline',
+            type: 'hysteria2',
+            'hop-interval': 15,
+            'hop-interval-max': 30,
+        });
+    });
+
+    it('drops invalid mihomo hop-interval values for Clash-style object inputs', function () {
+        const invalidHopIntervals = [
+            { title: 'zero string', value: '0' },
+            { title: 'zero number', value: 0 },
+            { title: 'negative string', value: '-5' },
+            { title: 'negative number', value: -5 },
+            { title: 'decimal string', value: '15.5' },
+            { title: 'decimal number', value: 15.5 },
+            { title: 'comma list', value: '15,30' },
+            { title: 'plain text', value: 'abc' },
+            { title: 'empty string', value: '' },
+            { title: 'blank string', value: '   ' },
+            { title: 'zero-start range', value: '0-15' },
+            { title: 'zero-end range', value: '15-0' },
+            { title: 'reverse range', value: '30-15' },
+            { title: 'multi-range', value: '15-30-45' },
+            { title: 'double hyphen range', value: '15--30' },
+            { title: 'boolean', value: true },
+            { title: 'array', value: [15, 30] },
+            { title: 'object', value: { min: 15, max: 30 } },
+        ];
+
+        for (const { title, value } of invalidHopIntervals) {
+            const proxy = parseOne(
+                JSON.stringify({
+                    name: `hy2-invalid-${title}`,
+                    type: 'hysteria2',
+                    server: 'hy2.example.com',
+                    port: 443,
+                    password: 'secret',
+                    'hop-interval': value,
+                    'hop-interval-max': 999,
+                }),
+            );
+
+            expect(proxy).to.not.have.property('hop-interval');
+            expect(proxy).to.not.have.property('hop-interval-max');
+        }
+    });
+
     it('accepts every Clash-supported proxy type as inline objects', function () {
         const supportedTypes = [
             'tailscale',
@@ -185,4 +245,3 @@ FINAL,DIRECT
         }
     });
 });
-
