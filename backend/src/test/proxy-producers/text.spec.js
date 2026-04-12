@@ -6,6 +6,259 @@ import { ProxyUtils } from '@/core/proxy-utils';
 import { produceExternal, UUID } from './helpers';
 
 describe('Proxy text producers', function () {
+    it('produces Quantumult X shadowsocks over-tls lines from canonical tls nodes', function () {
+        const output = produceExternal('QX', {
+            type: 'ss',
+            name: 'QX SS Over TLS',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+            sni: 'a.com',
+            'skip-cert-verify': true,
+        });
+
+        expect(output).to.equal(
+            'shadowsocks=ss.example.com:443,method=aes-128-gcm,password=secret,obfs=over-tls,obfs-host=a.com,tls-verification=false,tag=QX SS Over TLS',
+        );
+    });
+
+    it('produces Quantumult X shadowsocks over-tls lines without obfs-host when sni is absent', function () {
+        const output = produceExternal('QX', {
+            type: 'ss',
+            name: 'QX SS Over TLS No Host',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+        });
+
+        expect(output).to.equal(
+            'shadowsocks=ss.example.com:443,method=aes-128-gcm,password=secret,obfs=over-tls,tag=QX SS Over TLS No Host',
+        );
+    });
+
+    it('produces Quantumult X shadowsocks over-tls lines for canonical tcp tls nodes', function () {
+        const output = produceExternal('QX', {
+            type: 'ss',
+            name: 'QX SS Over TLS TCP',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+            sni: 'a.com',
+            network: 'tcp',
+        });
+
+        expect(output).to.equal(
+            'shadowsocks=ss.example.com:443,method=aes-128-gcm,password=secret,obfs=over-tls,obfs-host=a.com,tag=QX SS Over TLS TCP',
+        );
+    });
+
+    it('preserves Quantumult X obfs-host after Shadowrocket rewrites ss tls sni to servername', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'QX SS Over TLS Re-emit',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+            sni: 'a.com',
+        };
+
+        ProxyUtils.produce([proxy], 'Shadowrocket', 'internal');
+        const output = ProxyUtils.produce([proxy], 'QX', 'external');
+
+        expect(output).to.equal(
+            'shadowsocks=ss.example.com:443,method=aes-128-gcm,password=secret,obfs=over-tls,obfs-host=a.com,tag=QX SS Over TLS Re-emit',
+        );
+    });
+
+    it('keeps legacy Quantumult X shadowsocks obfs tls output unchanged', function () {
+        const output = produceExternal('QX', {
+            type: 'ss',
+            name: 'QX SS Obfs TLS',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'obfs',
+            'plugin-opts': {
+                mode: 'tls',
+                host: 'legacy.example.com',
+            },
+        });
+
+        expect(output).to.equal(
+            'shadowsocks=ss.example.com:8388,method=aes-128-gcm,password=secret,obfs=tls,obfs-host=legacy.example.com,tag=QX SS Obfs TLS',
+        );
+    });
+
+    it('preserves Quantumult X shadowsocks http token output', function () {
+        const output = produceExternal('QX', {
+            type: 'ss',
+            name: 'QX SS HTTP',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            _qx_obfs_http: 'http',
+            plugin: 'obfs',
+            'plugin-opts': {
+                mode: 'http',
+                host: 'plain.example.com',
+                path: '/plain',
+            },
+        });
+
+        expect(output).to.equal(
+            'shadowsocks=ss.example.com:8388,method=aes-128-gcm,password=secret,obfs=http,obfs-host=plain.example.com,obfs-uri=/plain,tag=QX SS HTTP',
+        );
+    });
+
+    // QX examples contain the upstream "vemss-http" typo; keep emitting it
+    // when the parsed source token was preserved in _qx_obfs_http.
+    it('preserves Quantumult X shadowsocks vemss-http alias output', function () {
+        const output = produceExternal('QX', {
+            type: 'ss',
+            name: 'QX SS VMess HTTP',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            _qx_obfs_http: 'vemss-http',
+            plugin: 'obfs',
+            'plugin-opts': {
+                mode: 'http',
+                host: 'legacy.example.com',
+                path: '/resource',
+            },
+        });
+
+        expect(output).to.equal(
+            'shadowsocks=ss.example.com:8388,method=aes-128-gcm,password=secret,obfs=vemss-http,obfs-host=legacy.example.com,obfs-uri=/resource,tag=QX SS VMess HTTP',
+        );
+    });
+
+    it('preserves Quantumult X shadowsocks shadowsocks-http token output', function () {
+        const output = produceExternal('QX', {
+            type: 'ss',
+            name: 'QX SS Shadowsocks HTTP',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            _qx_obfs_http: 'shadowsocks-http',
+            plugin: 'obfs',
+            'plugin-opts': {
+                mode: 'http',
+                host: 'shadow.example.com',
+                path: '/shadow',
+            },
+        });
+
+        expect(output).to.equal(
+            'shadowsocks=ss.example.com:8388,method=aes-128-gcm,password=secret,obfs=shadowsocks-http,obfs-host=shadow.example.com,obfs-uri=/shadow,tag=QX SS Shadowsocks HTTP',
+        );
+    });
+
+    it('preserves Quantumult X vmess http token output', function () {
+        const output = produceExternal('QX', {
+            type: 'vmess',
+            name: 'QX VMess HTTP',
+            server: 'vmess.example.com',
+            port: 80,
+            cipher: 'none',
+            uuid: UUID,
+            _qx_obfs_http: 'http',
+            network: 'http',
+            'http-opts': {
+                path: '/http',
+                headers: {
+                    Host: 'plain.example.com',
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vmess=vmess.example.com:80,method=none,password=${UUID},obfs=http,obfs-uri=/http,obfs-host=plain.example.com,aead=false,tag=QX VMess HTTP`,
+        );
+    });
+
+    // QX examples contain the upstream "vemss-http" typo; keep emitting it
+    // when the parsed source token was preserved in _qx_obfs_http.
+    it('preserves Quantumult X vmess vemss-http alias output', function () {
+        const output = produceExternal('QX', {
+            type: 'vmess',
+            name: 'QX VMess VMess HTTP',
+            server: 'vmess.example.com',
+            port: 80,
+            cipher: 'none',
+            uuid: UUID,
+            _qx_obfs_http: 'vemss-http',
+            network: 'http',
+            'http-opts': {
+                path: '/vemss',
+                headers: {
+                    Host: 'vemss.example.com',
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vmess=vmess.example.com:80,method=none,password=${UUID},obfs=vemss-http,obfs-uri=/vemss,obfs-host=vemss.example.com,aead=false,tag=QX VMess VMess HTTP`,
+        );
+    });
+
+    it('preserves Quantumult X vmess shadowsocks-http alias output', function () {
+        const output = produceExternal('QX', {
+            type: 'vmess',
+            name: 'QX VMess Shadowsocks HTTP',
+            server: 'vmess.example.com',
+            port: 80,
+            cipher: 'none',
+            uuid: UUID,
+            _qx_obfs_http: 'shadowsocks-http',
+            network: 'http',
+            'http-opts': {
+                path: '/resource/file',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vmess=vmess.example.com:80,method=none,password=${UUID},obfs=shadowsocks-http,obfs-uri=/resource/file,obfs-host=cdn.example.com,aead=false,tag=QX VMess Shadowsocks HTTP`,
+        );
+    });
+
+    it('preserves Quantumult X vless vmess-http token output', function () {
+        const output = produceExternal('QX', {
+            type: 'vless',
+            name: 'QX VLESS HTTP',
+            server: 'vless.example.com',
+            port: 80,
+            uuid: UUID,
+            _qx_obfs_http: 'vmess-http',
+            network: 'http',
+            'http-opts': {
+                path: '/vless-http',
+                headers: {
+                    Host: 'vless.example.com',
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless=vless.example.com:80,method=none,password=${UUID},obfs=vmess-http,obfs-uri=/vless-http,obfs-host=vless.example.com,tag=QX VLESS HTTP`,
+        );
+    });
+
     it('produces Quantumult X VLESS reality websocket lines', function () {
         const output = produceExternal('QX', {
             type: 'vless',

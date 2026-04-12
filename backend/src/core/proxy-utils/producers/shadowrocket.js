@@ -1,5 +1,6 @@
 import {
     isPresent,
+    isShadowsocksOverTls,
     produceProxyListOutput,
 } from '@/core/proxy-utils/producers/utils';
 import $ from '@/core/app';
@@ -155,6 +156,13 @@ export default function Shadowrocket_Producer() {
                         delete proxy['shadow-tls-password'];
                         delete proxy['shadow-tls-sni'];
                         delete proxy['shadow-tls-version'];
+                    }
+                    if (isShadowsocksOverTls(proxy)) {
+                        if (isPresent(proxy, 'sni')) {
+                            proxy.servername = proxy.sni;
+                            // 先不删 没有明确的规范
+                            // delete proxy.sni;
+                        }
                     }
                 }
 

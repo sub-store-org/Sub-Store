@@ -23,7 +23,7 @@ import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
 import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
 import Gist from '@/utils/gist';
-import { isPresent } from './producers/utils';
+import { isPresent, isShadowsocksOverTls } from './producers/utils';
 import { doh } from '@/utils/dns';
 import JSON5 from 'json5';
 import { hex_md5 } from '@/vendor/md5';
@@ -247,6 +247,13 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         throw new Error(`Target platform: ${targetPlatform} is not supported!`);
     }
 
+    const normalizedTarget = String(targetPlatform).toLowerCase();
+    const supportedShadowsocksOverTlsTargets = new Set([
+        'qx',
+        'quantumultx',
+        'shadowrocket',
+    ]);
+
     const sni_off_supported = /Surge|SurgeMac|Shadowrocket/i.test(
         targetPlatform,
     );
@@ -255,6 +262,14 @@ function produce(proxies, targetPlatform, type, opts = {}) {
     proxies = proxies.filter((proxy) => {
         // 检查代理是否支持目标平台
         if (proxy.supported && proxy.supported[targetPlatform] === false) {
+            return false;
+        }
+
+        if (
+            isShadowsocksOverTls(proxy) &&
+            !supportedShadowsocksOverTlsTargets.has(normalizedTarget) &&
+            !opts['include-unsupported-proxy']
+        ) {
             return false;
         }
 

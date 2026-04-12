@@ -20,6 +20,15 @@ const grammars = String.raw`
     const obfs = {};
     const $ = {};
 
+    function setQxHttpObfs(type) {
+        // Preserve the original QX http-obfs token for round-trip output,
+        // including the upstream "vemss-http" typo that appears in QX
+        // examples.
+        proxy._qx_obfs_http = type;
+        obfs.type = "http";
+        return type;
+    }
+
     function handleObfs() {
         if (obfs.type === "ws" || obfs.type === "wss") {
             proxy.network = "ws";
@@ -73,9 +82,12 @@ shadowsocks = "shadowsocks" equals address
                 $set(proxy, "plugin-opts.tls", true);
             }
         } else if (obfs.type === 'over-tls') {
-            throw new Error('ss over-tls is not supported');
+            proxy.tls = true;
+            if (obfs.host) {
+                proxy.sni = obfs.host;
+            }
         }
-        if (obfs.type) {
+        if (obfs.type && obfs.type !== 'over-tls') {
             $set(proxy, "plugin-opts.host", obfs.host);
             $set(proxy, "plugin-opts.path", obfs.path);
         }
@@ -83,7 +95,7 @@ shadowsocks = "shadowsocks" equals address
 }
 
 vmess = "vmess" equals address
-    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)* {
+    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs_vmess/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "none";
     if (proxy.aead === false) {
@@ -95,7 +107,7 @@ vmess = "vmess" equals address
 }
 
 vless = "vless" equals address
-    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/vless_flow/others)* {
+    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs_vless/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/vless_flow/others)* {
     proxy.type = "vless";
     proxy.cipher = proxy.cipher || "none";
     handleObfs();
@@ -176,9 +188,32 @@ tls_no_session_reuse = comma "tls-no-session-reuse" equals flag:bool {
     proxy["tls-no-session-reuse"] = flag;
 }
 
-obfs_ss = comma "obfs" equals type:("http"/"tls"/"wss"/"ws"/"over-tls") { obfs.type = type; return type; }
+obfs_ss = comma "obfs" equals (
+    type:("tls"/"wss"/"ws"/"over-tls") { obfs.type = type; return type; }
+  / type:("http"/"vmess-http"/"vemss-http"/"shadowsocks-http") {
+        // QX accepts multiple http-obfs spellings for ss/vmess/vless; keep
+        // the original token so QX output can round-trip it unchanged.
+        return setQxHttpObfs(type);
+    }
+)
 obfs_ssr = comma "obfs" equals type:("plain"/"http_simple"/"http_post"/"random_head"/"tls1.2_ticket_auth"/"tls1.2_ticket_fastauth") { proxy.type = "ssr"; obfs.type = type; return type; }
 obfs = comma "obfs" equals type:("wss"/"ws"/"over-tls"/"http") { obfs.type = type; return type; };
+obfs_vmess = comma "obfs" equals (
+    type:("wss"/"ws"/"over-tls") { obfs.type = type; return type; }
+  / type:("http"/"vmess-http"/"vemss-http"/"shadowsocks-http") {
+        // QX accepts multiple http-obfs spellings for ss/vmess/vless; keep
+        // the original token so QX output can round-trip it unchanged.
+        return setQxHttpObfs(type);
+    }
+);
+obfs_vless = comma "obfs" equals (
+    type:("wss"/"ws"/"over-tls") { obfs.type = type; return type; }
+  / type:("http"/"vmess-http"/"vemss-http"/"shadowsocks-http") {
+        // QX accepts multiple http-obfs spellings for ss/vmess/vless; keep
+        // the original token so QX output can round-trip it unchanged.
+        return setQxHttpObfs(type);
+    }
+);
 
 obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").replace(/^"(.*)"$/, '$1'); }
 obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = uri; }

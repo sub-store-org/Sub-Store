@@ -30,6 +30,19 @@ export function isPresent(obj, attr) {
     return typeof data !== 'undefined' && data !== null;
 }
 
+export function isShadowsocksOverTls(proxy) {
+    const normalizedNetwork =
+        typeof proxy?.network === 'string'
+            ? proxy.network.trim().toLowerCase()
+            : proxy?.network;
+    return (
+        proxy?.type === 'ss' &&
+        proxy?.tls === true &&
+        !isPresent(proxy, 'plugin') &&
+        (!isPresent(proxy, 'network') || normalizedNetwork === 'tcp')
+    );
+}
+
 export function normalizePluginMuxValue(mux) {
     if (typeof mux === 'boolean') return Number(mux);
     if (typeof mux === 'string') {

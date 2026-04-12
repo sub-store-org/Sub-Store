@@ -804,6 +804,130 @@ describe('Platform raw-format parser coverage', function () {
     describe('Quantumult X raw inputs', function () {
         registerCases([
             {
+                title: 'parses shadowsocks over-tls lines into canonical tls fields',
+                input: 'shadowsocks=qx-ss-tls.example.com:443,method=aes-128-gcm,password=secret,obfs=over-tls,obfs-host=a.com,tls-verification=false,udp-relay=true,fast-open=true,tag=QX SS Over TLS',
+                expected: {
+                    type: 'ss',
+                    name: 'QX SS Over TLS',
+                    server: 'qx-ss-tls.example.com',
+                    port: 443,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    tls: true,
+                    sni: 'a.com',
+                    'skip-cert-verify': true,
+                    udp: true,
+                    tfo: true,
+                },
+            },
+            {
+                title: 'parses shadowsocks over-tls lines with tls-verification=true',
+                input: 'shadowsocks=qx-ss-tls-verified.example.com:443,method=aes-128-gcm,password=secret,obfs=over-tls,obfs-host=verify.example.com,tls-verification=true,tag=QX SS Over TLS Verified',
+                expected: {
+                    type: 'ss',
+                    name: 'QX SS Over TLS Verified',
+                    server: 'qx-ss-tls-verified.example.com',
+                    port: 443,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    tls: true,
+                    sni: 'verify.example.com',
+                    'skip-cert-verify': false,
+                },
+            },
+            {
+                title: 'parses shadowsocks over-tls lines without obfs-host',
+                input: 'shadowsocks=qx-ss-tls-no-host.example.com:443,method=aes-128-gcm,password=secret,obfs=over-tls,udp-relay=true,tag=QX SS Over TLS No Host',
+                expected: {
+                    type: 'ss',
+                    name: 'QX SS Over TLS No Host',
+                    server: 'qx-ss-tls-no-host.example.com',
+                    port: 443,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    tls: true,
+                    udp: true,
+                },
+            },
+            {
+                title: 'keeps legacy shadowsocks obfs tls lines as plugin nodes',
+                input: 'shadowsocks=qx-ss-obfs.example.com:8388,method=aes-128-gcm,password=secret,obfs=tls,obfs-host=obfs.example.com,tag=QX SS Obfs TLS',
+                expected: {
+                    type: 'ss',
+                    name: 'QX SS Obfs TLS',
+                    server: 'qx-ss-obfs.example.com',
+                    port: 8388,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    plugin: 'obfs',
+                    'plugin-opts': {
+                        mode: 'tls',
+                        host: 'obfs.example.com',
+                    },
+                },
+            },
+            {
+                // QX accepts plain "http" as one of the shared http-obfs
+                // tokens for ss/vmess/vless; preserve it for round-trip output.
+                title: 'parses shadowsocks http lines as http obfs and keeps the QX token',
+                input: 'shadowsocks=qx-ss-http-plain.example.com:8388,method=aes-128-gcm,password=secret,obfs=http,obfs-host=plain.example.com,obfs-uri=/plain,tag=QX SS HTTP',
+                expected: {
+                    type: 'ss',
+                    name: 'QX SS HTTP',
+                    server: 'qx-ss-http-plain.example.com',
+                    port: 8388,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    plugin: 'obfs',
+                    _qx_obfs_http: 'http',
+                    'plugin-opts': {
+                        mode: 'http',
+                        host: 'plain.example.com',
+                        path: '/plain',
+                    },
+                },
+            },
+            {
+                // QX examples contain the upstream "vemss-http" typo; keep
+                // parsing it so the original line can round-trip unchanged.
+                title: 'parses shadowsocks vemss-http lines as http obfs and keeps the QX alias',
+                input: 'shadowsocks=qx-ss-http.example.com:8388,method=aes-128-gcm,password=secret,obfs=vemss-http,obfs-host=obfs.example.com,obfs-uri=/resource,tag=QX SS VMess HTTP',
+                expected: {
+                    type: 'ss',
+                    name: 'QX SS VMess HTTP',
+                    server: 'qx-ss-http.example.com',
+                    port: 8388,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    plugin: 'obfs',
+                    _qx_obfs_http: 'vemss-http',
+                    'plugin-opts': {
+                        mode: 'http',
+                        host: 'obfs.example.com',
+                        path: '/resource',
+                    },
+                },
+            },
+            {
+                title: 'parses shadowsocks shadowsocks-http lines as http obfs and keeps the QX token',
+                input: 'shadowsocks=qx-ss-shadowsocks-http.example.com:8388,method=aes-128-gcm,password=secret,obfs=shadowsocks-http,obfs-host=shadow.example.com,obfs-uri=/shadow,tag=QX SS Shadowsocks HTTP',
+                expected: {
+                    type: 'ss',
+                    name: 'QX SS Shadowsocks HTTP',
+                    server: 'qx-ss-shadowsocks-http.example.com',
+                    port: 8388,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    plugin: 'obfs',
+                    _qx_obfs_http: 'shadowsocks-http',
+                    'plugin-opts': {
+                        mode: 'http',
+                        host: 'shadow.example.com',
+                        path: '/shadow',
+                    },
+                },
+            },
+            {
                 title: 'parses shadowsocks v2ray-plugin wss lines',
                 input: 'shadowsocks=qx-ss.example.com:8388,method=aes-128-gcm,password=secret,obfs=wss,obfs-host=obfs.example.com,obfs-uri=/ws,udp-relay=true,fast-open=true,tag=QX SS',
                 expected: {
@@ -861,6 +985,91 @@ describe('Platform raw-format parser coverage', function () {
                         path: '/vmess',
                         headers: {
                             Host: 'cdn.example.com',
+                        },
+                    },
+                },
+            },
+            {
+                title: 'parses vmess http lines as http obfs and keeps the QX token',
+                input: `vmess=qx-vmess-http-plain.example.com:80,method=none,password=${UUID},obfs=http,obfs-host=plain.example.com,obfs-uri=/http,tag=QX VMess HTTP`,
+                expected: {
+                    type: 'vmess',
+                    name: 'QX VMess HTTP',
+                    server: 'qx-vmess-http-plain.example.com',
+                    port: 80,
+                    cipher: 'none',
+                    uuid: UUID,
+                    alterId: 0,
+                    network: 'http',
+                    _qx_obfs_http: 'http',
+                    'http-opts': {
+                        path: ['/http'],
+                        headers: {
+                            Host: ['plain.example.com'],
+                        },
+                    },
+                },
+            },
+            {
+                // QX examples contain the upstream "vemss-http" typo; keep
+                // parsing it so the original line can round-trip unchanged.
+                title: 'parses vmess vemss-http lines as http obfs and keeps the QX alias',
+                input: `vmess=qx-vmess-vemss-http.example.com:80,method=none,password=${UUID},obfs=vemss-http,obfs-host=vemss.example.com,obfs-uri=/vemss,tag=QX VMess VMess HTTP`,
+                expected: {
+                    type: 'vmess',
+                    name: 'QX VMess VMess HTTP',
+                    server: 'qx-vmess-vemss-http.example.com',
+                    port: 80,
+                    cipher: 'none',
+                    uuid: UUID,
+                    alterId: 0,
+                    network: 'http',
+                    _qx_obfs_http: 'vemss-http',
+                    'http-opts': {
+                        path: ['/vemss'],
+                        headers: {
+                            Host: ['vemss.example.com'],
+                        },
+                    },
+                },
+            },
+            {
+                title: 'parses vmess shadowsocks-http lines as http obfs and keeps the QX alias',
+                input: `vmess=qx-vmess-http.example.com:80,method=none,password=${UUID},obfs=shadowsocks-http,obfs-host=cdn.example.com,obfs-uri=/resource/file,tag=QX VMess Shadowsocks HTTP`,
+                expected: {
+                    type: 'vmess',
+                    name: 'QX VMess Shadowsocks HTTP',
+                    server: 'qx-vmess-http.example.com',
+                    port: 80,
+                    cipher: 'none',
+                    uuid: UUID,
+                    alterId: 0,
+                    network: 'http',
+                    _qx_obfs_http: 'shadowsocks-http',
+                    'http-opts': {
+                        path: ['/resource/file'],
+                        headers: {
+                            Host: ['cdn.example.com'],
+                        },
+                    },
+                },
+            },
+            {
+                title: 'parses vless vmess-http lines as http obfs and keeps the QX token',
+                input: `vless=qx-vless-http.example.com:80,method=none,password=${UUID},obfs=vmess-http,obfs-host=vless.example.com,obfs-uri=/vless-http,tag=QX VLESS HTTP`,
+                expected: {
+                    type: 'vless',
+                    name: 'QX VLESS HTTP',
+                    server: 'qx-vless-http.example.com',
+                    port: 80,
+                    cipher: 'none',
+                    uuid: UUID,
+                    network: 'http',
+                    _qx_obfs_http: 'vmess-http',
+                    'http-opts': {
+                        path: ['/vless-http'],
+                        headers: {
+                            Host: ['vless.example.com'],
                         },
                     },
                 },

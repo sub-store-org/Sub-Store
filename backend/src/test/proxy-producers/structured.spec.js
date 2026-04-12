@@ -485,6 +485,104 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('maps canonical shadowsocks tls fields into Shadowrocket structured output', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+            sni: 'a.com',
+            'skip-cert-verify': true,
+        };
+
+        const internal = produceInternal('Shadowrocket', proxy)[0];
+        const external = loadProducedYaml('Shadowrocket', proxy);
+
+        expectSubset(internal, {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS',
+            tls: true,
+            servername: 'a.com',
+            'skip-cert-verify': true,
+        });
+        // expect(internal).to.not.have.property('sni');
+        expectSubset(external.proxies[0], {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS',
+            tls: true,
+            servername: 'a.com',
+            'skip-cert-verify': true,
+        });
+        // expect(external.proxies[0]).to.not.have.property('sni');
+    });
+
+    it('keeps canonical shadowsocks tls nodes without servername in Shadowrocket output when sni is absent', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS No Host',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+        };
+
+        const internal = produceInternal('Shadowrocket', proxy)[0];
+        const external = loadProducedYaml('Shadowrocket', proxy);
+
+        expectSubset(internal, {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS No Host',
+            tls: true,
+        });
+        expect(internal).to.not.have.property('sni');
+        expect(internal).to.not.have.property('servername');
+        expectSubset(external.proxies[0], {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS No Host',
+            tls: true,
+        });
+        expect(external.proxies[0]).to.not.have.property('sni');
+        expect(external.proxies[0]).to.not.have.property('servername');
+    });
+
+    it('maps canonical shadowsocks tcp tls fields into Shadowrocket structured output', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS TCP',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+            sni: 'a.com',
+            network: 'tcp',
+        };
+
+        const internal = produceInternal('Shadowrocket', proxy)[0];
+        const external = loadProducedYaml('Shadowrocket', proxy);
+
+        expectSubset(internal, {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS TCP',
+            tls: true,
+            network: 'tcp',
+            servername: 'a.com',
+        });
+        // expect(internal).to.not.have.property('sni');
+        expectSubset(external.proxies[0], {
+            type: 'ss',
+            name: 'Shadowrocket SS TLS TCP',
+            tls: true,
+            network: 'tcp',
+            servername: 'a.com',
+        });
+        // expect(external.proxies[0]).to.not.have.property('sni');
+    });
+
     it('maps shadowsocks shadow-tls fields into Egern nested structures', function () {
         const proxy = {
             type: 'ss',
@@ -635,6 +733,106 @@ describe('Proxy structured producers', function () {
                 });
             }
         }
+    });
+
+    it('filters canonical shadowsocks over-tls nodes for unsupported client targets by default', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Unsupported SS TLS',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+            sni: 'a.com',
+        };
+
+        for (const platform of [
+            'Clash',
+            'ClashMeta',
+            'Mihomo',
+            'Stash',
+            'Loon',
+            'Surge',
+            'SurgeMac',
+            'Surfboard',
+            'Egern',
+            'sing-box',
+            'URI',
+            'V2Ray',
+        ]) {
+            expect(produceInternal(platform, proxy), platform).to.have.length(
+                0,
+            );
+        }
+
+        expect(ProxyUtils.produce([proxy], 'Clash', 'external')).to.equal(
+            'proxies:\n',
+        );
+        expect(ProxyUtils.produce([proxy], 'Loon', 'external')).to.equal('');
+        expect(ProxyUtils.produce([proxy], 'URI', 'external')).to.equal('');
+        expect(produceInternal('QX', proxy), 'QX').to.have.length(1);
+        expect(
+            produceInternal('Shadowrocket', proxy),
+            'Shadowrocket',
+        ).to.have.length(1);
+    });
+
+    it('keeps canonical shadowsocks over-tls nodes when include-unsupported-proxy is enabled for Clash', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Clash SS TLS',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+            sni: 'a.com',
+        };
+
+        const internal = produceInternal('Clash', proxy, {
+            'include-unsupported-proxy': true,
+        });
+
+        expect(internal).to.have.length(1);
+        expectSubset(internal[0], {
+            type: 'ss',
+            name: 'Clash SS TLS',
+            tls: true,
+            sni: 'a.com',
+        });
+    });
+
+    it('still treats canonical shadowsocks tls nodes without sni as unsupported for disallowed targets', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Unsupported SS TLS No Host',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+        };
+
+        expect(produceInternal('Clash', proxy)).to.have.length(0);
+        expect(produceExternal('Clash', proxy)).to.equal('proxies:\n');
+    });
+
+    it('still treats canonical shadowsocks tcp tls nodes as unsupported for disallowed targets', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Unsupported SS TLS TCP',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tls: true,
+            sni: 'a.com',
+            network: 'tcp',
+        };
+
+        expect(produceInternal('Clash', proxy)).to.have.length(0);
+        expect(ProxyUtils.produce([proxy], 'URI', 'external')).to.equal('');
     });
 
     it('skips invalid Egern nodes and keeps the rest of the subscription', function () {

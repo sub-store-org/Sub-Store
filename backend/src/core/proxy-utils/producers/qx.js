@@ -1,4 +1,4 @@
-import { isPresent, Result } from './utils';
+import { isPresent, isShadowsocksOverTls, Result } from './utils';
 
 const targetPlatform = 'QX';
 
@@ -54,10 +54,24 @@ export default function QX_Producer() {
     };
 }
 
+function getQxHttpObfs(proxy) {
+    // QX accepts multiple http-obfs spellings for ss/vmess/vless. Preserve
+    // the original token for round-trip output, including "vemss-http".
+    return [
+        'http',
+        'vmess-http',
+        'vemss-http',
+        'shadowsocks-http',
+    ].includes(proxy._qx_obfs_http)
+        ? proxy._qx_obfs_http
+        : 'http';
+}
+
 function shadowsocks(proxy) {
     const result = new Result(proxy);
     const append = result.append.bind(result);
     const appendIfPresent = result.appendIfPresent.bind(result);
+    const isSSOverTls = isShadowsocksOverTls(proxy);
     if (!proxy.cipher) {
         proxy.cipher = 'none';
     }
@@ -98,10 +112,23 @@ function shadowsocks(proxy) {
     if (needTls(proxy)) {
         proxy.tls = true;
     }
-    if (isPresent(proxy, 'plugin')) {
+    if (isSSOverTls) {
+        append(`,obfs=over-tls`);
+        if (isPresent(proxy, 'sni')) {
+            append(`,obfs-host=${proxy.sni}`);
+        } else {
+            appendIfPresent(`,obfs-host=${proxy.servername}`, 'servername');
+        }
+    } else if (isPresent(proxy, 'plugin')) {
         if (proxy.plugin === 'obfs') {
             const opts = proxy['plugin-opts'];
-            append(`,obfs=${opts.mode}`);
+            if (opts.mode === 'http') {
+                // Keep the original QX http-obfs token instead of collapsing
+                // it back to plain "http".
+                append(`,obfs=${getQxHttpObfs(proxy)}`);
+            } else {
+                append(`,obfs=${opts.mode}`);
+            }
         } else if (
             proxy.plugin === 'v2ray-plugin' &&
             proxy['plugin-opts'].mode === 'websocket'
@@ -147,7 +174,9 @@ function shadowsocks(proxy) {
             `,tls-verification=${!proxy['skip-cert-verify']}`,
             'skip-cert-verify',
         );
-        appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+        if (!isSSOverTls) {
+            appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+        }
     }
 
     // tfo
@@ -325,7 +354,7 @@ function vmess(proxy) {
             if (proxy.tls) append(`,obfs=wss`);
             else append(`,obfs=ws`);
         } else if (proxy.network === 'http') {
-            append(`,obfs=http`);
+            append(`,obfs=${getQxHttpObfs(proxy)}`);
         } else if (['tcp'].includes(proxy.network)) {
             if (proxy.tls) append(`,obfs=over-tls`);
         } else if (!['tcp'].includes(proxy.network)) {
@@ -431,7 +460,7 @@ function vless(proxy) {
             if (proxy.tls) append(`,obfs=wss`);
             else append(`,obfs=ws`);
         } else if (proxy.network === 'http') {
-            append(`,obfs=http`);
+            append(`,obfs=${getQxHttpObfs(proxy)}`);
         } else if (['tcp'].includes(proxy.network)) {
             if (proxy.tls) append(`,obfs=over-tls`);
         } else if (!['tcp'].includes(proxy.network)) {
