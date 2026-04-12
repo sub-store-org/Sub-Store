@@ -707,9 +707,7 @@ function URI_VLESS() {
                 hMaxReusableSecs: 'h-max-reusable-secs',
             };
 
-            for (const [sourceKey, targetKey] of Object.entries(
-                xmuxFieldMap,
-            )) {
+            for (const [sourceKey, targetKey] of Object.entries(xmuxFieldMap)) {
                 const value = xmux[sourceKey];
                 if (typeof value === 'string' && value !== '') {
                     reuseSettings[targetKey] = value;
@@ -849,6 +847,9 @@ function URI_VLESS() {
             `VLESS ${server}:${port}`;
 
         proxy.tls = params.security && params.security !== 'none';
+        if (params.pbk) {
+            params.security = 'reality';
+        }
         if (isShadowrocket && /TRUE|1/i.test(params.tls)) {
             proxy.tls = true;
             params.security = params.security ?? 'reality';

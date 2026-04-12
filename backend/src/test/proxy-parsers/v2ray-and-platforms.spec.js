@@ -356,6 +356,54 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
+        it('keeps reality opts when share links carry pbk without security=reality', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-grpc.example.com:443?type=grpc&security=tls&serviceName=grpc-service&pbk=pubkey&sid=08#VLESS%20PBK`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS PBK',
+                server: 'vless-grpc.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'grpc',
+                'grpc-opts': {
+                    'grpc-service-name': 'grpc-service',
+                    '_grpc-type': 'gun',
+                },
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+            });
+        });
+
+        it('keeps pbk-derived reality opts without tls defaults when security is none', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-grpc.example.com:443?type=grpc&security=none&serviceName=grpc-service&pbk=pubkey&sid=08#VLESS%20PBK%20No%20TLS`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS PBK No TLS',
+                server: 'vless-grpc.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: false,
+                network: 'grpc',
+                'grpc-opts': {
+                    'grpc-service-name': 'grpc-service',
+                    '_grpc-type': 'gun',
+                },
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+            });
+        });
+
         it('parses tcp http-header VLESS shares', function () {
             const proxy = parseOne(
                 `vless://${UUID}@vless-http.example.com:80?type=tcp&headerType=http&host=http.example.com&path=%2Fedge&method=GET#VLESS%20HTTP`,
@@ -484,7 +532,9 @@ describe('VMess and VLESS parser coverage', function () {
                 },
             });
             const proxy = parseOne(
-                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP`,
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP`,
             );
 
             expectSubset(proxy, {
@@ -542,7 +592,9 @@ describe('VMess and VLESS parser coverage', function () {
                 },
             });
             const proxy = parseOne(
-                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20Download`,
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Download`,
             );
 
             expectSubset(proxy, {
@@ -592,7 +644,9 @@ describe('VMess and VLESS parser coverage', function () {
                 },
             });
             const proxy = parseOne(
-                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20Download%20No%20Mode`,
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Download%20No%20Mode`,
             );
 
             expectSubset(proxy, {
@@ -634,7 +688,9 @@ describe('VMess and VLESS parser coverage', function () {
                 },
             });
             const proxy = parseOne(
-                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20Range`,
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Range`,
             );
 
             expectSubset(proxy, {
@@ -680,7 +736,9 @@ describe('VMess and VLESS parser coverage', function () {
                 },
             });
             const proxy = parseOne(
-                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20String`,
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20String`,
             );
 
             expectSubset(proxy, {
@@ -729,7 +787,9 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                 });
                 const proxy = parseOne(
-                    `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(extra)}#VLESS%20XHTTP%20Invalid`,
+                    `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                        extra,
+                    )}#VLESS%20XHTTP%20Invalid`,
                 );
 
                 expectSubset(proxy, {

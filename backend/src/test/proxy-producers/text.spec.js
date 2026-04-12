@@ -850,7 +850,9 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(extra)}#URI%20XHTTP`,
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                extra,
+            )}#URI%20XHTTP`,
         );
     });
 
@@ -888,7 +890,9 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(extra)}#URI%20XHTTP%20Raw%20Extra`,
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                extra,
+            )}#URI%20XHTTP%20Raw%20Extra`,
         );
     });
 
@@ -960,7 +964,9 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(extra)}#URI%20XHTTP%20Download`,
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                extra,
+            )}#URI%20XHTTP%20Download`,
         );
     });
 
