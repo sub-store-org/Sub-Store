@@ -39,6 +39,12 @@ const grammars = String.raw`
             $set(proxy, "ws-opts.headers.Host", obfs.host);
         } else if (obfs.type === "over-tls") {
             proxy.tls = true;
+            // Some QX share links use obfs-host as the TLS server name for
+            // plain over-tls TCP nodes instead of the explicit tls-host field.
+            // Accept it as a compatibility alias, but do not override tls-host.
+            if (obfs.host && !proxy.sni) {
+                proxy.sni = obfs.host;
+            }
         } else if (obfs.type === "http") {
             proxy.network = "http";
             $set(proxy, "http-opts.path", obfs.path);
