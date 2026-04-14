@@ -32,6 +32,15 @@ function surge_port_hopping(raw) {
     };
 }
 
+function splitURIFragment(raw) {
+    const [__, content, fragment] = /^(.*?)(?:#(.*?))?$/.exec(raw);
+    return {
+        content,
+        fragment:
+            fragment != null ? decodeURIComponent(fragment) : undefined,
+    };
+}
+
 function URI_PROXY() {
     // socks5+tls
     // socks5
@@ -129,13 +138,12 @@ function URI_SS() {
     };
     const parse = (line) => {
         // parse url
-        let content = line.split('ss://')[1];
-
-        let name = line.split('#')[1];
+        let { content, fragment: name } = splitURIFragment(
+            line.split('ss://')[1],
+        );
         const proxy = {
             type: 'ss',
         };
-        content = content.split('#')[0]; // strip proxy name
         // handle IPV4 and IPV6
         let serverAndPortArray = content.match(/@([^/?]*)(\/|\?|$)/);
 
@@ -365,9 +373,6 @@ function URI_SS() {
         if (/(&|\?)tfo=(1|true)/i.test(query)) {
             proxy.tfo = true;
         }
-        if (name != null) {
-            name = decodeURIComponent(name);
-        }
         proxy.name = name ?? `SS ${proxy.server}:${proxy.port}`;
         return proxy;
     };
@@ -450,8 +455,9 @@ function URI_VMess() {
         return /^vmess:\/\//.test(line);
     };
     const parse = (line) => {
-        line = line.split('vmess://')[1];
-        let content = Base64.decode(line.replace(/\?.*?$/, ''));
+        let { content: lineWithoutFragment, fragment: fragmentName } =
+            splitURIFragment(line.split('vmess://')[1]);
+        let content = Base64.decode(lineWithoutFragment.replace(/\?.*?$/, ''));
         if (/=\s*vmess/.test(content)) {
             // Quantumult VMess URI format
             const partitions = content.split(',').map((p) => p.trim());
@@ -501,6 +507,9 @@ function URI_VMess() {
                     throw new Error(`Unsupported obfs: ${params.obfs}`);
                 }
             }
+            if (isNotBlank(fragmentName)) {
+                proxy.name = fragmentName;
+            }
             return proxy;
         } else {
             let params = {};
@@ -511,7 +520,9 @@ function URI_VMess() {
             } catch (e) {
                 // Shadowrocket URI format
                 // eslint-disable-next-line no-unused-vars
-                let [__, base64Line, qs] = /(^[^?]+?)\/?\?(.*)$/.exec(line);
+                let [__, base64Line, qs] = /(^[^?]+?)\/?\?(.*)$/.exec(
+                    lineWithoutFragment,
+                );
                 content = Base64.decode(base64Line);
 
                 for (const addon of qs.split('&')) {
@@ -680,6 +691,9 @@ function URI_VMess() {
             proxy.alpn = params.alpn ? params.alpn.split(',') : undefined;
             // 然而 wiki 和 app 实测中都没有字段表示这个
             // proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.allowInsecure);
+            if (isNotBlank(fragmentName)) {
+                proxy.name = fragmentName;
+            }
 
             return proxy;
         }

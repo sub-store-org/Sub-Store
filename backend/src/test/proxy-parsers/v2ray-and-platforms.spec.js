@@ -69,6 +69,84 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
+        it('prefers fragment comments over internal V2rayN vmess names', function () {
+            const share = Base64.encode(
+                JSON.stringify({
+                    v: '2',
+                    ps: 'VMess WS Fragment',
+                    add: 'vmess-fragment.example.com',
+                    port: '443',
+                    id: UUID,
+                    aid: '0',
+                    scy: 'none',
+                    net: 'ws',
+                    host: 'fragment.example.com',
+                    path: '/fragment?ed=2560',
+                    tls: 'tls',
+                    sni: 'sni.fragment.example.com',
+                    fp: 'chrome',
+                }),
+            );
+            const proxy = parseOne(`vmess://${share}#Outer%20Fragment%20Remark`);
+
+            expectSubset(proxy, {
+                type: 'vmess',
+                name: 'Outer Fragment Remark',
+                server: 'vmess-fragment.example.com',
+                port: 443,
+                uuid: UUID,
+                alterId: 0,
+                cipher: 'none',
+                tls: true,
+                sni: 'sni.fragment.example.com',
+                'client-fingerprint': 'chrome',
+                network: 'ws',
+                'ws-opts': {
+                    path: '/fragment?ed=2560',
+                    headers: {
+                        Host: 'fragment.example.com',
+                    },
+                },
+            });
+        });
+
+        it('keeps the full vmess fragment comment after the first hash', function () {
+            const share = Base64.encode(
+                JSON.stringify({
+                    v: '2',
+                    ps: 'VMess WS Fragment Full',
+                    add: 'vmess-fragment-full.example.com',
+                    port: '443',
+                    id: UUID,
+                    aid: '0',
+                    scy: 'auto',
+                    net: 'ws',
+                    host: 'fragment-full.example.com',
+                    path: '/fragment-full',
+                    tls: 'tls',
+                }),
+            );
+            const proxy = parseOne(`vmess://${share}#Outer%20Fragment#Remark`);
+
+            expectSubset(proxy, {
+                type: 'vmess',
+                name: 'Outer Fragment#Remark',
+                server: 'vmess-fragment-full.example.com',
+                port: 443,
+                uuid: UUID,
+                alterId: 0,
+                cipher: 'auto',
+                tls: true,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/fragment-full',
+                    headers: {
+                        Host: 'fragment-full.example.com',
+                    },
+                },
+            });
+        });
+
         it('parses V2rayN http shares and normalizes http paths', function () {
             const share = Base64.encode(
                 JSON.stringify({
@@ -237,6 +315,34 @@ describe('VMess and VLESS parser coverage', function () {
             expectSubset(proxy, {
                 type: 'vless',
                 name: 'VLESS WS',
+                server: 'vless-ws.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                'client-fingerprint': 'chrome',
+                alpn: ['h2'],
+                udp: true,
+                xudp: true,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+            });
+        });
+
+        it('keeps the full vless fragment comment after the first hash', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-ws.example.com:443?type=ws&security=tls&sni=sni.example.com&host=cdn.example.com&path=%2Fws&allowInsecure=1&fp=chrome&alpn=h2#VLESS%20Outer#Remark`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS Outer#Remark',
                 server: 'vless-ws.example.com',
                 port: 443,
                 uuid: UUID,

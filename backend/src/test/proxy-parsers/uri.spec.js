@@ -22,6 +22,22 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
+        it('keeps the full https fragment comment after the first hash', function () {
+            const proxy = parseOne(
+                'https://alice:pa%24%24@https.example.com#HTTPS%20Outer#Remark',
+            );
+
+            expectSubset(proxy, {
+                type: 'http',
+                name: 'HTTPS Outer#Remark',
+                server: 'https.example.com',
+                port: 443,
+                tls: true,
+                username: 'alice',
+                password: 'pa$$',
+            });
+        });
+
         it('parses legacy socks:// URIs with base64 auth', function () {
             const proxy = parseOne(
                 `socks://${encodeURIComponent(
@@ -32,6 +48,23 @@ describe('Proxy URI parser coverage', function () {
             expectSubset(proxy, {
                 type: 'socks5',
                 name: 'SOCKS',
+                server: 'socks.example.com',
+                port: 1080,
+                username: 'bob',
+                password: 'secret',
+            });
+        });
+
+        it('keeps the full socks fragment comment after the first hash', function () {
+            const proxy = parseOne(
+                `socks://${encodeURIComponent(
+                    Base64.encode('bob:secret'),
+                )}@socks.example.com:1080#SOCKS#Remark`,
+            );
+
+            expectSubset(proxy, {
+                type: 'socks5',
+                name: 'SOCKS#Remark',
                 server: 'socks.example.com',
                 port: 1080,
                 username: 'bob',
@@ -94,6 +127,24 @@ describe('Proxy URI parser coverage', function () {
                     path: '/socket',
                     tls: true,
                 },
+            });
+        });
+
+        it('keeps the full shadowsocks fragment comment after the first hash', function () {
+            const userInfo = encodeURIComponent(
+                Base64.encode('aes-128-gcm:secret'),
+            );
+            const proxy = parseOne(
+                `ss://${userInfo}@ss.example.com:8388#SS%20Outer#Remark`,
+            );
+
+            expectSubset(proxy, {
+                type: 'ss',
+                name: 'SS Outer#Remark',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
             });
         });
 
