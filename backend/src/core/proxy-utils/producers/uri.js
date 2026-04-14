@@ -2,6 +2,7 @@
 import { Base64 } from 'js-base64';
 import { isIPv6 } from '@/utils';
 import { normalizePluginMuxValue } from './utils';
+import { normalizeXhttpScalarUpperBound } from '../xhttp-utils';
 
 function isObject(value) {
     return value != null && typeof value === 'object' && !Array.isArray(value);
@@ -103,6 +104,22 @@ function buildXhttpDownloadSettings(downloadSettings) {
     if (downloadSettings['x-padding-bytes']) {
         xhttpSettings.xPaddingBytes = downloadSettings['x-padding-bytes'];
     }
+    if (downloadSettings['sc-max-each-post-bytes'] != null) {
+        const scMaxEachPostBytes = normalizeXhttpScalarUpperBound(
+            downloadSettings['sc-max-each-post-bytes'],
+        );
+        if (scMaxEachPostBytes != null) {
+            xhttpSettings.scMaxEachPostBytes = scMaxEachPostBytes;
+        }
+    }
+    if (downloadSettings['sc-min-posts-interval-ms'] != null) {
+        const scMinPostsIntervalMs = normalizeXhttpScalarUpperBound(
+            downloadSettings['sc-min-posts-interval-ms'],
+        );
+        if (scMinPostsIntervalMs != null) {
+            xhttpSettings.scMinPostsIntervalMs = scMinPostsIntervalMs;
+        }
+    }
 
     const xmux = mapReuseSettingsToXmux(downloadSettings['reuse-settings']);
     if (xmux) {
@@ -126,7 +143,20 @@ function buildStructuredVlessExtra(proxy) {
         extra.xPaddingBytes = xhttpOpts['x-padding-bytes'];
     }
     if (xhttpOpts['sc-max-each-post-bytes'] != null) {
-        extra.scMaxEachPostBytes = xhttpOpts['sc-max-each-post-bytes'];
+        const scMaxEachPostBytes = normalizeXhttpScalarUpperBound(
+            xhttpOpts['sc-max-each-post-bytes'],
+        );
+        if (scMaxEachPostBytes != null) {
+            extra.scMaxEachPostBytes = scMaxEachPostBytes;
+        }
+    }
+    if (xhttpOpts['sc-min-posts-interval-ms'] != null) {
+        const scMinPostsIntervalMs = normalizeXhttpScalarUpperBound(
+            xhttpOpts['sc-min-posts-interval-ms'],
+        );
+        if (scMinPostsIntervalMs != null) {
+            extra.scMinPostsIntervalMs = scMinPostsIntervalMs;
+        }
     }
 
     const xmux = mapReuseSettingsToXmux(xhttpOpts['reuse-settings']);
@@ -144,13 +174,124 @@ function buildStructuredVlessExtra(proxy) {
     return Object.keys(extra).length > 0 ? JSON.stringify(extra) : '';
 }
 
+function applyNormalizedXhttpScalar(target, rawKey, value) {
+    if (!isObject(target)) {
+        return false;
+    }
+
+    const normalizedValue = normalizeXhttpScalarUpperBound(value);
+    if (normalizedValue != null) {
+        if (target[rawKey] === normalizedValue) {
+            return false;
+        }
+        target[rawKey] = normalizedValue;
+        return true;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(target, rawKey)) {
+        delete target[rawKey];
+        return true;
+    }
+
+    return false;
+}
+
+function normalizeRawXhttpExtra(proxy) {
+    if (!proxy._extra) {
+        return '';
+    }
+
+    let rawExtra;
+    try {
+        rawExtra = JSON.parse(proxy._extra);
+    } catch (e) {
+        return proxy._extra;
+    }
+
+    if (!isObject(rawExtra) || !isObject(proxy['xhttp-opts'])) {
+        return proxy._extra;
+    }
+
+    let didChange = false;
+    const xhttpOpts = proxy['xhttp-opts'];
+
+    if (xhttpOpts['sc-max-each-post-bytes'] != null) {
+        didChange =
+            applyNormalizedXhttpScalar(
+                rawExtra,
+                'scMaxEachPostBytes',
+                xhttpOpts['sc-max-each-post-bytes'],
+            ) || didChange;
+    }
+    if (xhttpOpts['sc-min-posts-interval-ms'] != null) {
+        didChange =
+            applyNormalizedXhttpScalar(
+                rawExtra,
+                'scMinPostsIntervalMs',
+                xhttpOpts['sc-min-posts-interval-ms'],
+            ) || didChange;
+    }
+
+    const downloadSettings = xhttpOpts['download-settings'];
+    if (isObject(downloadSettings)) {
+        const rawDownloadSettings = isObject(rawExtra.downloadSettings)
+            ? rawExtra.downloadSettings
+            : undefined;
+
+        let rawXhttpSettings = isObject(rawDownloadSettings?.xhttpSettings)
+            ? rawDownloadSettings.xhttpSettings
+            : undefined;
+        if (
+            !rawXhttpSettings &&
+            (downloadSettings['sc-max-each-post-bytes'] != null ||
+                downloadSettings['sc-min-posts-interval-ms'] != null)
+        ) {
+            rawExtra.downloadSettings = isObject(rawExtra.downloadSettings)
+                ? rawExtra.downloadSettings
+                : {};
+            rawExtra.downloadSettings.xhttpSettings = {};
+            rawXhttpSettings = rawExtra.downloadSettings.xhttpSettings;
+            didChange = true;
+        }
+
+        if (rawXhttpSettings) {
+            if (downloadSettings['sc-max-each-post-bytes'] != null) {
+                didChange =
+                    applyNormalizedXhttpScalar(
+                        rawXhttpSettings,
+                        'scMaxEachPostBytes',
+                        downloadSettings['sc-max-each-post-bytes'],
+                    ) || didChange;
+            }
+            if (downloadSettings['sc-min-posts-interval-ms'] != null) {
+                didChange =
+                    applyNormalizedXhttpScalar(
+                        rawXhttpSettings,
+                        'scMinPostsIntervalMs',
+                        downloadSettings['sc-min-posts-interval-ms'],
+                    ) || didChange;
+            }
+
+            if (Object.keys(rawXhttpSettings).length === 0) {
+                delete rawExtra.downloadSettings.xhttpSettings;
+                didChange = true;
+                if (Object.keys(rawExtra.downloadSettings).length === 0) {
+                    delete rawExtra.downloadSettings;
+                }
+            }
+        }
+    }
+
+    return didChange ? JSON.stringify(rawExtra) : proxy._extra;
+}
+
 function buildVlessExtra(proxy) {
     if (proxy.network !== 'xhttp') {
         return proxy._extra || '';
     }
 
     if (proxy._extra) {
-        return proxy._extra;
+        return normalizeRawXhttpExtra(proxy);
     }
 
     return buildStructuredVlessExtra(proxy);

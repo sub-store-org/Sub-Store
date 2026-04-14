@@ -163,11 +163,8 @@ describe('Proxy structured producers', function () {
                 mode: 'stream-up',
                 'no-grpc-header': true,
                 'x-padding-bytes': '64-128',
+                'sc-min-posts-interval-ms': 300,
             },
-            _extra: JSON.stringify({
-                noGRPCHeader: true,
-                xPaddingBytes: '64-128',
-            }),
         };
 
         const internal = produceInternal('Mihomo', proxy);
@@ -188,6 +185,7 @@ describe('Proxy structured producers', function () {
                 mode: 'stream-up',
                 'no-grpc-header': true,
                 'x-padding-bytes': '64-128',
+                'sc-min-posts-interval-ms': 300,
             },
         });
         expectSubset(external.proxies[0], {
@@ -195,6 +193,90 @@ describe('Proxy structured producers', function () {
             name: 'XHTTP',
             network: 'xhttp',
             servername: 'sni.example.com',
+            'xhttp-opts': {
+                'sc-min-posts-interval-ms': 300,
+            },
+        });
+    });
+
+    it('emits Mihomo VLESS xhttp download settings with scMinPostsIntervalMs', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP Download',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                mode: 'stream-up',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    servername: 'download-sni.example.com',
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    'sc-min-posts-interval-ms': 300,
+                    'reuse-settings': {
+                        'max-connections': '8',
+                        'h-max-reusable-secs': '900',
+                    },
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        const external = loadProducedYaml('Mihomo', proxy);
+
+        expect(internal).to.have.length(1);
+        expect(external.proxies).to.have.length(1);
+        expectSubset(internal[0], {
+            type: 'vless',
+            name: 'XHTTP Download',
+            network: 'xhttp',
+            servername: 'sni.example.com',
+            'xhttp-opts': {
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    servername: 'download-sni.example.com',
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    'sc-min-posts-interval-ms': 300,
+                    'reuse-settings': {
+                        'max-connections': '8',
+                        'h-max-reusable-secs': '900',
+                    },
+                },
+            },
+        });
+        expectSubset(external.proxies[0], {
+            type: 'vless',
+            name: 'XHTTP Download',
+            network: 'xhttp',
+            servername: 'sni.example.com',
+            'xhttp-opts': {
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    servername: 'download-sni.example.com',
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    'sc-min-posts-interval-ms': 300,
+                    'reuse-settings': {
+                        'max-connections': '8',
+                        'h-max-reusable-secs': '900',
+                    },
+                },
+            },
         });
     });
 

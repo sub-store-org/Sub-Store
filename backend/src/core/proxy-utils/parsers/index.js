@@ -18,6 +18,7 @@ import YAML from '@/utils/yaml';
 import _ from 'lodash';
 
 import { Base64 } from 'js-base64';
+import { normalizeXhttpScalarUpperBound } from '../xhttp-utils';
 
 function surge_port_hopping(raw) {
     const [parts, port_hopping] =
@@ -800,6 +801,22 @@ function URI_VLESS() {
                     parsedDownloadSettings['x-padding-bytes'] =
                         downloadSettings.xhttpSettings.xPaddingBytes;
                 }
+                const scMaxEachPostBytes =
+                    normalizeXhttpScalarUpperBound(
+                        downloadSettings.xhttpSettings.scMaxEachPostBytes,
+                    );
+                if (scMaxEachPostBytes != null) {
+                    parsedDownloadSettings['sc-max-each-post-bytes'] =
+                        scMaxEachPostBytes;
+                }
+                const scMinPostsIntervalMs =
+                    normalizeXhttpScalarUpperBound(
+                        downloadSettings.xhttpSettings.scMinPostsIntervalMs,
+                    );
+                if (scMinPostsIntervalMs != null) {
+                    parsedDownloadSettings['sc-min-posts-interval-ms'] =
+                        scMinPostsIntervalMs;
+                }
 
                 const reuseSettings = mapXmuxToReuseSettings(
                     downloadSettings.xhttpSettings.extra?.xmux,
@@ -1032,31 +1049,19 @@ function URI_VLESS() {
                 if (isNotBlank(extra?.['xPaddingBytes'])) {
                     xhttpOpts['x-padding-bytes'] = extra['xPaddingBytes'];
                 }
-                const scMaxEachPostBytes = extra?.['scMaxEachPostBytes'];
-                if (
-                    typeof scMaxEachPostBytes === 'string' ||
-                    typeof scMaxEachPostBytes === 'number'
-                ) {
-                    const normalizedValue = `${scMaxEachPostBytes}`;
-                    if (/^\s*[1-9]\d*\s*$/.test(normalizedValue)) {
-                        xhttpOpts['sc-max-each-post-bytes'] = parseInt(
-                            normalizedValue,
-                            10,
-                        );
-                    } else {
-                        const rangeMatch = normalizedValue.match(
-                            /^\s*([1-9]\d*)\s*-\s*([1-9]\d*)\s*$/,
-                        );
-                        if (rangeMatch) {
-                            const lowerBound = parseInt(rangeMatch[1], 10);
-                            const upperBound = parseInt(rangeMatch[2], 10);
-
-                            if (upperBound >= lowerBound) {
-                                xhttpOpts['sc-max-each-post-bytes'] =
-                                    upperBound;
-                            }
-                        }
-                    }
+                const scMaxEachPostBytes =
+                    normalizeXhttpScalarUpperBound(extra?.['scMaxEachPostBytes']);
+                if (scMaxEachPostBytes != null) {
+                    xhttpOpts['sc-max-each-post-bytes'] =
+                        scMaxEachPostBytes;
+                }
+                const scMinPostsIntervalMs =
+                    normalizeXhttpScalarUpperBound(
+                        extra?.['scMinPostsIntervalMs'],
+                    );
+                if (scMinPostsIntervalMs != null) {
+                    xhttpOpts['sc-min-posts-interval-ms'] =
+                        scMinPostsIntervalMs;
                 }
                 if (isPlainObject(extra?.xmux)) {
                     const reuseSettings = mapXmuxToReuseSettings(extra.xmux);
