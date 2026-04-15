@@ -99,6 +99,89 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('keeps only websocket shadowsocks v2ray-plugin modes for Mihomo and Stash by default', function () {
+        const buildProxy = (name, mode) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode,
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+            },
+        });
+
+        const proxies = [
+            buildProxy('WS', 'websocket'),
+            buildProxy('QUIC', 'quic'),
+        ];
+
+        for (const platform of ['Mihomo', 'Stash']) {
+            const internal = produceInternal(platform, proxies);
+            const external = loadProducedYaml(platform, proxies, {
+                'include-unsupported-proxy': true,
+            });
+
+            expect(internal, platform).to.have.length(1);
+            expect(internal[0].name, platform).to.equal('WS');
+            expect(external.proxies.map((proxy) => proxy.name), platform).to
+                .deep.equal(['WS', 'QUIC']);
+        }
+    });
+
+    it('keeps only supported shadowsocks v2ray-plugin modes for Shadowrocket by default', function () {
+        const buildProxy = (name, mode) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode,
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+            },
+        });
+
+        const proxies = [
+            buildProxy('WS', 'websocket'),
+            buildProxy('QUIC', 'quic'),
+            buildProxy('HTTP2', 'http2'),
+            buildProxy('MKCP', 'mkcp'),
+            buildProxy('GRPC', 'grpc'),
+            buildProxy('TLS', 'tls'),
+        ];
+
+        const internal = produceInternal('Shadowrocket', proxies);
+        const external = loadProducedYaml('Shadowrocket', proxies, {
+            'include-unsupported-proxy': true,
+        });
+
+        expect(internal.map((proxy) => proxy.name)).to.deep.equal([
+            'WS',
+            'QUIC',
+            'HTTP2',
+            'MKCP',
+            'GRPC',
+        ]);
+        expect(external.proxies.map((proxy) => proxy.name)).to.deep.equal([
+            'WS',
+            'QUIC',
+            'HTTP2',
+            'MKCP',
+            'GRPC',
+            'TLS',
+        ]);
+    });
+
     it('adds Clash.Meta reality defaults and preserves websocket early data', function () {
         const proxy = {
             type: 'vless',
@@ -701,6 +784,47 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('maps shadowsocks obfs plugin fields into Egern nested structures', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Egern SS Obfs TLS',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'obfs',
+            'plugin-opts': {
+                mode: 'tls',
+                host: 'legacy.example.com',
+                path: '/legacy',
+            },
+        };
+
+        const internal = produceInternal('Egern', proxy)[0];
+        const external = loadProducedYaml('Egern', proxy);
+
+        expectSubset(internal, {
+            shadowsocks: {
+                name: 'Egern SS Obfs TLS',
+                method: 'aes-128-gcm',
+                server: 'ss.example.com',
+                port: 8388,
+                password: 'secret',
+                obfs: 'tls',
+                obfs_host: 'legacy.example.com',
+                obfs_uri: '/legacy',
+            },
+        });
+        expectSubset(external.proxies[0], {
+            shadowsocks: {
+                name: 'Egern SS Obfs TLS',
+                obfs: 'tls',
+                obfs_host: 'legacy.example.com',
+                obfs_uri: '/legacy',
+            },
+        });
+    });
+
     it('preserves numeric v2ray-plugin mux values across Clash-family YAML producers', function () {
         const buildProxy = (name, mux) => ({
             type: 'ss',
@@ -926,6 +1050,51 @@ describe('Proxy structured producers', function () {
                 port: 443,
                 uuid: UUID,
                 encryption: 'aes-128-gcm',
+            },
+            {
+                type: 'ss',
+                name: 'Healthy SS',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+            },
+        ];
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        expect(internal).to.have.length(1);
+        expect(external.proxies).to.have.length(1);
+        expectSubset(internal[0], {
+            shadowsocks: {
+                name: 'Healthy SS',
+                method: 'aes-128-gcm',
+            },
+        });
+        expectSubset(external.proxies[0], {
+            shadowsocks: {
+                name: 'Healthy SS',
+            },
+        });
+    });
+
+    it('skips Egern shadowsocks proxies with unsupported plugins and keeps the rest of the subscription', function () {
+        const proxies = [
+            {
+                type: 'ss',
+                name: 'Invalid SS Plugin',
+                server: 'invalid.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+                plugin: 'v2ray-plugin',
+                'plugin-opts': {
+                    mode: 'websocket',
+                    host: 'cdn.example.com',
+                    path: '/socket',
+                    tls: true,
+                },
             },
             {
                 type: 'ss',

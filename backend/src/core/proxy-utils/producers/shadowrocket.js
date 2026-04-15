@@ -2,6 +2,7 @@ import {
     isPresent,
     isShadowsocksOverTls,
     produceProxyListOutput,
+    supportsShadowsocksV2rayPluginMode,
 } from '@/core/proxy-utils/producers/utils';
 import $ from '@/core/app';
 
@@ -11,7 +12,17 @@ export default function Shadowrocket_Producer() {
         const list = proxies
             .filter((proxy) => {
                 if (opts['include-unsupported-proxy']) return true;
-                if (proxy.type === 'snell' && proxy.version >= 4) {
+                if (
+                    !supportsShadowsocksV2rayPluginMode(proxy, [
+                        'websocket',
+                        'quic',
+                        'http2',
+                        'mkcp',
+                        'grpc',
+                    ])
+                ) {
+                    return false;
+                } else if (proxy.type === 'snell' && proxy.version >= 4) {
                     return false;
                 } else if (
                     [

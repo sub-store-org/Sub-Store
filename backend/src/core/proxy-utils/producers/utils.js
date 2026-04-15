@@ -54,6 +54,17 @@ export function normalizePluginMuxValue(mux) {
     return mux;
 }
 
+export function supportsShadowsocksV2rayPluginMode(proxy, supportedModes) {
+    if (proxy?.type !== 'ss' || proxy?.plugin !== 'v2ray-plugin') return true;
+
+    const normalizedMode =
+        typeof proxy?.['plugin-opts']?.mode === 'string'
+            ? proxy['plugin-opts'].mode.trim().toLowerCase()
+            : proxy?.['plugin-opts']?.mode;
+
+    return supportedModes.includes(normalizedMode);
+}
+
 export function produceProxyListOutput(list, type, opts = {}) {
     if (type === 'internal') return list;
 

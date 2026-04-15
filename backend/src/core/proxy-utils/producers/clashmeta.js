@@ -1,6 +1,7 @@
 import {
     isPresent,
     produceProxyListOutput,
+    supportsShadowsocksV2rayPluginMode,
 } from '@/core/proxy-utils/producers/utils';
 
 const ipVersions = {
@@ -17,7 +18,11 @@ export default function ClashMeta_Producer() {
         const list = proxies
             .filter((proxy) => {
                 if (opts['include-unsupported-proxy']) return true;
-                if (proxy.type === 'snell' && proxy.version >= 4) {
+                if (
+                    !supportsShadowsocksV2rayPluginMode(proxy, ['websocket'])
+                ) {
+                    return false;
+                } else if (proxy.type === 'snell' && proxy.version >= 4) {
                     return false;
                 } else if (
                     ['tailscale', 'juicity', 'naive'].includes(proxy.type)
