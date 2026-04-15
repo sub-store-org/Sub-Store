@@ -1,7 +1,7 @@
 import ClashMeta_Producer from './clashmeta';
 import $ from '@/core/app';
-import { isIPv4, isIPv6, isPlainObject } from '@/utils';
-import { normalizePluginMuxValue } from './utils';
+import { isPlainObject } from '@/utils';
+import { getWireGuardAddressWithCIDR, normalizePluginMuxValue } from './utils';
 
 const ipVersions = {
     ipv4: 'ipv4_only',
@@ -951,12 +951,8 @@ const tailscaleParser = (proxy = {}) => {
 };
 
 const wireguardParser = (proxy = {}) => {
-    const address = ['ip', 'ipv6']
-        .map((i) => proxy[i])
-        .map((i) => {
-            if (isIPv4(i)) return `${i}/32`;
-            if (isIPv6(i)) return `${i}/128`;
-        })
+    const address = ['ipv4', 'ipv6']
+        .map((family) => getWireGuardAddressWithCIDR(proxy, family))
         .filter((i) => i);
     const parsedProxy = {
         system: !!proxy.system,

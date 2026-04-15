@@ -941,6 +941,99 @@ describe('Proxy structured producers', function () {
         }
     });
 
+    it('emits WireGuard interface CIDR suffixes for Mihomo and Shadowrocket outputs', function () {
+        const proxies = [
+            {
+                type: 'wireguard',
+                name: 'WG Explicit CIDR',
+                server: 'wg-explicit.example.com',
+                port: 51820,
+                'private-key': 'private-key-1',
+                'public-key': 'public-key-1',
+                ip: '10.0.0.2',
+                ipv6: 'fd00::2',
+                'ip-cidr': 24,
+                'ipv6-cidr': 64,
+            },
+            {
+                type: 'wireguard',
+                name: 'WG Default CIDR',
+                server: 'wg-default.example.com',
+                port: 51820,
+                'private-key': 'private-key-2',
+                'public-key': 'public-key-2',
+                ip: '10.0.0.3',
+                ipv6: 'fd00::3',
+            },
+        ];
+
+        for (const platform of ['Mihomo', 'Shadowrocket']) {
+            const output = loadProducedYaml(platform, proxies);
+            const explicit = output.proxies.find(
+                (proxy) => proxy.name === 'WG Explicit CIDR',
+            );
+            const defaults = output.proxies.find(
+                (proxy) => proxy.name === 'WG Default CIDR',
+            );
+
+            expectSubset(explicit, {
+                ip: '10.0.0.2/24',
+                ipv6: 'fd00::2/64',
+            });
+            expectSubset(defaults, {
+                ip: '10.0.0.3/32',
+                ipv6: 'fd00::3/128',
+            });
+            expect(explicit).to.not.have.property('ip-cidr');
+            expect(explicit).to.not.have.property('ipv6-cidr');
+            expect(defaults).to.not.have.property('ip-cidr');
+            expect(defaults).to.not.have.property('ipv6-cidr');
+        }
+    });
+
+    it('emits WireGuard address CIDR suffixes for sing-box exports', function () {
+        const output = loadProducedJson('sing-box', [
+            {
+                type: 'wireguard',
+                name: 'Sing-box WG Explicit CIDR',
+                server: 'wg-explicit.example.com',
+                port: 51820,
+                'private-key': 'private-key-1',
+                'public-key': 'public-key-1',
+                ip: '10.0.0.2',
+                ipv6: 'fd00::2',
+                'ip-cidr': 24,
+                'ipv6-cidr': 64,
+            },
+            {
+                type: 'wireguard',
+                name: 'Sing-box WG Default CIDR',
+                server: 'wg-default.example.com',
+                port: 51820,
+                'private-key': 'private-key-2',
+                'public-key': 'public-key-2',
+                ip: '10.0.0.3',
+                ipv6: 'fd00::3',
+            },
+        ]);
+
+        const explicit = output.endpoints.find(
+            (endpoint) => endpoint.tag === 'Sing-box WG Explicit CIDR',
+        );
+        const defaults = output.endpoints.find(
+            (endpoint) => endpoint.tag === 'Sing-box WG Default CIDR',
+        );
+
+        expectSubset(explicit, {
+            type: 'wireguard',
+            address: ['10.0.0.2/24', 'fd00::2/64'],
+        });
+        expectSubset(defaults, {
+            type: 'wireguard',
+            address: ['10.0.0.3/32', 'fd00::3/128'],
+        });
+    });
+
     it('filters canonical shadowsocks over-tls nodes for unsupported client targets by default', function () {
         const proxy = {
             type: 'ss',

@@ -1,7 +1,7 @@
 /* eslint-disable no-case-declarations */
 import { Base64 } from 'js-base64';
 import { isIPv6 } from '@/utils';
-import { normalizePluginMuxValue } from './utils';
+import { getWireGuardAddressWithCIDR, normalizePluginMuxValue } from './utils';
 import { normalizeXhttpScalarUpperBound } from '../xhttp-utils';
 
 function isObject(value) {
@@ -1168,6 +1168,8 @@ export default function URI_Producer() {
                             'port',
                             'ip',
                             'ipv6',
+                            'ip-cidr',
+                            'ipv6-cidr',
                             'private-key',
                         ].includes(key)
                     ) {
@@ -1186,19 +1188,27 @@ export default function URI_Producer() {
                         }
                     }
                 });
-                if (proxy.ip && proxy.ipv6) {
+                const wireguardIPv4 = getWireGuardAddressWithCIDR(
+                    proxy,
+                    'ipv4',
+                );
+                const wireguardIPv6 = getWireGuardAddressWithCIDR(
+                    proxy,
+                    'ipv6',
+                );
+                if (wireguardIPv4 && wireguardIPv6) {
                     wireguardParams.push(
                         `address=${encodeURIComponent(
-                            `${proxy.ip}/32,${proxy.ipv6}/128`,
+                            `${wireguardIPv4},${wireguardIPv6}`,
                         )}`,
                     );
-                } else if (proxy.ip) {
+                } else if (wireguardIPv4) {
                     wireguardParams.push(
-                        `address=${encodeURIComponent(`${proxy.ip}/32`)}`,
+                        `address=${encodeURIComponent(wireguardIPv4)}`,
                     );
-                } else if (proxy.ipv6) {
+                } else if (wireguardIPv6) {
                     wireguardParams.push(
-                        `address=${encodeURIComponent(`${proxy.ipv6}/128`)}`,
+                        `address=${encodeURIComponent(wireguardIPv6)}`,
                     );
                 }
                 result = `wireguard://${encodeURIComponent(

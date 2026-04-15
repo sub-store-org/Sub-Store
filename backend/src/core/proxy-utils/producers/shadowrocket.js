@@ -1,4 +1,5 @@
 import {
+    getWireGuardAddressWithCIDR,
     isPresent,
     isShadowsocksOverTls,
     produceProxyListOutput,
@@ -146,6 +147,8 @@ export default function Shadowrocket_Producer() {
                     proxy['preshared-key'] =
                         proxy['preshared-key'] ?? proxy['pre-shared-key'];
                     proxy['pre-shared-key'] = proxy['preshared-key'];
+                    proxy.ip = getWireGuardAddressWithCIDR(proxy, 'ipv4');
+                    proxy.ipv6 = getWireGuardAddressWithCIDR(proxy, 'ipv6');
                 } else if (proxy.type === 'snell' && proxy.version < 3) {
                     delete proxy.udp;
                 } else if (proxy.type === 'vless') {
@@ -277,6 +280,8 @@ export default function Shadowrocket_Producer() {
                 delete proxy.id;
                 delete proxy.resolved;
                 delete proxy['no-resolve'];
+                delete proxy['ip-cidr'];
+                delete proxy['ipv6-cidr'];
                 if (type !== 'internal') {
                     for (const key in proxy) {
                         if (proxy[key] == null || /^_/i.test(key)) {

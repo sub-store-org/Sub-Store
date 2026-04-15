@@ -38,6 +38,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 24. Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议. 设置节点字段 `_mihomoExternal` 为 `true` 可强制指定使用 mihomo External Proxy Program 输出该节点
   // 25. VLESS URI extra 字段复杂且其他客户端不一定跟进, 所以输出 URI 时, 若存在原始的 `_extra` 字段, 则直接使用该字段的值输出到 URI 的 extra 部分, 而不进行解析和重组
   // 26. `_qx_obfs_http` 为 QX 的 http obfs 原始值, 例如 `http`, `vmess-http`, `vemss-http`, `shadowsocks-http`, 用于 QX 输入输出时保留原始写法. `vemss-http` 应该是 huaqian 的 typo, 没测过, 反正也支持, 报错就自己改成 `vmess-http` 吧
+  // 27. WireGuard 支持 `ip-cidr`(IPv4 前缀长度) 和 `ipv6-cidr`(IPv6 前缀长度) 字段: 内部会保存前缀长度, 若未设置则默认分别为 `32` 和 `128`. 输出到 `mihomo`/`Shadowrocket`/`sing-box`/`URI` 时会带上该后缀
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件

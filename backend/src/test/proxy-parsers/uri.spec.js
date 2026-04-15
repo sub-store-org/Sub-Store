@@ -423,9 +423,47 @@ describe('Proxy URI parser coverage', function () {
                 'public-key': 'public-key',
                 ip: '10.0.0.2',
                 ipv6: 'fd00::2',
+                'ip-cidr': 32,
+                'ipv6-cidr': 128,
                 reserved: [1, 2, 3],
                 mtu: 1280,
                 udp: false,
+            });
+        });
+
+        it('defaults WireGuard CIDR suffixes when address entries omit them', function () {
+            const proxy = parseOne(
+                'wg://private-key@wg.example.com?publickey=public-key&address=10.0.0.2,[fd00::2]#WG%20Default%20CIDR',
+            );
+
+            expectSubset(proxy, {
+                type: 'wireguard',
+                name: 'WG Default CIDR',
+                ip: '10.0.0.2',
+                ipv6: 'fd00::2',
+                'ip-cidr': 32,
+                'ipv6-cidr': 128,
+            });
+        });
+
+        it('preserves trailing base64 padding in WireGuard key query params', function () {
+            const proxy = parseOne(
+                'wg://120.233.41.77:19368?publicKey=N+K9fXobvy0vy3VFbn8a7tPRgUNcQbGRwjlyOMx4WHc=&privateKey=QJjrFqqqpbIqfI5qhbYWrPXhaBFmFq71jCj8mMaQE04=&ip=10.0.20.45/16,fd10:10:10:0:10:0:20:45/64&mtu=1420&udp=1#HK-%E5%A4%A7%E5%B8%A6%E5%AE%BD4',
+            );
+
+            expectSubset(proxy, {
+                type: 'wireguard',
+                name: 'HK-大带宽4',
+                server: '120.233.41.77',
+                port: 19368,
+                'public-key': 'N+K9fXobvy0vy3VFbn8a7tPRgUNcQbGRwjlyOMx4WHc=',
+                'private-key': 'QJjrFqqqpbIqfI5qhbYWrPXhaBFmFq71jCj8mMaQE04=',
+                ip: '10.0.20.45',
+                'ip-cidr': 16,
+                ipv6: 'fd10:10:10:0:10:0:20:45',
+                'ipv6-cidr': 64,
+                mtu: 1420,
+                udp: true,
             });
         });
 

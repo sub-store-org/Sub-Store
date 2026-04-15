@@ -23,7 +23,11 @@ import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
 import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
 import Gist from '@/utils/gist';
-import { isPresent, isShadowsocksOverTls } from './producers/utils';
+import {
+    isPresent,
+    isShadowsocksOverTls,
+    normalizeWireGuardInterface,
+} from './producers/utils';
 import { doh } from '@/utils/dns';
 import JSON5 from 'json5';
 import { hex_md5 } from '@/vendor/md5';
@@ -312,6 +316,9 @@ function produce(proxies, targetPlatform, type, opts = {}) {
             if (!proxy.port) {
                 proxy.port = getRandomPort(proxy.ports);
             }
+        }
+        if (proxy.type === 'wireguard') {
+            normalizeWireGuardInterface(proxy);
         }
 
         return proxy;
@@ -745,18 +752,7 @@ function lastParse(proxy) {
                 }
             }
         }
-        if (proxy.ip?.includes('/')) {
-            const [ip] = proxy.ip.split('/');
-            if (isIPv4(ip)) {
-                proxy.ip = ip;
-            }
-        }
-        if (proxy.ipv6?.includes('/')) {
-            const [ip] = proxy.ipv6.split('/');
-            if (isIPv6(ip)) {
-                proxy.ipv6 = ip;
-            }
-        }
+        normalizeWireGuardInterface(proxy);
     }
     return proxy;
 }
