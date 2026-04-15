@@ -1,6 +1,7 @@
 import {
     isPresent,
     produceProxyListOutput,
+    supportsShadowsocksV2rayPluginMode,
 } from '@/core/proxy-utils/producers/utils';
 import $ from '@/core/app';
 
@@ -10,6 +11,7 @@ export default function Stash_Producer() {
         // https://stash.wiki/proxy-protocols/proxy-types#shadowsocks
         const list = proxies
             .filter((proxy) => {
+                if (opts['include-unsupported-proxy']) return true;
                 if (
                     ![
                         'ss',
@@ -49,6 +51,10 @@ export default function Stash_Producer() {
                             '2022-blake3-aes-256-gcm',
                         ].includes(proxy.cipher)) ||
                     (proxy.type === 'snell' && proxy.version >= 4)
+                ) {
+                    return false;
+                } else if (
+                    !supportsShadowsocksV2rayPluginMode(proxy, ['websocket'])
                 ) {
                     return false;
                 } else if (

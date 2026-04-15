@@ -152,10 +152,18 @@ export default function Egern_Producer() {
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,
                             next_hop: proxy.next_hop,
                         };
-                        if (original.plugin === 'obfs') {
-                            proxy.obfs = original['plugin-opts'].mode;
-                            proxy.obfs_host = original['plugin-opts'].host;
-                            proxy.obfs_uri = original['plugin-opts'].path;
+                        if (isPresent(original, 'plugin')) {
+                            if (original.plugin === 'obfs') {
+                                proxy.obfs = original['plugin-opts'].mode;
+                                proxy.obfs_host = original['plugin-opts'].host;
+                                proxy.obfs_uri = original['plugin-opts'].path;
+                            } else if (
+                                !['shadow-tls'].includes(original.plugin)
+                            ) {
+                                throw new Error(
+                                    `plugin ${original.plugin} is not supported`,
+                                );
+                            }
                         }
                     } else if (proxy.type === 'hysteria2') {
                         proxy = {

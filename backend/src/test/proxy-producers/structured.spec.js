@@ -99,6 +99,89 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('keeps only websocket shadowsocks v2ray-plugin modes for Mihomo and Stash by default', function () {
+        const buildProxy = (name, mode) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode,
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+            },
+        });
+
+        const proxies = [
+            buildProxy('WS', 'websocket'),
+            buildProxy('QUIC', 'quic'),
+        ];
+
+        for (const platform of ['Mihomo', 'Stash']) {
+            const internal = produceInternal(platform, proxies);
+            const external = loadProducedYaml(platform, proxies, {
+                'include-unsupported-proxy': true,
+            });
+
+            expect(internal, platform).to.have.length(1);
+            expect(internal[0].name, platform).to.equal('WS');
+            expect(external.proxies.map((proxy) => proxy.name), platform).to
+                .deep.equal(['WS', 'QUIC']);
+        }
+    });
+
+    it('keeps only supported shadowsocks v2ray-plugin modes for Shadowrocket by default', function () {
+        const buildProxy = (name, mode) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode,
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+            },
+        });
+
+        const proxies = [
+            buildProxy('WS', 'websocket'),
+            buildProxy('QUIC', 'quic'),
+            buildProxy('HTTP2', 'http2'),
+            buildProxy('MKCP', 'mkcp'),
+            buildProxy('GRPC', 'grpc'),
+            buildProxy('TLS', 'tls'),
+        ];
+
+        const internal = produceInternal('Shadowrocket', proxies);
+        const external = loadProducedYaml('Shadowrocket', proxies, {
+            'include-unsupported-proxy': true,
+        });
+
+        expect(internal.map((proxy) => proxy.name)).to.deep.equal([
+            'WS',
+            'QUIC',
+            'HTTP2',
+            'MKCP',
+            'GRPC',
+        ]);
+        expect(external.proxies.map((proxy) => proxy.name)).to.deep.equal([
+            'WS',
+            'QUIC',
+            'HTTP2',
+            'MKCP',
+            'GRPC',
+            'TLS',
+        ]);
+    });
+
     it('adds Clash.Meta reality defaults and preserves websocket early data', function () {
         const proxy = {
             type: 'vless',
