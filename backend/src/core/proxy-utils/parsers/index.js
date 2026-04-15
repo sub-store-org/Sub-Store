@@ -318,7 +318,10 @@ function URI_SS() {
                 case 'v2ray-plugin':
                     proxy.plugin = 'v2ray-plugin';
                     proxy['plugin-opts'] = {
-                        mode: 'websocket',
+                        mode:
+                            getIfNotBlank(params['obfs']) ||
+                            getIfNotBlank(params['mode']) ||
+                            'websocket',
                         host:
                             getIfNotBlank(params['obfs-host']) ||
                             getIfNotBlank(params['host']),

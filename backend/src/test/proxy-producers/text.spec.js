@@ -589,7 +589,7 @@ describe('Proxy text producers', function () {
 
     it('produces URI shadowsocks links with v2ray-plugin mux and tls flags', function () {
         const plugin = encodeURIComponent(
-            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;sni=sni.example.com;skip-cert-verify=true;mux=0',
+            'v2ray-plugin;obfs=websocket;mode=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;sni=sni.example.com;skip-cert-verify=true;mux=0',
         );
         const output = produceExternal('URI', {
             type: 'ss',
@@ -619,10 +619,10 @@ describe('Proxy text producers', function () {
 
     it('normalizes boolean v2ray-plugin mux values to integers in URI links', function () {
         const muxOnPlugin = encodeURIComponent(
-            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
+            'v2ray-plugin;obfs=websocket;mode=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
         );
         const muxOffPlugin = encodeURIComponent(
-            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
+            'v2ray-plugin;obfs=websocket;mode=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
         );
 
         const muxOnOutput = produceExternal('URI', {
@@ -701,10 +701,10 @@ describe('Proxy text producers', function () {
         const output = produceExternal('URI', proxies);
         const userInfo = Base64.encode('aes-128-gcm:secret');
         const muxOnPlugin = encodeURIComponent(
-            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
+            'v2ray-plugin;obfs=websocket;mode=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
         );
         const muxOffPlugin = encodeURIComponent(
-            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
+            'v2ray-plugin;obfs=websocket;mode=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
         );
 
         expect(output).to.equal(
@@ -747,10 +747,10 @@ describe('Proxy text producers', function () {
         const output = produceExternal('URI', proxies);
         const userInfo = Base64.encode('aes-128-gcm:secret');
         const muxOnPlugin = encodeURIComponent(
-            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
+            'v2ray-plugin;obfs=websocket;mode=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;mux=1',
         );
         const muxOffPlugin = encodeURIComponent(
-            'v2ray-plugin;obfs=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
+            'v2ray-plugin;obfs=websocket;mode=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;mux=0',
         );
 
         expect(output).to.equal(

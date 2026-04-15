@@ -548,14 +548,15 @@ export default function URI_Producer() {
                             break;
                         case 'v2ray-plugin':
                             const mux = normalizePluginMuxValue(opts.mux);
+                            // 为了兼容性 多输出 mode 和 host 两个字段
                             query += encodeURIComponent(
-                                `v2ray-plugin;obfs=${opts.mode}${
-                                    opts.host ? ';obfs-host=' + opts.host : ''
-                                }${opts.host ? ';host=' + opts.host : ''}${
-                                    opts.path ? ';path=' + opts.path : ''
-                                }${opts.tls ? ';tls' : ''}${
-                                    opts.sni ? ';sni=' + opts.sni : ''
-                                }${
+                                `v2ray-plugin;obfs=${opts.mode};mode=${
+                                    opts.mode
+                                }${opts.host ? ';obfs-host=' + opts.host : ''}${
+                                    opts.host ? ';host=' + opts.host : ''
+                                }${opts.path ? ';path=' + opts.path : ''}${
+                                    opts.tls ? ';tls' : ''
+                                }${opts.sni ? ';sni=' + opts.sni : ''}${
                                     opts['skip-cert-verify']
                                         ? ';skip-cert-verify=' +
                                           opts['skip-cert-verify']
