@@ -28,6 +28,8 @@ export default function QX_Producer() {
                 return socks5(proxy);
             case 'vless':
                 return vless(proxy);
+            case 'anytls':
+                return anytls(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -57,12 +59,9 @@ export default function QX_Producer() {
 function getQxHttpObfs(proxy) {
     // QX accepts multiple http-obfs spellings for ss/vmess/vless. Preserve
     // the original token for round-trip output, including "vemss-http".
-    return [
-        'http',
-        'vmess-http',
-        'vemss-http',
-        'shadowsocks-http',
-    ].includes(proxy._qx_obfs_http)
+    return ['http', 'vmess-http', 'vemss-http', 'shadowsocks-http'].includes(
+        proxy._qx_obfs_http,
+    )
         ? proxy._qx_obfs_http
         : 'http';
 }
@@ -528,6 +527,60 @@ function vless(proxy) {
     );
 
     // tag
+    append(`,tag=${proxy.name}`);
+
+    return result.toString();
+}
+
+function anytls(proxy) {
+    const network = proxy.network?.trim().toLowerCase();
+    if (network && network !== 'tcp') {
+        throw new Error(
+            `Platform ${targetPlatform} does not support AnyTLS with transport ${proxy.network}`,
+        );
+    }
+
+    const result = new Result(proxy);
+    const append = result.append.bind(result);
+    const appendIfPresent = result.appendIfPresent.bind(result);
+
+    append(`anytls=${proxy.server}:${proxy.port}`);
+    append(`,password=${proxy.password}`);
+
+    proxy.tls = true;
+    append(`,over-tls=true`);
+
+    appendIfPresent(
+        `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
+        'tls-pubkey-sha256',
+    );
+    appendIfPresent(`,tls-alpn=${proxy['tls-alpn']}`, 'tls-alpn');
+    appendIfPresent(
+        `,tls-no-session-ticket=${proxy['tls-no-session-ticket']}`,
+        'tls-no-session-ticket',
+    );
+    appendIfPresent(
+        `,tls-no-session-reuse=${proxy['tls-no-session-reuse']}`,
+        'tls-no-session-reuse',
+    );
+    appendIfPresent(
+        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+    appendIfPresent(
+        `,tls-verification=${!proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+    appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
+
+    appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
+    appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    result.appendIfPresent(
+        `,server_check_url=${proxy['test-url']}`,
+        'test-url',
+    );
+
     append(`,tag=${proxy.name}`);
 
     return result.toString();

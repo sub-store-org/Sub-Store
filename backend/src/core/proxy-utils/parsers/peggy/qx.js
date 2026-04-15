@@ -53,7 +53,7 @@ const grammars = String.raw`
     }
 }
 
-start = (trojan/shadowsocks/vmess/vless/http/socks5) {
+start = (trojan/shadowsocks/vmess/vless/anytls/http/socks5) {
     return proxy
 }
 
@@ -117,6 +117,12 @@ vless = "vless" equals address
     proxy.type = "vless";
     proxy.cipher = proxy.cipher || "none";
     handleObfs();
+}
+
+anytls = "anytls" equals address
+    (password/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/udp_relay/fast_open/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)* {
+    proxy.type = "anytls";
+    proxy.tls = true;
 }
 
 http = "http" equals address 

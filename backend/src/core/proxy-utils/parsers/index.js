@@ -1612,6 +1612,15 @@ function QX_VLESS() {
     return { name, test, parse };
 }
 
+function QX_AnyTLS() {
+    const name = 'QX AnyTLS Parser';
+    const test = (line) => {
+        return /^anytls\s*=/.test(line.split(',')[0].trim());
+    };
+    const parse = (line) => getQXParser().parse(line);
+    return { name, test, parse };
+}
+
 function QX_Trojan() {
     const name = 'QX Trojan Parser';
     const test = (line) => {
@@ -2093,6 +2102,7 @@ export default [
     QX_SSR(),
     QX_VMess(),
     QX_VLESS(),
+    QX_AnyTLS(),
     QX_Trojan(),
     QX_Http(),
     QX_Socks5(),

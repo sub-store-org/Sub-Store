@@ -1743,6 +1743,38 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses anytls standard tls lines',
+                input: 'anytls=example.com:443,password=pwd,over-tls=true,tls-host=apple.com,udp-relay=true,tag=anytls-standard-tls-01',
+                expected: {
+                    type: 'anytls',
+                    name: 'anytls-standard-tls-01',
+                    server: 'example.com',
+                    port: 443,
+                    password: 'pwd',
+                    tls: true,
+                    sni: 'apple.com',
+                    udp: true,
+                },
+            },
+            {
+                title: 'parses anytls reality tls lines',
+                input: 'anytls=example.com:443,password=pwd,over-tls=true,tls-host=apple.com,reality-base64-pubkey=k4Uxez0sjl8bKaZH2Vgi8-WDFshML51QkxKFLWFIONk,reality-hex-shortid=0123456789abcdef,tag=anytls-reality-tls-01',
+                expected: {
+                    type: 'anytls',
+                    name: 'anytls-reality-tls-01',
+                    server: 'example.com',
+                    port: 443,
+                    password: 'pwd',
+                    tls: true,
+                    sni: 'apple.com',
+                    'reality-opts': {
+                        'public-key':
+                            'k4Uxez0sjl8bKaZH2Vgi8-WDFshML51QkxKFLWFIONk',
+                        'short-id': '0123456789abcdef',
+                    },
+                },
+            },
+            {
                 title: 'parses trojan websocket tls lines',
                 input: 'trojan=qx-trojan.example.com:443,password=secret,obfs=wss,obfs-host=cdn.example.com,obfs-uri=/trojan,tls-verification=false,tls-host=sni.example.com,tls-cert-sha256=fingerprint,tag=QX Trojan',
                 expected: {

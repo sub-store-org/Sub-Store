@@ -3,6 +3,7 @@ import { Base64 } from 'js-base64';
 import { describe, it } from 'mocha';
 
 import { ProxyUtils } from '@/core/proxy-utils';
+import QX_Producer from '@/core/proxy-utils/producers/qx';
 import { produceExternal, UUID } from './helpers';
 
 describe('Proxy text producers', function () {
@@ -285,6 +286,98 @@ describe('Proxy text producers', function () {
         expect(output).to.equal(
             `vless=vless.example.com:443,method=none,password=${UUID},obfs=wss,obfs-uri=/ws,obfs-host=cdn.example.com,tls-host=sni.example.com,vless-flow=xtls-rprx-vision,tag=QX Reality,reality-base64-pubkey=pubkey,reality-hex-shortid=08`,
         );
+    });
+
+    it('produces Quantumult X AnyTLS standard tls lines', function () {
+        const output = produceExternal('QX', {
+            type: 'anytls',
+            name: 'anytls-standard-tls-01',
+            server: 'example.com',
+            port: 443,
+            password: 'pwd',
+            tls: true,
+            sni: 'apple.com',
+            udp: true,
+        });
+
+        expect(output).to.equal(
+            'anytls=example.com:443,password=pwd,over-tls=true,tls-host=apple.com,udp-relay=true,tag=anytls-standard-tls-01',
+        );
+    });
+
+    it('produces Quantumult X AnyTLS reality tls lines', function () {
+        const output = produceExternal('QX', {
+            type: 'anytls',
+            name: 'anytls-reality-tls-01',
+            server: 'example.com',
+            port: 443,
+            password: 'pwd',
+            tls: true,
+            sni: 'apple.com',
+            udp: true,
+            'reality-opts': {
+                'public-key':
+                    'k4Uxez0sjl8bKaZH2Vgi8-WDFshML51QkxKFLWFIONk',
+                'short-id': '0123456789abcdef',
+            },
+        });
+
+        expect(output).to.equal(
+            'anytls=example.com:443,password=pwd,over-tls=true,tls-host=apple.com,udp-relay=true,tag=anytls-reality-tls-01,reality-base64-pubkey=k4Uxez0sjl8bKaZH2Vgi8-WDFshML51QkxKFLWFIONk,reality-hex-shortid=0123456789abcdef',
+        );
+    });
+
+    it('produces Quantumult X AnyTLS lines and keeps only supported fields', function () {
+        const output = produceExternal('QX', {
+            type: 'anytls',
+            name: 'QX AnyTLS Supported Fields',
+            server: 'anytls.example.com',
+            port: 443,
+            password: 'secret',
+            tls: true,
+            sni: 'sni.example.com',
+            udp: true,
+            tfo: true,
+            'skip-cert-verify': true,
+            'test-url': 'https://check.example.com',
+            'idle-session-timeout': 30,
+            'max-stream-count': 16,
+        });
+
+        expect(output).to.equal(
+            'anytls=anytls.example.com:443,password=secret,over-tls=true,tls-verification=false,tls-host=sni.example.com,fast-open=true,udp-relay=true,server_check_url=https://check.example.com,tag=QX AnyTLS Supported Fields',
+        );
+    });
+
+    it('rejects Quantumult X AnyTLS transport shapes that QX cannot represent', function () {
+        const producer = QX_Producer();
+
+        expect(() =>
+            producer.produce({
+                type: 'anytls',
+                name: 'QX AnyTLS WS',
+                server: 'anytls.example.com',
+                port: 443,
+                password: 'secret',
+                tls: true,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/anytls',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+            }),
+        ).to.throw('Platform QX does not support AnyTLS with transport ws');
+    });
+
+    it('round-trips Quantumult X AnyTLS reality lines without changing supported semantics', function () {
+        const raw =
+            'anytls=example.com:443,password=pwd,over-tls=true,tls-host=apple.com,udp-relay=true,tag=anytls-reality-tls-01,reality-base64-pubkey=k4Uxez0sjl8bKaZH2Vgi8-WDFshML51QkxKFLWFIONk,reality-hex-shortid=0123456789abcdef';
+        const [proxy] = ProxyUtils.parse(raw);
+        const output = ProxyUtils.produce([proxy], 'QX', 'external');
+
+        expect(output).to.equal(raw);
     });
 
     it('produces Loon VLESS reality websocket lines', function () {
