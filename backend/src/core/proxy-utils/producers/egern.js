@@ -1,5 +1,9 @@
 import $ from '@/core/app';
-import { isPresent, produceProxyListOutput } from './utils';
+import {
+    getWireGuardAddressWithCIDR,
+    isPresent,
+    produceProxyListOutput,
+} from './utils';
 
 export default function Egern_Producer() {
     const type = 'ALL';
@@ -433,8 +437,14 @@ export default function Egern_Producer() {
                         proxy = {
                             type: 'wireguard',
                             name: proxy.name,
-                            local_ipv4: proxy.ip,
-                            local_ipv6: proxy.ipv6,
+                            local_ipv4: getWireGuardAddressWithCIDR(
+                                proxy,
+                                'ipv4',
+                            ),
+                            local_ipv6: getWireGuardAddressWithCIDR(
+                                proxy,
+                                'ipv6',
+                            ),
                             server: proxy.server,
                             port: proxy.port,
                             private_key: proxy['private-key'],

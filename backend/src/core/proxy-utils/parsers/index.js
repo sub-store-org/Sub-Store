@@ -42,6 +42,32 @@ function splitURIFragment(raw) {
     };
 }
 
+function parseWireGuardURIAddressValue(value) {
+    if (value == null) return null;
+    const raw = `${value}`.trim();
+    if (!raw) return null;
+    const [, hostRaw = raw, cidrRaw] = /^(.*?)(?:\/(\d+))?$/.exec(raw) || [];
+    const host = `${hostRaw}`.trim().replace(/^\[/, '').replace(/\]$/, '');
+    const normalizeCIDR = (cidr, max) => {
+        if (cidr == null) return undefined;
+        if (!/^\d+$/.test(cidr)) return undefined;
+        const parsed = parseInt(cidr, 10);
+        if (parsed < 0 || parsed > max) return undefined;
+        return parsed;
+    };
+    if (isIPv4(host)) {
+        return { family: 'ipv4', address: host, cidr: normalizeCIDR(cidrRaw, 32) };
+    }
+    if (isIPv6(host)) {
+        return {
+            family: 'ipv6',
+            address: host,
+            cidr: normalizeCIDR(cidrRaw, 128),
+        };
+    }
+    return null;
+}
+
 function URI_PROXY() {
     // socks5+tls
     // socks5
@@ -1420,7 +1446,16 @@ function URI_WireGuard() {
         };
         for (const addon of addons.split('&')) {
             if (addon) {
-                let [key, value] = addon.split('=');
+                const equalIndex = addon.indexOf('=');
+                let key;
+                let value;
+                if (equalIndex === -1) {
+                    key = addon;
+                    value = '';
+                } else {
+                    key = addon.slice(0, equalIndex);
+                    value = addon.slice(equalIndex + 1);
+                }
                 key = key.replace(/_/, '-');
                 value = decodeURIComponent(value);
                 if (['reserved'].includes(key)) {
@@ -1433,15 +1468,18 @@ function URI_WireGuard() {
                     }
                 } else if (['address', 'ip'].includes(key)) {
                     value.split(',').map((i) => {
-                        const ip = i
-                            .trim()
-                            .replace(/\/\d+$/, '')
-                            .replace(/^\[/, '')
-                            .replace(/\]$/, '');
-                        if (isIPv4(ip)) {
-                            proxy.ip = ip;
-                        } else if (isIPv6(ip)) {
-                            proxy.ipv6 = ip;
+                        const parsed = parseWireGuardURIAddressValue(i);
+                        if (!parsed) return;
+                        if (parsed.family === 'ipv4') {
+                            proxy.ip = parsed.address;
+                            if (typeof parsed.cidr !== 'undefined') {
+                                proxy['ip-cidr'] = parsed.cidr;
+                            }
+                        } else if (parsed.family === 'ipv6') {
+                            proxy.ipv6 = parsed.address;
+                            if (typeof parsed.cidr !== 'undefined') {
+                                proxy['ipv6-cidr'] = parsed.cidr;
+                            }
                         }
                     });
                 } else if (['mtu'].includes(key)) {

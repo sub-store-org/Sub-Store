@@ -455,6 +455,52 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces Loon WireGuard lines without leaking CIDR metadata fields', function () {
+        const output = produceExternal('Loon', {
+            type: 'wireguard',
+            name: 'Loon WG',
+            server: 'wg.example.com',
+            port: 51820,
+            'private-key': 'private-key',
+            'public-key': 'public-key',
+            ip: '10.0.0.2',
+            ipv6: 'fd00::2',
+            'ip-cidr': 24,
+            'ipv6-cidr': 64,
+        });
+
+        expect(output).to.include('Loon WG=wireguard');
+        expect(output).to.include(',interface-ip=10.0.0.2');
+        expect(output).to.include(',interface-ipv6=fd00::2');
+        expect(output).to.not.include('ip-cidr');
+        expect(output).to.not.include('ipv6-cidr');
+    });
+
+    it('produces Surge WireGuard sections without leaking CIDR metadata fields', function () {
+        const output = produceExternal(
+            'Surge',
+            {
+                type: 'wireguard',
+                name: 'Surge WG',
+                server: 'wg.example.com',
+                port: 51820,
+                'private-key': 'private-key',
+                'public-key': 'public-key',
+                ip: '10.0.0.2',
+                ipv6: 'fd00::2',
+                'ip-cidr': 24,
+                'ipv6-cidr': 64,
+            },
+            { 'include-unsupported-proxy': true },
+        );
+
+        expect(output).to.include('# > WireGuard Proxy Surge WG');
+        expect(output).to.include('self-ip = 10.0.0.2');
+        expect(output).to.include('self-ip-v6 = fd00::2');
+        expect(output).to.not.include('ip-cidr');
+        expect(output).to.not.include('ipv6-cidr');
+    });
+
     it('produces Surfboard trojan websocket lines', function () {
         const output = produceExternal('Surfboard', {
             type: 'trojan',
@@ -585,6 +631,47 @@ describe('Proxy text producers', function () {
             'Forced Mihomo=external,exec="/usr/local/bin/mihomo",local-port=17777',
         );
         expect(output).to.not.include('Forced Mihomo=tuic-v5');
+    });
+
+    it('produces URI WireGuard links with stored and default CIDR suffixes', function () {
+        const output = produceExternal('URI', [
+            {
+                type: 'wireguard',
+                name: 'URI WG Explicit CIDR',
+                server: 'wg-explicit.example.com',
+                port: 51820,
+                'private-key': 'private-key-1',
+                'public-key': 'public-key-1',
+                ip: '10.0.0.2',
+                ipv6: 'fd00::2',
+                'ip-cidr': 24,
+                'ipv6-cidr': 64,
+                udp: true,
+            },
+            {
+                type: 'wireguard',
+                name: 'URI WG Default CIDR',
+                server: 'wg-default.example.com',
+                port: 51820,
+                'private-key': 'private-key-2',
+                'public-key': 'public-key-2',
+                ip: '10.0.0.3',
+                ipv6: 'fd00::3',
+                udp: true,
+            },
+        ]);
+
+        const [explicit, defaults] = output.split('\n');
+        expect(explicit).to.include(
+            'address=10.0.0.2%2F24%2Cfd00%3A%3A2%2F64',
+        );
+        expect(defaults).to.include(
+            'address=10.0.0.3%2F32%2Cfd00%3A%3A3%2F128',
+        );
+        expect(explicit).to.not.include('ip-cidr=');
+        expect(explicit).to.not.include('ipv6-cidr=');
+        expect(defaults).to.not.include('ip-cidr=');
+        expect(defaults).to.not.include('ipv6-cidr=');
     });
 
     it('produces URI shadowsocks links with v2ray-plugin mux and tls flags', function () {
