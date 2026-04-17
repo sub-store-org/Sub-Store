@@ -2,7 +2,7 @@ import { getPlatformFromHeaders } from '@/utils/user-agent';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
-import { getFlowHeaders, normalizeFlowHeader } from '@/utils/flow';
+import { getFlowHeaders, normalizeFlowHeader, parseFlowHeaders } from '@/utils/flow';
 import $ from '@/core/app';
 import { failed } from '@/restful/response';
 import { InternalServerError, ResourceNotFoundError } from '@/restful/errors';
@@ -499,84 +499,119 @@ async function downloadCollection(req, res) {
                 ua: reqUA,
             });
             let subUserInfoOfSub;
-            // forward flow header from the first subscription in this collection
+            // aggregate flow info from all subscriptions: sum upload/download/total, take earliest expires
             const allSubs = $.read(SUBS_KEY);
             const subnames = collection.subscriptions;
             if (subnames.length > 0) {
-                const sub = findByName(allSubs, subnames[0]);
-                if (
-                    sub.source !== 'local' ||
-                    ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
-                ) {
-                    try {
-                        let url =
-                            `${sub.url}`
-                                .split(/[\r\n]+/)
-                                .map((i) => i.trim())
-                                .filter((i) => i.length)?.[0] || '';
+                let aggUpload = 0, aggDownload = 0, aggTotal = 0, aggExpires;
+                let hasAgg = false;
 
-                        let $arguments = {};
-                        const rawArgs = url.split('#');
-                        url = url.split('#')[0];
-                        if (rawArgs.length > 1) {
-                            try {
-                                // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
-                                $arguments = JSON.parse(
-                                    decodeURIComponent(rawArgs[1]),
-                                );
-                            } catch (e) {
-                                for (const pair of rawArgs[1].split('&')) {
-                                    const key = pair.split('=')[0];
-                                    const value = pair.split('=')[1];
-                                    // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
-                                    $arguments[key] =
-                                        value == null || value === ''
-                                            ? true
-                                            : decodeURIComponent(value);
+                for (const subname of subnames) {
+                    const sub = findByName(allSubs, subname);
+                    if (!sub) continue;
+
+                    let rawFlowInfo;
+                    if (
+                        sub.source !== 'local' ||
+                        ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
+                    ) {
+                        try {
+                            let url =
+                                `${sub.url}`
+                                    .split(/[\r\n]+/)
+                                    .map((i) => i.trim())
+                                    .filter((i) => i.length)?.[0] || '';
+
+                            let $arguments = {};
+                            const rawArgs = url.split('#');
+                            url = url.split('#')[0];
+                            if (rawArgs.length > 1) {
+                                try {
+                                    // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
+                                    $arguments = JSON.parse(
+                                        decodeURIComponent(rawArgs[1]),
+                                    );
+                                } catch (e) {
+                                    for (const pair of rawArgs[1].split('&')) {
+                                        const key = pair.split('=')[0];
+                                        const value = pair.split('=')[1];
+                                        // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
+                                        $arguments[key] =
+                                            value == null || value === ''
+                                                ? true
+                                                : decodeURIComponent(value);
+                                    }
                                 }
                             }
-                        }
-                        if (!$arguments.noFlow && /^https?:/.test(url)) {
-                            subUserInfoOfSub = await getFlowHeaders(
-                                $arguments?.insecure ? `${url}#insecure` : url,
-                                $arguments.flowUserAgent,
-                                undefined,
-                                proxy || sub.proxy || collection.proxy,
-                                $arguments.flowUrl,
+                            if (!$arguments.noFlow && /^https?:/.test(url)) {
+                                rawFlowInfo = await getFlowHeaders(
+                                    $arguments?.insecure ? `${url}#insecure` : url,
+                                    $arguments.flowUserAgent,
+                                    undefined,
+                                    proxy || sub.proxy || collection.proxy,
+                                    $arguments.flowUrl,
+                                );
+                            }
+                        } catch (err) {
+                            $.error(
+                                `组合订阅 ${name} 中的子订阅 ${
+                                    sub.name
+                                } 获取流量信息时发生错误: ${err.message ?? err}`,
                             );
                         }
-                    } catch (err) {
-                        $.error(
-                            `组合订阅 ${name} 中的子订阅 ${
-                                sub.name
-                            } 获取流量信息时发生错误: ${err.message ?? err}`,
-                        );
+                    }
+                    if (sub.subUserinfo) {
+                        let subUserInfo;
+                        if (/^https?:\/\//.test(sub.subUserinfo)) {
+                            try {
+                                subUserInfo = await getFlowHeaders(
+                                    undefined,
+                                    undefined,
+                                    undefined,
+                                    proxy || sub.proxy,
+                                    sub.subUserinfo,
+                                );
+                            } catch (e) {
+                                $.error(
+                                    `组合订阅 ${name} 使用自定义流量链接 ${
+                                        sub.subUserinfo
+                                    } 获取流量信息时发生错误: ${JSON.stringify(e)}`,
+                                );
+                            }
+                        } else {
+                            subUserInfo = sub.subUserinfo;
+                        }
+                        rawFlowInfo = [subUserInfo, rawFlowInfo]
+                            .filter((i) => i)
+                            .join('; ');
+                    }
+
+                    if (rawFlowInfo) {
+                        const parsed = parseFlowHeaders(rawFlowInfo);
+                        if (
+                            parsed &&
+                            Number.isFinite(parsed.total) &&
+                            Number.isFinite(parsed.usage?.upload) &&
+                            Number.isFinite(parsed.usage?.download)
+                        ) {
+                            aggUpload += parsed.usage.upload;
+                            aggDownload += parsed.usage.download;
+                            aggTotal += parsed.total;
+                            if (parsed.expires) {
+                                aggExpires =
+                                    aggExpires == null
+                                        ? parsed.expires
+                                        : Math.min(aggExpires, parsed.expires);
+                            }
+                            hasAgg = true;
+                        }
                     }
                 }
-                if (sub.subUserinfo) {
-                    let subUserInfo;
-                    if (/^https?:\/\//.test(sub.subUserinfo)) {
-                        try {
-                            subUserInfo = await getFlowHeaders(
-                                undefined,
-                                undefined,
-                                undefined,
-                                proxy || sub.proxy,
-                                sub.subUserinfo,
-                            );
-                        } catch (e) {
-                            $.error(
-                                `组合订阅 ${name} 使用自定义流量链接 ${
-                                    sub.subUserinfo
-                                } 获取流量信息时发生错误: ${JSON.stringify(e)}`,
-                            );
-                        }
-                    } else {
-                        subUserInfo = sub.subUserinfo;
-                    }
-                    subUserInfoOfSub = [subUserInfo, subUserInfoOfSub]
-                        .filter((i) => i)
-                        .join('; ');
+
+                if (hasAgg) {
+                    subUserInfoOfSub = `upload=${aggUpload}; download=${aggDownload}; total=${aggTotal}${
+                        aggExpires != null ? `; expire=${aggExpires}` : ''
+                    }`;
                 }
             }
 
