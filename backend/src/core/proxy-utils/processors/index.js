@@ -1,6 +1,6 @@
 import resourceCache from '@/utils/resource-cache';
 import scriptResourceCache from '@/utils/script-resource-cache';
-import { isIPv4, isIPv6, ipAddress } from '@/utils';
+import { isIPv4, isIPv6, ipAddress, isPlainObject } from '@/utils';
 import { FULL } from '@/utils/logical';
 import { getFlag, removeFlag } from '@/utils/geo';
 import { doh } from '@/utils/dns';
@@ -23,9 +23,6 @@ import {
     normalizeFlowHeader,
 } from '@/utils/flow';
 
-function isObject(item) {
-    return item && typeof item === 'object' && !Array.isArray(item);
-}
 function trimWrap(str) {
     if (str.startsWith('<') && str.endsWith('>')) {
         return str.slice(1, -1);
@@ -35,7 +32,10 @@ function trimWrap(str) {
 function deepMerge(target, _other) {
     const other = typeof _other === 'string' ? JSON.parse(_other) : _other;
     for (const key in other) {
-        if (isObject(other[key])) {
+        // Only recurse into JSON-like patch objects. YAML can surface non-plain
+        // objects (for example timestamps), and those should be assigned as
+        // values instead of being treated as nested config maps.
+        if (isPlainObject(other[key])) {
             if (key.endsWith('!')) {
                 const k = trimWrap(key.slice(0, -1));
                 target[k] = other[key];

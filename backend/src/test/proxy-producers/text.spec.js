@@ -316,8 +316,7 @@ describe('Proxy text producers', function () {
             sni: 'apple.com',
             udp: true,
             'reality-opts': {
-                'public-key':
-                    'k4Uxez0sjl8bKaZH2Vgi8-WDFshML51QkxKFLWFIONk',
+                'public-key': 'k4Uxez0sjl8bKaZH2Vgi8-WDFshML51QkxKFLWFIONk',
                 'short-id': '0123456789abcdef',
             },
         });
@@ -662,9 +661,7 @@ describe('Proxy text producers', function () {
         ]);
 
         const [explicit, defaults] = output.split('\n');
-        expect(explicit).to.include(
-            'address=10.0.0.2%2F24%2Cfd00%3A%3A2%2F64',
-        );
+        expect(explicit).to.include('address=10.0.0.2%2F24%2Cfd00%3A%3A2%2F64');
         expect(defaults).to.include(
             'address=10.0.0.3%2F32%2Cfd00%3A%3A3%2F128',
         );
@@ -1019,13 +1016,14 @@ describe('Proxy text producers', function () {
             tls: true,
             sni: 'sni.example.com',
             network: 'xhttp',
-            _extra: extra,
             'xhttp-opts': {
                 path: '/xhttp',
                 headers: {
                     Host: 'cdn.example.com',
                 },
                 mode: 'stream-up',
+                'no-grpc-header': true,
+                'x-padding-bytes': '64-128',
             },
         });
 
@@ -1036,24 +1034,25 @@ describe('Proxy text producers', function () {
         );
     });
 
-    it('prefers raw _extra over structured xhttp fields when producing URI VLESS links', function () {
-        const extra = JSON.stringify({
-            customField: 'keep-me',
-            downloadSettings: {
-                address: 'old.example.com',
-                port: 443,
-            },
-        });
+    it('preserves _extra_unsupported without letting it override structured xhttp fields when producing URI VLESS links', function () {
         const output = produceExternal('URI', {
             type: 'vless',
-            name: 'URI XHTTP Raw Extra',
+            name: 'URI XHTTP Unsupported Extra',
             server: 'vless-xhttp.example.com',
             port: 443,
             uuid: UUID,
             tls: true,
             sni: 'sni.example.com',
             network: 'xhttp',
-            _extra: extra,
+            _extra_unsupported: {
+                customField: 'keep-me',
+                downloadSettings: {
+                    sockopt: {
+                        mark: 255,
+                    },
+                    address: 'old.example.com',
+                },
+            },
             'xhttp-opts': {
                 path: '/xhttp',
                 mode: 'stream-up',
@@ -1065,35 +1064,55 @@ describe('Proxy text producers', function () {
                     server: 'download.example.com',
                     port: 8443,
                     tls: true,
+                    path: '/download',
+                    host: 'download-host.example.com',
                 },
             },
         });
 
-        expect(output).to.equal(
-            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
-                extra,
-            )}#URI%20XHTTP%20Raw%20Extra`,
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.customField).to.equal('keep-me');
+        expect(extra.noGRPCHeader).to.equal(true);
+        expect(extra.downloadSettings?.address).to.equal(
+            'download.example.com',
         );
-    });
+        expect(extra.downloadSettings?.port).to.equal(8443);
+        expect(extra.downloadSettings?.network).to.equal('xhttp');
+        expect(extra.downloadSettings?.security).to.equal('tls');
+        expect(extra.downloadSettings?.sockopt).to.deep.equal({
+            mark: 255,
+        });
+        expect(extra.downloadSettings?.xhttpSettings?.path).to.equal(
+            '/download',
+        );
+        expect(extra.downloadSettings?.xhttpSettings?.host).to.equal(
+            'download-host.example.com',
+        );
 
-    it('normalizes raw xhttp sc scalars from _extra when structured xhttp fields exist', function () {
-        const rawExtra = JSON.stringify({
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.server,
+        ).to.equal('download.example.com');
+        expect(reparsed[0]._extra_unsupported).to.deep.equal({
             customField: 'keep-me',
-            scMaxEachPostBytes: '000-1000000',
-            scMinPostsIntervalMs: '0300',
             downloadSettings: {
-                address: 'download.example.com',
-                port: 8443,
-                security: 'tls',
-                xhttpSettings: {
-                    scMaxEachPostBytes: '000-1000000',
-                    scMinPostsIntervalMs: '000-300',
+                sockopt: {
+                    mark: 255,
                 },
             },
+        });
+    });
+
+    it('uses string _extra as the final xhttp URI extra without rebuilding it', function () {
+        const rawExtra = JSON.stringify({
+            customField: 'keep-me',
+            scMinPostsIntervalMs: '0-300',
         });
         const output = produceExternal('URI', {
             type: 'vless',
-            name: 'URI XHTTP Raw Extra Scalars',
+            name: 'URI XHTTP Raw Extra String',
             server: 'vless-xhttp.example.com',
             port: 443,
             uuid: UUID,
@@ -1107,14 +1126,147 @@ describe('Proxy text producers', function () {
                 headers: {
                     Host: 'cdn.example.com',
                 },
+                'sc-min-posts-interval-ms': 300,
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        expect(decodeURIComponent(encodedExtra)).to.equal(rawExtra);
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
+        ).to.equal('0-300');
+    });
+
+    it('stringifies plain-object _extra before using it as the final xhttp URI extra', function () {
+        const rawExtra = {
+            customField: 'keep-me',
+            scMinPostsIntervalMs: '0-300',
+        };
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Raw Extra Object',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            _extra: rawExtra,
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'sc-min-posts-interval-ms': 300,
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        expect(JSON.parse(decodeURIComponent(encodedExtra))).to.deep.equal(
+            rawExtra,
+        );
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
+        ).to.equal('0-300');
+    });
+
+    it('prefers explicit _extra over _extra_unsupported when both are present', function () {
+        const rawExtra = JSON.stringify({
+            customField: 'raw-wins',
+            scMinPostsIntervalMs: '0-300',
+        });
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Raw Extra Wins',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            _extra: rawExtra,
+            _extra_unsupported: {
+                customField: 'stale-sidecar',
+                downloadSettings: {
+                    sockopt: {
+                        mark: 255,
+                    },
+                },
+            },
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'sc-min-posts-interval-ms': 300,
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                },
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        expect(decodeURIComponent(encodedExtra)).to.equal(rawExtra);
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
+        ).to.equal('0-300');
+        expect(reparsed[0]._extra_unsupported).to.deep.equal({
+            customField: 'raw-wins',
+        });
+    });
+
+    it('keeps structured xhttp scalar normalization even if _extra_unsupported carries conflicting raw fields', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Unsupported Extra Scalars',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            _extra_unsupported: {
+                customField: 'keep-me',
+                scMaxEachPostBytes: '000-1000000',
+                scMinPostsIntervalMs: '0300',
+                uplinkChunkSize: '00064 - 00128',
+                downloadSettings: {
+                    xhttpSettings: {
+                        scMaxEachPostBytes: '000-1000000',
+                        scMinPostsIntervalMs: '000-300',
+                        uplinkChunkSize: '00048',
+                    },
+                },
+            },
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
                 'sc-max-each-post-bytes': 1000000,
                 'sc-min-posts-interval-ms': 300,
+                'uplink-chunk-size': '00064 - 00128',
                 'download-settings': {
                     server: 'download.example.com',
                     port: 8443,
                     tls: true,
                     'sc-max-each-post-bytes': 1000000,
                     'sc-min-posts-interval-ms': 300,
+                    'uplink-chunk-size': '00048',
                 },
             },
         });
@@ -1124,21 +1276,277 @@ describe('Proxy text producers', function () {
         expect(extra.customField).to.equal('keep-me');
         expect(extra.scMaxEachPostBytes).to.equal(1000000);
         expect(extra.scMinPostsIntervalMs).to.equal(300);
-        expect(extra.downloadSettings?.xhttpSettings?.scMaxEachPostBytes).to.equal(
-            1000000,
-        );
+        expect(extra.uplinkChunkSize).to.equal('64-128');
+        expect(
+            extra.downloadSettings?.xhttpSettings?.scMaxEachPostBytes,
+        ).to.equal(1000000);
         expect(
             extra.downloadSettings?.xhttpSettings?.scMinPostsIntervalMs,
         ).to.equal(300);
+        expect(extra.downloadSettings?.xhttpSettings?.uplinkChunkSize).to.equal(
+            48,
+        );
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
         expect(reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes']).to.equal(
             1000000,
         );
-        expect(reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms']).to.equal(
-            300,
+        expect(
+            reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
+        ).to.equal(300);
+        expect(reparsed[0]['xhttp-opts']?.['uplink-chunk-size']).to.equal(
+            '64-128',
         );
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'uplink-chunk-size'
+            ],
+        ).to.equal(48);
+        expect(reparsed[0]._extra_unsupported).to.deep.equal({
+            customField: 'keep-me',
+        });
+    });
+
+    it('round-trips unsupported xhttp extra sidecar values without dropping them', function () {
+        const rawExtra = JSON.stringify({
+            uplinkChunkSize: 'fast',
+            xmux: {
+                hKeepAlivePeriod: '9007199254740993',
+            },
+            downloadSettings: {
+                address: 'download.example.com',
+                port: 8443,
+                security: 'tls',
+                tlsSettings: {
+                    alpn: ['h2', { foo: 1 }],
+                },
+                xhttpSettings: {
+                    path: '/download',
+                },
+            },
+        });
+        const [parsed] = ProxyUtils.parse(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                rawExtra,
+            )}#URI%20XHTTP%20Unsupported%20Roundtrip`,
+        );
+        const output = produceExternal('URI', parsed);
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.uplinkChunkSize).to.equal('fast');
+        expect(extra.xmux).to.deep.equal({
+            hKeepAlivePeriod: '9007199254740993',
+        });
+        expect(extra.downloadSettings?.address).to.equal('download.example.com');
+        expect(extra.downloadSettings?.port).to.equal(8443);
+        expect(extra.downloadSettings?.network).to.equal('xhttp');
+        expect(extra.downloadSettings?.security).to.equal('tls');
+        expect(extra.downloadSettings?.tlsSettings?.alpn).to.deep.equal([
+            'h2',
+            { foo: 1 },
+        ]);
+        expect(extra.downloadSettings?.xhttpSettings?.path).to.equal(
+            '/download',
+        );
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.network,
+        ).to.equal('xhttp');
+        expect(reparsed[0]).to.have.property('_extra_unsupported');
+        expect(reparsed[0]._extra_unsupported).to.deep.equal({
+            uplinkChunkSize: 'fast',
+            xmux: {
+                hKeepAlivePeriod: '9007199254740993',
+            },
+            downloadSettings: {
+                tlsSettings: {
+                    alpn: ['h2', { foo: 1 }],
+                },
+            },
+        });
+    });
+
+    it('round-trips unsupported-only nested download settings with structured xhttp network', function () {
+        const rawExtra = JSON.stringify({
+            downloadSettings: {
+                network: 'xhttp',
+                sockopt: {
+                    mark: 255,
+                },
+            },
+        });
+        const [parsed] = ProxyUtils.parse(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                rawExtra,
+            )}#URI%20XHTTP%20Download%20Unsupported%20Only`,
+        );
+        expect(parsed['xhttp-opts']?.['download-settings']).to.deep.equal({
+            network: 'xhttp',
+        });
+        expect(parsed._extra_unsupported).to.deep.equal({
+            downloadSettings: {
+                sockopt: {
+                    mark: 255,
+                },
+            },
+        });
+
+        const output = produceExternal('URI', parsed);
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.downloadSettings).to.deep.equal({
+            network: 'xhttp',
+            sockopt: {
+                mark: 255,
+            },
+        });
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(reparsed[0]['xhttp-opts']?.['download-settings']).to.deep.equal(
+            {
+                network: 'xhttp',
+            },
+        );
+        expect(reparsed[0]._extra_unsupported).to.deep.equal({
+            downloadSettings: {
+                sockopt: {
+                    mark: 255,
+                },
+            },
+        });
+    });
+
+    it('keeps structured nested xhttp network out of mixed download settings sidecars', function () {
+        const rawExtra = JSON.stringify({
+            downloadSettings: {
+                address: 'download.example.com',
+                network: 'xhttp',
+                port: 8443,
+                security: 'tls',
+                xhttpSettings: {
+                    path: '/download',
+                },
+                sockopt: {
+                    mark: 255,
+                },
+            },
+        });
+        const [parsed] = ProxyUtils.parse(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                rawExtra,
+            )}#URI%20XHTTP%20Download%20Mixed%20Sidecar`,
+        );
+
+        expect(parsed['xhttp-opts']?.['download-settings']).to.deep.equal({
+            network: 'xhttp',
+            server: 'download.example.com',
+            port: 8443,
+            tls: true,
+            path: '/download',
+        });
+        expect(parsed._extra_unsupported).to.deep.equal({
+            downloadSettings: {
+                sockopt: {
+                    mark: 255,
+                },
+            },
+        });
+
+        delete parsed['xhttp-opts']['download-settings'];
+
+        const output = produceExternal('URI', parsed);
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.downloadSettings).to.deep.equal({
+            sockopt: {
+                mark: 255,
+            },
+        });
+    });
+
+    it('round-trips invalid xhttp extra strings through _extra', function () {
+        const rawExtra = '{bad';
+        const [parsed] = ProxyUtils.parse(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                rawExtra,
+            )}#URI%20XHTTP%20Invalid%20Extra`,
+        );
+
+        expect(parsed._extra).to.equal(rawExtra);
+
+        const output = produceExternal('URI', parsed);
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        expect(decodeURIComponent(encodedExtra)).to.equal(rawExtra);
+    });
+
+    it('normalizes structured xhttp xmux values when producing URI VLESS links', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP XMUX',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'reuse-settings': {
+                    'max-connections': '+0008',
+                    'max-concurrency': '0008-0016',
+                    'h-keep-alive-period': '+15',
+                },
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    path: '/download',
+                    'reuse-settings': {
+                        'h-max-request-times': '+0004-0008',
+                        'h-keep-alive-period': -1,
+                    },
+                },
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.xmux).to.deep.equal({
+            maxConnections: '8',
+            maxConcurrency: '8-16',
+            hKeepAlivePeriod: 15,
+        });
+        expect(extra.downloadSettings?.xhttpSettings?.extra?.xmux).to.deep.equal(
+            {
+                hMaxRequestTimes: '4-8',
+                hKeepAlivePeriod: -1,
+            },
+        );
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(reparsed[0]['xhttp-opts']?.['reuse-settings']).to.deep.equal({
+            'max-connections': '8',
+            'max-concurrency': '8-16',
+            'h-keep-alive-period': 15,
+        });
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'reuse-settings'
+            ],
+        ).to.deep.equal({
+            'h-max-request-times': '4-8',
+            'h-keep-alive-period': -1,
+        });
     });
 
     it('produces URI VLESS xhttp links with structured scMinPostsIntervalMs', function () {
@@ -1184,9 +1592,181 @@ describe('Proxy text producers', function () {
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
-        expect(reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms']).to.equal(
-            300,
+        expect(
+            reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
+        ).to.equal(300);
+    });
+
+    it('produces URI VLESS xhttp links with extended structured extra fields', function () {
+        const extra = JSON.stringify({
+            headers: {
+                'X-Test': 'demo',
+            },
+            noGRPCHeader: true,
+            xPaddingBytes: '64-128',
+            xPaddingObfsMode: true,
+            xPaddingKey: 'x_padding',
+            xPaddingHeader: 'Referer',
+            xPaddingPlacement: 'header',
+            xPaddingMethod: 'tokenish',
+            uplinkHTTPMethod: 'PUT',
+            sessionPlacement: 'query',
+            sessionKey: 'x_session_id',
+            seqPlacement: 'header',
+            seqKey: 'X-Seq',
+            uplinkDataPlacement: 'header',
+            uplinkDataKey: 'X-Data',
+            uplinkChunkSize: '64-128',
+            xmux: {
+                maxConcurrency: '16-32',
+                hKeepAlivePeriod: 15,
+            },
+            downloadSettings: {
+                address: 'download.example.com',
+                network: 'xhttp',
+                port: 8443,
+                security: 'tls',
+                tlsSettings: {
+                    serverName: 'download-sni.example.com',
+                    fingerprint: 'chrome',
+                    allowInsecure: true,
+                    alpn: ['h2'],
+                    echConfigList: 'ECHCONFIG',
+                },
+                xhttpSettings: {
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    headers: {
+                        'X-Download': '1',
+                    },
+                    noGRPCHeader: true,
+                    xPaddingBytes: '16-32',
+                    xPaddingObfsMode: true,
+                    xPaddingKey: 'x_padding_dl',
+                    xPaddingHeader: 'Cookie',
+                    xPaddingPlacement: 'query',
+                    xPaddingMethod: 'repeat-x',
+                    uplinkHTTPMethod: 'PATCH',
+                    sessionPlacement: 'header',
+                    sessionKey: 'X-Session',
+                    seqPlacement: 'query',
+                    seqKey: 'x_seq',
+                    uplinkDataPlacement: 'cookie',
+                    uplinkDataKey: 'x_data',
+                    uplinkChunkSize: 48,
+                    extra: {
+                        xmux: {
+                            maxConcurrency: '8-16',
+                            hKeepAlivePeriod: -1,
+                        },
+                    },
+                },
+            },
+        });
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Extended',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                    'X-Test': 'demo',
+                },
+                'no-grpc-header': true,
+                'x-padding-bytes': '64-128',
+                'x-padding-obfs-mode': true,
+                'x-padding-key': 'x_padding',
+                'x-padding-header': 'Referer',
+                'x-padding-placement': 'header',
+                'x-padding-method': 'tokenish',
+                'uplink-http-method': 'PUT',
+                'session-placement': 'query',
+                'session-key': 'x_session_id',
+                'seq-placement': 'header',
+                'seq-key': 'X-Seq',
+                'uplink-data-placement': 'header',
+                'uplink-data-key': 'X-Data',
+                'uplink-chunk-size': '64-128',
+                'reuse-settings': {
+                    'max-concurrency': '16-32',
+                    'h-keep-alive-period': 15,
+                },
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    servername: 'download-sni.example.com',
+                    'client-fingerprint': 'chrome',
+                    'skip-cert-verify': true,
+                    alpn: ['h2'],
+                    'ech-opts': {
+                        enable: true,
+                        config: 'ECHCONFIG',
+                    },
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    headers: {
+                        'X-Download': '1',
+                    },
+                    'no-grpc-header': true,
+                    'x-padding-bytes': '16-32',
+                    'x-padding-obfs-mode': true,
+                    'x-padding-key': 'x_padding_dl',
+                    'x-padding-header': 'Cookie',
+                    'x-padding-placement': 'query',
+                    'x-padding-method': 'repeat-x',
+                    'uplink-http-method': 'PATCH',
+                    'session-placement': 'header',
+                    'session-key': 'X-Session',
+                    'seq-placement': 'query',
+                    'seq-key': 'x_seq',
+                    'uplink-data-placement': 'cookie',
+                    'uplink-data-key': 'x_data',
+                    'uplink-chunk-size': 48,
+                    'reuse-settings': {
+                        'max-concurrency': '8-16',
+                        'h-keep-alive-period': -1,
+                    },
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                extra,
+            )}#URI%20XHTTP%20Extended`,
         );
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(reparsed[0]['xhttp-opts']?.headers?.['X-Test']).to.equal('demo');
+        expect(
+            reparsed[0]['xhttp-opts']?.['reuse-settings']?.[
+                'h-keep-alive-period'
+            ],
+        ).to.equal(15);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.headers?.[
+                'X-Download'
+            ],
+        ).to.equal('1');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'uplink-chunk-size'
+            ],
+        ).to.equal(48);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'reuse-settings'
+            ]?.['h-keep-alive-period'],
+        ).to.equal(-1);
     });
 
     it('normalizes Mihomo leading-zero structured xhttp scalars when producing URI VLESS links', function () {
@@ -1195,13 +1775,14 @@ describe('Proxy text producers', function () {
             scMinPostsIntervalMs: 300,
             downloadSettings: {
                 address: 'download.example.com',
+                network: 'xhttp',
                 port: 8443,
                 security: 'tls',
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
                     scMaxEachPostBytes: 1000000,
-                    scMinPostsIntervalMs: 300,
+                    scMinPostsIntervalMs: '0-300',
                 },
             },
         });
@@ -1242,12 +1823,12 @@ describe('Proxy text producers', function () {
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
-        expect(
-            reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes'],
-        ).to.equal(1000000);
-        expect(reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms']).to.equal(
-            300,
+        expect(reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes']).to.equal(
+            1000000,
         );
+        expect(
+            reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
+        ).to.equal(300);
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-max-each-post-bytes'
@@ -1257,7 +1838,7 @@ describe('Proxy text producers', function () {
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-min-posts-interval-ms'
             ],
-        ).to.equal(300);
+        ).to.equal('0-300');
     });
 
     it('normalizes Mihomo explicit-plus structured xhttp scalars when producing URI VLESS links', function () {
@@ -1266,13 +1847,14 @@ describe('Proxy text producers', function () {
             scMinPostsIntervalMs: 300,
             downloadSettings: {
                 address: 'download.example.com',
+                network: 'xhttp',
                 port: 8443,
                 security: 'tls',
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
                     scMaxEachPostBytes: 1000000,
-                    scMinPostsIntervalMs: 300,
+                    scMinPostsIntervalMs: '0-300',
                 },
             },
         });
@@ -1313,12 +1895,12 @@ describe('Proxy text producers', function () {
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
-        expect(
-            reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes'],
-        ).to.equal(1000000);
-        expect(reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms']).to.equal(
-            300,
+        expect(reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes']).to.equal(
+            1000000,
         );
+        expect(
+            reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
+        ).to.equal(300);
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-max-each-post-bytes'
@@ -1328,7 +1910,7 @@ describe('Proxy text producers', function () {
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-min-posts-interval-ms'
             ],
-        ).to.equal(300);
+        ).to.equal('0-300');
     });
 
     it('produces URI VLESS xhttp links from structured download settings', function () {
@@ -1340,6 +1922,7 @@ describe('Proxy text producers', function () {
             },
             downloadSettings: {
                 address: 'download.example.com',
+                network: 'xhttp',
                 port: 8443,
                 security: 'tls',
                 tlsSettings: {
@@ -1422,24 +2005,347 @@ describe('Proxy text producers', function () {
         ).to.equal(300);
     });
 
+    it('normalizes structured xhttp uplinkChunkSize values when producing URI VLESS links', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Uplink Chunk Size',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'uplink-chunk-size': '00064 - 00128',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    'uplink-chunk-size': '00048',
+                },
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.uplinkChunkSize).to.equal('64-128');
+        expect(extra.downloadSettings?.xhttpSettings?.uplinkChunkSize).to.equal(
+            48,
+        );
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(reparsed[0]['xhttp-opts']?.['uplink-chunk-size']).to.equal(
+            '64-128',
+        );
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'uplink-chunk-size'
+            ],
+        ).to.equal(48);
+    });
+
+    it('preserves reality download settings TLS extras when producing URI VLESS links', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Reality Download',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    servername: 'download-sni.example.com',
+                    'client-fingerprint': 'chrome',
+                    'skip-cert-verify': true,
+                    alpn: ['h2', 'http/1.1'],
+                    'ech-opts': {
+                        enable: true,
+                        config: 'ECHCONFIG',
+                    },
+                    'reality-opts': {
+                        'public-key': 'pubkey',
+                        'short-id': '08',
+                    },
+                    path: '/download',
+                    host: 'download-host.example.com',
+                },
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.downloadSettings?.network).to.equal('xhttp');
+        expect(extra.downloadSettings?.security).to.equal('reality');
+        expect(extra.downloadSettings?.tlsSettings).to.deep.equal({
+            serverName: 'download-sni.example.com',
+            fingerprint: 'chrome',
+            allowInsecure: true,
+            alpn: ['h2', 'http/1.1'],
+            echConfigList: 'ECHCONFIG',
+        });
+        expect(extra.downloadSettings?.realitySettings).to.deep.equal({
+            serverName: 'download-sni.example.com',
+            fingerprint: 'chrome',
+            publicKey: 'pubkey',
+            shortId: '08',
+        });
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.servername,
+        ).to.equal('download-sni.example.com');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'client-fingerprint'
+            ],
+        ).to.equal('chrome');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'skip-cert-verify'
+            ],
+        ).to.equal(true);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.alpn,
+        ).to.deep.equal(['h2', 'http/1.1']);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.['ech-opts']
+                ?.config,
+        ).to.equal('ECHCONFIG');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.['reality-opts'],
+        ).to.deep.equal({
+            'public-key': 'pubkey',
+            'short-id': '08',
+        });
+    });
+
+    it('skips URI VLESS exports when nested reality download settings are missing public keys', function () {
+        const rawExtra = JSON.stringify({
+            downloadSettings: {
+                address: 'download.example.com',
+                network: 'xhttp',
+                port: 8443,
+                security: 'reality',
+                xhttpSettings: {
+                    path: '/download',
+                },
+            },
+        });
+        const parsed = ProxyUtils.parse(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                rawExtra,
+            )}#URI%20XHTTP%20Invalid%20Reality%20Download`,
+        );
+
+        expect(parsed).to.have.length(1);
+        expect(
+            parsed[0]['xhttp-opts']?.['download-settings']?.['reality-opts'],
+        ).to.deep.equal({});
+
+        const output = ProxyUtils.produce(parsed, 'URI', 'external');
+        expect(output).to.equal('');
+    });
+
+    it('skips URI VLESS exports when outer reality is valid but nested download reality is missing public keys', function () {
+        const rawExtra = JSON.stringify({
+            downloadSettings: {
+                address: 'download.example.com',
+                network: 'xhttp',
+                port: 8443,
+                security: 'reality',
+                xhttpSettings: {
+                    path: '/download',
+                },
+            },
+        });
+        const parsed = ProxyUtils.parse(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=reality&pbk=outer-pub&sid=01&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                rawExtra,
+            )}#URI%20XHTTP%20Mixed%20Reality`,
+        );
+
+        expect(parsed).to.have.length(1);
+        expect(parsed[0]['reality-opts']).to.deep.equal({
+            'public-key': 'outer-pub',
+            'short-id': '01',
+        });
+        expect(
+            parsed[0]['xhttp-opts']?.['download-settings']?.['reality-opts'],
+        ).to.deep.equal({});
+
+        const output = ProxyUtils.produce(parsed, 'URI', 'external');
+        expect(output).to.equal('');
+    });
+
+    it('skips URI VLESS exports when xhttp stream-one is combined with download-settings', function () {
+        const rawExtra = JSON.stringify({
+            downloadSettings: {
+                address: 'download.example.com',
+                network: 'xhttp',
+                port: 8443,
+                security: 'tls',
+                xhttpSettings: {
+                    path: '/download',
+                },
+            },
+        });
+        const parsed = ProxyUtils.parse(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-one&extra=${encodeURIComponent(
+                rawExtra,
+            )}#URI%20XHTTP%20Stream%20One%20Download`,
+        );
+
+        expect(parsed).to.have.length(1);
+        expect(parsed[0]['xhttp-opts']?.mode).to.equal('stream-one');
+        expect(parsed[0]['xhttp-opts']?.['download-settings']).to.deep.include({
+            server: 'download.example.com',
+            port: 8443,
+            tls: true,
+        });
+
+        const output = ProxyUtils.produce(parsed, 'URI', 'external');
+        expect(output).to.equal('');
+    });
+
+    it('uses nested download Host header when producing URI VLESS links', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Download Host Header',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    path: '/download',
+                    headers: {
+                        Host: 'download-host.example.com',
+                        'X-Download': '1',
+                    },
+                },
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.downloadSettings?.xhttpSettings?.host).to.equal(
+            'download-host.example.com',
+        );
+        expect(extra.downloadSettings?.xhttpSettings?.headers).to.deep.equal({
+            'X-Download': '1',
+        });
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.host,
+        ).to.equal('download-host.example.com');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.headers,
+        ).to.deep.equal({
+            'X-Download': '1',
+        });
+    });
+
+    it('prefers explicit nested download host over nested download Host header when producing URI VLESS links', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Download Host Precedence',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    path: '/download',
+                    host: 'download-host.example.com',
+                    headers: {
+                        Host: 'ignored-header.example.com',
+                        'X-Download': '1',
+                    },
+                },
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.downloadSettings?.xhttpSettings?.host).to.equal(
+            'download-host.example.com',
+        );
+        expect(extra.downloadSettings?.xhttpSettings?.headers).to.deep.equal({
+            'X-Download': '1',
+        });
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.host,
+        ).to.equal('download-host.example.com');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.headers,
+        ).to.deep.equal({
+            'X-Download': '1',
+        });
+    });
+
     it('normalizes structured xhttp range-form scalars when producing URI VLESS links', function () {
         const extra = JSON.stringify({
             noGRPCHeader: true,
             xPaddingBytes: '64-128',
             scMaxEachPostBytes: 1000000,
-            scMinPostsIntervalMs: 300,
+            scMinPostsIntervalMs: '0-300',
             xmux: {
                 maxConnections: '8',
             },
             downloadSettings: {
                 address: 'download.example.com',
+                network: 'xhttp',
                 port: 8443,
                 security: 'tls',
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
                     scMaxEachPostBytes: 1000000,
-                    scMinPostsIntervalMs: 300,
+                    scMinPostsIntervalMs: '0-300',
                     extra: {
                         xmux: {
                             maxConcurrency: '16-32',
@@ -1493,12 +2399,12 @@ describe('Proxy text producers', function () {
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
-        expect(
-            reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes'],
-        ).to.equal(1000000);
-        expect(reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms']).to.equal(
-            300,
+        expect(reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes']).to.equal(
+            1000000,
         );
+        expect(
+            reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
+        ).to.equal('0-300');
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-max-each-post-bytes'
@@ -1508,7 +2414,57 @@ describe('Proxy text producers', function () {
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-min-posts-interval-ms'
             ],
-        ).to.equal(300);
+        ).to.equal('0-300');
+    });
+
+    it('does not truncate malformed nested download port strings when producing URI VLESS links', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Invalid Download Port',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: '8443foo',
+                    tls: true,
+                    path: '/download',
+                },
+            },
+        });
+
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const extra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(extra.downloadSettings).to.not.have.property('port');
+        expect(extra.downloadSettings).to.deep.equal({
+            address: 'download.example.com',
+            network: 'xhttp',
+            security: 'tls',
+            xhttpSettings: {
+                path: '/download',
+            },
+        });
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings'],
+        ).to.not.have.property('port');
+        expect(reparsed[0]['xhttp-opts']?.['download-settings']).to.deep.equal({
+            server: 'download.example.com',
+            network: 'xhttp',
+            tls: true,
+            path: '/download',
+        });
     });
 
     it('drops invalid structured xhttp scalars when producing URI VLESS links', function () {
@@ -1520,6 +2476,7 @@ describe('Proxy text producers', function () {
             },
             downloadSettings: {
                 address: 'download.example.com',
+                network: 'xhttp',
                 port: 8443,
                 security: 'tls',
                 xhttpSettings: {
@@ -1554,6 +2511,7 @@ describe('Proxy text producers', function () {
                 'x-padding-bytes': '64-128',
                 'sc-max-each-post-bytes': '9007199254740993',
                 'sc-min-posts-interval-ms': 0,
+                'uplink-chunk-size': '64-fast',
                 'reuse-settings': {
                     'max-connections': '8',
                 },
@@ -1567,6 +2525,7 @@ describe('Proxy text producers', function () {
                     'x-padding-bytes': '32-64',
                     'sc-max-each-post-bytes': '1-9007199254740993',
                     'sc-min-posts-interval-ms': 'fast',
+                    'uplink-chunk-size': 'fast',
                     'reuse-settings': {
                         'max-concurrency': '16-32',
                     },
@@ -1588,12 +2547,18 @@ describe('Proxy text producers', function () {
         expect(reparsed[0]['xhttp-opts']).to.not.have.property(
             'sc-min-posts-interval-ms',
         );
+        expect(reparsed[0]['xhttp-opts']).to.not.have.property(
+            'uplink-chunk-size',
+        );
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings'],
         ).to.not.have.property('sc-max-each-post-bytes');
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings'],
         ).to.not.have.property('sc-min-posts-interval-ms');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings'],
+        ).to.not.have.property('uplink-chunk-size');
     });
 
     it('omits top-level URI xhttp extra when only invalid structured scalars remain', function () {
@@ -1614,6 +2579,7 @@ describe('Proxy text producers', function () {
                 },
                 'sc-max-each-post-bytes': '9007199254740993',
                 'sc-min-posts-interval-ms': 0,
+                'uplink-chunk-size': 'fast',
             },
         });
 
@@ -1627,6 +2593,7 @@ describe('Proxy text producers', function () {
         const extra = JSON.stringify({
             downloadSettings: {
                 address: 'download.example.com',
+                network: 'xhttp',
                 port: 8443,
                 security: 'tls',
             },
@@ -1652,6 +2619,7 @@ describe('Proxy text producers', function () {
                     tls: true,
                     'sc-max-each-post-bytes': '1-9007199254740993',
                     'sc-min-posts-interval-ms': 'fast',
+                    'uplink-chunk-size': 'fast',
                 },
             },
         });
@@ -1664,18 +2632,18 @@ describe('Proxy text producers', function () {
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
-        expect(reparsed[0]['xhttp-opts']?.['download-settings']).to.not.have.property(
-            'sc-max-each-post-bytes',
-        );
-        expect(reparsed[0]['xhttp-opts']?.['download-settings']).to.not.have.property(
-            'sc-min-posts-interval-ms',
-        );
-        expect(reparsed[0]['xhttp-opts']?.['download-settings']).to.not.have.property(
-            'path',
-        );
-        expect(reparsed[0]['xhttp-opts']?.['download-settings']).to.not.have.property(
-            'host',
-        );
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings'],
+        ).to.not.have.property('sc-max-each-post-bytes');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings'],
+        ).to.not.have.property('sc-min-posts-interval-ms');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings'],
+        ).to.not.have.property('path');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings'],
+        ).to.not.have.property('host');
     });
 
     it('produces URI Trojan websocket links with pcs from tls fingerprint', function () {

@@ -283,6 +283,47 @@ function produce(proxies, targetPlatform, type, opts = {}) {
             if (!isProxyUUIDValid)
                 $.info(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
             // return isProxyUUIDValid;
+            const isVlessType = proxy.type === 'vless';
+            const realityChecks = isVlessType
+                ? [
+                      ['reality-opts', proxy['reality-opts']],
+                      [
+                          'xhttp download-settings reality-opts',
+                          proxy['xhttp-opts']?.['download-settings']?.[
+                              'reality-opts'
+                          ],
+                      ],
+                  ]
+                : [];
+            for (const [realityLabel, realityOpts] of realityChecks) {
+                if (realityOpts && !isNotBlank(realityOpts['public-key'])) {
+                    // Intentional: a VLESS Reality node without public-key is
+                    // not a valid Mihomo export or regenerated share link. We
+                    // keep the marker while parsing so callers can inspect the
+                    // broken config, then stop export here instead of silently
+                    // emitting invalid Reality output.
+                    $.error(
+                        `Skipping VLESS Reality proxy ${proxy.name}: empty ${realityLabel}.public-key`,
+                    );
+                    return false;
+                }
+            }
+
+            const xhttpOpts = proxy['xhttp-opts'];
+            if (
+                isVlessType &&
+                proxy.network === 'xhttp' &&
+                xhttpOpts?.mode === 'stream-one' &&
+                xhttpOpts['download-settings']
+            ) {
+                // Match Mihomo's outbound validation: xhttp download-settings
+                // require split transports, so stream-one is rejected instead
+                // of emitting a config/share link that Mihomo will not accept.
+                $.error(
+                    `Skipping VLESS xhttp proxy ${proxy.name}: mode "stream-one" cannot be used with download-settings`,
+                );
+                return false;
+            }
         }
 
         return true;

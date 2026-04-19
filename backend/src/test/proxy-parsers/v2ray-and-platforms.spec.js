@@ -87,7 +87,9 @@ describe('VMess and VLESS parser coverage', function () {
                     fp: 'chrome',
                 }),
             );
-            const proxy = parseOne(`vmess://${share}#Outer%20Fragment%20Remark`);
+            const proxy = parseOne(
+                `vmess://${share}#Outer%20Fragment%20Remark`,
+            );
 
             expectSubset(proxy, {
                 type: 'vmess',
@@ -652,7 +654,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -672,6 +673,8 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                 },
             });
+            expect(proxy).to.not.have.property('_extra');
+            expect(proxy).to.not.have.property('_extra_unsupported');
         });
 
         it('parses xhttp VLESS shares with downloadSettings extra', function () {
@@ -715,7 +718,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -734,7 +736,7 @@ describe('VMess and VLESS parser coverage', function () {
                         'no-grpc-header': true,
                         'x-padding-bytes': '32-64',
                         'sc-max-each-post-bytes': 1000000,
-                        'sc-min-posts-interval-ms': 300,
+                        'sc-min-posts-interval-ms': '0-300',
                         'reuse-settings': {
                             'max-connections': '8',
                             'h-max-reusable-secs': '900',
@@ -742,6 +744,10 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                 },
             });
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('network');
+            expect(proxy).to.not.have.property('_extra_unsupported');
         });
 
         it('parses xhttp VLESS shares with downloadSettings extra without mode', function () {
@@ -769,7 +775,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     path: '/xhttp',
                     headers: {
@@ -784,6 +789,166 @@ describe('VMess and VLESS parser coverage', function () {
                 },
             });
             expect(proxy['xhttp-opts']).to.not.have.property('mode');
+        });
+
+        it('parses xhttp network into structured downloadSettings while keeping unsupported nested fields in the sidecar', function () {
+            const extra = JSON.stringify({
+                downloadSettings: {
+                    network: 'xhttp',
+                    sockopt: {
+                        mark: 255,
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Download%20Unsupported%20Only`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Download Unsupported Only',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'download-settings': {
+                        network: 'xhttp',
+                    },
+                },
+            });
+            expect(proxy._extra_unsupported).to.deep.equal({
+                downloadSettings: {
+                    sockopt: {
+                        mark: 255,
+                    },
+                },
+            });
+        });
+
+        it('normalizes splithttp downloadSettings network without keeping the raw network in the sidecar', function () {
+            const extra = JSON.stringify({
+                downloadSettings: {
+                    network: 'splithttp',
+                    sockopt: {
+                        mark: 255,
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Download%20SplitHTTP`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Download SplitHTTP',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'download-settings': {
+                        network: 'xhttp',
+                    },
+                },
+            });
+            expect(proxy._extra_unsupported).to.deep.equal({
+                downloadSettings: {
+                    sockopt: {
+                        mark: 255,
+                    },
+                },
+            });
+        });
+
+        it('keeps malformed reality downloadSettings as an empty reality marker', function () {
+            const extra = JSON.stringify({
+                downloadSettings: {
+                    address: 'download.example.com',
+                    network: 'xhttp',
+                    port: 8443,
+                    security: 'reality',
+                    xhttpSettings: {
+                        path: '/download',
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Download%20Reality%20Marker`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Download Reality Marker',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'download-settings': {
+                        network: 'xhttp',
+                        server: 'download.example.com',
+                        port: 8443,
+                        tls: true,
+                        path: '/download',
+                    },
+                },
+            });
+            expect(
+                proxy['xhttp-opts']?.['download-settings']?.['reality-opts'],
+            ).to.deep.equal({});
+            expect(proxy).to.not.have.property('_extra_unsupported');
+        });
+
+        it('keeps invalid xhttp extra as raw _extra for URI round-trips', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    '{bad',
+                )}#VLESS%20XHTTP%20Invalid%20Extra`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Invalid Extra',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                _extra: '{bad',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+            });
+            expect(proxy).to.not.have.property('_extra_unsupported');
         });
 
         it('parses xhttp VLESS shares with range-form scMinPostsIntervalMs', function () {
@@ -813,7 +978,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -822,7 +986,7 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                     'no-grpc-header': true,
                     'x-padding-bytes': '64-128',
-                    'sc-min-posts-interval-ms': 300,
+                    'sc-min-posts-interval-ms': '100-300',
                     'reuse-settings': {
                         'max-connections': '0',
                         'max-concurrency': '16-32',
@@ -861,7 +1025,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -909,7 +1072,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -918,7 +1080,7 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                     'no-grpc-header': true,
                     'x-padding-bytes': '64-128',
-                    'sc-min-posts-interval-ms': 300,
+                    'sc-min-posts-interval-ms': '0-300',
                     'reuse-settings': {
                         'max-connections': '0',
                         'max-concurrency': '16-32',
@@ -962,7 +1124,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -980,7 +1141,7 @@ describe('VMess and VLESS parser coverage', function () {
                         path: '/download',
                         host: 'download-host.example.com',
                         'sc-max-each-post-bytes': 1000000,
-                        'sc-min-posts-interval-ms': 300,
+                        'sc-min-posts-interval-ms': '0-300',
                     },
                 },
             });
@@ -1018,7 +1179,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -1036,7 +1196,7 @@ describe('VMess and VLESS parser coverage', function () {
                         path: '/download',
                         host: 'download-host.example.com',
                         'sc-max-each-post-bytes': 1000000,
-                        'sc-min-posts-interval-ms': 300,
+                        'sc-min-posts-interval-ms': '0-300',
                     },
                 },
             });
@@ -1081,7 +1241,6 @@ describe('VMess and VLESS parser coverage', function () {
                     uuid: UUID,
                     tls: true,
                     network: 'xhttp',
-                    _extra: extra,
                     'xhttp-opts': {
                         mode: 'stream-up',
                         path: '/xhttp',
@@ -1102,6 +1261,9 @@ describe('VMess and VLESS parser coverage', function () {
                 expect(proxy['xhttp-opts']).to.not.have.property(
                     'sc-min-posts-interval-ms',
                 );
+                expect(proxy._extra_unsupported).to.deep.equal({
+                    scMinPostsIntervalMs: value,
+                });
             }
         });
 
@@ -1136,7 +1298,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -1158,6 +1319,354 @@ describe('VMess and VLESS parser coverage', function () {
             expect(
                 proxy['xhttp-opts']?.['download-settings'],
             ).to.not.have.property('sc-min-posts-interval-ms');
+            expect(proxy._extra_unsupported).to.deep.equal({
+                downloadSettings: {
+                    xhttpSettings: {
+                        scMinPostsIntervalMs: '0-0',
+                    },
+                },
+            });
+        });
+
+        it('parses extended xhttp VLESS extra fields and keeps unsupported fields in _extra_unsupported', function () {
+            const extra = JSON.stringify({
+                headers: {
+                    'X-Test': 'demo',
+                },
+                noGRPCHeader: true,
+                xPaddingBytes: '64-128',
+                xPaddingObfsMode: true,
+                xPaddingKey: 'x_padding',
+                xPaddingHeader: 'Referer',
+                xPaddingPlacement: 'header',
+                xPaddingMethod: 'tokenish',
+                uplinkHTTPMethod: 'PUT',
+                sessionPlacement: 'query',
+                sessionKey: 'x_session_id',
+                seqPlacement: 'header',
+                seqKey: 'X-Seq',
+                uplinkDataPlacement: 'header',
+                uplinkDataKey: 'X-Data',
+                uplinkChunkSize: '64-128',
+                xmux: {
+                    maxConcurrency: '16-32',
+                    hKeepAlivePeriod: 15,
+                },
+                noSSEHeader: true,
+                downloadSettings: {
+                    address: 'download.example.com',
+                    port: 8443,
+                    security: 'tls',
+                    tlsSettings: {
+                        serverName: 'download-sni.example.com',
+                        fingerprint: 'chrome',
+                        allowInsecure: true,
+                        alpn: ['h2'],
+                        echConfigList: 'ECHCONFIG',
+                    },
+                    xhttpSettings: {
+                        path: '/download',
+                        host: 'download-host.example.com',
+                        headers: {
+                            'X-Download': '1',
+                        },
+                        noGRPCHeader: true,
+                        xPaddingBytes: '16-32',
+                        xPaddingObfsMode: true,
+                        xPaddingKey: 'x_padding_dl',
+                        xPaddingHeader: 'Cookie',
+                        xPaddingPlacement: 'query',
+                        xPaddingMethod: 'repeat-x',
+                        uplinkHTTPMethod: 'PATCH',
+                        sessionPlacement: 'header',
+                        sessionKey: 'X-Session',
+                        seqPlacement: 'query',
+                        seqKey: 'x_seq',
+                        uplinkDataPlacement: 'cookie',
+                        uplinkDataKey: 'x_data',
+                        uplinkChunkSize: 48,
+                        extra: {
+                            xmux: {
+                                maxConcurrency: '8-16',
+                                hKeepAlivePeriod: -1,
+                            },
+                        },
+                    },
+                    sockopt: {
+                        mark: 255,
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Extended%20Extra`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Extended Extra',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                        'X-Test': 'demo',
+                    },
+                    'no-grpc-header': true,
+                    'x-padding-bytes': '64-128',
+                    'x-padding-obfs-mode': true,
+                    'x-padding-key': 'x_padding',
+                    'x-padding-header': 'Referer',
+                    'x-padding-placement': 'header',
+                    'x-padding-method': 'tokenish',
+                    'uplink-http-method': 'PUT',
+                    'session-placement': 'query',
+                    'session-key': 'x_session_id',
+                    'seq-placement': 'header',
+                    'seq-key': 'X-Seq',
+                    'uplink-data-placement': 'header',
+                    'uplink-data-key': 'X-Data',
+                    'uplink-chunk-size': '64-128',
+                    'reuse-settings': {
+                        'max-concurrency': '16-32',
+                        'h-keep-alive-period': 15,
+                    },
+                    'download-settings': {
+                        server: 'download.example.com',
+                        port: 8443,
+                        tls: true,
+                        servername: 'download-sni.example.com',
+                        'client-fingerprint': 'chrome',
+                        'skip-cert-verify': true,
+                        alpn: ['h2'],
+                        'ech-opts': {
+                            enable: true,
+                            config: 'ECHCONFIG',
+                        },
+                        path: '/download',
+                        host: 'download-host.example.com',
+                        headers: {
+                            'X-Download': '1',
+                        },
+                        'no-grpc-header': true,
+                        'x-padding-bytes': '16-32',
+                        'x-padding-obfs-mode': true,
+                        'x-padding-key': 'x_padding_dl',
+                        'x-padding-header': 'Cookie',
+                        'x-padding-placement': 'query',
+                        'x-padding-method': 'repeat-x',
+                        'uplink-http-method': 'PATCH',
+                        'session-placement': 'header',
+                        'session-key': 'X-Session',
+                        'seq-placement': 'query',
+                        'seq-key': 'x_seq',
+                        'uplink-data-placement': 'cookie',
+                        'uplink-data-key': 'x_data',
+                        'uplink-chunk-size': 48,
+                        'reuse-settings': {
+                            'max-concurrency': '8-16',
+                            'h-keep-alive-period': -1,
+                        },
+                    },
+                },
+            });
+
+            expect(proxy).to.not.have.property('_extra');
+            expect(proxy._extra_unsupported).to.deep.equal({
+                noSSEHeader: true,
+                downloadSettings: {
+                    sockopt: {
+                        mark: 255,
+                    },
+                },
+            });
+            expect(proxy['xhttp-opts']).to.not.have.property('no-sse-header');
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('sockopt');
+        });
+
+        it('parses xhttp VLESS xmux ranges canonically and keeps unsupported keep-alive values in _extra_unsupported', function () {
+            const extra = JSON.stringify({
+                xmux: {
+                    maxConnections: '+0008',
+                    maxConcurrency: '0008-0016',
+                    hKeepAlivePeriod: '9007199254740993',
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20XMUX%20Canonical`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'reuse-settings': {
+                        'max-connections': '8',
+                        'max-concurrency': '8-16',
+                    },
+                },
+            });
+            expect(proxy['xhttp-opts']?.['reuse-settings']).to.not.have.property(
+                'h-keep-alive-period',
+            );
+            expect(proxy._extra_unsupported).to.deep.equal({
+                xmux: {
+                    hKeepAlivePeriod: '9007199254740993',
+                },
+            });
+        });
+
+        it('parses xhttp VLESS shares with string downloadSettings ports as structured values', function () {
+            const extra = JSON.stringify({
+                downloadSettings: {
+                    address: 'download.example.com',
+                    port: '8443',
+                    security: 'tls',
+                    xhttpSettings: {
+                        path: '/download',
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20String%20Download%20Port`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'download-settings': {
+                        server: 'download.example.com',
+                        port: 8443,
+                        tls: true,
+                        path: '/download',
+                    },
+                },
+            });
+            expect(proxy).to.not.have.property('_extra_unsupported');
+        });
+
+        it('keeps malformed xhttp VLESS uplinkChunkSize values in _extra_unsupported', function () {
+            const extra = JSON.stringify({
+                uplinkChunkSize: 'fast',
+                downloadSettings: {
+                    address: 'download.example.com',
+                    port: 8443,
+                    security: 'tls',
+                    xhttpSettings: {
+                        path: '/download',
+                        uplinkChunkSize: 'faster',
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Malformed%20Uplink%20Chunk`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'download-settings': {
+                        server: 'download.example.com',
+                        port: 8443,
+                        tls: true,
+                        path: '/download',
+                    },
+                },
+            });
+            expect(proxy['xhttp-opts']).to.not.have.property(
+                'uplink-chunk-size',
+            );
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('uplink-chunk-size');
+            expect(proxy._extra_unsupported).to.deep.equal({
+                uplinkChunkSize: 'fast',
+                downloadSettings: {
+                    xhttpSettings: {
+                        uplinkChunkSize: 'faster',
+                    },
+                },
+            });
+        });
+
+        it('keeps mixed downloadSettings tlsSettings.alpn arrays in _extra_unsupported', function () {
+            const extra = JSON.stringify({
+                downloadSettings: {
+                    address: 'download.example.com',
+                    port: 8443,
+                    security: 'tls',
+                    tlsSettings: {
+                        alpn: ['h2', { foo: 1 }],
+                    },
+                    xhttpSettings: {
+                        path: '/download',
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Mixed%20ALPN`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'download-settings': {
+                        server: 'download.example.com',
+                        port: 8443,
+                        tls: true,
+                        path: '/download',
+                    },
+                },
+            });
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('alpn');
+            expect(proxy._extra_unsupported).to.deep.equal({
+                downloadSettings: {
+                    tlsSettings: {
+                        alpn: ['h2', { foo: 1 }],
+                    },
+                },
+            });
         });
 
         it('parses xhttp VLESS shares with range-form scMaxEachPostBytes', function () {
@@ -1187,7 +1696,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -1235,7 +1743,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -1283,7 +1790,6 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 network: 'xhttp',
-                _extra: extra,
                 'xhttp-opts': {
                     mode: 'stream-up',
                     path: '/xhttp',
@@ -1342,7 +1848,6 @@ describe('VMess and VLESS parser coverage', function () {
                     uuid: UUID,
                     tls: true,
                     network: 'xhttp',
-                    _extra: extra,
                     'xhttp-opts': {
                         mode: 'stream-up',
                         path: '/xhttp',
@@ -1363,6 +1868,9 @@ describe('VMess and VLESS parser coverage', function () {
                 expect(proxy['xhttp-opts']).to.not.have.property(
                     'sc-max-each-post-bytes',
                 );
+                expect(proxy._extra_unsupported).to.deep.equal({
+                    scMaxEachPostBytes: value,
+                });
             }
         });
 

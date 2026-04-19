@@ -18,7 +18,12 @@ import YAML from '@/utils/yaml';
 import _ from 'lodash';
 
 import { Base64 } from 'js-base64';
-import { normalizeXhttpScalarUpperBound } from '../xhttp-utils';
+import {
+    normalizeXhttpIntegerValue,
+    normalizeXhttpNonNegativeRange,
+    normalizeXhttpPositiveRange,
+    normalizeXhttpScalarUpperBound,
+} from '../xhttp-utils';
 
 function surge_port_hopping(raw) {
     const [parts, port_hopping] =
@@ -37,8 +42,7 @@ function splitURIFragment(raw) {
     const [__, content, fragment] = /^(.*?)(?:#(.*?))?$/.exec(raw);
     return {
         content,
-        fragment:
-            fragment != null ? decodeURIComponent(fragment) : undefined,
+        fragment: fragment != null ? decodeURIComponent(fragment) : undefined,
     };
 }
 
@@ -56,7 +60,11 @@ function parseWireGuardURIAddressValue(value) {
         return parsed;
     };
     if (isIPv4(host)) {
-        return { family: 'ipv4', address: host, cidr: normalizeCIDR(cidrRaw, 32) };
+        return {
+            family: 'ipv4',
+            address: host,
+            cidr: normalizeCIDR(cidrRaw, 32),
+        };
     }
     if (isIPv6(host)) {
         return {
@@ -752,20 +760,639 @@ function URI_VLESS() {
             };
 
             for (const [sourceKey, targetKey] of Object.entries(xmuxFieldMap)) {
-                const value = xmux[sourceKey];
-                if (typeof value === 'string' && value !== '') {
-                    reuseSettings[targetKey] = value;
-                } else if (
-                    typeof value === 'number' &&
-                    Number.isFinite(value)
-                ) {
-                    reuseSettings[targetKey] = `${value}`;
+                const normalizedValue = normalizeXhttpNonNegativeRange(
+                    xmux[sourceKey],
+                );
+                if (normalizedValue != null) {
+                    reuseSettings[targetKey] =
+                        typeof normalizedValue === 'number'
+                            ? `${normalizedValue}`
+                            : normalizedValue;
                 }
+            }
+
+            const hKeepAlivePeriod = normalizeXhttpIntegerValue(
+                xmux.hKeepAlivePeriod,
+            );
+            if (hKeepAlivePeriod != null) {
+                reuseSettings['h-keep-alive-period'] = hKeepAlivePeriod;
             }
 
             return Object.keys(reuseSettings).length > 0
                 ? reuseSettings
                 : undefined;
+        };
+
+        const toStringHeaderMap = (headers) => {
+            if (!isPlainObject(headers)) {
+                return undefined;
+            }
+
+            const parsedHeaders = {};
+            for (const [key, value] of Object.entries(headers)) {
+                if (typeof value === 'string' && value !== '') {
+                    parsedHeaders[key] = value;
+                }
+            }
+
+            return Object.keys(parsedHeaders).length > 0
+                ? parsedHeaders
+                : undefined;
+        };
+
+        const cloneUnsupportedXhttpValue = (value) => {
+            if (Array.isArray(value)) {
+                return value.map(cloneUnsupportedXhttpValue);
+            }
+
+            if (isPlainObject(value)) {
+                const clonedValue = {};
+                for (const [key, entryValue] of Object.entries(value)) {
+                    clonedValue[key] = cloneUnsupportedXhttpValue(entryValue);
+                }
+                return clonedValue;
+            }
+
+            return value;
+        };
+
+        const compactUnsupportedXhttpValue = (value) => {
+            if (Array.isArray(value)) {
+                return value
+                    .map(compactUnsupportedXhttpValue)
+                    .filter((entryValue) => entryValue !== undefined);
+            }
+
+            if (!isPlainObject(value)) {
+                return value;
+            }
+
+            const compactedValue = {};
+            for (const [key, entryValue] of Object.entries(value)) {
+                const compactedEntryValue =
+                    compactUnsupportedXhttpValue(entryValue);
+                if (compactedEntryValue !== undefined) {
+                    compactedValue[key] = compactedEntryValue;
+                }
+            }
+
+            return Object.keys(compactedValue).length > 0
+                ? compactedValue
+                : undefined;
+        };
+
+        const setUnsupportedXhttpField = (target, key, value) => {
+            const normalizedValue = compactUnsupportedXhttpValue(
+                cloneUnsupportedXhttpValue(value),
+            );
+            if (normalizedValue !== undefined) {
+                target[key] = normalizedValue;
+            }
+        };
+
+        const collectUnsupportedXhttpHeaders = (headers) => {
+            if (headers == null) {
+                return undefined;
+            }
+
+            if (!isPlainObject(headers)) {
+                return cloneUnsupportedXhttpValue(headers);
+            }
+
+            const unsupportedHeaders = {};
+            for (const [key, value] of Object.entries(headers)) {
+                if (typeof value === 'string' && value !== '') {
+                    continue;
+                }
+
+                setUnsupportedXhttpField(unsupportedHeaders, key, value);
+            }
+
+            return compactUnsupportedXhttpValue(unsupportedHeaders);
+        };
+
+        const isSupportedXmuxFieldValue = (key, value) => {
+            if (
+                [
+                    'maxConnections',
+                    'maxConcurrency',
+                    'cMaxReuseTimes',
+                    'hMaxRequestTimes',
+                    'hMaxReusableSecs',
+                ].includes(key)
+            ) {
+                return normalizeXhttpNonNegativeRange(value) != null;
+            }
+
+            if (key === 'hKeepAlivePeriod') {
+                return normalizeXhttpIntegerValue(value) != null;
+            }
+
+            return false;
+        };
+
+        const collectUnsupportedXmux = (xmux) => {
+            if (xmux == null) {
+                return undefined;
+            }
+
+            if (!isPlainObject(xmux)) {
+                return cloneUnsupportedXhttpValue(xmux);
+            }
+
+            const unsupportedXmux = {};
+            for (const [key, value] of Object.entries(xmux)) {
+                if (isSupportedXmuxFieldValue(key, value)) {
+                    continue;
+                }
+
+                setUnsupportedXhttpField(unsupportedXmux, key, value);
+            }
+
+            return compactUnsupportedXhttpValue(unsupportedXmux);
+        };
+
+        const collectUnsupportedXhttpExtra = (extra) => {
+            if (extra == null) {
+                return undefined;
+            }
+
+            if (!isPlainObject(extra)) {
+                return cloneUnsupportedXhttpValue(extra);
+            }
+
+            const unsupportedExtra = {};
+            for (const [key, value] of Object.entries(extra)) {
+                switch (key) {
+                    case 'headers': {
+                        const unsupportedHeaders =
+                            collectUnsupportedXhttpHeaders(value);
+                        if (unsupportedHeaders !== undefined) {
+                            unsupportedExtra.headers = unsupportedHeaders;
+                        }
+                        break;
+                    }
+                    case 'noGRPCHeader':
+                    case 'xPaddingObfsMode':
+                        if (value !== true) {
+                            setUnsupportedXhttpField(
+                                unsupportedExtra,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'xPaddingBytes':
+                    case 'xPaddingKey':
+                    case 'xPaddingHeader':
+                    case 'xPaddingPlacement':
+                    case 'xPaddingMethod':
+                    case 'uplinkHTTPMethod':
+                    case 'sessionPlacement':
+                    case 'sessionKey':
+                    case 'seqPlacement':
+                    case 'seqKey':
+                    case 'uplinkDataPlacement':
+                    case 'uplinkDataKey':
+                        if (!isNotBlank(value)) {
+                            setUnsupportedXhttpField(
+                                unsupportedExtra,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'uplinkChunkSize':
+                        if (normalizeXhttpNonNegativeRange(value) == null) {
+                            setUnsupportedXhttpField(
+                                unsupportedExtra,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'scMaxEachPostBytes':
+                        if (normalizeXhttpScalarUpperBound(value) == null) {
+                            setUnsupportedXhttpField(
+                                unsupportedExtra,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'scMinPostsIntervalMs':
+                        if (normalizeXhttpPositiveRange(value) == null) {
+                            setUnsupportedXhttpField(
+                                unsupportedExtra,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'xmux': {
+                        const unsupportedXmux = collectUnsupportedXmux(value);
+                        if (unsupportedXmux !== undefined) {
+                            unsupportedExtra.xmux = unsupportedXmux;
+                        }
+                        break;
+                    }
+                    default:
+                        setUnsupportedXhttpField(unsupportedExtra, key, value);
+                        break;
+                }
+            }
+
+            return compactUnsupportedXhttpValue(unsupportedExtra);
+        };
+
+        const collectUnsupportedNestedXhttpSettings = (xhttpSettings) => {
+            if (xhttpSettings == null) {
+                return undefined;
+            }
+
+            if (!isPlainObject(xhttpSettings)) {
+                return cloneUnsupportedXhttpValue(xhttpSettings);
+            }
+
+            const unsupportedXhttpSettings = {};
+            if (
+                Object.prototype.hasOwnProperty.call(xhttpSettings, 'path') &&
+                !isNotBlank(xhttpSettings.path)
+            ) {
+                setUnsupportedXhttpField(
+                    unsupportedXhttpSettings,
+                    'path',
+                    xhttpSettings.path,
+                );
+            }
+            if (
+                Object.prototype.hasOwnProperty.call(xhttpSettings, 'host') &&
+                !isNotBlank(xhttpSettings.host)
+            ) {
+                setUnsupportedXhttpField(
+                    unsupportedXhttpSettings,
+                    'host',
+                    xhttpSettings.host,
+                );
+            }
+
+            const inlineExtra = {};
+            for (const [key, value] of Object.entries(xhttpSettings)) {
+                if (['path', 'host', 'extra'].includes(key)) {
+                    continue;
+                }
+                inlineExtra[key] = value;
+            }
+
+            const unsupportedInlineExtra =
+                collectUnsupportedXhttpExtra(inlineExtra);
+            if (isPlainObject(unsupportedInlineExtra)) {
+                Object.assign(unsupportedXhttpSettings, unsupportedInlineExtra);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(xhttpSettings, 'extra')) {
+                const unsupportedExtra = collectUnsupportedXhttpExtra(
+                    xhttpSettings.extra,
+                );
+                if (unsupportedExtra !== undefined) {
+                    unsupportedXhttpSettings.extra = unsupportedExtra;
+                }
+            }
+
+            return compactUnsupportedXhttpValue(unsupportedXhttpSettings);
+        };
+
+        const collectUnsupportedDownloadSettings = (downloadSettings) => {
+            if (downloadSettings == null) {
+                return undefined;
+            }
+
+            if (!isPlainObject(downloadSettings)) {
+                return cloneUnsupportedXhttpValue(downloadSettings);
+            }
+
+            const unsupportedDownloadSettings = {};
+            for (const [key, value] of Object.entries(downloadSettings)) {
+                switch (key) {
+                    case 'address':
+                        if (!isNotBlank(value)) {
+                            setUnsupportedXhttpField(
+                                unsupportedDownloadSettings,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'port':
+                        if (
+                            normalizeXhttpIntegerValue(value, {
+                                allowNegative: false,
+                            }) == null
+                        ) {
+                            setUnsupportedXhttpField(
+                                unsupportedDownloadSettings,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'security': {
+                        const normalizedSecurity =
+                            typeof value === 'string' ? value.toLowerCase() : '';
+                        if (!['tls', 'reality'].includes(normalizedSecurity)) {
+                            setUnsupportedXhttpField(
+                                unsupportedDownloadSettings,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    }
+                    case 'tlsSettings': {
+                        if (!isPlainObject(value)) {
+                            setUnsupportedXhttpField(
+                                unsupportedDownloadSettings,
+                                key,
+                                value,
+                            );
+                            break;
+                        }
+
+                        const unsupportedTlsSettings = {};
+                        for (const [tlsKey, tlsValue] of Object.entries(value)) {
+                            switch (tlsKey) {
+                                case 'serverName':
+                                case 'fingerprint':
+                                case 'echConfigList':
+                                    if (!isNotBlank(tlsValue)) {
+                                        setUnsupportedXhttpField(
+                                            unsupportedTlsSettings,
+                                            tlsKey,
+                                            tlsValue,
+                                        );
+                                    }
+                                    break;
+                                case 'alpn':
+                                    if (
+                                        !(
+                                            Array.isArray(tlsValue) &&
+                                            tlsValue.length > 0 &&
+                                            tlsValue.every(
+                                                (item) =>
+                                                    typeof item === 'string' &&
+                                                    item !== '',
+                                            )
+                                        )
+                                    ) {
+                                        setUnsupportedXhttpField(
+                                            unsupportedTlsSettings,
+                                            tlsKey,
+                                            tlsValue,
+                                        );
+                                    }
+                                    break;
+                                case 'allowInsecure':
+                                    if (tlsValue !== true) {
+                                        setUnsupportedXhttpField(
+                                            unsupportedTlsSettings,
+                                            tlsKey,
+                                            tlsValue,
+                                        );
+                                    }
+                                    break;
+                                default:
+                                    setUnsupportedXhttpField(
+                                        unsupportedTlsSettings,
+                                        tlsKey,
+                                        tlsValue,
+                                    );
+                                    break;
+                            }
+                        }
+
+                        const compactedTlsSettings =
+                            compactUnsupportedXhttpValue(
+                                unsupportedTlsSettings,
+                            );
+                        if (compactedTlsSettings !== undefined) {
+                            unsupportedDownloadSettings.tlsSettings =
+                                compactedTlsSettings;
+                        }
+                        break;
+                    }
+                    case 'realitySettings': {
+                        if (!isPlainObject(value)) {
+                            setUnsupportedXhttpField(
+                                unsupportedDownloadSettings,
+                                key,
+                                value,
+                            );
+                            break;
+                        }
+
+                        const unsupportedRealitySettings = {};
+                        for (const [realityKey, realityValue] of Object.entries(
+                            value,
+                        )) {
+                            switch (realityKey) {
+                                case 'publicKey':
+                                case 'shortId':
+                                case 'serverName':
+                                case 'fingerprint':
+                                    if (!isNotBlank(realityValue)) {
+                                        setUnsupportedXhttpField(
+                                            unsupportedRealitySettings,
+                                            realityKey,
+                                            realityValue,
+                                        );
+                                    }
+                                    break;
+                                default:
+                                    setUnsupportedXhttpField(
+                                        unsupportedRealitySettings,
+                                        realityKey,
+                                        realityValue,
+                                    );
+                                    break;
+                            }
+                        }
+
+                        const compactedRealitySettings =
+                            compactUnsupportedXhttpValue(
+                                unsupportedRealitySettings,
+                            );
+                        if (compactedRealitySettings !== undefined) {
+                            unsupportedDownloadSettings.realitySettings =
+                                compactedRealitySettings;
+                        }
+                        break;
+                    }
+                    case 'xhttpSettings': {
+                        const unsupportedXhttpSettings =
+                            collectUnsupportedNestedXhttpSettings(value);
+                        if (unsupportedXhttpSettings !== undefined) {
+                            unsupportedDownloadSettings.xhttpSettings =
+                                unsupportedXhttpSettings;
+                        }
+                        break;
+                    }
+                    case 'network': {
+                        const normalizedNetwork =
+                            typeof value === 'string' ? value.toLowerCase() : '';
+                        if (
+                            normalizedNetwork !== 'xhttp' &&
+                            normalizedNetwork !== 'splithttp'
+                        ) {
+                            setUnsupportedXhttpField(
+                                unsupportedDownloadSettings,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    }
+                    default:
+                        setUnsupportedXhttpField(
+                            unsupportedDownloadSettings,
+                            key,
+                            value,
+                        );
+                        break;
+                }
+            }
+
+            return compactUnsupportedXhttpValue(unsupportedDownloadSettings);
+        };
+
+        const collectUnsupportedRootXhttpExtra = (
+            extra,
+            { parsedDownloadSettings } = {},
+        ) => {
+            if (!isPlainObject(extra)) {
+                return undefined;
+            }
+
+            const {
+                downloadSettings: rawDownloadSettings,
+                ...rootInlineExtra
+            } = extra;
+
+            const unsupportedExtra =
+                collectUnsupportedXhttpExtra(rootInlineExtra) || {};
+
+            if (
+                Object.prototype.hasOwnProperty.call(extra, 'downloadSettings')
+            ) {
+                const unsupportedDownloadSettings =
+                    collectUnsupportedDownloadSettings(rawDownloadSettings);
+                if (unsupportedDownloadSettings !== undefined) {
+                    unsupportedExtra.downloadSettings =
+                        unsupportedDownloadSettings;
+                }
+            }
+
+            return compactUnsupportedXhttpValue(unsupportedExtra);
+        };
+
+        const applyXhttpExtraFields = (target, extra) => {
+            if (!isPlainObject(target) || !isPlainObject(extra)) {
+                return;
+            }
+
+            const parsedHeaders = toStringHeaderMap(extra.headers);
+            if (parsedHeaders) {
+                const headers = { ...(target.headers || {}) };
+                for (const [key, value] of Object.entries(parsedHeaders)) {
+                    if (/^host$/i.test(key)) {
+                        if (
+                            !Object.prototype.hasOwnProperty.call(
+                                headers,
+                                'Host',
+                            ) &&
+                            !Object.prototype.hasOwnProperty.call(
+                                headers,
+                                'host',
+                            )
+                        ) {
+                            headers.Host = value;
+                        }
+                        continue;
+                    }
+                    headers[key] = value;
+                }
+                if (Object.keys(headers).length > 0) {
+                    target.headers = headers;
+                }
+            }
+
+            if (extra.noGRPCHeader === true) {
+                target['no-grpc-header'] = true;
+            }
+            if (isNotBlank(extra.xPaddingBytes)) {
+                target['x-padding-bytes'] = extra.xPaddingBytes;
+            }
+            if (extra.xPaddingObfsMode === true) {
+                target['x-padding-obfs-mode'] = true;
+            }
+            if (isNotBlank(extra.xPaddingKey)) {
+                target['x-padding-key'] = extra.xPaddingKey;
+            }
+            if (isNotBlank(extra.xPaddingHeader)) {
+                target['x-padding-header'] = extra.xPaddingHeader;
+            }
+            if (isNotBlank(extra.xPaddingPlacement)) {
+                target['x-padding-placement'] = extra.xPaddingPlacement;
+            }
+            if (isNotBlank(extra.xPaddingMethod)) {
+                target['x-padding-method'] = extra.xPaddingMethod;
+            }
+            if (isNotBlank(extra.uplinkHTTPMethod)) {
+                target['uplink-http-method'] = extra.uplinkHTTPMethod;
+            }
+            if (isNotBlank(extra.sessionPlacement)) {
+                target['session-placement'] = extra.sessionPlacement;
+            }
+            if (isNotBlank(extra.sessionKey)) {
+                target['session-key'] = extra.sessionKey;
+            }
+            if (isNotBlank(extra.seqPlacement)) {
+                target['seq-placement'] = extra.seqPlacement;
+            }
+            if (isNotBlank(extra.seqKey)) {
+                target['seq-key'] = extra.seqKey;
+            }
+            if (isNotBlank(extra.uplinkDataPlacement)) {
+                target['uplink-data-placement'] = extra.uplinkDataPlacement;
+            }
+            if (isNotBlank(extra.uplinkDataKey)) {
+                target['uplink-data-key'] = extra.uplinkDataKey;
+            }
+
+            const uplinkChunkSize = normalizeXhttpNonNegativeRange(
+                extra.uplinkChunkSize,
+            );
+            if (uplinkChunkSize != null) {
+                target['uplink-chunk-size'] = uplinkChunkSize;
+            }
+
+            const scMaxEachPostBytes = normalizeXhttpScalarUpperBound(
+                extra.scMaxEachPostBytes,
+            );
+            if (scMaxEachPostBytes != null) {
+                target['sc-max-each-post-bytes'] = scMaxEachPostBytes;
+            }
+
+            const scMinPostsIntervalMs = normalizeXhttpPositiveRange(
+                extra.scMinPostsIntervalMs,
+            );
+            if (scMinPostsIntervalMs != null) {
+                target['sc-min-posts-interval-ms'] = scMinPostsIntervalMs;
+            }
+
+            const reuseSettings = mapXmuxToReuseSettings(extra.xmux);
+            if (reuseSettings) {
+                target['reuse-settings'] = reuseSettings;
+            }
         };
 
         const parseDownloadSettings = (downloadSettings) => {
@@ -774,24 +1401,35 @@ function URI_VLESS() {
             }
 
             const parsedDownloadSettings = {};
+            const downloadNetwork =
+                typeof downloadSettings.network === 'string'
+                    ? downloadSettings.network.toLowerCase()
+                    : '';
+            if (
+                downloadNetwork === 'xhttp' ||
+                downloadNetwork === 'splithttp'
+            ) {
+                parsedDownloadSettings.network = 'xhttp';
+            }
             if (isNotBlank(downloadSettings.address)) {
                 parsedDownloadSettings.server = downloadSettings.address;
             }
 
-            if (
-                typeof downloadSettings.port === 'number' &&
-                Number.isFinite(downloadSettings.port)
-            ) {
-                parsedDownloadSettings.port = parseInt(
-                    `${downloadSettings.port}`,
-                    10,
-                );
+            const parsedPort = normalizeXhttpIntegerValue(
+                downloadSettings.port,
+                {
+                    allowNegative: false,
+                },
+            );
+            if (parsedPort != null) {
+                parsedDownloadSettings.port = parsedPort;
             }
 
-            if (
-                typeof downloadSettings.security === 'string' &&
-                downloadSettings.security.toLowerCase() === 'tls'
-            ) {
+            const downloadSecurity =
+                typeof downloadSettings.security === 'string'
+                    ? downloadSettings.security.toLowerCase()
+                    : '';
+            if (downloadSecurity === 'tls' || downloadSecurity === 'reality') {
                 parsedDownloadSettings.tls = true;
             }
 
@@ -804,14 +1442,54 @@ function URI_VLESS() {
                     parsedDownloadSettings['client-fingerprint'] =
                         downloadSettings.tlsSettings.fingerprint;
                 }
-                if (Array.isArray(downloadSettings.tlsSettings.alpn)) {
-                    const alpn = downloadSettings.tlsSettings.alpn.filter(
+                if (
+                    Array.isArray(downloadSettings.tlsSettings.alpn) &&
+                    downloadSettings.tlsSettings.alpn.length > 0 &&
+                    downloadSettings.tlsSettings.alpn.every(
                         (item) => typeof item === 'string' && item !== '',
-                    );
-                    if (alpn.length > 0) {
-                        parsedDownloadSettings.alpn = alpn;
-                    }
+                    )
+                ) {
+                    parsedDownloadSettings.alpn =
+                        downloadSettings.tlsSettings.alpn;
                 }
+                if (downloadSettings.tlsSettings.allowInsecure === true) {
+                    parsedDownloadSettings['skip-cert-verify'] = true;
+                }
+                if (isNotBlank(downloadSettings.tlsSettings.echConfigList)) {
+                    parsedDownloadSettings['ech-opts'] = {
+                        enable: true,
+                        config: downloadSettings.tlsSettings.echConfigList,
+                    };
+                }
+            }
+
+            let realityOpts;
+            if (isPlainObject(downloadSettings.realitySettings)) {
+                realityOpts = {};
+                if (isNotBlank(downloadSettings.realitySettings.publicKey)) {
+                    realityOpts['public-key'] =
+                        downloadSettings.realitySettings.publicKey;
+                }
+                if (isNotBlank(downloadSettings.realitySettings.shortId)) {
+                    realityOpts['short-id'] =
+                        downloadSettings.realitySettings.shortId;
+                }
+                if (isNotBlank(downloadSettings.realitySettings.serverName)) {
+                    parsedDownloadSettings.servername =
+                        downloadSettings.realitySettings.serverName;
+                }
+                if (isNotBlank(downloadSettings.realitySettings.fingerprint)) {
+                    parsedDownloadSettings['client-fingerprint'] =
+                        downloadSettings.realitySettings.fingerprint;
+                }
+            }
+            if (downloadSecurity === 'reality') {
+                // Keep an explicit empty reality marker so the producer can
+                // route invalid nested Reality configs through the shared
+                // "missing public-key" export rejection path.
+                parsedDownloadSettings['reality-opts'] = realityOpts || {};
+            } else if (realityOpts && Object.keys(realityOpts).length > 0) {
+                parsedDownloadSettings['reality-opts'] = realityOpts;
             }
 
             if (isPlainObject(downloadSettings.xhttpSettings)) {
@@ -823,35 +1501,15 @@ function URI_VLESS() {
                     parsedDownloadSettings.host =
                         downloadSettings.xhttpSettings.host;
                 }
-                if (downloadSettings.xhttpSettings.noGRPCHeader === true) {
-                    parsedDownloadSettings['no-grpc-header'] = true;
-                }
-                if (isNotBlank(downloadSettings.xhttpSettings.xPaddingBytes)) {
-                    parsedDownloadSettings['x-padding-bytes'] =
-                        downloadSettings.xhttpSettings.xPaddingBytes;
-                }
-                const scMaxEachPostBytes =
-                    normalizeXhttpScalarUpperBound(
-                        downloadSettings.xhttpSettings.scMaxEachPostBytes,
-                    );
-                if (scMaxEachPostBytes != null) {
-                    parsedDownloadSettings['sc-max-each-post-bytes'] =
-                        scMaxEachPostBytes;
-                }
-                const scMinPostsIntervalMs =
-                    normalizeXhttpScalarUpperBound(
-                        downloadSettings.xhttpSettings.scMinPostsIntervalMs,
-                    );
-                if (scMinPostsIntervalMs != null) {
-                    parsedDownloadSettings['sc-min-posts-interval-ms'] =
-                        scMinPostsIntervalMs;
-                }
-
-                const reuseSettings = mapXmuxToReuseSettings(
-                    downloadSettings.xhttpSettings.extra?.xmux,
+                applyXhttpExtraFields(
+                    parsedDownloadSettings,
+                    downloadSettings.xhttpSettings,
                 );
-                if (reuseSettings) {
-                    parsedDownloadSettings['reuse-settings'] = reuseSettings;
+                if (isPlainObject(downloadSettings.xhttpSettings.extra)) {
+                    applyXhttpExtraFields(
+                        parsedDownloadSettings,
+                        downloadSettings.xhttpSettings.extra,
+                    );
                 }
             }
 
@@ -1054,17 +1712,19 @@ function URI_VLESS() {
                 // mKCP 的伪装头部类型。当前可选值有 none / srtp / utp / wechat-video / dtls / wireguard。省略时默认值为 none，即不使用伪装头部，但不可以为空字符串。
                 proxy.headerType = params.headerType || 'none';
             }
-            if (params.extra) {
+            if (params.extra && !['xhttp'].includes(proxy.network)) {
                 proxy._extra = params.extra;
             }
             if (['xhttp'].includes(proxy.network)) {
                 let extra = {};
+                let invalidRawExtra;
                 try {
-                    extra = proxy._extra ? JSON.parse(proxy._extra) : {};
+                    extra = params.extra ? JSON.parse(params.extra) : {};
                 } catch (e) {
                     $.error(
-                        `Failed to parse extra field as JSON: ${proxy._extra}`,
+                        `Failed to parse extra field as JSON: ${params.extra}`,
                     );
+                    invalidRawExtra = params.extra;
                 }
                 const xhttpOpts = {
                     ...(proxy[`${proxy.network}-opts`] || {}),
@@ -1072,32 +1732,7 @@ function URI_VLESS() {
                 if (params.mode) {
                     xhttpOpts.mode = params.mode;
                 }
-                if (extra?.['noGRPCHeader'] === true) {
-                    xhttpOpts['no-grpc-header'] = true;
-                }
-                if (isNotBlank(extra?.['xPaddingBytes'])) {
-                    xhttpOpts['x-padding-bytes'] = extra['xPaddingBytes'];
-                }
-                const scMaxEachPostBytes =
-                    normalizeXhttpScalarUpperBound(extra?.['scMaxEachPostBytes']);
-                if (scMaxEachPostBytes != null) {
-                    xhttpOpts['sc-max-each-post-bytes'] =
-                        scMaxEachPostBytes;
-                }
-                const scMinPostsIntervalMs =
-                    normalizeXhttpScalarUpperBound(
-                        extra?.['scMinPostsIntervalMs'],
-                    );
-                if (scMinPostsIntervalMs != null) {
-                    xhttpOpts['sc-min-posts-interval-ms'] =
-                        scMinPostsIntervalMs;
-                }
-                if (isPlainObject(extra?.xmux)) {
-                    const reuseSettings = mapXmuxToReuseSettings(extra.xmux);
-                    if (reuseSettings) {
-                        xhttpOpts['reuse-settings'] = reuseSettings;
-                    }
-                }
+                applyXhttpExtraFields(xhttpOpts, extra);
                 const downloadSettings = parseDownloadSettings(
                     extra?.downloadSettings,
                 );
@@ -1106,6 +1741,23 @@ function URI_VLESS() {
                 }
                 if (Object.keys(xhttpOpts).length > 0) {
                     proxy[`${proxy.network}-opts`] = xhttpOpts;
+                }
+                if (invalidRawExtra != null) {
+                    // Keep the raw invalid extra string so URI exports can
+                    // round-trip it verbatim even though Mihomo cannot model it.
+                    proxy._extra = invalidRawExtra;
+                }
+
+                // IMPORTANT: for VLESS xhttp we only keep URI extra fields that
+                // Mihomo does not model structurally in `_extra_unsupported`.
+                // Supported fields must round-trip through the structured node
+                // so later edits are reflected on export, while unsupported
+                // fields still survive VLESS URI -> node -> VLESS URI flows.
+                const unsupportedExtra = collectUnsupportedRootXhttpExtra(extra, {
+                    parsedDownloadSettings: downloadSettings,
+                });
+                if (unsupportedExtra) {
+                    proxy._extra_unsupported = unsupportedExtra;
                 }
             } else if (params.mode) {
                 proxy._mode = params.mode;

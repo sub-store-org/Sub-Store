@@ -363,6 +363,38 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('skips Mihomo VLESS xhttp stream-one proxies when download-settings are present', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP Stream One Download',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                mode: 'stream-one',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    path: '/download',
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        const external = ProxyUtils.produce([proxy], 'Mihomo', 'external');
+
+        expect(internal).to.have.length(0);
+        expect(external.trim()).to.equal('proxies:');
+    });
+
     it('normalizes Stash TUIC defaults and external yaml wrapper', function () {
         const proxy = {
             type: 'tuic',

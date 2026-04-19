@@ -173,6 +173,15 @@ export default function ClashMeta_Producer() {
                         proxy.servername = proxy.sni;
                         delete proxy.sni;
                     }
+                    // Mihomo 的运行时校验（`adapter/outbound/vless.go`）
+                    // 会先把 flow 截断到 16 个字符，并且只接受
+                    // `xtls-rprx-vision`。`xtls-rprx-direct`、
+                    // `xtls-rprx-unknown` 等值在 Mihomo 加载时会报错。
+                    //
+                    // 另外，xhttp 使用 `alpn: [h3]` 时必须启用 TLS，
+                    // 且不能启用 Reality；这条限制同时作用于根 xhttp
+                    // 配置，以及继承根配置默认值后的嵌套
+                    // `download-settings`。
                 } else if (proxy.type === 'ss') {
                     if (
                         isPresent(proxy, 'shadow-tls-password') &&

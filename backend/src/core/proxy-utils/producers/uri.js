@@ -1,11 +1,39 @@
 /* eslint-disable no-case-declarations */
 import { Base64 } from 'js-base64';
-import { isIPv6 } from '@/utils';
+import { isIPv6, isPlainObject } from '@/utils';
 import { getWireGuardAddressWithCIDR, normalizePluginMuxValue } from './utils';
-import { normalizeXhttpScalarUpperBound } from '../xhttp-utils';
+import {
+    normalizeXhttpIntegerValue,
+    normalizeXhttpNonNegativeRange,
+    normalizeXhttpPositiveRange,
+    normalizeXhttpScalarUpperBound,
+} from '../xhttp-utils';
 
-function isObject(value) {
-    return value != null && typeof value === 'object' && !Array.isArray(value);
+function toStringHeaderMap(headers, { excludeHost = false } = {}) {
+    if (!isPlainObject(headers)) {
+        return undefined;
+    }
+
+    const parsedHeaders = {};
+    for (const [key, value] of Object.entries(headers)) {
+        if (typeof value !== 'string' || value === '') {
+            continue;
+        }
+        if (excludeHost && /^host$/i.test(key)) {
+            continue;
+        }
+        parsedHeaders[key] = value;
+    }
+
+    return Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined;
+}
+
+function parseIntegerLikeValue(value) {
+    return normalizeXhttpIntegerValue(value);
+}
+
+function getSerializableXhttpRangeValue(value) {
+    return normalizeXhttpNonNegativeRange(value);
 }
 
 function getTransportHost(network, transportOpts = {}) {
@@ -31,7 +59,7 @@ function getTransportHost(network, transportOpts = {}) {
 }
 
 function mapReuseSettingsToXmux(reuseSettings) {
-    if (!isObject(reuseSettings)) {
+    if (!isPlainObject(reuseSettings)) {
         return undefined;
     }
 
@@ -45,33 +73,155 @@ function mapReuseSettingsToXmux(reuseSettings) {
     };
 
     for (const [sourceKey, targetKey] of Object.entries(reuseFieldMap)) {
-        const value = reuseSettings[sourceKey];
-        if (typeof value === 'string' && value !== '') {
-            xmux[targetKey] = value;
-        } else if (typeof value === 'number' && Number.isFinite(value)) {
-            xmux[targetKey] = `${value}`;
+        const normalizedValue = normalizeXhttpNonNegativeRange(
+            reuseSettings[sourceKey],
+        );
+        if (normalizedValue != null) {
+            xmux[targetKey] =
+                typeof normalizedValue === 'number'
+                    ? `${normalizedValue}`
+                    : normalizedValue;
         }
+    }
+
+    const hKeepAlivePeriod = parseIntegerLikeValue(
+        reuseSettings['h-keep-alive-period'],
+    );
+    if (hKeepAlivePeriod != null) {
+        xmux.hKeepAlivePeriod = hKeepAlivePeriod;
     }
 
     return Object.keys(xmux).length > 0 ? xmux : undefined;
 }
 
+function applyStructuredXhttpExtraFields(
+    target,
+    xhttpOpts,
+    { excludeHostHeader = true, xmuxTarget = 'root' } = {},
+) {
+    if (!isPlainObject(target) || !isPlainObject(xhttpOpts)) {
+        return;
+    }
+
+    const headers = toStringHeaderMap(xhttpOpts.headers, {
+        excludeHost: excludeHostHeader,
+    });
+    if (headers) {
+        target.headers = headers;
+    }
+
+    if (xhttpOpts['no-grpc-header'] === true) {
+        target.noGRPCHeader = true;
+    }
+    if (xhttpOpts['x-padding-bytes']) {
+        target.xPaddingBytes = xhttpOpts['x-padding-bytes'];
+    }
+    if (xhttpOpts['x-padding-obfs-mode'] === true) {
+        target.xPaddingObfsMode = true;
+    }
+    if (xhttpOpts['x-padding-key']) {
+        target.xPaddingKey = xhttpOpts['x-padding-key'];
+    }
+    if (xhttpOpts['x-padding-header']) {
+        target.xPaddingHeader = xhttpOpts['x-padding-header'];
+    }
+    if (xhttpOpts['x-padding-placement']) {
+        target.xPaddingPlacement = xhttpOpts['x-padding-placement'];
+    }
+    if (xhttpOpts['x-padding-method']) {
+        target.xPaddingMethod = xhttpOpts['x-padding-method'];
+    }
+    if (xhttpOpts['uplink-http-method']) {
+        target.uplinkHTTPMethod = xhttpOpts['uplink-http-method'];
+    }
+    if (xhttpOpts['session-placement']) {
+        target.sessionPlacement = xhttpOpts['session-placement'];
+    }
+    if (xhttpOpts['session-key']) {
+        target.sessionKey = xhttpOpts['session-key'];
+    }
+    if (xhttpOpts['seq-placement']) {
+        target.seqPlacement = xhttpOpts['seq-placement'];
+    }
+    if (xhttpOpts['seq-key']) {
+        target.seqKey = xhttpOpts['seq-key'];
+    }
+    if (xhttpOpts['uplink-data-placement']) {
+        target.uplinkDataPlacement = xhttpOpts['uplink-data-placement'];
+    }
+    if (xhttpOpts['uplink-data-key']) {
+        target.uplinkDataKey = xhttpOpts['uplink-data-key'];
+    }
+
+    const uplinkChunkSize = getSerializableXhttpRangeValue(
+        xhttpOpts['uplink-chunk-size'],
+    );
+    if (uplinkChunkSize != null) {
+        target.uplinkChunkSize = uplinkChunkSize;
+    }
+
+    if (xhttpOpts['sc-max-each-post-bytes'] != null) {
+        const scMaxEachPostBytes = normalizeXhttpScalarUpperBound(
+            xhttpOpts['sc-max-each-post-bytes'],
+        );
+        if (scMaxEachPostBytes != null) {
+            target.scMaxEachPostBytes = scMaxEachPostBytes;
+        }
+    }
+
+    if (xhttpOpts['sc-min-posts-interval-ms'] != null) {
+        const scMinPostsIntervalMs = normalizeXhttpPositiveRange(
+            xhttpOpts['sc-min-posts-interval-ms'],
+        );
+        if (scMinPostsIntervalMs != null) {
+            target.scMinPostsIntervalMs = scMinPostsIntervalMs;
+        }
+    }
+
+    const xmux = mapReuseSettingsToXmux(xhttpOpts['reuse-settings']);
+    if (xmux) {
+        if (xmuxTarget === 'extra') {
+            target.extra = {
+                ...(isPlainObject(target.extra) ? target.extra : {}),
+                xmux,
+            };
+        } else {
+            target.xmux = xmux;
+        }
+    }
+}
+
 function buildXhttpDownloadSettings(downloadSettings) {
-    if (!isObject(downloadSettings)) {
+    if (!isPlainObject(downloadSettings)) {
         return undefined;
     }
+
+    const explicitNetwork =
+        typeof downloadSettings.network === 'string'
+            ? downloadSettings.network.toLowerCase()
+            : '';
+    const normalizedNetwork =
+        explicitNetwork === 'xhttp' || explicitNetwork === 'splithttp'
+            ? 'xhttp'
+            : undefined;
 
     const result = {};
     if (downloadSettings.server) {
         result.address = downloadSettings.server;
     }
-    if (
-        downloadSettings.port != null &&
-        !Number.isNaN(parseInt(`${downloadSettings.port}`, 10))
-    ) {
-        result.port = parseInt(`${downloadSettings.port}`, 10);
+    const parsedPort = normalizeXhttpIntegerValue(downloadSettings.port, {
+        allowNegative: false,
+    });
+    if (parsedPort != null) {
+        result.port = parsedPort;
     }
-    if (downloadSettings.tls) {
+
+    const realityOpts = isPlainObject(downloadSettings['reality-opts'])
+        ? downloadSettings['reality-opts']
+        : undefined;
+    if (realityOpts) {
+        result.security = 'reality';
+    } else if (downloadSettings.tls) {
         result.security = 'tls';
     }
 
@@ -82,87 +232,87 @@ function buildXhttpDownloadSettings(downloadSettings) {
     if (downloadSettings['client-fingerprint']) {
         tlsSettings.fingerprint = downloadSettings['client-fingerprint'];
     }
+    if (downloadSettings['skip-cert-verify']) {
+        tlsSettings.allowInsecure = true;
+    }
     if (downloadSettings.alpn) {
         tlsSettings.alpn = Array.isArray(downloadSettings.alpn)
             ? downloadSettings.alpn
             : [downloadSettings.alpn];
     }
+    if (
+        isPlainObject(downloadSettings['ech-opts']) &&
+        downloadSettings['ech-opts'].config
+    ) {
+        tlsSettings.echConfigList = downloadSettings['ech-opts'].config;
+    }
     if (Object.keys(tlsSettings).length > 0) {
         result.tlsSettings = tlsSettings;
+    }
+
+    if (realityOpts) {
+        const realitySettings = {};
+        if (downloadSettings.servername) {
+            realitySettings.serverName = downloadSettings.servername;
+        }
+        if (downloadSettings['client-fingerprint']) {
+            realitySettings.fingerprint =
+                downloadSettings['client-fingerprint'];
+        }
+        if (realityOpts['public-key']) {
+            realitySettings.publicKey = realityOpts['public-key'];
+        }
+        if (realityOpts['short-id']) {
+            realitySettings.shortId = realityOpts['short-id'];
+        }
+        if (Object.keys(realitySettings).length > 0) {
+            result.realitySettings = realitySettings;
+        }
     }
 
     const xhttpSettings = {};
     if (downloadSettings.path) {
         xhttpSettings.path = downloadSettings.path;
     }
-    if (downloadSettings.host) {
-        xhttpSettings.host = downloadSettings.host;
+    const downloadHost = getTransportHost('xhttp', downloadSettings);
+    if (downloadHost) {
+        xhttpSettings.host = downloadHost;
     }
-    if (downloadSettings['no-grpc-header']) {
-        xhttpSettings.noGRPCHeader = true;
-    }
-    if (downloadSettings['x-padding-bytes']) {
-        xhttpSettings.xPaddingBytes = downloadSettings['x-padding-bytes'];
-    }
-    if (downloadSettings['sc-max-each-post-bytes'] != null) {
-        const scMaxEachPostBytes = normalizeXhttpScalarUpperBound(
-            downloadSettings['sc-max-each-post-bytes'],
-        );
-        if (scMaxEachPostBytes != null) {
-            xhttpSettings.scMaxEachPostBytes = scMaxEachPostBytes;
-        }
-    }
-    if (downloadSettings['sc-min-posts-interval-ms'] != null) {
-        const scMinPostsIntervalMs = normalizeXhttpScalarUpperBound(
-            downloadSettings['sc-min-posts-interval-ms'],
-        );
-        if (scMinPostsIntervalMs != null) {
-            xhttpSettings.scMinPostsIntervalMs = scMinPostsIntervalMs;
-        }
-    }
-
-    const xmux = mapReuseSettingsToXmux(downloadSettings['reuse-settings']);
-    if (xmux) {
-        xhttpSettings.extra = { xmux };
-    }
+    applyStructuredXhttpExtraFields(xhttpSettings, downloadSettings, {
+        excludeHostHeader: true,
+        xmuxTarget: 'extra',
+    });
     if (Object.keys(xhttpSettings).length > 0) {
         result.xhttpSettings = xhttpSettings;
     }
 
-    return Object.keys(result).length > 0 ? result : undefined;
+    if (Object.keys(result).length === 0 && normalizedNetwork == null) {
+        return undefined;
+    }
+
+    // Treat nested downloadSettings.network as a supported structured field.
+    // Fresh structured exports still default to xhttp so Xray sees a nested
+    // StreamConfig instead of falling back to tcp.
+    return {
+        ...(result.address != null ? { address: result.address } : {}),
+        network: normalizedNetwork || 'xhttp',
+        ...(result.port != null ? { port: result.port } : {}),
+        ...(result.security != null ? { security: result.security } : {}),
+        ...(result.tlsSettings != null ? { tlsSettings: result.tlsSettings } : {}),
+        ...(result.realitySettings != null
+            ? { realitySettings: result.realitySettings }
+            : {}),
+        ...(result.xhttpSettings != null ? { xhttpSettings: result.xhttpSettings } : {}),
+    };
 }
 
-function buildStructuredVlessExtra(proxy) {
+function buildStructuredVlessExtraObject(proxy) {
     const xhttpOpts = proxy['xhttp-opts'] || {};
     const extra = {};
-
-    if (xhttpOpts['no-grpc-header'] === true) {
-        extra.noGRPCHeader = true;
-    }
-    if (xhttpOpts['x-padding-bytes']) {
-        extra.xPaddingBytes = xhttpOpts['x-padding-bytes'];
-    }
-    if (xhttpOpts['sc-max-each-post-bytes'] != null) {
-        const scMaxEachPostBytes = normalizeXhttpScalarUpperBound(
-            xhttpOpts['sc-max-each-post-bytes'],
-        );
-        if (scMaxEachPostBytes != null) {
-            extra.scMaxEachPostBytes = scMaxEachPostBytes;
-        }
-    }
-    if (xhttpOpts['sc-min-posts-interval-ms'] != null) {
-        const scMinPostsIntervalMs = normalizeXhttpScalarUpperBound(
-            xhttpOpts['sc-min-posts-interval-ms'],
-        );
-        if (scMinPostsIntervalMs != null) {
-            extra.scMinPostsIntervalMs = scMinPostsIntervalMs;
-        }
-    }
-
-    const xmux = mapReuseSettingsToXmux(xhttpOpts['reuse-settings']);
-    if (xmux) {
-        extra.xmux = xmux;
-    }
+    applyStructuredXhttpExtraFields(extra, xhttpOpts, {
+        excludeHostHeader: true,
+        xmuxTarget: 'root',
+    });
 
     const downloadSettings = buildXhttpDownloadSettings(
         xhttpOpts['download-settings'],
@@ -171,130 +321,112 @@ function buildStructuredVlessExtra(proxy) {
         extra.downloadSettings = downloadSettings;
     }
 
-    return Object.keys(extra).length > 0 ? JSON.stringify(extra) : '';
+    return Object.keys(extra).length > 0 ? extra : undefined;
 }
 
-function applyNormalizedXhttpScalar(target, rawKey, value) {
-    if (!isObject(target)) {
-        return false;
+function cloneXhttpExtraValue(value) {
+    if (Array.isArray(value)) {
+        return value.map(cloneXhttpExtraValue);
     }
 
-    const normalizedValue = normalizeXhttpScalarUpperBound(value);
-    if (normalizedValue != null) {
-        if (target[rawKey] === normalizedValue) {
-            return false;
+    if (isPlainObject(value)) {
+        const clonedValue = {};
+        for (const [key, entryValue] of Object.entries(value)) {
+            clonedValue[key] = cloneXhttpExtraValue(entryValue);
         }
-        target[rawKey] = normalizedValue;
-        return true;
+        return clonedValue;
     }
 
-    if (Object.prototype.hasOwnProperty.call(target, rawKey)) {
-        delete target[rawKey];
-        return true;
-    }
-
-    return false;
+    return value;
 }
 
-function normalizeRawXhttpExtra(proxy) {
-    if (!proxy._extra) {
-        return '';
+function mergeUnsupportedXhttpExtraValue(baseValue, unsupportedValue) {
+    if (baseValue == null) {
+        return cloneXhttpExtraValue(unsupportedValue);
     }
 
-    let rawExtra;
-    try {
-        rawExtra = JSON.parse(proxy._extra);
-    } catch (e) {
+    if (Array.isArray(baseValue) || Array.isArray(unsupportedValue)) {
+        return cloneXhttpExtraValue(baseValue);
+    }
+
+    if (isPlainObject(baseValue) && isPlainObject(unsupportedValue)) {
+        return mergeUnsupportedXhttpExtraObject(baseValue, unsupportedValue);
+    }
+
+    return cloneXhttpExtraValue(baseValue);
+}
+
+function mergeUnsupportedXhttpExtraObject(baseObject, unsupportedObject) {
+    const mergedExtra = isPlainObject(baseObject)
+        ? cloneXhttpExtraValue(baseObject)
+        : {};
+    if (!isPlainObject(unsupportedObject)) {
+        return mergedExtra;
+    }
+
+    for (const [key, value] of Object.entries(unsupportedObject)) {
+        if (!Object.prototype.hasOwnProperty.call(mergedExtra, key)) {
+            mergedExtra[key] = cloneXhttpExtraValue(value);
+            continue;
+        }
+
+        mergedExtra[key] = mergeUnsupportedXhttpExtraValue(
+            mergedExtra[key],
+            value,
+        );
+    }
+
+    return mergedExtra;
+}
+
+function getExplicitExtraOverride(proxy) {
+    if (typeof proxy._extra === 'string') {
         return proxy._extra;
     }
 
-    if (!isObject(rawExtra) || !isObject(proxy['xhttp-opts'])) {
-        return proxy._extra;
+    // `_extra` only accepts JSON-like plain objects here. Broader object checks
+    // would accidentally stringify instances such as Date/Map/class values.
+    if (isPlainObject(proxy._extra)) {
+        return JSON.stringify(proxy._extra);
     }
 
-    let didChange = false;
-    const xhttpOpts = proxy['xhttp-opts'];
-
-    if (xhttpOpts['sc-max-each-post-bytes'] != null) {
-        didChange =
-            applyNormalizedXhttpScalar(
-                rawExtra,
-                'scMaxEachPostBytes',
-                xhttpOpts['sc-max-each-post-bytes'],
-            ) || didChange;
-    }
-    if (xhttpOpts['sc-min-posts-interval-ms'] != null) {
-        didChange =
-            applyNormalizedXhttpScalar(
-                rawExtra,
-                'scMinPostsIntervalMs',
-                xhttpOpts['sc-min-posts-interval-ms'],
-            ) || didChange;
-    }
-
-    const downloadSettings = xhttpOpts['download-settings'];
-    if (isObject(downloadSettings)) {
-        const rawDownloadSettings = isObject(rawExtra.downloadSettings)
-            ? rawExtra.downloadSettings
-            : undefined;
-
-        let rawXhttpSettings = isObject(rawDownloadSettings?.xhttpSettings)
-            ? rawDownloadSettings.xhttpSettings
-            : undefined;
-        if (
-            !rawXhttpSettings &&
-            (downloadSettings['sc-max-each-post-bytes'] != null ||
-                downloadSettings['sc-min-posts-interval-ms'] != null)
-        ) {
-            rawExtra.downloadSettings = isObject(rawExtra.downloadSettings)
-                ? rawExtra.downloadSettings
-                : {};
-            rawExtra.downloadSettings.xhttpSettings = {};
-            rawXhttpSettings = rawExtra.downloadSettings.xhttpSettings;
-            didChange = true;
-        }
-
-        if (rawXhttpSettings) {
-            if (downloadSettings['sc-max-each-post-bytes'] != null) {
-                didChange =
-                    applyNormalizedXhttpScalar(
-                        rawXhttpSettings,
-                        'scMaxEachPostBytes',
-                        downloadSettings['sc-max-each-post-bytes'],
-                    ) || didChange;
-            }
-            if (downloadSettings['sc-min-posts-interval-ms'] != null) {
-                didChange =
-                    applyNormalizedXhttpScalar(
-                        rawXhttpSettings,
-                        'scMinPostsIntervalMs',
-                        downloadSettings['sc-min-posts-interval-ms'],
-                    ) || didChange;
-            }
-
-            if (Object.keys(rawXhttpSettings).length === 0) {
-                delete rawExtra.downloadSettings.xhttpSettings;
-                didChange = true;
-                if (Object.keys(rawExtra.downloadSettings).length === 0) {
-                    delete rawExtra.downloadSettings;
-                }
-            }
-        }
-    }
-
-    return didChange ? JSON.stringify(rawExtra) : proxy._extra;
+    return undefined;
 }
 
 function buildVlessExtra(proxy) {
+    const explicitExtraOverride = getExplicitExtraOverride(proxy);
+    if (explicitExtraOverride != null) {
+        // `_extra` is an explicit user override for the final URI extra. When
+        // present as a string or plain object, we bypass the structured xhttp
+        // rebuild entirely so users can hand-author extra without needing to
+        // keep other structured fields in sync.
+        return explicitExtraOverride;
+    }
+
     if (proxy.network !== 'xhttp') {
         return proxy._extra || '';
     }
 
-    if (proxy._extra) {
-        return normalizeRawXhttpExtra(proxy);
-    }
+    const structuredExtra = buildStructuredVlessExtraObject(proxy);
 
-    return buildStructuredVlessExtra(proxy);
+    // IMPORTANT: `_extra_unsupported` is only the sidecar for URI extra fields
+    // that Mihomo does not model structurally yet, and it only participates
+    // when the user did not explicitly set `_extra`. Without an explicit
+    // override, supported xhttp fields must still be emitted from the current
+    // structured Mihomo node so later edits are reflected on export, while
+    // `_extra_unsupported` fills the holes needed for VLESS URI -> node ->
+    // VLESS URI lossless round-trips. That also means supported-field format
+    // conflicts are resolved by the structured emitters here, e.g.
+    // sc-max-each-post-bytes still emits the compatibility upper bound while
+    // sc-min-posts-interval-ms keeps range.
+    const mergedExtra = mergeUnsupportedXhttpExtraObject(
+        structuredExtra,
+        proxy._extra_unsupported,
+    );
+
+    return Object.keys(mergedExtra).length > 0
+        ? JSON.stringify(mergedExtra)
+        : '';
 }
 
 function vless(proxy) {
