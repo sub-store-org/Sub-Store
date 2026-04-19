@@ -34,6 +34,25 @@ const { build } = require('esbuild');
         });
     }
 
+    const browserEsmArtifacts = [
+        {
+            src: 'src/products/proxy-utils.esm.js',
+            dest: 'dist/proxy-utils.esm.mjs',
+        },
+    ];
+
+    for await (const artifact of browserEsmArtifacts) {
+        await build({
+            entryPoints: [artifact.src],
+            bundle: true,
+            minify: true,
+            sourcemap: false,
+            platform: 'browser',
+            format: 'esm',
+            outfile: artifact.dest,
+        });
+    }
+
     let content = fs.readFileSync(path.join(__dirname, 'sub-store.min.js'), {
         encoding: 'utf8',
     });
