@@ -90,7 +90,9 @@ function restoreArchivedEntry(entry) {
             return createArtifactItem(normalizeArtifactSnapshotForRestore(snapshot));
         case 'share':
             return createTokenItem(snapshot, {
+                mode: snapshot.mode,
                 expiresIn: snapshot.expiresIn,
+                exp: snapshot.exp,
             });
         default:
             throw new RequestInvalidError(

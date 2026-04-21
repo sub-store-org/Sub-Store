@@ -219,7 +219,7 @@ describe('archive routes', function () {
         expect(state[ARCHIVES_KEY]).to.deep.equal([]);
     });
 
-    it('keeps archived entries when restore fails and preserves share tokens on success', async function () {
+    it('keeps archived entries when restore fails and preserves exact-datetime share tokens on success', async function () {
         state[SUBS_KEY] = [
             {
                 name: 'shared-sub',
@@ -227,13 +227,15 @@ describe('archive routes', function () {
                 process: [],
             },
         ];
+        const exactExp = Date.now() - 5 * 60 * 1000;
         state[TOKENS_KEY] = [
             {
                 token: 'keep-me',
                 type: 'sub',
                 name: 'shared-sub',
                 displayName: 'Shared Link',
-                expiresIn: '1d',
+                mode: 'datetime',
+                exp: exactExp,
             },
         ];
 
@@ -305,6 +307,140 @@ describe('archive routes', function () {
         expect(successfulRestoreRes.body.status).to.equal('success');
         expect(state[TOKENS_KEY]).to.have.length(1);
         expect(state[TOKENS_KEY][0].token).to.equal('keep-me');
+        expect(state[TOKENS_KEY][0].mode).to.equal('datetime');
+        expect(state[TOKENS_KEY][0].exp).to.equal(exactExp);
+        expect(state[TOKENS_KEY][0]).to.not.have.property('expiresIn');
+        expect(state[ARCHIVES_KEY]).to.deep.equal([]);
+    });
+
+    it('preserves legacy duration share tokens on restore', async function () {
+        state[SUBS_KEY] = [
+            {
+                name: 'shared-sub',
+                source: 'remote',
+                process: [],
+            },
+        ];
+        state[TOKENS_KEY] = [
+            {
+                token: 'legacy-duration',
+                type: 'sub',
+                name: 'shared-sub',
+                displayName: 'Legacy Share',
+                expiresIn: '1d',
+            },
+        ];
+
+        const deleteHandler = getHandler(
+            registerTokenRoutes,
+            'DELETE',
+            '/api/token/:token',
+        );
+        const deleteRes = createResponse('/api/token/:token');
+
+        deleteHandler(
+            {
+                params: { token: 'legacy-duration' },
+                query: {
+                    mode: 'archive',
+                    type: 'sub',
+                    name: 'shared-sub',
+                },
+            },
+            deleteRes,
+        );
+
+        expect(deleteRes.body.status).to.equal('success');
+        expect(state[TOKENS_KEY]).to.deep.equal([]);
+        expect(state[ARCHIVES_KEY]).to.have.length(1);
+
+        const restoreHandler = getHandler(
+            registerArchiveRoutes,
+            'POST',
+            '/api/archives/:id/restore',
+        );
+        const restoreRes = createResponse('/api/archives/:id/restore');
+
+        restoreHandler(
+            {
+                params: { id: state[ARCHIVES_KEY][0].id },
+                query: {},
+            },
+            restoreRes,
+        );
+
+        expect(restoreRes.body.status).to.equal('success');
+        expect(state[TOKENS_KEY]).to.have.length(1);
+        expect(state[TOKENS_KEY][0].token).to.equal('legacy-duration');
+        expect(state[TOKENS_KEY][0].mode).to.equal('duration');
+        expect(state[TOKENS_KEY][0].expiresIn).to.equal('1d');
+        expect(state[TOKENS_KEY][0].exp).to.be.a('number');
+        expect(state[ARCHIVES_KEY]).to.deep.equal([]);
+    });
+
+    it('restores legacy exp-only share tokens as exact-datetime shares', async function () {
+        state[SUBS_KEY] = [
+            {
+                name: 'shared-sub',
+                source: 'remote',
+                process: [],
+            },
+        ];
+        const exactExp = Date.now() - 5 * 60 * 1000;
+        state[TOKENS_KEY] = [
+            {
+                token: 'legacy-datetime',
+                type: 'sub',
+                name: 'shared-sub',
+                displayName: 'Legacy Exact Share',
+                exp: exactExp,
+            },
+        ];
+
+        const deleteHandler = getHandler(
+            registerTokenRoutes,
+            'DELETE',
+            '/api/token/:token',
+        );
+        const deleteRes = createResponse('/api/token/:token');
+
+        deleteHandler(
+            {
+                params: { token: 'legacy-datetime' },
+                query: {
+                    mode: 'archive',
+                    type: 'sub',
+                    name: 'shared-sub',
+                },
+            },
+            deleteRes,
+        );
+
+        expect(deleteRes.body.status).to.equal('success');
+        expect(state[TOKENS_KEY]).to.deep.equal([]);
+        expect(state[ARCHIVES_KEY]).to.have.length(1);
+
+        const restoreHandler = getHandler(
+            registerArchiveRoutes,
+            'POST',
+            '/api/archives/:id/restore',
+        );
+        const restoreRes = createResponse('/api/archives/:id/restore');
+
+        restoreHandler(
+            {
+                params: { id: state[ARCHIVES_KEY][0].id },
+                query: {},
+            },
+            restoreRes,
+        );
+
+        expect(restoreRes.body.status).to.equal('success');
+        expect(state[TOKENS_KEY]).to.have.length(1);
+        expect(state[TOKENS_KEY][0].token).to.equal('legacy-datetime');
+        expect(state[TOKENS_KEY][0].mode).to.equal('datetime');
+        expect(state[TOKENS_KEY][0].exp).to.equal(exactExp);
+        expect(state[TOKENS_KEY][0]).to.not.have.property('expiresIn');
         expect(state[ARCHIVES_KEY]).to.deep.equal([]);
     });
 

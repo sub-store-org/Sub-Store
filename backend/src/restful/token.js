@@ -87,8 +87,91 @@ async function signToken(req, res) {
     }
 }
 
-function createTokenItem(payload, options = {}) {
+function normalizeExpirationMode(mode) {
+    if (mode == null || mode === '') {
+        return undefined;
+    }
+    if (mode === 'duration' || mode === 'datetime') {
+        return mode;
+    }
+    throw new RequestInvalidError(
+        'INVALID_EXPIRATION_MODE',
+        `Unsupported expiration mode: ${mode}`,
+    );
+}
+
+function inferLegacyExpirationMode(options = {}) {
+    if (options?.expiresIn != null && options.expiresIn !== '') {
+        return 'duration';
+    }
+    if (options?.exp != null && options.exp !== '') {
+        return 'datetime';
+    }
+    return undefined;
+}
+
+function resolveExactExpiration(options = {}) {
+    const rawExp = options?.exp;
+    if (typeof rawExp !== 'number' && typeof rawExp !== 'string') {
+        throw new RequestInvalidError(
+            'INVALID_EXPIRATION_DATETIME',
+            `Invalid exp option: ${rawExp}`,
+        );
+    }
+
+    const normalizedRawExp =
+        typeof rawExp === 'string' ? rawExp.trim() : rawExp;
+    if (normalizedRawExp === '') {
+        throw new RequestInvalidError(
+            'INVALID_EXPIRATION_DATETIME',
+            `Invalid exp option: ${rawExp}`,
+        );
+    }
+
+    const exp = Number(normalizedRawExp);
+    if (
+        !Number.isSafeInteger(exp) ||
+        exp <= 0 ||
+        // Require an explicit millisecond Unix timestamp to avoid
+        // silently accepting second-based values from non-frontend callers.
+        exp < 1000000000000
+    ) {
+        throw new RequestInvalidError(
+            'INVALID_EXPIRATION_DATETIME',
+            `Invalid exp option: ${rawExp}`,
+        );
+    }
+    return exp;
+}
+
+function resolveDurationExpiration(options = {}, { required = false } = {}) {
+    const rawExpiresIn = options?.expiresIn;
+    if (rawExpiresIn == null || rawExpiresIn === '') {
+        if (required) {
+            throw new RequestInvalidError(
+                'INVALID_EXPIRES_IN',
+                `Invalid expiresIn option: ${rawExpiresIn}`,
+            );
+        }
+        return null;
+    }
+
     const ms = eval(`require("ms")`);
+    const expiresIn = ms(rawExpiresIn);
+    if (expiresIn == null || isNaN(expiresIn) || expiresIn <= 0) {
+        throw new RequestInvalidError(
+            'INVALID_EXPIRES_IN',
+            `Invalid expiresIn option: ${rawExpiresIn}`,
+        );
+    }
+
+    return {
+        rawExpiresIn,
+        exp: Date.now() + expiresIn,
+    };
+}
+
+function createTokenItem(payload, options = {}) {
     const type = payload?.type;
     const name = payload?.name;
     if (!type || !name) {
@@ -155,15 +238,18 @@ function createTokenItem(payload, options = {}) {
         );
     }
 
-    let expiresIn = options?.expiresIn;
-    if (options?.expiresIn != null) {
-        expiresIn = ms(options.expiresIn);
-        if (expiresIn == null || isNaN(expiresIn) || expiresIn <= 0) {
-            throw new RequestInvalidError(
-                'INVALID_EXPIRES_IN',
-                `Invalid expiresIn option: ${options.expiresIn}`,
-            );
-        }
+    const expirationMode =
+        normalizeExpirationMode(options?.mode) ??
+        inferLegacyExpirationMode(options);
+    let durationExpiration = null;
+    let exp;
+    if (expirationMode === 'datetime') {
+        exp = resolveExactExpiration(options);
+    } else {
+        durationExpiration = resolveDurationExpiration(options, {
+            required: expirationMode === 'duration',
+        });
+        exp = durationExpiration?.exp;
     }
 
     const nanoid = eval(`require("nanoid")`);
@@ -180,12 +266,29 @@ function createTokenItem(payload, options = {}) {
             )
         );
     }
+    const normalizedMode =
+        expirationMode === 'datetime'
+            ? 'datetime'
+            : durationExpiration
+              ? 'duration'
+              : undefined;
+    const safePayload = { ...payload };
+    delete safePayload.mode;
+    delete safePayload.exp;
+    delete safePayload.expiresIn;
     const tokenData = {
-        ...payload,
+        ...safePayload,
         token,
         createdAt: Date.now(),
-        expiresIn: expiresIn > 0 ? options?.expiresIn : undefined,
-        exp: expiresIn > 0 ? Date.now() + expiresIn : undefined,
+        ...(normalizedMode ? { mode: normalizedMode } : {}),
+        ...(normalizedMode === 'datetime'
+            ? { exp }
+            : durationExpiration
+              ? {
+                    expiresIn: durationExpiration.rawExpiresIn,
+                    exp,
+                }
+              : {}),
     };
     insertByPosition(tokens, tokenData, getCreateItemPosition());
     $.write(tokens, TOKENS_KEY);
