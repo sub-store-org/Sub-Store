@@ -1,4 +1,6 @@
 /* eslint-disable no-undef */
+import { installConsoleLogCapture } from '@/utils/debug-logs';
+
 const isQX = typeof $task !== 'undefined';
 const isLoon = typeof $loon !== 'undefined';
 // 可能有一些兼容环境依赖于这个, 先不改成 $environment.surge-version
@@ -64,6 +66,7 @@ export class OpenAPI {
             }
         })();
         this.initCache();
+        installConsoleLogCapture(this);
 
         const delay = (t, v) =>
             new Promise(function (resolve) {
@@ -348,6 +351,10 @@ export class OpenAPI {
 
     info(msg) {
         console.log(`[${this.name}] INFO: ${msg}`);
+    }
+
+    warn(msg) {
+        console.log(`[${this.name}] WARN: ${msg}`);
     }
 
     error(msg) {

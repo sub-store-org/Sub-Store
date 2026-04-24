@@ -395,6 +395,12 @@ function operator(proxies = [], targetPlatform, context) {
   //   "version": "2.14.198"
   // }
 
+  // 脚本中使用日志 可以参考这个格式 能在前端日志查看里区分识别
+  // console.log(`[SCOPE] LOG: 信息`)
+  // console.log(`[SCOPE] INFO: 信息`)
+  // console.log(`[SCOPE] WARN: 警告`)
+  // console.log(`[SCOPE] ERROR: 错误`)
+
   // 参数说明
   // 可参考 https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E
 

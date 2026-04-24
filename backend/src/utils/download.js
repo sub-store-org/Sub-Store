@@ -351,7 +351,7 @@ export default async function download(
                 }
             }
             if (shouldCache) {
-                console.log($arguments);
+                // console.log($arguments);
                 resourceCache.set(
                     id,
                     body,

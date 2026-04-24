@@ -373,11 +373,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
                     return producer.produce(proxy, type, opts);
                 } catch (err) {
                     $.error(
-                        `Cannot produce proxy: ${JSON.stringify(
-                            proxy,
-                            null,
-                            2,
-                        )}\nReason: ${err}`,
+                        `Cannot produce proxy: ${proxy.name}\nReason: ${err}`,
                     );
                     return '';
                 }

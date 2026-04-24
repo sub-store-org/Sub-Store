@@ -23,6 +23,7 @@ import registerSortingRoutes from './sort';
 import registerMiscRoutes from './miscs';
 import registerNodeInfoRoutes from './node-info';
 import registerParserRoutes from './parser';
+import registerLogRoutes from './logs';
 
 export default function serve() {
     let port;
@@ -139,6 +140,7 @@ export default function serve() {
     registerNodeInfoRoutes($app);
     registerMiscRoutes($app);
     registerParserRoutes($app);
+    registerLogRoutes($app);
 
     $app.start();
 

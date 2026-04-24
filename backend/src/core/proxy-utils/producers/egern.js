@@ -580,11 +580,7 @@ export default function Egern_Producer() {
                     };
                 } catch (err) {
                     $.error(
-                        `Cannot produce proxy: ${JSON.stringify(
-                            sourceProxy,
-                            null,
-                            2,
-                        )}\nReason: ${err}`,
+                        `Cannot produce proxy: ${proxy.name}\nReason: ${err}`,
                     );
                     return null;
                 }

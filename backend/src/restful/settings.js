@@ -3,6 +3,7 @@ import { success, failed } from './response';
 import { InternalServerError } from '@/restful/errors';
 import $ from '@/core/app';
 import Gist from '@/utils/gist';
+import { clearLogSettingsCache } from '@/utils/debug-logs';
 
 export default function register($app) {
     const settings = $.read(SETTINGS_KEY);
@@ -54,7 +55,21 @@ async function updateSettings(req, res) {
                 delete newSettings[key];
             }
         });
+        if ('logsMaxCount' in newSettings) {
+            const rawLogsMaxCount = newSettings.logsMaxCount;
+            const value = Number(rawLogsMaxCount);
+            if (
+                rawLogsMaxCount === null ||
+                rawLogsMaxCount === undefined ||
+                rawLogsMaxCount === '' ||
+                !isFinite(value) ||
+                value < 0
+            ) {
+                delete newSettings.logsMaxCount;
+            }
+        }
         $.write(newSettings, SETTINGS_KEY);
+        clearLogSettingsCache();
         if (
             req.body.githubUser ||
             req.body.gistToken ||
