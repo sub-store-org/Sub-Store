@@ -1694,4 +1694,154 @@ describe('Proxy structured producers', function () {
             name: 'JSON HTTP',
         });
     });
+
+    it('blocks Mihomo xhttp reality-opts inheritance when upload has reality-opts but download does not', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP Reality No Download Reality',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'reality-opts': {
+                'public-key': 'upload-pubkey',
+                'short-id': 'ab',
+            },
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    path: '/download',
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        const external = loadProducedYaml('Mihomo', proxy);
+
+        expect(internal).to.have.length(1);
+        expectSubset(internal[0], {
+            'xhttp-opts': {
+                'download-settings': {
+                    'reality-opts': { 'public-key': '' },
+                },
+            },
+        });
+        expectSubset(external.proxies[0], {
+            'xhttp-opts': {
+                'download-settings': {
+                    'reality-opts': { 'public-key': '' },
+                },
+            },
+        });
+    });
+
+    it('does not inject reality-opts blocker when download-settings already has reality-opts', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP Reality Both',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'reality-opts': {
+                'public-key': 'upload-pubkey',
+                'short-id': 'ab',
+            },
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    path: '/download',
+                    'reality-opts': {
+                        'public-key': 'download-pubkey',
+                        'short-id': 'cd',
+                    },
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+
+        expect(internal).to.have.length(1);
+        expectSubset(internal[0], {
+            'xhttp-opts': {
+                'download-settings': {
+                    'reality-opts': {
+                        'public-key': 'download-pubkey',
+                        'short-id': 'cd',
+                    },
+                },
+            },
+        });
+    });
+
+    it('does not inject reality-opts blocker when upload has no reality-opts', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP No Reality',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    path: '/download',
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+
+        expect(internal).to.have.length(1);
+        const ds = internal[0]['xhttp-opts']['download-settings'];
+        expect(ds).to.not.have.property('reality-opts');
+    });
+
+    it('filters xhttp proxies from Shadowrocket by default', function () {
+        const proxies = [
+            {
+                type: 'vless',
+                name: 'VLESS XHTTP',
+                server: 'vless.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': { path: '/xhttp' },
+            },
+            {
+                type: 'vless',
+                name: 'VLESS WS',
+                server: 'vless.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'ws',
+                'ws-opts': { path: '/ws' },
+            },
+        ];
+
+        const internal = produceInternal('Shadowrocket', proxies);
+
+        expect(internal.map((p) => p.name)).to.deep.equal(['VLESS WS']);
+    });
+
 });

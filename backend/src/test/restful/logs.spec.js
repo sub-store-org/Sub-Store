@@ -429,4 +429,72 @@ describe('logs routes', function () {
         expect(JSON.parse(state[LOGS_KEY])).to.deep.equal([]);
         expect(clearLogEntries).to.be.a('function');
     });
+
+    it('rejects negative logsMaxCount in settings PATCH', async function () {
+        const app = createRouteApp();
+        registerSettingsRoutes(app);
+        const patchHandler = app.handlers.get('PATCH /api/settings');
+
+        const res = createResponse('/api/settings');
+        await patchHandler({ body: { logsMaxCount: -1 } }, res);
+
+        expect(res.body.status).to.equal('success');
+        expect(state[SETTINGS_KEY]).to.not.have.property('logsMaxCount');
+    });
+
+    it('rejects NaN logsMaxCount in settings PATCH', async function () {
+        const app = createRouteApp();
+        registerSettingsRoutes(app);
+        const patchHandler = app.handlers.get('PATCH /api/settings');
+
+        const res = createResponse('/api/settings');
+        await patchHandler({ body: { logsMaxCount: 'abc' } }, res);
+
+        expect(res.body.status).to.equal('success');
+        expect(state[SETTINGS_KEY]).to.not.have.property('logsMaxCount');
+    });
+
+    it('rejects null logsMaxCount in settings PATCH', async function () {
+        const app = createRouteApp();
+        registerSettingsRoutes(app);
+        const patchHandler = app.handlers.get('PATCH /api/settings');
+
+        const res = createResponse('/api/settings');
+        await patchHandler({ body: { logsMaxCount: null } }, res);
+
+        expect(res.body.status).to.equal('success');
+        expect(state[SETTINGS_KEY]).to.not.have.property('logsMaxCount');
+    });
+
+    it('accepts valid positive integer logsMaxCount in settings PATCH', async function () {
+        const app = createRouteApp();
+        registerSettingsRoutes(app);
+        const patchHandler = app.handlers.get('PATCH /api/settings');
+
+        const res = createResponse('/api/settings');
+        await patchHandler({ body: { logsMaxCount: 300 } }, res);
+
+        expect(res.body.status).to.equal('success');
+        expect(state[SETTINGS_KEY]).to.deep.include({ logsMaxCount: 300 });
+    });
+
+    it('clears log settings cache after settings PATCH so new logsMaxCount takes effect immediately', async function () {
+        const app = createRouteApp();
+        registerSettingsRoutes(app);
+        const patchHandler = app.handlers.get('PATCH /api/settings');
+
+        state[SETTINGS_KEY] = { logsMaxCount: 500 };
+        appendLogEntry($, 'info', ['before change']);
+        appendLogEntry($, 'info', ['before change 2']);
+        appendLogEntry($, 'info', ['before change 3']);
+
+        await patchHandler({ body: { logsMaxCount: 1 } }, createResponse('/api/settings'));
+
+        appendLogEntry($, 'info', ['after change']);
+
+        const storedLogs = JSON.parse(state[LOGS_KEY]);
+        expect(storedLogs).to.have.length(1);
+        expect(storedLogs[0].message).to.equal('[unknown] INFO: after change');
+    });
+
 });

@@ -4,6 +4,7 @@ import {
     produceProxyListOutput,
     supportsShadowsocksV2rayPluginMode,
 } from '@/core/proxy-utils/producers/utils';
+import $ from '@/core/app';
 
 const ipVersions = {
     dual: 'dual',
@@ -19,9 +20,7 @@ export default function ClashMeta_Producer() {
         const list = proxies
             .filter((proxy) => {
                 if (opts['include-unsupported-proxy']) return true;
-                if (
-                    !supportsShadowsocksV2rayPluginMode(proxy, ['websocket'])
-                ) {
+                if (!supportsShadowsocksV2rayPluginMode(proxy, ['websocket'])) {
                     return false;
                 } else if (proxy.type === 'snell' && proxy.version >= 4) {
                     return false;
@@ -182,6 +181,24 @@ export default function ClashMeta_Producer() {
                     // 且不能启用 Reality；这条限制同时作用于根 xhttp
                     // 配置，以及继承根配置默认值后的嵌套
                     // `download-settings`。
+
+                    // 1. mihomo 似乎不支持上行/下行有一个为 tls 一个不为 tls. 但是这跟转换无关了
+                    // 2. 下行有 tls 且上行有 reality-opts 且下行无 reality-opts →
+                    //    补 reality-opts: { public-key: '' }，阻断 reality 继承
+                    if (
+                        proxy.network === 'xhttp' &&
+                        proxy['xhttp-opts']?.['download-settings']
+                    ) {
+                        const ds = proxy['xhttp-opts']['download-settings'];
+                        if (
+                            proxy.tls &&
+                            ds.tls &&
+                            proxy['reality-opts'] &&
+                            !ds['reality-opts']
+                        ) {
+                            ds['reality-opts'] = { 'public-key': '' };
+                        }
+                    }
                 } else if (proxy.type === 'ss') {
                     if (
                         isPresent(proxy, 'shadow-tls-password') &&
