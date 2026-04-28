@@ -191,7 +191,7 @@ function applyStructuredXhttpExtraFields(
     }
 }
 
-function buildXhttpDownloadSettings(downloadSettings) {
+function buildXhttpDownloadSettings(downloadSettings, outerXhttpOpts = {}) {
     if (!isPlainObject(downloadSettings)) {
         return undefined;
     }
@@ -271,12 +271,22 @@ function buildXhttpDownloadSettings(downloadSettings) {
     }
 
     const xhttpSettings = {};
-    if (downloadSettings.path) {
-        xhttpSettings.path = downloadSettings.path;
+    // Mirror Mihomo's inheritance: path and host fall back to outer xhttp-opts
+    // when not explicitly set in download-settings. Mode is never a field in
+    // Mihomo's XHTTPDownloadSettings struct, so it always comes from outer.
+    const dsPath = downloadSettings.path ?? outerXhttpOpts.path;
+    if (dsPath) {
+        xhttpSettings.path = dsPath;
     }
-    const downloadHost = getTransportHost('xhttp', downloadSettings);
+    const downloadHost =
+        getTransportHost('xhttp', downloadSettings) ??
+        getTransportHost('xhttp', outerXhttpOpts);
     if (downloadHost) {
         xhttpSettings.host = downloadHost;
+    }
+    const mode = downloadSettings.mode ?? outerXhttpOpts.mode;
+    if (mode) {
+        xhttpSettings.mode = mode;
     }
     applyStructuredXhttpExtraFields(xhttpSettings, downloadSettings, {
         excludeHostHeader: true,
@@ -298,11 +308,15 @@ function buildXhttpDownloadSettings(downloadSettings) {
         network: normalizedNetwork || 'xhttp',
         ...(result.port != null ? { port: result.port } : {}),
         ...(result.security != null ? { security: result.security } : {}),
-        ...(result.tlsSettings != null ? { tlsSettings: result.tlsSettings } : {}),
+        ...(result.tlsSettings != null
+            ? { tlsSettings: result.tlsSettings }
+            : {}),
         ...(result.realitySettings != null
             ? { realitySettings: result.realitySettings }
             : {}),
-        ...(result.xhttpSettings != null ? { xhttpSettings: result.xhttpSettings } : {}),
+        ...(result.xhttpSettings != null
+            ? { xhttpSettings: result.xhttpSettings }
+            : {}),
     };
 }
 
@@ -316,6 +330,7 @@ function buildStructuredVlessExtraObject(proxy) {
 
     const downloadSettings = buildXhttpDownloadSettings(
         xhttpOpts['download-settings'],
+        xhttpOpts,
     );
     if (downloadSettings) {
         extra.downloadSettings = downloadSettings;

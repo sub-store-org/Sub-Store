@@ -1339,7 +1339,9 @@ describe('Proxy text producers', function () {
         expect(extra.xmux).to.deep.equal({
             hKeepAlivePeriod: '9007199254740993',
         });
-        expect(extra.downloadSettings?.address).to.equal('download.example.com');
+        expect(extra.downloadSettings?.address).to.equal(
+            'download.example.com',
+        );
         expect(extra.downloadSettings?.port).to.equal(8443);
         expect(extra.downloadSettings?.network).to.equal('xhttp');
         expect(extra.downloadSettings?.security).to.equal('tls');
@@ -1400,6 +1402,11 @@ describe('Proxy text producers', function () {
         const extra = JSON.parse(decodeURIComponent(encodedExtra));
         expect(extra.downloadSettings).to.deep.equal({
             network: 'xhttp',
+            xhttpSettings: {
+                path: '/xhttp',
+                host: 'cdn.example.com',
+                mode: 'stream-up',
+            },
             sockopt: {
                 mark: 255,
             },
@@ -1407,11 +1414,12 @@ describe('Proxy text producers', function () {
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
-        expect(reparsed[0]['xhttp-opts']?.['download-settings']).to.deep.equal(
-            {
-                network: 'xhttp',
-            },
-        );
+        expect(reparsed[0]['xhttp-opts']?.['download-settings']).to.deep.equal({
+            network: 'xhttp',
+            path: '/xhttp',
+            host: 'cdn.example.com',
+            mode: 'stream-up',
+        });
         expect(reparsed[0]._extra_unsupported).to.deep.equal({
             downloadSettings: {
                 sockopt: {
@@ -1525,12 +1533,12 @@ describe('Proxy text producers', function () {
             maxConcurrency: '8-16',
             hKeepAlivePeriod: 15,
         });
-        expect(extra.downloadSettings?.xhttpSettings?.extra?.xmux).to.deep.equal(
-            {
-                hMaxRequestTimes: '4-8',
-                hKeepAlivePeriod: -1,
-            },
-        );
+        expect(
+            extra.downloadSettings?.xhttpSettings?.extra?.xmux,
+        ).to.deep.equal({
+            hMaxRequestTimes: '4-8',
+            hKeepAlivePeriod: -1,
+        });
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
@@ -1636,6 +1644,7 @@ describe('Proxy text producers', function () {
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
+                    mode: 'stream-up',
                     headers: {
                         'X-Download': '1',
                     },
@@ -1781,6 +1790,7 @@ describe('Proxy text producers', function () {
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
+                    mode: 'stream-up',
                     scMaxEachPostBytes: 1000000,
                     scMinPostsIntervalMs: '0-300',
                 },
@@ -1853,6 +1863,7 @@ describe('Proxy text producers', function () {
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
+                    mode: 'stream-up',
                     scMaxEachPostBytes: 1000000,
                     scMinPostsIntervalMs: '0-300',
                 },
@@ -1933,6 +1944,7 @@ describe('Proxy text producers', function () {
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
+                    mode: 'stream-up',
                     noGRPCHeader: true,
                     xPaddingBytes: '32-64',
                     scMaxEachPostBytes: 1000000,
@@ -2266,9 +2278,9 @@ describe('Proxy text producers', function () {
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
-        expect(
-            reparsed[0]['xhttp-opts']?.['download-settings']?.host,
-        ).to.equal('download-host.example.com');
+        expect(reparsed[0]['xhttp-opts']?.['download-settings']?.host).to.equal(
+            'download-host.example.com',
+        );
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.headers,
         ).to.deep.equal({
@@ -2317,9 +2329,9 @@ describe('Proxy text producers', function () {
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
-        expect(
-            reparsed[0]['xhttp-opts']?.['download-settings']?.host,
-        ).to.equal('download-host.example.com');
+        expect(reparsed[0]['xhttp-opts']?.['download-settings']?.host).to.equal(
+            'download-host.example.com',
+        );
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.headers,
         ).to.deep.equal({
@@ -2344,6 +2356,7 @@ describe('Proxy text producers', function () {
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
+                    mode: 'stream-up',
                     scMaxEachPostBytes: 1000000,
                     scMinPostsIntervalMs: '0-300',
                     extra: {
@@ -2451,6 +2464,8 @@ describe('Proxy text producers', function () {
             security: 'tls',
             xhttpSettings: {
                 path: '/download',
+                host: 'cdn.example.com',
+                mode: 'stream-up',
             },
         });
 
@@ -2464,6 +2479,8 @@ describe('Proxy text producers', function () {
             network: 'xhttp',
             tls: true,
             path: '/download',
+            host: 'cdn.example.com',
+            mode: 'stream-up',
         });
     });
 
@@ -2482,6 +2499,7 @@ describe('Proxy text producers', function () {
                 xhttpSettings: {
                     path: '/download',
                     host: 'download-host.example.com',
+                    mode: 'stream-up',
                     noGRPCHeader: true,
                     xPaddingBytes: '32-64',
                     extra: {
@@ -2596,6 +2614,11 @@ describe('Proxy text producers', function () {
                 network: 'xhttp',
                 port: 8443,
                 security: 'tls',
+                xhttpSettings: {
+                    path: '/xhttp',
+                    host: 'cdn.example.com',
+                    mode: 'stream-up',
+                },
             },
         });
         const output = produceExternal('URI', {
@@ -2638,12 +2661,12 @@ describe('Proxy text producers', function () {
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings'],
         ).to.not.have.property('sc-min-posts-interval-ms');
-        expect(
-            reparsed[0]['xhttp-opts']?.['download-settings'],
-        ).to.not.have.property('path');
-        expect(
-            reparsed[0]['xhttp-opts']?.['download-settings'],
-        ).to.not.have.property('host');
+        expect(reparsed[0]['xhttp-opts']?.['download-settings']?.path).to.equal(
+            '/xhttp',
+        );
+        expect(reparsed[0]['xhttp-opts']?.['download-settings']?.host).to.equal(
+            'cdn.example.com',
+        );
     });
 
     it('produces URI Trojan websocket links with pcs from tls fingerprint', function () {
