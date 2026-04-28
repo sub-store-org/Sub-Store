@@ -129,8 +129,10 @@ describe('Proxy structured producers', function () {
 
             expect(internal, platform).to.have.length(1);
             expect(internal[0].name, platform).to.equal('WS');
-            expect(external.proxies.map((proxy) => proxy.name), platform).to
-                .deep.equal(['WS', 'QUIC']);
+            expect(
+                external.proxies.map((proxy) => proxy.name),
+                platform,
+            ).to.deep.equal(['WS', 'QUIC']);
         }
     });
 
@@ -393,6 +395,117 @@ describe('Proxy structured producers', function () {
 
         expect(internal).to.have.length(0);
         expect(external.trim()).to.equal('proxies:');
+    });
+
+    it('keeps VLESS xhttp proxy when download-settings reality-opts has empty public-key and main reality is valid', function () {
+        // 上行（主代理）有合法 reality-opts，下行（download-settings）用
+        // reality-opts: { public-key: '' } 取消继承上行 Reality，合法配置。
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP Reality Cancel',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    servername: 'download-sni.example.com',
+                    'reality-opts': { 'public-key': '' },
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        expect(internal).to.have.length(1);
+        expect(internal[0].name).to.equal('XHTTP Reality Cancel');
+    });
+
+    it('filters out VLESS xhttp proxy when download-settings reality-opts is empty object (broken URI) even with valid main reality', function () {
+        // 下行 download-settings.reality-opts 为 {} (没有 public-key 字段)，
+        // 代表 URI 里声明了 security=reality 但 pbk 缺失，属于残缺配置，应过滤。
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP Broken Reality',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '08',
+            },
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    'reality-opts': {},
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        expect(internal).to.have.length(0);
+    });
+
+    it('filters out VLESS xhttp proxy when download-settings reality-opts has empty public-key and main has no valid reality', function () {
+        // 下行 download-settings 有 reality-opts: { public-key: '' }，
+        // 但上行主代理本身没有合法 Reality，属于无效配置，应被过滤。
+        const proxy = {
+            type: 'vless',
+            name: 'XHTTP Invalid Reality',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                mode: 'stream-up',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    tls: true,
+                    'reality-opts': { 'public-key': '' },
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        expect(internal).to.have.length(0);
+    });
+
+    it('filters out VLESS proxy when main reality-opts has empty public-key', function () {
+        // 主代理 reality-opts.public-key 为空，无论下行如何，都应被过滤。
+        const proxy = {
+            type: 'vless',
+            name: 'Reality Empty Key',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            network: 'tcp',
+            'reality-opts': { 'public-key': '' },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        expect(internal).to.have.length(0);
     });
 
     it('normalizes Stash TUIC defaults and external yaml wrapper', function () {
@@ -1843,5 +1956,4 @@ describe('Proxy structured producers', function () {
 
         expect(internal.map((p) => p.name)).to.deep.equal(['VLESS WS']);
     });
-
 });

@@ -297,6 +297,23 @@ function produce(proxies, targetPlatform, type, opts = {}) {
                 : [];
             for (const [realityLabel, realityOpts] of realityChecks) {
                 if (realityOpts && !isNotBlank(realityOpts['public-key'])) {
+                    // When the main proxy (上行) uses Reality with a valid
+                    // public-key, an explicit empty-string public-key in xhttp
+                    // download-settings reality-opts (下行) is intentional:
+                    // it explicitly cancels Reality inheritance for the
+                    // download stream. This is a legitimate Mihomo config.
+                    // Distinguish from reality-opts:{} (missing public-key
+                    // entirely) which represents a broken/incomplete Reality
+                    // config parsed from a malformed URI and should still be
+                    // rejected.
+                    if (
+                        realityLabel ===
+                            'xhttp download-settings reality-opts' &&
+                        isNotBlank(proxy['reality-opts']?.['public-key']) &&
+                        realityOpts['public-key'] === ''
+                    ) {
+                        continue;
+                    }
                     // Intentional: a VLESS Reality node without public-key is
                     // not a valid Mihomo export or regenerated share link. We
                     // keep the marker while parsing so callers can inspect the
