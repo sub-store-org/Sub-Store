@@ -102,6 +102,60 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
+        it('parses SIP002 Base64URL shadowsocks userinfo', function () {
+            const proxy = parseOne(
+                `ss://${Base64.encodeURI(
+                    'aes-128-gcm:aa>',
+                )}@ss.example.com:8388#SS%20Base64URL`,
+            );
+
+            expectSubset(proxy, {
+                type: 'ss',
+                name: 'SS Base64URL',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'aa>',
+            });
+        });
+
+        it('parses SIP002 plain shadowsocks userinfo with percent-encoded credentials', function () {
+            const password = 'sec:ret@/plus+';
+            const proxy = parseOne(
+                `ss://aes-128-gcm:${encodeURIComponent(
+                    password,
+                )}@ss.example.com:8388#SS%20Plain`,
+            );
+
+            expectSubset(proxy, {
+                type: 'ss',
+                name: 'SS Plain',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password,
+            });
+        });
+
+        it('parses SIP002 AEAD-2022 plain userinfo without Base64URL decoding', function () {
+            const password =
+                'YctPZ6U7xPPcU+gp3u+0tx/tRizJN9K8y+uKlW2qjlI=';
+            const proxy = parseOne(
+                `ss://2022-blake3-aes-256-gcm:${encodeURIComponent(
+                    password,
+                )}@192.168.100.1:8888#SS%202022`,
+            );
+
+            expectSubset(proxy, {
+                type: 'ss',
+                name: 'SS 2022',
+                server: '192.168.100.1',
+                port: 8888,
+                cipher: '2022-blake3-aes-256-gcm',
+                password,
+            });
+        });
+
         it('parses legacy shadowsocks URIs with v2ray-plugin options', function () {
             const legacy = Base64.encode(
                 'chacha20-ietf-poly1305:legacy-pass@legacy.example.com:443',

@@ -46,6 +46,23 @@ function splitURIFragment(raw) {
     };
 }
 
+function decodeShadowsocksUserInfo(rawUserInfoStr) {
+    const separatorIndex = rawUserInfoStr.indexOf(':');
+    if (separatorIndex !== -1) {
+        return [
+            decodeURIComponent(rawUserInfoStr.slice(0, separatorIndex)),
+            decodeURIComponent(rawUserInfoStr.slice(separatorIndex + 1)),
+        ].join(':');
+    }
+
+    const decodedUserInfoStr = decodeURIComponent(rawUserInfoStr);
+    if (decodedUserInfoStr.includes(':')) {
+        return decodedUserInfoStr;
+    }
+
+    return Base64.decode(decodedUserInfoStr);
+}
+
 function parseWireGuardURIAddressValue(value) {
     if (value == null) return null;
     const raw = `${value}`.trim();
@@ -182,13 +199,7 @@ function URI_SS() {
         // handle IPV4 and IPV6
         let serverAndPortArray = content.match(/@([^/?]*)(\/|\?|$)/);
 
-        let rawUserInfoStr = decodeURIComponent(content.split('@')[0]); // 其实应该分隔之后, 用户名和密码再 decodeURIComponent. 但是问题不大
-        let userInfoStr;
-        if (rawUserInfoStr?.startsWith('2022-blake3-')) {
-            userInfoStr = rawUserInfoStr;
-        } else {
-            userInfoStr = Base64.decode(rawUserInfoStr);
-        }
+        let userInfoStr = decodeShadowsocksUserInfo(content.split('@')[0]);
 
         let query = '';
         if (!serverAndPortArray) {
