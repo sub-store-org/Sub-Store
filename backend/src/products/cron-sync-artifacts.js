@@ -242,7 +242,7 @@ async function doSync() {
                 `同步配置成功 ${valid.length} 个, 失败 ${invalid.length} 个, 详情请查看日志`,
             );
         } else {
-            $.notify('🌍 Sub-Store', '同步配置完成');
+            // $.notify('🌍 Sub-Store', '同步配置完成');
         }
     } catch (e) {
         $.notify('🌍 Sub-Store', '同步配置失败', `原因：${e.message ?? e}`);
