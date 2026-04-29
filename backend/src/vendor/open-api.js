@@ -278,7 +278,7 @@ export class OpenAPI {
                 content +
                 (openURL ? `\n点击跳转: ${openURL}` : '') +
                 (mediaURL ? `\n多媒体: ${mediaURL}` : '');
-            console.log(`${title}\n${subtitle}\n${content_}\n\n`);
+            console.log(`[Notify] ${title}\n${subtitle}\n${content_}\n\n`);
 
             let push = eval('process.env.SUB_STORE_PUSH_SERVICE');
             if (push) {
