@@ -8,6 +8,11 @@ import {
     normalizeXhttpPositiveRange,
     normalizeXhttpScalarUpperBound,
 } from '../xhttp-utils';
+import {
+    extractPathQueryParam,
+    parseSafeIntegerValue,
+    setPathQueryParam,
+} from '../transport-path';
 
 function toStringHeaderMap(headers, { excludeHost = false } = {}) {
     if (!isPlainObject(headers)) {
@@ -26,6 +31,56 @@ function toStringHeaderMap(headers, { excludeHost = false } = {}) {
     }
 
     return Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined;
+}
+
+function getHttpUpgradeEarlyData(transportOpts, path) {
+    const httpUpgradeEd = getSafeEarlyDataValue(
+        transportOpts?.['_v2ray-http-upgrade-ed'],
+    );
+    if (httpUpgradeEd !== '') return httpUpgradeEd;
+
+    const pathEd = getSafeEarlyDataValue(
+        extractPathQueryParam(path || '/', 'ed').value,
+    );
+    return pathEd !== '' ? pathEd : 2560;
+}
+
+function setHttpUpgradeEarlyDataPath(path, transportOpts) {
+    if (!transportOpts?.['v2ray-http-upgrade-fast-open']) {
+        return path;
+    }
+
+    return setPathQueryParam(
+        path || '/',
+        'ed',
+        getHttpUpgradeEarlyData(transportOpts, path),
+    );
+}
+
+function setWebSocketEarlyDataPath(path, transportOpts) {
+    const earlyDataValue = transportOpts?.['max-early-data'];
+    const earlyData = getSafeEarlyDataValue(earlyDataValue);
+    if (earlyData === '') {
+        if (earlyDataValue != null && `${earlyDataValue}` !== '') {
+            return path == null ? path : extractPathQueryParam(path, 'ed').path;
+        }
+        return path;
+    }
+
+    const earlyDataHeaderName = transportOpts?.['early-data-header-name'];
+    if (
+        earlyDataHeaderName &&
+        earlyDataHeaderName !== 'Sec-WebSocket-Protocol'
+    ) {
+        return path == null ? path : extractPathQueryParam(path, 'ed').path;
+    }
+
+    return setPathQueryParam(path || '/', 'ed', earlyData);
+}
+
+function getSafeEarlyDataValue(value) {
+    if (value == null || `${value}` === '') return '';
+    return parseSafeIntegerValue(value) == null ? '' : `${value}`;
 }
 
 function parseIntegerLikeValue(value) {
@@ -550,16 +605,35 @@ function vless(proxy) {
     }
 
     const transportOpts = proxy[`${proxy.network}-opts`] || {};
+    const isVlessHttpUpgrade =
+        proxy.network === 'ws' && transportOpts?.['v2ray-http-upgrade'];
     let vlessTransportServiceName =
         transportOpts?.[`${proxy.network}-service-name`];
     let vlessTransportPath = transportOpts?.path;
     let vlessTransportHost = getTransportHost(proxy.network, transportOpts);
+    const vlessWsEarlyData = getSafeEarlyDataValue(
+        proxy['ws-opts']?.['max-early-data'],
+    );
+    if (Array.isArray(vlessTransportPath)) {
+        vlessTransportPath = vlessTransportPath[0];
+    }
+    if (isVlessHttpUpgrade && transportOpts?.['v2ray-http-upgrade-fast-open']) {
+        vlessTransportPath = setHttpUpgradeEarlyDataPath(
+            vlessTransportPath,
+            transportOpts,
+        );
+    } else if (
+        proxy.network === 'ws' &&
+        proxy['ws-opts']?.['max-early-data'] != null &&
+        vlessTransportPath
+    ) {
+        vlessTransportPath = extractPathQueryParam(
+            vlessTransportPath,
+            'ed',
+        ).path;
+    }
     if (vlessTransportPath) {
-        vlessTransport += `&path=${encodeURIComponent(
-            Array.isArray(vlessTransportPath)
-                ? vlessTransportPath[0]
-                : vlessTransportPath,
-        )}`;
+        vlessTransport += `&path=${encodeURIComponent(vlessTransportPath)}`;
     }
     if (vlessTransportHost) {
         vlessTransport += `&host=${encodeURIComponent(
@@ -590,26 +664,15 @@ function vless(proxy) {
     }
     if (
         proxy.network === 'ws' &&
-        !proxy['ws-opts']?.['v2ray-http-upgrade'] &&
-        proxy['ws-opts']?.['max-early-data'] != null
+        !isVlessHttpUpgrade &&
+        vlessWsEarlyData !== ''
     ) {
-        vlessTransport += `&ed=${encodeURIComponent(
-            proxy['ws-opts']['max-early-data'],
-        )}`;
-    }
-    if (
-        proxy.network === 'ws' &&
-        proxy['ws-opts']?.['v2ray-http-upgrade'] &&
-        proxy['ws-opts']?.['max-early-data'] != null
-    ) {
-        vlessTransport += `&ed=${encodeURIComponent(
-            proxy['ws-opts']['max-early-data'],
-        )}`;
+        vlessTransport += `&ed=${encodeURIComponent(vlessWsEarlyData)}`;
     }
     const earlyDataHeaderName = proxy['ws-opts']?.['early-data-header-name'];
     if (
         earlyDataHeaderName &&
-        (proxy['ws-opts']?.['v2ray-http-upgrade'] ||
+        (isVlessHttpUpgrade ||
             proxy['ws-opts']?.['max-early-data'] == null ||
             earlyDataHeaderName !== 'Sec-WebSocket-Protocol')
     ) {
@@ -760,14 +823,30 @@ export default function URI_Producer() {
                                 'gun',
                         )}`;
                     }
-                    let ssTransportPath = proxy[`${proxy.network}-opts`]?.path;
-                    let ssTransportHost =
-                        proxy[`${proxy.network}-opts`]?.headers?.Host;
+                    const ssTransportOpts =
+                        proxy[`${proxy.network}-opts`] || {};
+                    const isSsHttpUpgrade =
+                        proxy.network === 'ws' &&
+                        ssTransportOpts?.['v2ray-http-upgrade'];
+                    let ssTransportPath = ssTransportOpts?.path;
+                    let ssTransportHost = ssTransportOpts?.headers?.Host;
+                    if (Array.isArray(ssTransportPath)) {
+                        ssTransportPath = ssTransportPath[0];
+                    }
+                    if (isSsHttpUpgrade) {
+                        ssTransportPath = setHttpUpgradeEarlyDataPath(
+                            ssTransportPath,
+                            ssTransportOpts,
+                        );
+                    } else if (proxy.network === 'ws') {
+                        ssTransportPath = setWebSocketEarlyDataPath(
+                            ssTransportPath,
+                            ssTransportOpts,
+                        );
+                    }
                     if (ssTransportPath) {
                         ssTransport += `&path=${encodeURIComponent(
-                            Array.isArray(ssTransportPath)
-                                ? ssTransportPath[0]
-                                : ssTransportPath,
+                            ssTransportPath,
                         )}`;
                     }
                     if (ssTransportHost) {
@@ -880,10 +959,13 @@ export default function URI_Producer() {
                 }
                 // obfs
                 if (proxy.network) {
-                    let vmessTransportPath =
-                        proxy[`${proxy.network}-opts`]?.path;
-                    let vmessTransportHost =
-                        proxy[`${proxy.network}-opts`]?.headers?.Host;
+                    const vmessTransportOpts =
+                        proxy[`${proxy.network}-opts`] || {};
+                    const isVmessHttpUpgrade =
+                        proxy.network === 'ws' &&
+                        vmessTransportOpts?.['v2ray-http-upgrade'];
+                    let vmessTransportPath = vmessTransportOpts?.path;
+                    let vmessTransportHost = vmessTransportOpts?.headers?.Host;
 
                     if (['grpc'].includes(proxy.network)) {
                         result.path =
@@ -911,10 +993,22 @@ export default function URI_Producer() {
                                 `_${proxy.network}-path`
                             ];
                     } else {
+                        if (Array.isArray(vmessTransportPath)) {
+                            vmessTransportPath = vmessTransportPath[0];
+                        }
+                        if (isVmessHttpUpgrade) {
+                            vmessTransportPath = setHttpUpgradeEarlyDataPath(
+                                vmessTransportPath,
+                                vmessTransportOpts,
+                            );
+                        } else if (proxy.network === 'ws') {
+                            vmessTransportPath = setWebSocketEarlyDataPath(
+                                vmessTransportPath,
+                                vmessTransportOpts,
+                            );
+                        }
                         if (vmessTransportPath) {
-                            result.path = Array.isArray(vmessTransportPath)
-                                ? vmessTransportPath[0]
-                                : vmessTransportPath;
+                            result.path = vmessTransportPath;
                         }
                         if (vmessTransportHost) {
                             result.host = Array.isArray(vmessTransportHost)
@@ -961,15 +1055,31 @@ export default function URI_Producer() {
                                 'gun',
                         )}`;
                     }
-                    let trojanTransportPath =
-                        proxy[`${proxy.network}-opts`]?.path;
+                    const trojanTransportOpts =
+                        proxy[`${proxy.network}-opts`] || {};
+                    const isTrojanHttpUpgrade =
+                        proxy.network === 'ws' &&
+                        trojanTransportOpts?.['v2ray-http-upgrade'];
+                    let trojanTransportPath = trojanTransportOpts?.path;
                     let trojanTransportHost =
-                        proxy[`${proxy.network}-opts`]?.headers?.Host;
+                        trojanTransportOpts?.headers?.Host;
+                    if (Array.isArray(trojanTransportPath)) {
+                        trojanTransportPath = trojanTransportPath[0];
+                    }
+                    if (isTrojanHttpUpgrade) {
+                        trojanTransportPath = setHttpUpgradeEarlyDataPath(
+                            trojanTransportPath,
+                            trojanTransportOpts,
+                        );
+                    } else if (proxy.network === 'ws') {
+                        trojanTransportPath = setWebSocketEarlyDataPath(
+                            trojanTransportPath,
+                            trojanTransportOpts,
+                        );
+                    }
                     if (trojanTransportPath) {
                         trojanTransport += `&path=${encodeURIComponent(
-                            Array.isArray(trojanTransportPath)
-                                ? trojanTransportPath[0]
-                                : trojanTransportPath,
+                            trojanTransportPath,
                         )}`;
                     }
                     if (trojanTransportHost) {

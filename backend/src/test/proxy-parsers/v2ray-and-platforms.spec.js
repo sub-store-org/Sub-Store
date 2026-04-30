@@ -104,10 +104,12 @@ describe('VMess and VLESS parser coverage', function () {
                 'client-fingerprint': 'chrome',
                 network: 'ws',
                 'ws-opts': {
-                    path: '/fragment?ed=2560',
+                    path: '/fragment',
                     headers: {
                         Host: 'fragment.example.com',
                     },
+                    'max-early-data': 2560,
+                    'early-data-header-name': 'Sec-WebSocket-Protocol',
                 },
             });
         });
@@ -273,9 +275,85 @@ describe('VMess and VLESS parser coverage', function () {
                         Host: 'upgrade.example.com',
                     },
                     'v2ray-http-upgrade': true,
-                    'v2ray-http-upgrade-fast-open': true,
                 },
             });
+            expect(proxy['ws-opts']).to.not.have.property(
+                'v2ray-http-upgrade-fast-open',
+            );
+        });
+
+        it('parses V2rayN httpupgrade path early data from multiple query params', function () {
+            const share = Base64.encode(
+                JSON.stringify({
+                    ps: 'VMess Upgrade Early',
+                    add: 'vmess-upgrade.example.com',
+                    port: '443',
+                    id: UUID,
+                    aid: '0',
+                    scy: 'auto',
+                    net: 'httpupgrade',
+                    host: 'upgrade.example.com',
+                    path: '/upgrade?a=1&ed=1024&b=2',
+                }),
+            );
+            const proxy = parseOne(`vmess://${share}`);
+
+            expectSubset(proxy, {
+                type: 'vmess',
+                name: 'VMess Upgrade Early',
+                server: 'vmess-upgrade.example.com',
+                port: 443,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/upgrade?a=1&b=2',
+                    headers: {
+                        Host: 'upgrade.example.com',
+                    },
+                    'v2ray-http-upgrade': true,
+                    'v2ray-http-upgrade-fast-open': true,
+                    '_v2ray-http-upgrade-ed': '1024',
+                },
+            });
+            expect(proxy['ws-opts']).to.not.have.property('max-early-data');
+            expect(proxy['ws-opts']).to.not.have.property(
+                'early-data-header-name',
+            );
+        });
+
+        it('parses V2rayN httpupgrade top-level early data', function () {
+            const share = Base64.encode(
+                JSON.stringify({
+                    ps: 'VMess Upgrade Top Early',
+                    add: 'vmess-upgrade.example.com',
+                    port: '443',
+                    id: UUID,
+                    aid: '0',
+                    scy: 'auto',
+                    net: 'httpupgrade',
+                    host: 'upgrade.example.com',
+                    path: '/upgrade',
+                    ed: '1024',
+                }),
+            );
+            const proxy = parseOne(`vmess://${share}`);
+
+            expectSubset(proxy, {
+                type: 'vmess',
+                name: 'VMess Upgrade Top Early',
+                server: 'vmess-upgrade.example.com',
+                port: 443,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/upgrade',
+                    headers: {
+                        Host: 'upgrade.example.com',
+                    },
+                    'v2ray-http-upgrade': true,
+                    'v2ray-http-upgrade-fast-open': true,
+                    '_v2ray-http-upgrade-ed': '1024',
+                },
+            });
+            expect(proxy['ws-opts']).to.not.have.property('max-early-data');
         });
 
         it('parses Shadowrocket VMess shares', function () {
@@ -550,9 +628,11 @@ describe('VMess and VLESS parser coverage', function () {
                         Host: 'upgrade.example.com',
                     },
                     'v2ray-http-upgrade': true,
-                    'v2ray-http-upgrade-fast-open': true,
                 },
             });
+            expect(proxy['ws-opts']).to.not.have.property(
+                'v2ray-http-upgrade-fast-open',
+            );
         });
 
         it('parses httpupgrade VLESS shares with early data metadata', function () {
@@ -573,8 +653,81 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                     'v2ray-http-upgrade': true,
                     'v2ray-http-upgrade-fast-open': true,
-                    'max-early-data': 1024,
+                    '_v2ray-http-upgrade-ed': '1024',
                     'early-data-header-name': 'X-Upgrade',
+                },
+            });
+            expect(proxy['ws-opts']).to.not.have.property('max-early-data');
+        });
+
+        it('parses httpupgrade VLESS path early data from multiple query params', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-upgrade.example.com:443?type=httpupgrade&host=upgrade.example.com&path=%2Fupgrade%3Fa%3D1%26ed%3D1024%26b%3D2#VLESS%20Upgrade%20Path%20Early`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS Upgrade Path Early',
+                server: 'vless-upgrade.example.com',
+                port: 443,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/upgrade?a=1&b=2',
+                    headers: {
+                        Host: 'upgrade.example.com',
+                    },
+                    'v2ray-http-upgrade': true,
+                    'v2ray-http-upgrade-fast-open': true,
+                    '_v2ray-http-upgrade-ed': '1024',
+                },
+            });
+            expect(proxy['ws-opts']).to.not.have.property('max-early-data');
+            expect(proxy['ws-opts']).to.not.have.property(
+                'early-data-header-name',
+            );
+        });
+
+        it('prefers VLESS path early data over duplicate top-level early data', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-upgrade.example.com:443?type=httpupgrade&host=upgrade.example.com&path=%2Fupgrade%3Fed%3D1024&ed=2048#VLESS%20Upgrade%20Duplicate%20Early`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS Upgrade Duplicate Early',
+                server: 'vless-upgrade.example.com',
+                port: 443,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/upgrade',
+                    headers: {
+                        Host: 'upgrade.example.com',
+                    },
+                    'v2ray-http-upgrade': true,
+                    'v2ray-http-upgrade-fast-open': true,
+                    '_v2ray-http-upgrade-ed': '1024',
+                },
+            });
+        });
+
+        it('parses websocket VLESS path early data from multiple query params', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-ws.example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws%3Fa%3D1%26ed%3D2048%26b%3D2#VLESS%20WS%20Path%20Early`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS WS Path Early',
+                server: 'vless-ws.example.com',
+                port: 443,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws?a=1&b=2',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                    'max-early-data': 2048,
+                    'early-data-header-name': 'Sec-WebSocket-Protocol',
                 },
             });
         });

@@ -2,6 +2,10 @@ import ClashMeta_Producer from './clashmeta';
 import $ from '@/core/app';
 import { isPlainObject } from '@/utils';
 import { getWireGuardAddressWithCIDR, normalizePluginMuxValue } from './utils';
+import {
+    extractPathQueryParam,
+    getSafeIntegerPathQueryParam,
+} from '../transport-path';
 
 const ipVersions = {
     ipv4: 'ipv4_only',
@@ -130,13 +134,12 @@ const wsParser = (proxy, parsedProxy) => {
     if (proxy['ws-path'] && proxy['ws-path'] !== '')
         transport.path = `${proxy['ws-path']}`;
     if (transport.path) {
-        const reg = /^(.*?)(?:\?ed=(\d+))?$/;
-        // eslint-disable-next-line no-unused-vars
-        const [_, path = '', ed = ''] = reg.exec(transport.path);
-        transport.path = path;
+        const { value: ed, parsed: maxEarlyData } =
+            getSafeIntegerPathQueryParam(transport.path, 'ed');
         if (ed !== '') {
+            transport.path = extractPathQueryParam(transport.path, 'ed').path;
             transport.early_data_header_name = 'Sec-WebSocket-Protocol';
-            transport.max_early_data = parseInt(ed, 10);
+            transport.max_early_data = maxEarlyData;
         }
     }
 

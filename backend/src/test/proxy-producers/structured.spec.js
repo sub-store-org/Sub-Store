@@ -26,7 +26,7 @@ describe('Proxy structured producers', function () {
                 sni: 'sni.example.com',
                 network: 'ws',
                 'ws-opts': {
-                    path: '/ws?ed=2048',
+                    path: '/ws?a=1&ed=2048&b=2',
                     headers: {
                         Host: 'cdn.example.com',
                     },
@@ -59,7 +59,7 @@ describe('Proxy structured producers', function () {
             alterId: 0,
             servername: 'sni.example.com',
             'ws-opts': {
-                path: '/ws',
+                path: '/ws?a=1&b=2',
                 headers: {
                     Host: 'cdn.example.com',
                 },
@@ -195,7 +195,7 @@ describe('Proxy structured producers', function () {
             flow: 'xtls-rprx-vision',
             network: 'ws',
             'ws-opts': {
-                path: '/ws?ed=2048',
+                path: '/ws?a=1&ed=2048&b=2',
                 headers: {
                     Host: 'cdn.example.com',
                 },
@@ -218,7 +218,7 @@ describe('Proxy structured producers', function () {
                 'short-id': '08',
             },
             'ws-opts': {
-                path: '/ws',
+                path: '/ws?a=1&b=2',
                 'early-data-header-name': 'Sec-WebSocket-Protocol',
                 'max-early-data': 2048,
             },
@@ -228,6 +228,258 @@ describe('Proxy structured producers', function () {
             name: 'Reality',
             'client-fingerprint': 'chrome',
         });
+    });
+
+    it('normalizes websocket early data query params for Stash and Shadowrocket', function () {
+        const proxy = {
+            type: 'vmess',
+            name: 'WS Early Query',
+            server: 'vmess.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws?a=1&ed=2048&b=2',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+            },
+        };
+
+        for (const platform of ['Stash', 'Shadowrocket']) {
+            const internal = produceInternal(platform, proxy)[0];
+            expectSubset(internal, {
+                name: 'WS Early Query',
+                'ws-opts': {
+                    path: '/ws?a=1&b=2',
+                    'early-data-header-name': 'Sec-WebSocket-Protocol',
+                    'max-early-data': 2048,
+                },
+            });
+        }
+    });
+
+    it('leaves unsafe websocket early data query params untouched', function () {
+        const proxy = {
+            type: 'vmess',
+            name: 'WS Unsafe Early Query',
+            server: 'vmess.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws?a=1&ed=999999999999999999999&b=2',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+            },
+        };
+
+        const wsOpts = produceInternal('Clash', proxy)[0]['ws-opts'];
+
+        expect(wsOpts.path).to.equal('/ws?a=1&ed=999999999999999999999&b=2');
+        expect(wsOpts).to.not.have.property('early-data-header-name');
+        expect(wsOpts).to.not.have.property('max-early-data');
+    });
+
+    it('keeps explicit websocket early data fields over stale path query values', function () {
+        const proxy = {
+            type: 'vmess',
+            name: 'WS Explicit Early Fields',
+            server: 'vmess.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws?a=1&ed=2048&b=2',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'max-early-data': 4096,
+                'early-data-header-name': 'X-Data',
+            },
+        };
+
+        for (const platform of [
+            'Clash',
+            'ClashMeta',
+            'Stash',
+            'Shadowrocket',
+        ]) {
+            const wsOpts = loadProducedYaml(platform, proxy).proxies[0][
+                'ws-opts'
+            ];
+
+            expect(wsOpts.path, platform).to.equal('/ws?a=1&b=2');
+            expect(wsOpts['max-early-data'], platform).to.equal(4096);
+            expect(wsOpts['early-data-header-name'], platform).to.equal(
+                'X-Data',
+            );
+        }
+    });
+
+    it('normalizes httpupgrade path early data as httpupgrade metadata', function () {
+        const proxy = {
+            type: 'vmess',
+            name: 'HTTPUpgrade Early Query',
+            server: 'vmess.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            network: 'ws',
+            'ws-opts': {
+                path: '/upgrade?a=1&ed=2048&b=2',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'v2ray-http-upgrade': true,
+            },
+        };
+
+        for (const platform of [
+            'Clash',
+            'ClashMeta',
+            'Stash',
+            'Shadowrocket',
+        ]) {
+            const wsOpts = produceInternal(platform, proxy, {
+                'include-unsupported-proxy': true,
+            })[0]['ws-opts'];
+
+            expect(wsOpts.path).to.equal('/upgrade?a=1&b=2');
+            expect(wsOpts['v2ray-http-upgrade']).to.equal(true);
+            expect(wsOpts['v2ray-http-upgrade-fast-open']).to.equal(true);
+            expect(wsOpts['_v2ray-http-upgrade-ed']).to.equal('2048');
+            expect(wsOpts).to.not.have.property('early-data-header-name');
+            expect(wsOpts).to.not.have.property('max-early-data');
+
+            const externalWsOpts = loadProducedYaml(platform, proxy, {
+                'include-unsupported-proxy': true,
+            }).proxies[0]['ws-opts'];
+            expect(externalWsOpts.path).to.equal('/upgrade?a=1&b=2');
+            expect(externalWsOpts['v2ray-http-upgrade-fast-open']).to.equal(
+                true,
+            );
+            expect(externalWsOpts).to.not.have.property(
+                '_v2ray-http-upgrade-ed',
+            );
+        }
+    });
+
+    it('keeps explicit httpupgrade early data over stale path query values', function () {
+        const proxy = {
+            type: 'vmess',
+            name: 'HTTPUpgrade Explicit Early',
+            server: 'vmess.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            network: 'ws',
+            'ws-opts': {
+                path: '/upgrade?a=1&ed=1024&b=2',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'v2ray-http-upgrade': true,
+                'v2ray-http-upgrade-fast-open': true,
+                '_v2ray-http-upgrade-ed': '4096',
+            },
+        };
+
+        for (const platform of [
+            'Clash',
+            'ClashMeta',
+            'Stash',
+            'Shadowrocket',
+        ]) {
+            const wsOpts = produceInternal(platform, proxy, {
+                'include-unsupported-proxy': true,
+            })[0]['ws-opts'];
+
+            expect(wsOpts.path, platform).to.equal('/upgrade?a=1&b=2');
+            expect(wsOpts['_v2ray-http-upgrade-ed'], platform).to.equal(
+                '4096',
+            );
+        }
+    });
+
+    it('does not emit websocket early data fields for httpupgrade transports', function () {
+        const directProxy = {
+            type: 'vmess',
+            name: 'HTTPUpgrade Legacy Fields',
+            server: 'vmess.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            network: 'ws',
+            'ws-opts': {
+                path: '/upgrade',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'v2ray-http-upgrade': true,
+                'v2ray-http-upgrade-fast-open': true,
+                'max-early-data': 1024,
+                'early-data-header-name': 'X-Upgrade',
+            },
+        };
+        const directProxyWithoutPath = {
+            type: 'vmess',
+            name: 'HTTPUpgrade Legacy Fields Without Path',
+            server: 'vmess.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            network: 'ws',
+            'ws-opts': {
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                'v2ray-http-upgrade': true,
+                'v2ray-http-upgrade-fast-open': true,
+                'max-early-data': 2048,
+                'early-data-header-name': 'X-Upgrade',
+            },
+        };
+        const parsedVlessProxy = ProxyUtils.parse(
+            `vless://${UUID}@vless-upgrade.example.com:443?type=httpupgrade&host=upgrade.example.com&path=%2Fupgrade&ed=1024&eh=X-Upgrade#VLESS%20Upgrade`,
+        )[0];
+
+        for (const proxy of [
+            directProxy,
+            directProxyWithoutPath,
+            parsedVlessProxy,
+        ]) {
+            for (const platform of [
+                'Clash',
+                'ClashMeta',
+                'Stash',
+                'Shadowrocket',
+            ]) {
+                const externalWsOpts = loadProducedYaml(platform, proxy, {
+                    'include-unsupported-proxy': true,
+                }).proxies[0]['ws-opts'];
+
+                expect(externalWsOpts['v2ray-http-upgrade']).to.equal(true);
+                expect(externalWsOpts).to.not.have.property(
+                    'early-data-header-name',
+                );
+                expect(externalWsOpts).to.not.have.property('max-early-data');
+                expect(externalWsOpts).to.not.have.property(
+                    '_v2ray-http-upgrade-ed',
+                );
+            }
+        }
     });
 
     it('emits Mihomo VLESS xhttp proxies and preserves xhttp options', function () {
@@ -1684,7 +1936,7 @@ describe('Proxy structured producers', function () {
             flow: 'xtls-rprx-vision',
             network: 'ws',
             'ws-opts': {
-                path: '/ws?ed=2048',
+                path: '/ws?a=1&ed=2048&b=2',
                 headers: {
                     Host: 'cdn.example.com',
                 },
@@ -1718,7 +1970,7 @@ describe('Proxy structured producers', function () {
             },
             transport: {
                 type: 'ws',
-                path: '/ws',
+                path: '/ws?a=1&b=2',
                 headers: {
                     Host: 'cdn.example.com',
                 },
@@ -1726,6 +1978,42 @@ describe('Proxy structured producers', function () {
                 max_early_data: 2048,
             },
         });
+    });
+
+    it('emits sing-box httpupgrade transport without websocket early data fields', function () {
+        const output = loadProducedJson('sing-box', {
+            type: 'vless',
+            name: 'Upgrade',
+            server: 'vless-upgrade.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            network: 'ws',
+            'ws-opts': {
+                path: '/upgrade?a=1&ed=2048&b=2',
+                headers: {
+                    Host: 'upgrade.example.com',
+                },
+                'v2ray-http-upgrade': true,
+            },
+        });
+
+        expect(output.outbounds).to.have.length(1);
+        expectSubset(output.outbounds[0], {
+            tag: 'Upgrade',
+            type: 'vless',
+            transport: {
+                type: 'httpupgrade',
+                path: '/upgrade?a=1&b=2',
+                host: 'upgrade.example.com',
+            },
+        });
+        expect(output.outbounds[0].transport).to.not.have.property(
+            'early_data_header_name',
+        );
+        expect(output.outbounds[0].transport).to.not.have.property(
+            'max_early_data',
+        );
     });
 
     it('normalizes sing-box ech PEM config strings with escaped newlines', function () {

@@ -24,6 +24,7 @@ import {
     normalizeXhttpPositiveRange,
     normalizeXhttpScalarUpperBound,
 } from '../xhttp-utils';
+import { extractPathQueryParam, getPathQueryParam } from '../transport-path';
 
 function surge_port_hopping(raw) {
     const [parts, port_hopping] =
@@ -61,6 +62,39 @@ function decodeShadowsocksUserInfo(rawUserInfoStr) {
     }
 
     return Base64.decode(decodedUserInfoStr);
+}
+
+function isNumericEarlyData(value) {
+    if (value == null || !/^\d+$/.test(`${value}`)) return false;
+
+    return Number.isSafeInteger(parseInt(`${value}`, 10));
+}
+
+function extractEarlyDataFromPath(path) {
+    const ed = getPathQueryParam(path, 'ed');
+    if (!isNumericEarlyData(ed)) {
+        return {
+            path,
+            ed: '',
+        };
+    }
+
+    return {
+        path: extractPathQueryParam(path, 'ed').path,
+        ed,
+    };
+}
+
+function parseEarlyDataSize(value) {
+    const raw = `${value}`;
+    if (!/^\d+$/.test(raw)) {
+        throw new Error(`bad WebSocket max early data size: ${value}`);
+    }
+    const parsed = parseInt(raw, 10);
+    if (!Number.isSafeInteger(parsed)) {
+        throw new Error(`bad WebSocket max early data size: ${value}`);
+    }
+    return parsed;
 }
 
 function parseWireGuardURIAddressValue(value) {
@@ -253,6 +287,8 @@ function URI_SS() {
 
         if (params['type']) {
             let httpupgrade;
+            let httpUpgradeEd = '';
+            let pathEarlyData = '';
             proxy.network = params['type'];
             if (proxy.network === 'httpupgrade') {
                 proxy.network = 'ws';
@@ -266,11 +302,18 @@ function URI_SS() {
                 };
             } else {
                 if (params['path']) {
-                    _.set(
-                        proxy,
-                        proxy.network + '-opts.path',
-                        decodeURIComponent(params['path']),
-                    );
+                    let transportPath = params['path'];
+                    if (proxy.network === 'ws') {
+                        const extracted =
+                            extractEarlyDataFromPath(transportPath);
+                        transportPath = extracted.path;
+                        if (httpupgrade) {
+                            httpUpgradeEd = extracted.ed;
+                        } else {
+                            pathEarlyData = extracted.ed;
+                        }
+                    }
+                    _.set(proxy, proxy.network + '-opts.path', transportPath);
                 }
                 if (params['host']) {
                     _.set(
@@ -280,15 +323,37 @@ function URI_SS() {
                     );
                 }
                 if (httpupgrade) {
+                    httpUpgradeEd =
+                        httpUpgradeEd ||
+                        (isNumericEarlyData(params.ed) ? `${params.ed}` : '');
                     _.set(
                         proxy,
                         proxy.network + '-opts.v2ray-http-upgrade',
                         true,
                     );
+                    if (httpUpgradeEd !== '') {
+                        _.set(
+                            proxy,
+                            proxy.network +
+                                '-opts.v2ray-http-upgrade-fast-open',
+                            true,
+                        );
+                        _.set(
+                            proxy,
+                            proxy.network + '-opts._v2ray-http-upgrade-ed',
+                            httpUpgradeEd,
+                        );
+                    }
+                } else if (proxy.network === 'ws' && pathEarlyData !== '') {
                     _.set(
                         proxy,
-                        proxy.network + '-opts.v2ray-http-upgrade-fast-open',
-                        true,
+                        proxy.network + '-opts.max-early-data',
+                        parseEarlyDataSize(pathEarlyData),
+                    );
+                    _.set(
+                        proxy,
+                        proxy.network + '-opts.early-data-header-name',
+                        'Sec-WebSocket-Protocol',
                     );
                 }
             }
@@ -673,6 +738,17 @@ function URI_VMess() {
                     // eslint-disable-next-line no-empty
                 } catch (e) {}
                 let transportPath = params.path;
+                let httpUpgradeEd = '';
+                let pathEarlyData = '';
+                if (proxy.network === 'ws' && transportPath) {
+                    const extracted = extractEarlyDataFromPath(transportPath);
+                    transportPath = extracted.path;
+                    if (httpupgrade) {
+                        httpUpgradeEd = extracted.ed;
+                    } else {
+                        pathEarlyData = extracted.ed;
+                    }
+                }
 
                 // 补上默认 path
                 if (['ws'].includes(proxy.network)) {
@@ -727,7 +803,23 @@ function URI_VMess() {
                         };
                         if (httpupgrade) {
                             opts['v2ray-http-upgrade'] = true;
-                            opts['v2ray-http-upgrade-fast-open'] = true;
+                            httpUpgradeEd =
+                                httpUpgradeEd ||
+                                (isNumericEarlyData(params.ed)
+                                    ? `${params.ed}`
+                                    : '');
+                            if (httpUpgradeEd !== '') {
+                                opts['v2ray-http-upgrade-fast-open'] = true;
+                                opts['_v2ray-http-upgrade-ed'] = httpUpgradeEd;
+                            }
+                        } else if (
+                            proxy.network === 'ws' &&
+                            pathEarlyData !== ''
+                        ) {
+                            opts['max-early-data'] =
+                                parseEarlyDataSize(pathEarlyData);
+                            opts['early-data-header-name'] =
+                                'Sec-WebSocket-Protocol';
                         }
                         proxy[`${proxy.network}-opts`] = opts;
                     }
@@ -1671,6 +1763,7 @@ function URI_VLESS() {
 
         if (proxy.network && !['tcp', 'none'].includes(proxy.network)) {
             const opts = {};
+            let pathEarlyData = '';
             const host = params.host ?? params.obfsParam;
             if (host) {
                 if (params.obfsParam) {
@@ -1703,7 +1796,13 @@ function URI_VLESS() {
                 }
             }
             if (params.path) {
-                opts.path = params.path;
+                let transportPath = params.path;
+                if (proxy.network === 'ws') {
+                    const extracted = extractEarlyDataFromPath(transportPath);
+                    transportPath = extracted.path;
+                    pathEarlyData = extracted.ed;
+                }
+                opts.path = transportPath;
             }
             if (proxy.network === 'http' && params.method) {
                 opts.method = params.method;
@@ -1714,23 +1813,13 @@ function URI_VLESS() {
             }
             if (httpupgrade) {
                 opts['v2ray-http-upgrade'] = true;
-                opts['v2ray-http-upgrade-fast-open'] = true;
             }
-            if (params.ed) {
-                const maxEarlyDataRaw = `${params.ed}`;
-                if (!/^\d+$/.test(maxEarlyDataRaw)) {
-                    throw new Error(
-                        `bad WebSocket max early data size: ${params.ed}`,
-                    );
-                }
-                const maxEarlyData = parseInt(maxEarlyDataRaw, 10);
-                if (!Number.isSafeInteger(maxEarlyData)) {
-                    throw new Error(
-                        `bad WebSocket max early data size: ${params.ed}`,
-                    );
-                }
+            const earlyDataRaw = pathEarlyData || params.ed;
+            if (earlyDataRaw) {
+                const maxEarlyData = parseEarlyDataSize(earlyDataRaw);
                 if (httpupgrade) {
-                    opts['max-early-data'] = maxEarlyData;
+                    opts['v2ray-http-upgrade-fast-open'] = true;
+                    opts['_v2ray-http-upgrade-ed'] = `${earlyDataRaw}`;
                 } else if (proxy.network === 'ws') {
                     opts['max-early-data'] = maxEarlyData;
                     opts['early-data-header-name'] =

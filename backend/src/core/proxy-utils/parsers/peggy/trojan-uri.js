@@ -17,6 +17,91 @@ const grammars = String.raw`
     if (typeof str === 'undefined' || str === null) return undefined;
     return /(TRUE)|1/i.test(str);
   }
+
+  function decodeQueryComponent(value) {
+    try {
+      return decodeURIComponent(String(value).replace(/\+/g, '%20'));
+    } catch (e) {
+      return value;
+    }
+  }
+
+  function splitQueryPart(part) {
+    const separatorIndex = part.indexOf('=');
+    if (separatorIndex === -1) {
+      return {
+        key: decodeQueryComponent(part),
+        value: '',
+      };
+    }
+
+    return {
+      key: decodeQueryComponent(part.slice(0, separatorIndex)),
+      value: decodeQueryComponent(part.slice(separatorIndex + 1)),
+    };
+  }
+
+  function getPathQueryParam(path, paramName) {
+    const queryIndex = path.indexOf('?');
+    if (queryIndex === -1) return '';
+
+    const query = path.slice(queryIndex + 1);
+    for (const part of query.split('&')) {
+      if (part === '') continue;
+
+      const parsed = splitQueryPart(part);
+      if (parsed.key === paramName && parsed.value !== '') {
+        return parsed.value;
+      }
+    }
+
+    return '';
+  }
+
+  function extractPathQueryParam(path, paramName) {
+    const queryIndex = path.indexOf('?');
+    if (queryIndex === -1) {
+      return {
+        path,
+        value: '',
+      };
+    }
+
+    const basePath = path.slice(0, queryIndex);
+    const query = path.slice(queryIndex + 1);
+    const keptParts = [];
+    let value = '';
+
+    for (const part of query.split('&')) {
+      if (part === '') continue;
+
+      const parsed = splitQueryPart(part);
+      if (parsed.key === paramName) {
+        if (value === '' && parsed.value !== '') {
+          value = parsed.value;
+        }
+        continue;
+      }
+
+      keptParts.push(part);
+    }
+
+    return {
+      path: keptParts.length > 0 ? basePath + '?' + keptParts.join('&') : basePath,
+      value,
+    };
+  }
+
+  function parseEarlyDataSize(value) {
+    if (value == null || !/^\d+$/.test(String(value))) return null;
+
+    const parsed = parseInt(String(value), 10);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+
+  function isNumericEarlyData(value) {
+    return parseEarlyDataSize(value) != null;
+  }
 }}
 
 {
@@ -96,6 +181,8 @@ params = "?" head:param tail:("&"@param)* {
   
   if (params["type"]) {
     let httpupgrade
+    let httpUpgradeEd = ''
+    let pathEarlyData = ''
     proxy.network = params["type"]
     if(proxy.network === 'httpupgrade') {
       proxy.network = 'ws'
@@ -109,14 +196,33 @@ params = "?" head:param tail:("&"@param)* {
         };
     } else {
       if (params["path"]) {
-        $set(proxy, proxy.network+"-opts.path", decodeURIComponent(params["path"]));  
+        let transportPath = params["path"]
+        if (proxy.network === 'ws') {
+          const pathEd = getPathQueryParam(transportPath, 'ed')
+          if (isNumericEarlyData(pathEd)) {
+            transportPath = extractPathQueryParam(transportPath, 'ed').path
+            if (httpupgrade) {
+              httpUpgradeEd = pathEd
+            } else {
+              pathEarlyData = pathEd
+            }
+          }
+        }
+        $set(proxy, proxy.network+"-opts.path", transportPath);
       }
       if (params["host"]) {
         $set(proxy, proxy.network+"-opts.headers.Host", decodeURIComponent(params["host"])); 
       }
       if (httpupgrade) {
+        httpUpgradeEd = httpUpgradeEd || (isNumericEarlyData(params.ed) ? String(params.ed) : '')
         $set(proxy, proxy.network+"-opts.v2ray-http-upgrade", true); 
-        $set(proxy, proxy.network+"-opts.v2ray-http-upgrade-fast-open", true); 
+        if (httpUpgradeEd !== '') {
+          $set(proxy, proxy.network+"-opts.v2ray-http-upgrade-fast-open", true);
+          $set(proxy, proxy.network+"-opts._v2ray-http-upgrade-ed", httpUpgradeEd);
+        }
+      } else if (proxy.network === 'ws' && pathEarlyData !== '') {
+        $set(proxy, proxy.network+"-opts.max-early-data", parseEarlyDataSize(pathEarlyData));
+        $set(proxy, proxy.network+"-opts.early-data-header-name", 'Sec-WebSocket-Protocol');
       }
     }
     if (['reality'].includes(params.security)) {
