@@ -139,71 +139,125 @@ function shadowsocksr(proxy) {
 function mihomo(proxy, type, opts) {
     const clashProxy = ClashMeta_Producer().produce([proxy], 'internal')?.[0];
     if (clashProxy) {
-        const localPort = opts?.localPort || proxy._localPort || 65535;
+        let localPort = opts?.localPort || proxy._localPort || 65535;
         const ipv6 = ['ipv4', 'v4-only'].includes(proxy['ip-version'])
             ? false
             : true;
-
-        const external_proxy = {
-            name: proxy.name,
-            type: 'external',
-            udp: true,
-            exec: proxy._exec || '/usr/local/bin/mihomo',
-            'local-port': localPort,
-            args: [
-                '-config',
-                Base64.encode(
-                    JSON.stringify({
-                        'mixed-port': localPort,
-                        ipv6,
-                        mode: 'global',
-                        dns: {
-                            enable: true,
-                            ipv6,
-                            'default-nameserver': opts?.defaultNameserver ||
-                                proxy._defaultNameserver || [
-                                    '180.76.76.76',
-                                    '52.80.52.52',
-                                    '119.28.28.28',
-                                    '223.6.6.6',
-                                ],
-                            nameserver: opts?.nameserver ||
-                                proxy._nameserver || [
-                                    'https://doh.pub/dns-query',
-                                    'https://dns.alidns.com/dns-query',
-                                    'https://doh-pure.onedns.net/dns-query',
-                                ],
-                        },
-                        proxies: [
-                            {
-                                ...clashProxy,
-                                name: 'proxy',
-                            },
-                        ],
-                        'proxy-groups': [
-                            {
-                                name: 'GLOBAL',
-                                type: 'select',
-                                proxies: ['proxy'],
-                            },
-                        ],
-                        ...(proxy._config || {}),
-                    }),
-                ),
-            ],
-            addresses: [],
+        const dns = {
+            enable: true,
+            ipv6,
+            'default-nameserver': opts?.defaultNameserver ||
+                proxy._defaultNameserver || [
+                    '180.76.76.76',
+                    '52.80.52.52',
+                    '119.28.28.28',
+                    '223.6.6.6',
+                ],
+            nameserver: opts?.nameserver ||
+                proxy._nameserver || [
+                    'https://doh.pub/dns-query',
+                    'https://dns.alidns.com/dns-query',
+                    'https://doh-pure.onedns.net/dns-query',
+                ],
         };
+        const merge = opts?.merge || proxy._merge;
+        let result;
+        if (merge) {
+            const socks5 = {
+                name: proxy.name,
+                type: 'socks5',
+                server: '127.0.0.1',
+                port: localPort,
+                udp: true,
+            };
+            result = surge_Producer.produce(socks5, 'socks5', opts);
 
-        // https://manual.nssurge.com/policy/external-proxy.html
-        if (isIP(proxy.server)) {
-            external_proxy.addresses.push(proxy.server);
+            opts._merged = opts._merged || {
+                name: opts?.mergeName || proxy._mergeName || 'mihomo merged',
+                exec: opts?.exec || proxy._exec || '/usr/local/bin/mihomo',
+                config: {
+                    // 最后输出的时候加
+                    // 'mixed-port':,
+                    ipv6,
+                    mode: 'global',
+                    dns,
+                    proxies: [],
+                    'proxy-groups': [
+                        {
+                            name: 'GLOBAL',
+                            type: 'fallback',
+                            proxies: [],
+                        },
+                    ],
+                    listeners: [],
+                },
+            };
+            const proxyName = `${localPort}`;
+            opts._merged.config.listeners.push({
+                name: `socks5-${localPort}`,
+                type: 'socks',
+                port: localPort,
+                listen: '127.0.0.1',
+                udp: true,
+                proxy: proxyName,
+            });
+            opts._merged.config['proxy-groups'][0].proxies.push(proxyName);
+            opts._merged.config.proxies.push({
+                ...clashProxy,
+                name: proxyName,
+            });
+            opts._merged.config = {
+                ...opts._merged.config,
+                ...(opts?.config || proxy._config || {}),
+            };
         } else {
-            $.warn(
-                `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}`,
-            );
+            const external_proxy = {
+                name: proxy.name,
+                type: 'external',
+                udp: true,
+                exec: opts?.exec || proxy._exec || '/usr/local/bin/mihomo',
+                'local-port': localPort,
+                args: [
+                    '-config',
+                    Base64.encode(
+                        JSON.stringify({
+                            'mixed-port': localPort,
+                            ipv6,
+                            mode: 'global',
+                            dns,
+                            proxies: [
+                                {
+                                    ...clashProxy,
+                                    name: 'proxy',
+                                },
+                            ],
+                            'proxy-groups': [
+                                {
+                                    name: 'GLOBAL',
+                                    type: 'select',
+                                    proxies: ['proxy'],
+                                },
+                            ],
+                            ...(opts?.config || proxy._config || {}),
+                        }),
+                    ),
+                ],
+                addresses: [],
+            };
+
+            // https://manual.nssurge.com/policy/external-proxy.html
+            if (isIP(proxy.server)) {
+                external_proxy.addresses.push(proxy.server);
+            } else {
+                $.warn(
+                    `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}`,
+                );
+            }
+
+            result = external(external_proxy);
         }
         opts.localPort = localPort - 1;
-        return external(external_proxy);
+        return result;
     }
 }
 

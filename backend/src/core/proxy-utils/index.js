@@ -31,6 +31,7 @@ import {
 import { doh } from '@/utils/dns';
 import JSON5 from 'json5';
 import { hex_md5 } from '@/vendor/md5';
+import SurgeMac_Producer from './producers/surgemac';
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
@@ -396,6 +397,31 @@ function produce(proxies, targetPlatform, type, opts = {}) {
                 }
             })
             .filter((line) => line.length > 0);
+        if (opts._merged && opts.localPort >= 1) {
+            list.push(
+                SurgeMac_Producer().produce(
+                    {
+                        name: opts._merged.name,
+                        type: 'external',
+                        udp: true,
+                        exec: opts._merged.exec,
+                        'local-port': opts.localPort,
+                        args: [
+                            '-config',
+                            Base64.encode(
+                                JSON.stringify({
+                                    ...opts._merged.config,
+                                    'mixed-port': opts.localPort,
+                                }),
+                            ),
+                        ],
+                        addresses: [],
+                    },
+                    type,
+                    opts,
+                ),
+            );
+        }
         list = type === 'internal' ? list : list.join('\n');
         if (
             targetPlatform.startsWith('Surge') &&
