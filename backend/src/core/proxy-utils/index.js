@@ -89,7 +89,7 @@ function parse(raw) {
         if (['vless', 'vmess'].includes(proxy.type)) {
             const isProxyUUIDValid = isValidUUID(proxy.uuid);
             if (!isProxyUUIDValid) {
-                $.info(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
+                $.warn(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
             }
             // return isProxyUUIDValid;
         } else if (['hysteria2'].includes(proxy.type)) {
@@ -281,7 +281,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         if (['vless', 'vmess'].includes(proxy.type)) {
             const isProxyUUIDValid = isValidUUID(proxy.uuid);
             if (!isProxyUUIDValid)
-                $.info(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
+                $.warn(`UUID may be invalid: ${proxy.name} ${proxy.uuid}`);
             // return isProxyUUIDValid;
             const isVlessType = proxy.type === 'vless';
             const realityChecks = isVlessType

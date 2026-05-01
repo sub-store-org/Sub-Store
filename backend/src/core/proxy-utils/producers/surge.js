@@ -4,6 +4,17 @@ import $ from '@/core/app';
 
 const targetPlatform = 'Surge';
 
+export class SurgeUnsupportedProxyError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'SurgeUnsupportedProxyError';
+    }
+}
+
+function unsupported(message) {
+    return new SurgeUnsupportedProxyError(message);
+}
+
 const ipVersions = {
     dual: 'dual',
     ipv4: 'v4-only',
@@ -18,7 +29,7 @@ export default function Surge_Producer() {
             ['ws'].includes(proxy.network) &&
             proxy['ws-opts']?.['v2ray-http-upgrade']
         ) {
-            throw new Error(
+            throw unsupported(
                 `Platform ${targetPlatform} does not support network ${proxy.network} with http upgrade`,
             );
         }
@@ -62,14 +73,14 @@ export default function Surge_Producer() {
                 (!['tcp'].includes(proxy.network) ||
                     (['tcp'].includes(proxy.network) && proxy['reality-opts']))
             ) {
-                throw new Error(
+                throw unsupported(
                     `Platform ${targetPlatform} does not support proxy type ${proxy.type} with network or reality`,
                 );
             }
 
             return anytls(proxy);
         }
-        throw new Error(
+        throw unsupported(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
         );
     };
@@ -114,7 +125,7 @@ function shadowsocks(proxy) {
             '2022-blake3-aes-256-gcm',
         ].includes(proxy.cipher)
     ) {
-        throw new Error(`cipher ${proxy.cipher} is not supported`);
+        throw unsupported(`cipher ${proxy.cipher} is not supported`);
     }
     result.append(`,encrypt-method=${proxy.cipher}`);
     result.appendIfPresent(`,password="${proxy.password}"`, 'password');
@@ -140,7 +151,7 @@ function shadowsocks(proxy) {
                 'plugin-opts.path',
             );
         } else if (!['shadow-tls'].includes(proxy.plugin)) {
-            throw new Error(`plugin ${proxy.plugin} is not supported`);
+            throw unsupported(`plugin ${proxy.plugin} is not supported`);
         }
     }
 
@@ -194,7 +205,7 @@ function shadowsocks(proxy) {
             }
             if (version) {
                 if (version < 2) {
-                    throw new Error(
+                    throw unsupported(
                         `shadow-tls version ${version} is not supported`,
                     );
                 }
@@ -593,7 +604,7 @@ function ssh(proxy) {
 }
 function http(proxy) {
     if (proxy.headers && Object.keys(proxy.headers).length > 0) {
-        throw new Error(`headers is unsupported`);
+        throw unsupported(`headers is unsupported`);
     }
     const result = new Result(proxy);
     const type = proxy.tls ? 'https' : 'http';
@@ -1166,7 +1177,7 @@ function wireguard_surge(proxy) {
 
 function hysteria2(proxy) {
     if (proxy['obfs-password'] && proxy.obfs != 'salamander') {
-        throw new Error(`only salamander obfs is supported`);
+        throw unsupported(`only salamander obfs is supported`);
     }
 
     const result = new Result(proxy);
@@ -1300,9 +1311,9 @@ function handleTransport(result, proxy, includeUnsupportedProxy) {
                 ['tcp'].includes(proxy.network) &&
                 proxy['reality-opts']
             ) {
-                throw new Error(`reality is unsupported`);
+                throw unsupported(`reality is unsupported`);
             } else if (!['tcp'].includes(proxy.network)) {
-                throw new Error(`network ${proxy.network} is unsupported`);
+                throw unsupported(`network ${proxy.network} is unsupported`);
             }
         }
     }

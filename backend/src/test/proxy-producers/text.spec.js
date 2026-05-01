@@ -610,6 +610,27 @@ describe('Proxy text producers', function () {
         expect(output).to.include('udp-relay=true');
     });
 
+    it('does not wrap malformed SurgeMac nodes with Mihomo external mode', function () {
+        const output = ProxyUtils.produce(
+            [
+                {
+                    type: 'ss',
+                    name: 'Broken Obfs',
+                    server: 'ss.example.com',
+                    port: 8388,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    plugin: 'obfs',
+                },
+            ],
+            'SurgeMac',
+            'external',
+            { useMihomoExternal: true, localPort: 16666 },
+        );
+
+        expect(output).to.equal('');
+    });
+
     it('forces SurgeMac nodes with _mihomoExternal to use Mihomo external mode', function () {
         const output = produceExternal(
             'SurgeMac',

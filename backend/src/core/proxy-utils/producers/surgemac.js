@@ -1,6 +1,6 @@
 import { Base64 } from 'js-base64';
 import { Result, isPresent } from './utils';
-import Surge_Producer from './surge';
+import Surge_Producer, { SurgeUnsupportedProxyError } from './surge';
 import ClashMeta_Producer from './clashmeta';
 import { isIPv4, isIPv6 } from '@/utils';
 import $ from '@/core/app';
@@ -23,16 +23,27 @@ export default function SurgeMac_Producer() {
                 try {
                     return surge_Producer.produce(proxy, type, opts);
                 } catch (e) {
-                    if (opts.useMihomoExternal) {
+                    if (
+                        opts.useMihomoExternal &&
+                        e instanceof SurgeUnsupportedProxyError
+                    ) {
+                        const output = mihomo(proxy, type, opts);
+                        if (!output) {
+                            throw e;
+                        }
                         $.log(
                             `${proxy.name} is not supported on ${targetPlatform}, try to use Mihomo(SurgeMac - External Proxy Program) instead`,
                         );
-                        return mihomo(proxy, type, opts);
-                    } else {
+                        return output;
+                    }
+
+                    if (e instanceof SurgeUnsupportedProxyError) {
                         throw new Error(
-                            `Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议`,
+                            `${e.message}. Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议`,
                         );
                     }
+
+                    throw e;
                 }
             }
         }
@@ -187,7 +198,7 @@ function mihomo(proxy, type, opts) {
         if (isIP(proxy.server)) {
             external_proxy.addresses.push(proxy.server);
         } else {
-            $.log(
+            $.warn(
                 `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}`,
             );
         }
