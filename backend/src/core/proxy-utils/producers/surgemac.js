@@ -132,6 +132,7 @@ function mihomo(proxy, type, opts) {
         const ipv6 = ['ipv4', 'v4-only'].includes(proxy['ip-version'])
             ? false
             : true;
+
         const external_proxy = {
             name: proxy.name,
             type: 'external',
@@ -175,6 +176,7 @@ function mihomo(proxy, type, opts) {
                                 proxies: ['proxy'],
                             },
                         ],
+                        ...(proxy._config || {}),
                     }),
                 ),
             ],
