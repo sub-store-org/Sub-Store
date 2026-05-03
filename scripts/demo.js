@@ -36,6 +36,12 @@ function operator(proxies = [], targetPlatform, context) {
   // 23. `interface-name` 指定流量出站接口 只给 Surge 用的话, `interface` 也可以
   // 24. Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议, 详见 https://t.me/zhetengsha/1735 . 设置节点字段 `_mihomoExternal` 为 `true` 可强制指定使用 mihomo External Proxy Program 输出该节点. 节点字段 _exec 为 mihomo 路径, 默认 /usr/local/bin/mihomo; 节点字段 _localPort 端口为初始端口号, 逐个递减, 默认为 65535. _merge 为开启仅一个 mihomo 进程+多个 listeners 的模式, 此时仅有一个 mihomo External Proxy Program, 节点会转成 SOCKS5, _mergeName 可设置这个 mihomo 节点的名字(默认为 mihomo merged); _config 对象可覆盖默认配置, _defaultNameserver(默认为 [ '180.76.76.76', '52.80.52.52', '119.28.28.28', '223.6.6.6' ]) 和 _nameserver (默认为 [ 'https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query', 'https://doh-pure.onedns.net/dns-query' ]) 为数组 用于自定义 mihomo 的 default-nameserver 和 nameserver
   // 25. VLESS xhttp URI 的 extra 默认会拆成两部分处理: mihomo 已支持的字段会解析到节点的结构化字段并在输出 URI 时重新组装; extra 里 mihomo 还不支持的字段只会保存在 `_extra_unsupported` 对象里. 输出 URI 时会用“当前结构化字段 + _extra_unsupported”一起构造 extra, 这样既不会让旧 raw extra 覆盖后来修改过的 mihomo 字段, 也能避免 VLESS URI -> VLESS URI 的流程里把暂不支持的 extra 字段丢掉. 但如果节点上显式设置了 `_extra`, 且它是字符串或普通对象, 那么输出 URI 时 extra 会直接使用 `_extra` (对象会自动转成 JSON 字符串), 不再重组结构化字段. 这是为了方便手动自定义 extra, 不用再一个个同步那些本来会影响 extra 的其它字段
+  // 修改/设置 extra 举例:
+  // 如果是你写的全是 mihomo 已经支持的格式 就直接按 mihomo 的设置
+  // 比如
+  // `$server['xhttp-opts']['download-settings'] = {}`
+  // 如果有 mihomo 不支持的字段可以手动设到 `_extra_unsupported` 字段里, 会自动重组
+  // 如果你是 xray -> xray 用, 可以直接设置 `$server._extra = { }` 或 `$server._extra = ""`
   // 26. `_qx_obfs_http` 为 QX 的 http obfs 原始值, 例如 `http`, `vmess-http`, `vemss-http`, `shadowsocks-http`, 用于 QX 输入输出时保留原始写法. `vemss-http` 应该是 huaqian 的 typo, 没测过, 反正也支持, 报错就自己改成 `vmess-http` 吧
   // 27. WireGuard 支持 `ip-cidr`(IPv4 前缀长度) 和 `ipv6-cidr`(IPv6 前缀长度) 字段: 内部会保存前缀长度, 若未设置则默认分别为 `32` 和 `128`. 输出到 `mihomo`/`Shadowrocket`/`sing-box`/`URI` 时会带上该后缀
 
@@ -287,6 +293,9 @@ function operator(proxies = [], targetPlatform, context) {
   // })
   // yaml.proxies.unshift(...clashMetaProxies)
   // $content = ProxyUtils.yaml.dump(yaml)
+
+  // 一个 Base64 编码的例子:
+  // $content = ProxyUtils.Base64.encode($content ?? $files[0])
 
   // { $content, $files, $options } will be passed to the next operator
   // $content is the final content of the file
