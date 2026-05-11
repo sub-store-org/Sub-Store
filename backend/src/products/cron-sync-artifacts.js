@@ -269,6 +269,6 @@ async function doSync(arg = {}) {
         }
     } catch (e) {
         $.notify('🌍 Sub-Store', '同步配置失败', `原因：${e.message ?? e}`);
-        $.error(`无法同步配置到 Gist，原因：${e}`);
+        $.error(`无法同步配置到 Gist，原因：${e.stack ?? e.message ?? e}`);
     }
 }

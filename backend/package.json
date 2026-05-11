@@ -1,8 +1,9 @@
 {
   "name": "sub-store",
-  "version": "2.22.26",
+  "version": "2.22.27",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.",
   "main": "src/main.js",
+  "packageManager": "pnpm@11.0.9",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "test": "mocha src/test/**/*.spec.js --require @babel/register --recursive",
@@ -54,7 +55,7 @@
     "chai": "^4.3.6",
     "esbuild": "^0.19.8",
     "eslint": "^8.16.0",
-    "mocha": "^10.0.0",
+    "mocha": "^11.7.5",
     "nodemon": "^2.0.16",
     "peggy": "^2.0.1",
     "prettier": "2.6.2"

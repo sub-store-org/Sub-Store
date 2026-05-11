@@ -323,16 +323,38 @@ async function syncToGist(files, options = {}) {
     if (!gistToken) {
         return Promise.reject('未设置 GitHub Token！');
     }
+    const uploadSummary = summarizeGistUploadFiles(files);
+    $.info(
+        `准备同步 Gist: 文件数 ${uploadSummary.count}, 总大小 ${formatBytes(
+            uploadSummary.totalBytes,
+        )}, 最大文件 ${
+            uploadSummary.largestFilename || '-'
+        } (${formatBytes(uploadSummary.largestBytes)})`,
+    );
     const manager = new Gist({
         token: gistToken,
         key: ARTIFACT_REPOSITORY_KEY,
         syncPlatform,
     });
-    const res = await manager.upload(files, {
-        ...options,
-        emptyFileFallback:
-            options.emptyFileFallback ?? getArtifactGistEmptyFileFallback(),
-    });
+    let res;
+    try {
+        res = await manager.upload(files, {
+            ...options,
+            emptyFileFallback:
+                options.emptyFileFallback ?? getArtifactGistEmptyFileFallback(),
+        });
+    } catch (error) {
+        $.error(
+            `同步 Gist 请求失败: 文件数 ${uploadSummary.count}, 总大小 ${formatBytes(
+                uploadSummary.totalBytes,
+            )}, 最大文件 ${
+                uploadSummary.largestFilename || '-'
+            } (${formatBytes(uploadSummary.largestBytes)}), 原因: ${
+                error.message ?? error
+            }`,
+        );
+        throw error;
+    }
     let body = {};
     try {
         body = JSON.parse(res.body);
@@ -351,6 +373,42 @@ async function syncToGist(files, options = {}) {
     }
     $.write(settings, SETTINGS_KEY);
     return res;
+}
+
+function summarizeGistUploadFiles(files) {
+    return Object.entries(files || {}).reduce(
+        (summary, [filename, file]) => {
+            const content = file?.content;
+            if (typeof content !== 'string') return summary;
+            const bytes = stringByteLength(content);
+            summary.count++;
+            summary.totalBytes += bytes;
+            if (bytes > summary.largestBytes) {
+                summary.largestBytes = bytes;
+                summary.largestFilename = filename;
+            }
+            return summary;
+        },
+        {
+            count: 0,
+            totalBytes: 0,
+            largestBytes: 0,
+            largestFilename: '',
+        },
+    );
+}
+
+function stringByteLength(value) {
+    if (typeof TextEncoder !== 'undefined') {
+        return new TextEncoder().encode(value).length;
+    }
+    return unescape(encodeURIComponent(value)).length;
+}
+
+function formatBytes(size) {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export { syncToGist };

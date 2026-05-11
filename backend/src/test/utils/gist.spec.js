@@ -3,7 +3,10 @@ import { describe, it } from 'mocha';
 
 import $ from '@/core/app';
 import { SETTINGS_KEY } from '@/constants';
-import Gist, { getGithubGistBaseURL } from '@/utils/gist';
+import Gist, {
+    describeGistApiErrorResponse,
+    getGithubGistBaseURL,
+} from '@/utils/gist';
 import { syncToGist } from '@/restful/artifacts';
 
 describe('Gist GitHub API URL', function () {
@@ -34,6 +37,20 @@ describe('Gist GitHub API URL', function () {
                 githubProxy: 'https://proxy.example.com/',
             }),
         ).to.equal('https://litegist.example.com/api');
+    });
+
+    it('includes HTTP status when describing Gist API errors', function () {
+        expect(
+            describeGistApiErrorResponse({
+                statusCode: 500,
+                body: JSON.stringify({
+                    message:
+                        'Internal Server Error: Error: D1 query budget exceeded',
+                }),
+            }),
+        ).to.equal(
+            'ERROR: HTTP 500: Internal Server Error: Error: D1 query budget exceeded',
+        );
     });
 
     it('keeps an existing Gist alive with a fallback file when a delete would empty it', async function () {
@@ -143,9 +160,11 @@ describe('Gist GitHub API URL', function () {
     it('passes the artifact placeholder fallback to syncToGist by default', async function () {
         const originalRead = $.read.bind($);
         const originalWrite = $.write.bind($);
+        const originalInfo = $.info.bind($);
         const originalUpload = Gist.prototype.upload;
         let capturedOptions;
         let writtenSettings;
+        const infoMessages = [];
 
         $.read = (key) => {
             if (key === SETTINGS_KEY) {
@@ -161,6 +180,9 @@ describe('Gist GitHub API URL', function () {
                 return true;
             }
             return originalWrite(data, key);
+        };
+        $.info = (message) => {
+            infoMessages.push(message);
         };
         Gist.prototype.upload = async function (_, options) {
             capturedOptions = options;
@@ -181,6 +203,7 @@ describe('Gist GitHub API URL', function () {
         } finally {
             $.read = originalRead;
             $.write = originalWrite;
+            $.info = originalInfo;
             Gist.prototype.upload = originalUpload;
         }
 
@@ -193,5 +216,8 @@ describe('Gist GitHub API URL', function () {
             'https://gist.example.com/sub-store',
         );
         expect(writtenSettings.artifactStoreStatus).to.equal('VALID');
+        expect(infoMessages).to.include(
+            '准备同步 Gist: 文件数 1, 总大小 12 B, 最大文件 artifact (12 B)',
+        );
     });
 });

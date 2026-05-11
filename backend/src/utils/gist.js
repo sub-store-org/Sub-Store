@@ -5,6 +5,22 @@ import { SETTINGS_KEY } from '@/constants';
 
 const DEFAULT_GITHUB_API_URL = 'https://api.github.com';
 
+function describeGistApiErrorResponse(resp) {
+    let body;
+    try {
+        body = JSON.parse(resp.body);
+    } catch (e) {
+        //
+    }
+    const message =
+        body?.message?.error ??
+        body?.error ??
+        body?.message ??
+        resp.body ??
+        'Unknown error';
+    return `ERROR: HTTP ${resp.statusCode}: ${message}`;
+}
+
 function normalizeApiUrl(url, fallback = DEFAULT_GITHUB_API_URL) {
     const normalizedUrl = String(url ?? '').trim() || fallback;
 
@@ -27,6 +43,8 @@ export function getGithubGistBaseURL({ githubApiUrl, githubProxy } = {}) {
         normalizedGithubProxy ? `${normalizedGithubProxy}/` : ''
     }${DEFAULT_GITHUB_API_URL}`;
 }
+
+export { describeGistApiErrorResponse };
 
 /**
  * Gist backup
@@ -81,19 +99,8 @@ export default class Gist {
                 events: {
                     onResponse: (resp) => {
                         if (/^[45]/.test(String(resp.statusCode))) {
-                            let body;
-                            try {
-                                body = JSON.parse(resp.body);
-                            } catch (e) {
-                                //
-                            }
                             return Promise.reject(
-                                `ERROR: ${
-                                    body?.message?.error ??
-                                    body?.error ??
-                                    body?.message ??
-                                    resp.body
-                                }`,
+                                describeGistApiErrorResponse(resp),
                             );
                         } else {
                             return resp;
@@ -131,19 +138,8 @@ export default class Gist {
                 events: {
                     onResponse: (resp) => {
                         if (/^[45]/.test(String(resp.statusCode))) {
-                            let body;
-                            try {
-                                body = JSON.parse(resp.body);
-                            } catch (e) {
-                                //
-                            }
                             return Promise.reject(
-                                `ERROR: ${
-                                    body?.message?.error ??
-                                    body?.error ??
-                                    body?.message ??
-                                    resp.body
-                                }`,
+                                describeGistApiErrorResponse(resp),
                             );
                         } else {
                             return resp;

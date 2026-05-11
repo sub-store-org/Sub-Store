@@ -22,10 +22,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20"
+          node-version-file: ".node-version"
       - name: Install dependencies
         run: |
-          npm install -g pnpm
+          corepack enable
           cd backend && pnpm i --no-frozen-lockfile
       - name: Sync latest mihomo version
         run: |
