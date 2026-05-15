@@ -2289,6 +2289,96 @@ describe('Proxy structured producers', function () {
         expect(outbound.plugin_opts).to.include('mux=0');
     });
 
+    it('maps mihomo udp capability flags to sing-box network only when disabling UDP', function () {
+        const output = loadProducedJson('sing-box', [
+            {
+                type: 'ss',
+                name: 'SS UDP On',
+                server: 'ss-on.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+                udp: true,
+            },
+            {
+                type: 'ss',
+                name: 'SS UDP Off',
+                server: 'ss-off.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+                udp: false,
+            },
+            {
+                type: 'ss',
+                name: 'SS Network Override',
+                server: 'ss-override.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+                udp: false,
+                _network: 'udp',
+            },
+        ]);
+
+        const udpOn = output.outbounds.find((item) => item.tag === 'SS UDP On');
+        const udpOff = output.outbounds.find(
+            (item) => item.tag === 'SS UDP Off',
+        );
+        const networkOverride = output.outbounds.find(
+            (item) => item.tag === 'SS Network Override',
+        );
+
+        expect(udpOn).to.not.have.property('network');
+        expect(udpOff).to.have.property('network', 'tcp');
+        expect(networkOverride).to.have.property('network', 'udp');
+    });
+
+    it('does not emit sing-box network for protocols without sing-box network options', function () {
+        const output = loadProducedJson('sing-box', [
+            {
+                type: 'anytls',
+                name: 'AnyTLS No Network',
+                server: 'anytls.example.com',
+                port: 443,
+                password: 'secret',
+                udp: false,
+                _network: 'udp',
+            },
+            {
+                type: 'tailscale',
+                name: 'Tailscale No Network',
+                udp: false,
+                _network: 'udp',
+            },
+            {
+                type: 'wireguard',
+                name: 'WireGuard No Network',
+                server: 'wg.example.com',
+                port: 51820,
+                'private-key': 'private-key',
+                'public-key': 'public-key',
+                ip: '10.0.0.2',
+                udp: false,
+                _network: 'udp',
+            },
+        ]);
+
+        const anytls = output.outbounds.find(
+            (item) => item.tag === 'AnyTLS No Network',
+        );
+        const tailscale = output.endpoints.find(
+            (item) => item.tag === 'Tailscale No Network',
+        );
+        const wireguard = output.endpoints.find(
+            (item) => item.tag === 'WireGuard No Network',
+        );
+
+        expect(anytls).to.not.have.property('network');
+        expect(tailscale).to.not.have.property('network');
+        expect(wireguard).to.not.have.property('network');
+    });
+
     it('emits sing-box outbounds with reality tls and websocket transport', function () {
         const output = loadProducedJson('sing-box', {
             type: 'vless',
