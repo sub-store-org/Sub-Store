@@ -150,6 +150,9 @@ async function downloadSubscription(req, res) {
             params: req.params,
             headers: req.headers,
             body: req.body,
+            socket: {
+                remoteAddress: req.socket?.remoteAddress,
+            },
         },
     };
     if (req.query.$options) {
@@ -481,6 +484,9 @@ async function downloadCollection(req, res) {
             params: req.params,
             headers: req.headers,
             body: req.body,
+            socket: {
+                remoteAddress: req.socket?.remoteAddress,
+            },
         },
     };
     if (req.query.$options) {

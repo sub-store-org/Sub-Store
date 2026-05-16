@@ -76,6 +76,9 @@ function operator(proxies = [], targetPlatform, context) {
   //     params,
   //     headers,
   //     body,
+  //     scoket: {
+  //         remoteAddress
+  //     }
   // }
   // console.log($options)
 

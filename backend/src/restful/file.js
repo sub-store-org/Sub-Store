@@ -69,6 +69,9 @@ async function getFile(req, res, next) {
             params: req.params,
             headers: req.headers,
             body: req.body,
+            socket: {
+                remoteAddress: req.socket?.remoteAddress,
+            },
         },
     };
     if (req.query.$options) {
