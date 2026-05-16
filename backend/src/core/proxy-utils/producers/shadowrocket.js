@@ -36,6 +36,7 @@ export default function Shadowrocket_Producer() {
                         'naive',
                         'masque',
                         'openvpn',
+                        'gost-relay',
                     ].includes(proxy.type)
                 ) {
                     return false;
