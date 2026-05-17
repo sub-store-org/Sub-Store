@@ -453,6 +453,36 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('quotes Surge SSH private-key and TLS client-cert keystore values', function () {
+        const output = ProxyUtils.produce(
+            [
+                {
+                    type: 'ssh',
+                    name: 'Surge SSH Key',
+                    server: 'ssh.example.com',
+                    port: 22,
+                    username: 'user',
+                    'keystore-private-key': "'ssh-key'",
+                },
+                {
+                    type: 'http',
+                    name: 'Surge HTTPS Client Cert',
+                    server: 'https.example.com',
+                    port: 443,
+                    tls: true,
+                    'keystore-client-cert': "'client-cert'",
+                },
+            ],
+            'Surge',
+            'external',
+        );
+
+        expect(output.split('\n')).to.deep.equal([
+            'Surge SSH Key=ssh,ssh.example.com,22,username="user",private-key="ssh-key"',
+            'Surge HTTPS Client Cert=https,https.example.com,443,client-cert="client-cert"',
+        ]);
+    });
+
     it('produces Surge root headers for HTTP, HTTPS, HTTP/2 CONNECT, and TrustTunnel', function () {
         const output = ProxyUtils.produce(
             [

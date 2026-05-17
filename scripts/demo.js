@@ -23,6 +23,9 @@ function operator(proxies = [], targetPlatform, context) {
   // 10. `sni` 在某些协议里会自动与 `servername` 转换
   // 11. 读取节点的 ca-str 和 _ca (后端文件路径) 字段, 自动计算 fingerprint (参考 https://t.me/zhetengsha/1512)
   // 12. 以 Surge 为例, 最新的参数一般我都会跟进, 以 Surge 文档为例, 一些常用的: TUIC/Hysteria 2 的 `ecn`, Snell 的 `reuse` 连接复用, QUIC 策略 block-quic`, Hysteria 2 下载带宽 `down`
+  //     Surge 的 `private-key`/`client-cert` 对应内部字段 `keystore-private-key`/`keystore-client-cert`, 值都是 Surge `[Keystore]` 里的密钥库条目名, 不是证书/密钥内容或本地路径
+  //     例如: $server['keystore-private-key'] = 'ssh-key-name' 输出 Surge SSH 时会生成 private-key="ssh-key-name"
+  //     例如: $server['keystore-client-cert'] = 'client-cert-name' 输出 Surge TLS 代理时会生成 client-cert="client-cert-name"
   // 13. `test-url` 为测延迟链接, `test-timeout` 为测延迟超时
   // 14. `ports` 为端口跳跃, `hop-interval` 变换端口号的时间间隔
   // 15. `ip-version` 设置节点使用 IP 版本，兼容各家的值. 会进行内部转换. sing-box 以外: 若无法匹配则使用原始值. sing-box: 需有匹配且节点上设置 `_dns_server` 字段, 将自动设置 `domain_resolver.server`. 同时, `sing-box` 支持使用完整的 `_domain_resolver` 结构设置 `domain_resolver` 字段

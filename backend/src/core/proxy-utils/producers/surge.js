@@ -23,6 +23,51 @@ const ipVersions = {
     'ipv6-prefer': 'prefer-v6',
 };
 
+function stripSurgeQuotes(value) {
+    if (typeof value !== 'string') return value;
+
+    const trimmed = value.trim();
+    const quote = trimmed[0];
+    if (
+        (quote === '"' || quote === "'") &&
+        trimmed[trimmed.length - 1] === quote
+    ) {
+        return trimmed.slice(1, -1).replace(/\\(["'\\])/g, '$1');
+    }
+
+    return trimmed.replace(/\\(["'\\])/g, '$1');
+}
+
+function quoteSurgeValue(value) {
+    return `"${String(stripSurgeQuotes(value))
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')}"`;
+}
+
+function appendClientCert(result, proxy) {
+    const clientCert = isPresent(proxy, 'keystore-client-cert')
+        ? proxy['keystore-client-cert']
+        : proxy['client-cert'];
+    if (
+        isPresent(proxy, 'keystore-client-cert') ||
+        isPresent(proxy, 'client-cert')
+    ) {
+        result.append(`,client-cert=${quoteSurgeValue(clientCert)}`);
+    }
+}
+
+function appendSshPrivateKey(result, proxy) {
+    const privateKey = isPresent(proxy, 'keystore-private-key')
+        ? proxy['keystore-private-key']
+        : proxy['private-key'];
+    if (
+        isPresent(proxy, 'keystore-private-key') ||
+        isPresent(proxy, 'private-key')
+    ) {
+        result.append(`,private-key=${quoteSurgeValue(privateKey)}`);
+    }
+}
+
 export default function Surge_Producer() {
     const produce = (proxy, type, opts = {}) => {
         if (
@@ -264,6 +309,7 @@ function trojan(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -341,6 +387,7 @@ function anytls(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -408,6 +455,7 @@ function trusttunnel(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -472,6 +520,7 @@ function h2Connect(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
 
     if (proxy.tfo) {
         $.info(`Option tfo is not supported by Surge, thus omitted`);
@@ -556,6 +605,7 @@ function vmess(proxy, includeUnsupportedProxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -617,10 +667,7 @@ function ssh(proxy) {
 
     // https://manual.nssurge.com/policy/ssh.html
     // 需配合 Keystore
-    result.appendIfPresent(
-        `,private-key=${proxy['keystore-private-key']}`,
-        'keystore-private-key',
-    );
+    appendSshPrivateKey(result, proxy);
     result.appendIfPresent(
         `,idle-timeout=${proxy['idle-timeout']}`,
         'idle-timeout',
@@ -702,6 +749,7 @@ function http(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -830,6 +878,7 @@ function socks5(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
 
     // tfo
     if (proxy.tfo) {
@@ -1029,6 +1078,7 @@ function tuic(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
 
     // tls fingerprint
     result.appendIfPresent(
@@ -1304,6 +1354,7 @@ function hysteria2(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
+    appendClientCert(result, proxy);
     result.appendIfPresent(
         `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
         'tls-fingerprint',
