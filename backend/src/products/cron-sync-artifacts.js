@@ -8,7 +8,7 @@ import {
 import $ from '@/core/app';
 import { produceArtifact, uploadArtifactBatches } from '@/restful/sync';
 import { findByName } from '@/utils/database';
-import { hasCronArtifactSyncCredentials } from '@/products/cron-sync-artifacts-eligibility';
+import { hasGistSyncCredentials } from '@/utils/gist';
 
 !(async function () {
     let arg;
@@ -36,7 +36,7 @@ import { hasCronArtifactSyncCredentials } from '@/products/cron-sync-artifacts-e
     } else {
         const settings = $.read(SETTINGS_KEY);
         // if GitHub token is not configured
-        if (!hasCronArtifactSyncCredentials(settings)) return;
+        if (!hasGistSyncCredentials(settings)) return;
 
         const artifacts = $.read(ARTIFACTS_KEY);
         if (!artifacts || artifacts.length === 0) return;

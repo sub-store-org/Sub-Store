@@ -6,6 +6,7 @@ import { SETTINGS_KEY } from '@/constants';
 import Gist, {
     describeGistApiErrorResponse,
     getGithubGistBaseURL,
+    hasGistSyncCredentials,
 } from '@/utils/gist';
 import {
     normalizeArtifactSyncBatchSize,
@@ -55,6 +56,23 @@ describe('Gist GitHub API URL', function () {
         ).to.equal(
             'ERROR: HTTP 500: Internal Server Error: Error: D1 query budget exceeded',
         );
+    });
+
+    it('allows token-only Gist-compatible sync settings', function () {
+        expect(
+            hasGistSyncCredentials({
+                gistToken: 'token',
+                githubUser: '',
+            }),
+        ).to.equal(true);
+    });
+
+    it('skips sync when the token is missing', function () {
+        expect(
+            hasGistSyncCredentials({
+                githubUser: 'xream',
+            }),
+        ).to.equal(false);
     });
 
     it('normalizes artifact sync batch size', function () {

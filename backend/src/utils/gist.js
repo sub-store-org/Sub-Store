@@ -44,6 +44,10 @@ export function getGithubGistBaseURL({ githubApiUrl, githubProxy } = {}) {
     }${DEFAULT_GITHUB_API_URL}`;
 }
 
+export function hasGistSyncCredentials(settings = {}) {
+    return Boolean(settings?.gistToken);
+}
+
 export { describeGistApiErrorResponse };
 
 /**
