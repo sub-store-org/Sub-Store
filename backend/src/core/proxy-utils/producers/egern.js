@@ -181,6 +181,14 @@ export default function Egern_Producer() {
                             server: proxy.server,
                             port: proxy.port,
                             auth: proxy.password,
+                            ...(isPresent(proxy, 'up')
+                                ? {
+                                      bandwidth: parseInt(
+                                          `${proxy.up}`.match(/\d+/)?.[0] || 0,
+                                          10,
+                                      ),
+                                  }
+                                : {}),
                             tfo: proxy.tfo || proxy['fast-open'],
                             udp_relay:
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,

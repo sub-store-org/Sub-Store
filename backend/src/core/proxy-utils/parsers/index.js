@@ -2104,6 +2104,12 @@ function URI_Hysteria2() {
         if (/^\d+$/.test(keepalive)) {
             proxy['keepalive'] = parseInt(`${keepalive}`, 10);
         }
+        if (params.upmbps) {
+            proxy.up = params.upmbps;
+        }
+        if (params.downmbps) {
+            proxy.down = params.downmbps;
+        }
 
         return proxy;
     };

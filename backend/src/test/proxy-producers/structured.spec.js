@@ -1341,6 +1341,34 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('emits Egern Hysteria2 upload bandwidth as bandwidth', function () {
+        const proxy = {
+            type: 'hysteria2',
+            name: 'Egern Hysteria2 Bandwidth',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            up: '50 Mbps',
+            sni: 'peer.example.com',
+        };
+
+        const internal = produceInternal('Egern', proxy)[0];
+        const external = loadProducedYaml('Egern', proxy);
+
+        expectSubset(internal, {
+            hysteria2: {
+                name: 'Egern Hysteria2 Bandwidth',
+                bandwidth: 50,
+            },
+        });
+        expectSubset(external.proxies[0], {
+            hysteria2: {
+                name: 'Egern Hysteria2 Bandwidth',
+                bandwidth: 50,
+            },
+        });
+    });
+
     it('keeps Mihomo HTTP headers and filters unsupported h2-connect/trusttunnel header variants', function () {
         const { result, errors } = captureErrors(() =>
             produceInternal('Mihomo', [

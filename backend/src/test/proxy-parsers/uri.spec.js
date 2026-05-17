@@ -496,6 +496,22 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
+        it('parses Hysteria2 URI throughput fields', function () {
+            const proxy = parseOne(
+                'hy2://hy2-secret@hy2.example.com:443?upmbps=50&downmbps=100#Hy2%20Throughput',
+            );
+
+            expectSubset(proxy, {
+                type: 'hysteria2',
+                name: 'Hy2 Throughput',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'hy2-secret',
+                up: '50',
+                down: '100',
+            });
+        });
+
         it('rejects Hysteria2 salamander obfs without obfs-password', function () {
             const proxies = parseAll(
                 'hy2://hy2-secret@hy2.example.com:443?obfs=salamander#Hy2%20Missing%20Password',
