@@ -13,7 +13,11 @@ import {
     getRandomPort,
     numberToString,
 } from '@/utils';
-import PROXY_PROCESSORS, { ApplyProcessor } from './processors';
+import PROXY_PROCESSORS, {
+    ApplyProcessor,
+    ApplyResponseTransformer,
+    isResponseTransformerType,
+} from './processors';
 import PROXY_PREPROCESSORS from './preprocessors';
 import PROXY_PRODUCERS from './producers';
 import PROXY_PARSERS from './parsers';
@@ -114,6 +118,16 @@ async function processFn(
 ) {
     let context = {};
     for (const item of operators) {
+        if (isResponseTransformerType(item.type)) {
+            $.log(
+                `Skipping response transformer during proxy/file processing: "${
+                    item.type
+                }" with arguments:\n >>> ${
+                    JSON.stringify(item.args, null, 2) || 'None'
+                }`,
+            );
+            continue;
+        }
         if (item.disabled) {
             $.log(
                 `Skipping disabled operator: "${
@@ -128,94 +142,7 @@ async function processFn(
         let script;
         let $arguments = {};
         if (item.type.indexOf('Script') !== -1) {
-            const { mode, content } = item.args;
-            if (mode === 'link') {
-                let url = content || '';
-                // extract link arguments
-                const rawArgs = url.split('#');
-                if (rawArgs.length > 1) {
-                    try {
-                        // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
-                        $arguments = JSON.parse(decodeURIComponent(rawArgs[1]));
-                    } catch (e) {
-                        for (const pair of rawArgs[1].split('&')) {
-                            const key = pair.split('=')[0];
-                            const value = pair.split('=')[1];
-                            // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
-                            $arguments[key] =
-                                value == null || value === ''
-                                    ? true
-                                    : decodeURIComponent(value);
-                        }
-                    }
-                }
-                url = `${url.split('#')[0]}${
-                    rawArgs[2]
-                        ? `#${rawArgs[2]}`
-                        : $arguments?.noCache != null ||
-                          $arguments?.insecure != null
-                        ? `#${rawArgs[1]}`
-                        : ''
-                }`;
-                const downloadUrlMatch = url
-                    .split('#')[0]
-                    .match(/^\/api\/(file|module)\/(.+)/);
-                if (downloadUrlMatch) {
-                    let type = '';
-                    try {
-                        type = downloadUrlMatch?.[1];
-                        let name = downloadUrlMatch?.[2];
-                        if (name == null) {
-                            throw new Error(`本地 ${type} URL 无效: ${url}`);
-                        }
-                        name = decodeURIComponent(name);
-                        const key = type === 'module' ? MODULES_KEY : FILES_KEY;
-                        const item = findByName($.read(key), name);
-                        if (!item) {
-                            throw new Error(`找不到 ${type}: ${name}`);
-                        }
-
-                        if (type === 'module') {
-                            script = item.content;
-                        } else {
-                            script = await produceArtifact({
-                                type: 'file',
-                                name,
-                            });
-                        }
-                    } catch (err) {
-                        $.error(
-                            `Error when loading ${type}: ${item.args.content}.\n Reason: ${err}`,
-                        );
-                        throw new Error(`无法加载 ${type}: ${url}`);
-                    }
-                } else if (url?.startsWith('/')) {
-                    try {
-                        const fs = eval(`require("fs")`);
-                        script = fs.readFileSync(url.split('#')[0], 'utf8');
-                        // $.info(`Script loaded: >>>\n ${script}`);
-                    } catch (err) {
-                        $.error(
-                            `Error when reading local script: ${item.args.content}.\n Reason: ${err}`,
-                        );
-                        throw new Error(`无法从该路径读取脚本文件: ${url}`);
-                    }
-                } else {
-                    // if this is a remote script, download it
-                    try {
-                        script = await download(url);
-                        // $.info(`Script loaded: >>>\n ${script}`);
-                    } catch (err) {
-                        $.error(
-                            `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`,
-                        );
-                        throw new Error(`无法下载脚本: ${url}`);
-                    }
-                }
-            } else {
-                script = content;
-                $arguments = item.args.arguments || {};
-            }
+            ({ script, $arguments } = await loadScriptItem(item));
         }
 
         if (!PROXY_PROCESSORS[item.type]) {
@@ -244,6 +171,172 @@ async function processFn(
         proxies = await ApplyProcessor(processor, proxies);
     }
     return proxies;
+}
+
+async function processResponseFn(
+    response,
+    operators = [],
+    targetPlatform,
+    source,
+    $options,
+) {
+    let context = {};
+    let output = normalizeResponse(response);
+    for (const item of operators) {
+        if (!isResponseTransformerType(item.type)) continue;
+        if (item.disabled) {
+            $.log(
+                `Skipping disabled response transformer: "${
+                    item.type
+                }" with arguments:\n >>> ${
+                    JSON.stringify(item.args, null, 2) || 'None'
+                }`,
+            );
+            continue;
+        }
+
+        const { script, $arguments } = await loadScriptItem(item);
+        $.log(
+            `Applying "${item.type}" with arguments:\n >>> ${
+                JSON.stringify(item.args, null, 2) || 'None'
+            }`,
+        );
+        const transformer = PROXY_PROCESSORS[item.type](
+            script,
+            targetPlatform,
+            $arguments,
+            source,
+            $options,
+            context,
+        );
+        output = normalizeResponse(
+            await ApplyResponseTransformer(transformer, output),
+        );
+    }
+    return output;
+}
+
+async function loadScriptItem(item) {
+    let script;
+    let $arguments = {};
+    const { mode, content } = item.args || {};
+    if (mode === 'link') {
+        let url = content || '';
+        // extract link arguments
+        const rawArgs = url.split('#');
+        if (rawArgs.length > 1) {
+            try {
+                // 支持 `#${encodeURIComponent(JSON.stringify({arg1: "1"}))}`
+                $arguments = JSON.parse(decodeURIComponent(rawArgs[1]));
+            } catch (e) {
+                for (const pair of rawArgs[1].split('&')) {
+                    const key = pair.split('=')[0];
+                    const value = pair.split('=')[1];
+                    // 部分兼容之前的逻辑 const value = pair.split('=')[1] || true;
+                    $arguments[key] =
+                        value == null || value === ''
+                            ? true
+                            : decodeURIComponent(value);
+                }
+            }
+        }
+        url = `${url.split('#')[0]}${
+            rawArgs[2]
+                ? `#${rawArgs[2]}`
+                : $arguments?.noCache != null || $arguments?.insecure != null
+                ? `#${rawArgs[1]}`
+                : ''
+        }`;
+        const downloadUrlMatch = url
+            .split('#')[0]
+            .match(/^\/api\/(file|module)\/(.+)/);
+        if (downloadUrlMatch) {
+            let type = '';
+            try {
+                type = downloadUrlMatch?.[1];
+                let name = downloadUrlMatch?.[2];
+                if (name == null) {
+                    throw new Error(`本地 ${type} URL 无效: ${url}`);
+                }
+                name = decodeURIComponent(name);
+                const key = type === 'module' ? MODULES_KEY : FILES_KEY;
+                const localItem = findByName($.read(key), name);
+                if (!localItem) {
+                    throw new Error(`找不到 ${type}: ${name}`);
+                }
+
+                if (type === 'module') {
+                    script = localItem.content;
+                } else {
+                    script = await produceArtifact({
+                        type: 'file',
+                        name,
+                    });
+                }
+            } catch (err) {
+                $.error(
+                    `Error when loading ${type}: ${item.args.content}.\n Reason: ${err}`,
+                );
+                throw new Error(`无法加载 ${type}: ${url}`);
+            }
+        } else if (url?.startsWith('/')) {
+            try {
+                const fs = eval(`require("fs")`);
+                script = fs.readFileSync(url.split('#')[0], 'utf8');
+                // $.info(`Script loaded: >>>\n ${script}`);
+            } catch (err) {
+                $.error(
+                    `Error when reading local script: ${item.args.content}.\n Reason: ${err}`,
+                );
+                throw new Error(`无法从该路径读取脚本文件: ${url}`);
+            }
+        } else {
+            // if this is a remote script, download it
+            try {
+                script = await download(url);
+                // $.info(`Script loaded: >>>\n ${script}`);
+            } catch (err) {
+                $.error(
+                    `Error when downloading remote script: ${item.args.content}.\n Reason: ${err}`,
+                );
+                throw new Error(`无法下载脚本: ${url}`);
+            }
+        }
+    } else {
+        script = content;
+        $arguments = item.args?.arguments || {};
+    }
+    return { script, $arguments };
+}
+
+function normalizeResponse(response = {}) {
+    let headers = response.header || response.headers || {};
+    if (!headers || typeof headers !== 'object') headers = {};
+    const normalized = {
+        status: response.status || response.statusCode || 200,
+        body: Object.prototype.hasOwnProperty.call(response, 'body')
+            ? response.body
+            : '',
+    };
+    Object.defineProperty(normalized, 'headers', {
+        enumerable: true,
+        get() {
+            return headers;
+        },
+        set(value) {
+            headers = value && typeof value === 'object' ? value : {};
+        },
+    });
+    Object.defineProperty(normalized, 'header', {
+        enumerable: true,
+        get() {
+            return headers;
+        },
+        set(value) {
+            headers = value && typeof value === 'object' ? value : {};
+        },
+    });
+    return normalized;
 }
 
 function produce(proxies, targetPlatform, type, opts = {}) {
@@ -518,6 +611,7 @@ function getRootHeaderProxyLabel(proxy) {
 export const ProxyUtils = {
     parse,
     process: processFn,
+    processResponse: processResponseFn,
     produce,
     ipAddress,
     getRandomPort,

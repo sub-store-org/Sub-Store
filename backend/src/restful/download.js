@@ -11,6 +11,7 @@ import { produceArtifact } from '@/restful/sync';
 import { isIPv4, isIPv6 } from '@/utils';
 import { getISO } from '@/utils/geo';
 import env from '@/utils/env';
+import { applyResponseTransformers } from '@/restful/response-transformer';
 
 function buildEmptyNezhaPayload() {
     return JSON.stringify(
@@ -417,7 +418,15 @@ async function downloadSubscription(req, res) {
             if ($options?._res?.status) {
                 res.status($options._res.status);
             }
-            res.send(output);
+            const body = await applyResponseTransformers({
+                res,
+                body: output,
+                process: sub.process,
+                targetPlatform: platform,
+                source: { [sub.name]: sub },
+                $options,
+            });
+            res.send(body);
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载订阅失败`,
@@ -736,7 +745,15 @@ async function downloadCollection(req, res) {
             if ($options?._res?.status) {
                 res.status($options._res.status);
             }
-            res.send(output);
+            const body = await applyResponseTransformers({
+                res,
+                body: output,
+                process: collection.process,
+                targetPlatform: platform,
+                source: { _collection: collection },
+                $options,
+            });
+            res.send(body);
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载组合订阅失败`,

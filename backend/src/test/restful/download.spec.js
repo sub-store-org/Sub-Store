@@ -48,6 +48,9 @@ function createResponse(routePath) {
             delete this.headers[key];
             return this;
         },
+        getHeaders() {
+            return this.headers;
+        },
         send(payload) {
             this.sent = payload;
             return this;
@@ -63,7 +66,7 @@ function createResponse(routePath) {
     };
 }
 
-async function downloadSubscription(query) {
+async function requestDownloadSubscription(query) {
     const handler = getHandler('/download/:name');
     const res = createResponse('/download/:name');
 
@@ -80,6 +83,11 @@ async function downloadSubscription(query) {
         res,
     );
 
+    return res;
+}
+
+async function downloadSubscription(query) {
+    const res = await requestDownloadSubscription(query);
     return res.sent;
 }
 
@@ -223,5 +231,45 @@ describe('download routes', function () {
         expect(output).to.include(
             'Shared Mihomo=external,exec="/usr/local/bin/mihomo"',
         );
+    });
+
+    it('applies shortcut response transformers before sending subscription output', async function () {
+        state[SUBS_KEY][0].process = [
+            {
+                type: 'Response Transformer',
+                args: {
+                    mode: 'script',
+                    content:
+                        "$res.status = 202\n$res.header['x-test'] = 'ok'\n$res.body = 'changed'",
+                },
+            },
+        ];
+
+        const res = await requestDownloadSubscription({ target: 'JSON' });
+
+        expect(res.statusCode).to.equal(202);
+        expect(res.headers['x-test']).to.equal('ok');
+        expect(res.sent).to.equal('changed');
+    });
+
+    it('applies transformFunction response transformers before sending subscription output', async function () {
+        state[SUBS_KEY][0].process = [
+            {
+                type: 'Response Transformer',
+                args: {
+                    mode: 'script',
+                    content: `async function transformFunction(res, context) {
+                        res.status = 201;
+                        res.body = context.source['local-vless'].name;
+                        return res;
+                    }`,
+                },
+            },
+        ];
+
+        const res = await requestDownloadSubscription({ target: 'JSON' });
+
+        expect(res.statusCode).to.equal(201);
+        expect(res.sent).to.equal('local-vless');
     });
 });

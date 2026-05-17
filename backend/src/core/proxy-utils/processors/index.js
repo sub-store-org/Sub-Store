@@ -23,6 +23,12 @@ import {
     normalizeFlowHeader,
 } from '@/utils/flow';
 
+export const RESPONSE_TRANSFORMER = 'Response Transformer';
+
+export function isResponseTransformerType(type) {
+    return type === RESPONSE_TRANSFORMER;
+}
+
 function trimWrap(str) {
     if (str.startsWith('<') && str.endsWith('>')) {
         return str.slice(1, -1);
@@ -1098,6 +1104,51 @@ function ScriptFilter(
     };
 }
 
+function ResponseTransformer(
+    script,
+    targetPlatform,
+    $arguments,
+    source,
+    $options,
+    context,
+) {
+    context.source = source;
+    context.env = env;
+    return {
+        name: RESPONSE_TRANSFORMER,
+        func: async (res) => {
+            let output = res;
+            await (async function () {
+                const transformFunction = createDynamicFunction(
+                    'transformFunction',
+                    script,
+                    $arguments,
+                    $options,
+                );
+                output = transformFunction(res, context);
+            })();
+            return output;
+        },
+        shortcutFunc: async (res) => {
+            let output = res;
+            await (async function () {
+                const transformFunction = createDynamicFunction(
+                    'transformFunction',
+                    `async function transformFunction(res = {}, context) {
+                        let $res = res
+                        ${script}
+                        return $res
+                      }`,
+                    $arguments,
+                    $options,
+                );
+                output = transformFunction(res, context);
+            })();
+            return output;
+        },
+    };
+}
+
 export default {
     'Useless Filter': UselessFilter,
     'Region Filter': RegionFilter,
@@ -1113,9 +1164,45 @@ export default {
     'Regex Rename Operator': RegexRenameOperator,
     'Regex Delete Operator': RegexDeleteOperator,
     'Script Operator': ScriptOperator,
+    [RESPONSE_TRANSFORMER]: ResponseTransformer,
     'Handle Duplicate Operator': HandleDuplicateOperator,
     'Resolve Domain Operator': ResolveDomainOperator,
 };
+
+export async function ApplyResponseTransformer(transformer, res) {
+    let output = res;
+    try {
+        const output_ = await transformer.func(output);
+        if (output_) output = output_;
+    } catch (err) {
+        let funcErr = '';
+        const funcErrMsg = `${err.message ?? err}`;
+        if (!funcErrMsg.includes('$res is not defined')) {
+            $.error(
+                `Cannot apply ${transformer.name}(function transformFunction)! Reason: ${err}`,
+            );
+            funcErr = `执行 function transformFunction 失败 ${funcErrMsg}; `;
+        }
+        try {
+            const output_ = await transformer.shortcutFunc(output);
+            if (output_) output = output_;
+        } catch (shortcutErr) {
+            $.error(
+                `Cannot apply ${transformer.name}(shortcut script)! Reason: ${shortcutErr}`,
+            );
+            let shortcutErrText = '';
+            const shortcutErrMsg = `${shortcutErr.message ?? shortcutErr}`;
+            if (funcErr && shortcutErrMsg === funcErrMsg) {
+                shortcutErrText = '';
+                funcErr = `执行失败 ${funcErrMsg}`;
+            } else {
+                shortcutErrText = `执行快捷脚本失败 ${shortcutErrMsg}`;
+            }
+            throw new Error(`响应修改 ${funcErr}${shortcutErrText}`);
+        }
+    }
+    return output;
+}
 
 async function ApplyFilter(filter, objs) {
     // select proxies

@@ -17,6 +17,7 @@ import {
 import { produceArtifact } from '@/restful/sync';
 import { archiveFile } from '@/utils/archive';
 import { formatDateTime } from '@/utils';
+import { applyResponseTransformers } from '@/restful/response-transformer';
 
 export default function register($app) {
     if (!$.read(FILES_KEY)) $.write([], FILES_KEY);
@@ -202,7 +203,14 @@ async function getFile(req, res, next) {
             if (output?.$options?._res?.status) {
                 res.status(output.$options._res.status);
             }
-            res.send(output?.$content ?? '');
+            const body = await applyResponseTransformers({
+                res,
+                body: output?.$content ?? '',
+                process: file.process,
+                source: { $file: file },
+                $options: output?.$options ?? $options,
+            });
+            res.send(body);
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载文件失败`,
