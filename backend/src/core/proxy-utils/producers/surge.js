@@ -68,6 +68,17 @@ function appendSshPrivateKey(result, proxy) {
     }
 }
 
+function warnMaxStreamsIfNeeded(proxy) {
+    if (!isPresent(proxy, 'max-streams')) return;
+
+    const maxStreams = Number(stripSurgeQuotes(proxy['max-streams']));
+    if (!Number.isInteger(maxStreams) || maxStreams <= 3) return;
+
+    $.warn(
+        `Surge ${proxy.type} proxy ${proxy.name}: max-streams=${maxStreams} is greater than 3. Too many streams sharing one TCP connection may hurt performance.`,
+    );
+}
+
 export default function Surge_Producer() {
     const produce = (proxy, type, opts = {}) => {
         if (
@@ -434,6 +445,11 @@ function trusttunnel(proxy) {
     result.appendIfPresent(`,username="${proxy.username}"`, 'username');
     result.appendIfPresent(`,password="${proxy.password}"`, 'password');
     appendHeaders(result, proxy);
+    warnMaxStreamsIfNeeded(proxy);
+    result.appendIfPresent(
+        `,max-streams=${proxy['max-streams']}`,
+        'max-streams',
+    );
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
@@ -502,6 +518,11 @@ function h2Connect(proxy) {
     result.appendIfPresent(`,username="${proxy.username}"`, 'username');
     result.appendIfPresent(`,password="${proxy.password}"`, 'password');
     appendHeaders(result, proxy);
+    warnMaxStreamsIfNeeded(proxy);
+    result.appendIfPresent(
+        `,max-streams=${proxy['max-streams']}`,
+        'max-streams',
+    );
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');

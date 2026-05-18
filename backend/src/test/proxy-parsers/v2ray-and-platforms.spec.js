@@ -2878,6 +2878,38 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses trust-tunnel lines with double-quoted max-streams',
+                input: 'Surge TrustTunnel Max Streams = trust-tunnel,surge-trust.example.com,443,username=user,password=secret,headers=X-Client:Surge,max-streams="3",sni=sni.example.com,skip-cert-verify=true,reuse=true',
+                expected: {
+                    type: 'trusttunnel',
+                    name: 'Surge TrustTunnel Max Streams',
+                    server: 'surge-trust.example.com',
+                    port: 443,
+                    username: 'user',
+                    password: 'secret',
+                    tls: true,
+                    headers: {
+                        'X-Client': 'Surge',
+                    },
+                    'max-streams': 3,
+                    sni: 'sni.example.com',
+                    'skip-cert-verify': true,
+                    reuse: true,
+                },
+            },
+            {
+                title: 'parses trust-tunnel lines with single-quoted max-streams',
+                input: "Surge TrustTunnel Single Max Streams = trust-tunnel,surge-trust-single.example.com,443,max-streams='2'",
+                expected: {
+                    type: 'trusttunnel',
+                    name: 'Surge TrustTunnel Single Max Streams',
+                    server: 'surge-trust-single.example.com',
+                    port: 443,
+                    tls: true,
+                    'max-streams': 2,
+                },
+            },
+            {
                 title: 'parses h2-connect lines with dynamic headers',
                 input: 'Surge H2 = h2-connect,h2.example.com,443,headers=X-Padding:<random-string(16-32)>,sni=sni.example.com,skip-cert-verify=true',
                 expected: {
@@ -2889,6 +2921,23 @@ describe('Platform raw-format parser coverage', function () {
                     headers: {
                         'X-Padding': '<random-string(16-32)>',
                     },
+                    sni: 'sni.example.com',
+                    'skip-cert-verify': true,
+                },
+            },
+            {
+                title: 'parses h2-connect lines with max-streams',
+                input: 'Surge H2 Max Streams = h2-connect,h2.example.com,443,headers=X-Padding:<random-string(16-32)>,max-streams=1,sni=sni.example.com,skip-cert-verify=true',
+                expected: {
+                    type: 'h2-connect',
+                    name: 'Surge H2 Max Streams',
+                    server: 'h2.example.com',
+                    port: 443,
+                    tls: true,
+                    headers: {
+                        'X-Padding': '<random-string(16-32)>',
+                    },
+                    'max-streams': 1,
                     sni: 'sni.example.com',
                     'skip-cert-verify': true,
                 },

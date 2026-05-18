@@ -545,6 +545,99 @@ describe('Proxy text producers', function () {
         ]);
     });
 
+    it('produces Surge max-streams for HTTP/2 CONNECT and TrustTunnel', function () {
+        const output = ProxyUtils.produce(
+            [
+                {
+                    type: 'h2-connect',
+                    name: 'Surge H2 Max Streams',
+                    server: 'h2.example.com',
+                    port: 443,
+                    tls: true,
+                    sni: 'sni.example.com',
+                    headers: {
+                        'X-Padding': '<random-string(16-32)>',
+                    },
+                    'max-streams': 1,
+                },
+                {
+                    type: 'trusttunnel',
+                    name: 'Surge Trust Max Streams',
+                    server: 'trust.example.com',
+                    port: 443,
+                    username: 'user',
+                    password: 'pass',
+                    headers: {
+                        'X-Client': 'Surge',
+                    },
+                    'max-streams': 3,
+                    sni: 'sni.example.com',
+                },
+            ],
+            'Surge',
+            'external',
+        );
+
+        expect(output.split('\n')).to.deep.equal([
+            'Surge H2 Max Streams=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com"',
+            'Surge Trust Max Streams=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"',
+        ]);
+    });
+
+    it('warns when Surge max-streams is greater than 3', function () {
+        const { result: output, warnings } = captureWarns(() =>
+            ProxyUtils.produce(
+                [
+                    {
+                        type: 'h2-connect',
+                        name: 'Surge H2 High Max Streams',
+                        server: 'h2.example.com',
+                        port: 443,
+                        tls: true,
+                        'max-streams': 4,
+                    },
+                    {
+                        type: 'trusttunnel',
+                        name: 'Surge Trust High Max Streams',
+                        server: 'trust.example.com',
+                        port: 443,
+                        tls: true,
+                        'max-streams': 5,
+                    },
+                ],
+                'Surge',
+                'external',
+            ),
+        );
+
+        expect(output.split('\n')).to.deep.equal([
+            'Surge H2 High Max Streams=h2-connect,h2.example.com,443,max-streams=4',
+            'Surge Trust High Max Streams=trust-tunnel,trust.example.com,443,max-streams=5',
+        ]);
+        expect(warnings).to.have.length(2);
+        expect(warnings[0]).to.include('max-streams=4');
+        expect(warnings[0]).to.include('greater than 3');
+        expect(warnings[0]).to.include('performance');
+        expect(warnings[1]).to.include('max-streams=5');
+        expect(warnings[1]).to.include('greater than 3');
+        expect(warnings[1]).to.include('performance');
+    });
+
+    it('round-trips Surge max-streams for HTTP/2 CONNECT and TrustTunnel', function () {
+        const proxies = ProxyUtils.parse(
+            [
+                'Surge H2 Round Trip = h2-connect,h2.example.com,443,headers=X-Padding:<random-string(16-32)>,max-streams=1,sni=sni.example.com',
+                'Surge Trust Round Trip = trust-tunnel,trust.example.com,443,username=user,password=pass,headers=X-Client:Surge,max-streams="3",sni=sni.example.com',
+            ].join('\n'),
+        );
+        const output = ProxyUtils.produce(proxies, 'Surge', 'external');
+
+        expect(output.split('\n')).to.deep.equal([
+            'Surge H2 Round Trip=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com"',
+            'Surge Trust Round Trip=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"',
+        ]);
+    });
+
     it('round-trips Surge root headers with nested quotes and separators', function () {
         const output = ProxyUtils.produce(
             [

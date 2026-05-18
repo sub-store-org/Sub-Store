@@ -348,7 +348,7 @@ https = tag equals "https" address (username password)? (usernamek passwordk)? (
     proxy.tls = true;
     handleShadowTLS();
 }
-h2_connect = tag equals "h2-connect" address (username password)? (usernamek passwordk)? (headers/sni/tls_fingerprint/tls_verification/client_cert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+h2_connect = tag equals "h2-connect" address (username password)? (usernamek passwordk)? (headers/max_streams/sni/tls_fingerprint/tls_verification/client_cert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "h2-connect";
     proxy.tls = true;
     handleShadowTLS();
@@ -401,7 +401,7 @@ anytls = tag equals "anytls" address (passwordk/reuse/ip_version/underlying_prox
     proxy.type = "anytls";
     proxy.tls = true;
 }
-trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/headers/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/fast_open/tfo/block_quic/others)* {
+trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/headers/max_streams/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/fast_open/tfo/block_quic/others)* {
     proxy.type = "trusttunnel";
     proxy.tls = true;
 }
@@ -533,6 +533,8 @@ download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down 
 test_url = comma "test-url" equals match:[^,]+ { proxy["test-url"] = match.join(""); }
 test_udp = comma "test-udp" equals match:[^,]+ { proxy["test-udp"] = match.join(""); }
 test_timeout = comma "test-timeout" equals match:$[0-9]+ { proxy["test-timeout"] = parseInt(match.trim()); }
+max_streams = comma "max-streams" equals match:quoted_integer { proxy["max-streams"] = match; }
+quoted_integer = '"' match:$[0-9]+ '"' { return parseInt(match.trim()); } / "'" match:$[0-9]+ "'" { return parseInt(match.trim()); } / match:$[0-9]+ { return parseInt(match.trim()); }
 tos = comma "tos" equals match:$[0-9]+ { proxy.tos = parseInt(match.trim()); }
 interface = comma "interface" equals match:[^,]+ { proxy.interface = match.join(""); }
 allow_other_interface = comma "allow-other-interface" equals flag:bool { proxy["allow-other-interface"] = flag; }
