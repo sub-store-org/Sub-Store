@@ -72,7 +72,7 @@ anytls = tag equals "anytls"i address password (transport/transport_host/transpo
     proxy.type = "anytls";
     handleTransport();
 }
-hysteria2 = tag equals "hysteria2"i address password (tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/udp_relay/fast_open/download_bandwidth/salamander_password/ecn/ip_mode/block_quic/others)* {
+hysteria2 = tag equals "hysteria2"i address password (tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/udp_relay/fast_open/download_bandwidth/server_ports/hop_interval/salamander_password/ecn/ip_mode/block_quic/others)* {
     proxy.type = "hysteria2";
 }
 https = tag equals "https"i address (username password)? (tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/fast_open/udp_relay/ip_mode/block_quic/others)* {
@@ -195,6 +195,8 @@ ip_mode = comma "ip-mode" equals match:[^,]+ { proxy["ip-version"] = match.join(
 
 ecn = comma "ecn" equals flag:bool { proxy.ecn = flag; }
 download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down = match.join(""); }
+server_ports = comma "server-ports" equals '"' match:$[^"]+ '"' { proxy.ports = match.trim().replace(/\s*-\s*/g, "-").replace(/\s*,\s*/g, ","); }
+hop_interval = comma "hop-interval" equals match:$[0-9]+ { proxy["hop-interval"] = parseInt(match, 10); }
 salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join(""); proxy.obfs = 'salamander'; }
 
 block_quic = comma "block-quic" equals flag:bool { if(flag) proxy["block-quic"] = "on"; else proxy["block-quic"] = "off"; }

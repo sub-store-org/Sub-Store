@@ -4,6 +4,10 @@ import { isNotBlank } from '@/utils';
 
 const targetPlatform = 'Surfboard';
 
+function hasNonBlankValue(value) {
+    return value != null && `${value}`.trim().length > 0;
+}
+
 export default function Surfboard_Producer() {
     const produce = (proxy) => {
         if (
@@ -62,14 +66,15 @@ function hysteria2(proxy) {
 
     result.appendIfPresent(`,password="${proxy.password}"`, 'password');
 
-    if (isPresent(proxy, 'ports')) {
-        result.append(`,port-hopping="${proxy.ports.replace(/,/g, ';')}"`);
+    if (hasNonBlankValue(proxy.ports)) {
+        result.append(
+            `,port-hopping="${String(proxy.ports).replace(/,/g, ';')}"`,
+        );
     }
 
-    result.appendIfPresent(
-        `,port-hopping-interval=${proxy['hop-interval']}`,
-        'hop-interval',
-    );
+    if (hasNonBlankValue(proxy['hop-interval'])) {
+        result.append(`,port-hopping-interval=${proxy['hop-interval']}`);
+    }
 
     // tls verification
     result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');

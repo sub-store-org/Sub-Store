@@ -749,6 +749,17 @@ function hysteria2(proxy) {
 
     result.appendIfPresent(`,"${proxy.password}"`, 'password');
 
+    if (isPresent(proxy, 'ports') && `${proxy.ports}`.trim().length > 0) {
+        result.append(`,server-ports="${proxy.ports}"`);
+    }
+
+    if (
+        isPresent(proxy, 'hop-interval') &&
+        `${proxy['hop-interval']}`.trim().length > 0
+    ) {
+        result.append(`,hop-interval=${proxy['hop-interval']}`);
+    }
+
     // sni
     result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
     result.appendIfPresent(

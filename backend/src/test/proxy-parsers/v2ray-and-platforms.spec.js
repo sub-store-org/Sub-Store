@@ -2559,6 +2559,7 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
         ]);
+
     });
 
     describe('Loon raw inputs', function () {
@@ -2710,6 +2711,21 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses hysteria2 port hopping lines',
+                input: 'Loon Hysteria2 Port Hopping=hysteria2,loon-hy2.example.com,443,"secret",server-ports="1000,2000-3000,5000",hop-interval=30,tls-name=peer.example.com,skip-cert-verify=true',
+                expected: {
+                    type: 'hysteria2',
+                    name: 'Loon Hysteria2 Port Hopping',
+                    server: 'loon-hy2.example.com',
+                    port: 443,
+                    ports: '1000,2000-3000,5000',
+                    'hop-interval': 30,
+                    password: 'secret',
+                    sni: 'peer.example.com',
+                    'skip-cert-verify': true,
+                },
+            },
+            {
                 title: 'parses https auth lines',
                 input: 'Loon HTTPS=https,loon-http.example.com,8443,user,"pass",tls-name=sni.example.com,skip-cert-verify=true',
                 expected: {
@@ -2829,6 +2845,14 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
         ]);
+
+        it('rejects hysteria2 hop interval ranges', function () {
+            expect(
+                parseAll(
+                    'Loon Hysteria2 Hop Range=hysteria2,loon-hy2.example.com,443,"secret",hop-interval=15-30',
+                ),
+            ).to.have.length(0);
+        });
     });
 
     describe('Surge raw inputs', function () {

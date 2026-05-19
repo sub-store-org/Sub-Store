@@ -433,6 +433,53 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces Loon Hysteria2 lines with port hopping', function () {
+        const output = produceExternal('Loon', {
+            type: 'hysteria2',
+            name: 'Loon Hysteria2',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            ports: '1000,2000-3000,5000',
+            'hop-interval': 30,
+            sni: 'peer.example.com',
+            'skip-cert-verify': true,
+        });
+
+        expect(output).to.equal(
+            'Loon Hysteria2=Hysteria2,hy2.example.com,443,"secret",server-ports="1000,2000-3000,5000",hop-interval=30,tls-name=peer.example.com,skip-cert-verify=true',
+        );
+    });
+
+    it('does not emit empty Loon Hysteria2 port hopping fields', function () {
+        const output = produceExternal('Loon', {
+            type: 'hysteria2',
+            name: 'Loon Hysteria2 Plain',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            ports: '',
+            'hop-interval': '   ',
+            sni: 'peer.example.com',
+            'skip-cert-verify': true,
+        });
+
+        expect(output).to.equal(
+            'Loon Hysteria2 Plain=Hysteria2,hy2.example.com,443,"secret",tls-name=peer.example.com,skip-cert-verify=true',
+        );
+    });
+
+    it('exports URI Hysteria2 port hopping nodes to Loon fields', function () {
+        const [proxy] = ProxyUtils.parse(
+            'hy2://secret@hy2.example.com:443?mport=1000,2000-3000,5000&hop-interval=30#URI%20Hysteria2',
+        );
+        const output = produceExternal('Loon', proxy);
+
+        expect(output).to.equal(
+            'URI Hysteria2=Hysteria2,hy2.example.com,443,"secret",server-ports="1000,2000-3000,5000",hop-interval=30,tls-name=hy2.example.com,skip-cert-verify=false,fast-open=false',
+        );
+    });
+
     it('produces Surge TUIC v5 lines with port hopping', function () {
         const output = produceExternal('Surge', {
             type: 'tuic',
@@ -450,6 +497,58 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             `Surge TUIC=tuic-v5,tuic.example.com,443,uuid=${UUID},password="secret",alpn=h3,port-hopping="9000;9002-9004",sni="sni.example.com",skip-cert-verify=true,ecn=true`,
+        );
+    });
+
+    it('does not emit empty Surge port hopping fields', function () {
+        const output = produceExternal('Surge', [
+            {
+                type: 'tuic',
+                name: 'Surge TUIC Plain',
+                server: 'tuic.example.com',
+                port: 443,
+                uuid: UUID,
+                password: 'secret',
+                ports: '',
+                'hop-interval': '   ',
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                alpn: ['h3'],
+            },
+            {
+                type: 'hysteria2',
+                name: 'Surge Hysteria2 Plain',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'secret',
+                ports: '',
+                'hop-interval': '   ',
+                sni: 'peer.example.com',
+                'skip-cert-verify': true,
+            },
+        ]);
+
+        expect(output).to.equal(
+            `Surge TUIC Plain=tuic-v5,tuic.example.com,443,uuid=${UUID},password="secret",alpn=h3,sni="sni.example.com",skip-cert-verify=true\nSurge Hysteria2 Plain=hysteria2,hy2.example.com,443,password="secret",sni="peer.example.com",skip-cert-verify=true`,
+        );
+    });
+
+    it('produces Surge Hysteria2 lines with port hopping', function () {
+        const output = produceExternal('Surge', {
+            type: 'hysteria2',
+            name: 'Surge Hysteria2',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            ports: '8443,8445-8447',
+            'hop-interval': 30,
+            sni: 'peer.example.com',
+            'skip-cert-verify': true,
+            down: '100 Mbps',
+        });
+
+        expect(output).to.equal(
+            'Surge Hysteria2=hysteria2,hy2.example.com,443,password="secret",port-hopping="8443;8445-8447",port-hopping-interval=30,sni="peer.example.com",skip-cert-verify=true,download-bandwidth=100',
         );
     });
 
@@ -815,6 +914,24 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             'Surfboard Hysteria2=hysteria2,hy2.example.com,443,password="secret",port-hopping="8443;8445-8447",port-hopping-interval=30,sni="peer.example.com",skip-cert-verify=true,download-bandwidth=100,udp-relay=true',
+        );
+    });
+
+    it('does not emit empty Surfboard Hysteria2 port hopping fields', function () {
+        const output = produceExternal('Surfboard', {
+            type: 'hysteria2',
+            name: 'Surfboard Hysteria2 Plain',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            ports: '',
+            'hop-interval': '   ',
+            sni: 'peer.example.com',
+            'skip-cert-verify': true,
+        });
+
+        expect(output).to.equal(
+            'Surfboard Hysteria2 Plain=hysteria2,hy2.example.com,443,password="secret",sni="peer.example.com",skip-cert-verify=true',
         );
     });
 
