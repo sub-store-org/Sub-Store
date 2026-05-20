@@ -269,7 +269,7 @@ async function deleteArtifactItem(name) {
         attempted: false,
         status: 'not_attempted',
     };
-    if (artifact.updated) {
+    if (artifact.url || (artifact.updated && artifact.upload !== false)) {
         const files = {};
         files[encodeURIComponent(artifact.name)] = {
             content: '',

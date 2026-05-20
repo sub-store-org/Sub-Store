@@ -755,16 +755,34 @@ function resolveArtifactUploadUrl(body, artifactName) {
     return new_url;
 }
 
+function shouldUploadArtifact(artifact) {
+    return artifact?.upload !== false;
+}
+
+function markArtifactProducedWithoutUpload(artifact) {
+    artifact.updated = new Date().getTime();
+    delete artifact.url;
+}
+
 async function uploadArtifactBatches({ allArtifacts, files, valid, invalid }) {
     const settings = $.read(SETTINGS_KEY) || {};
     const batchSize = normalizeArtifactSyncBatchSize(
         settings.artifactSyncBatchSize,
     );
-    const batches = createArtifactUploadBatches(valid, batchSize);
+    const uploadNames = valid.filter((name) => {
+        const artifact = findByName(allArtifacts, name);
+        return artifact && shouldUploadArtifact(artifact);
+    });
+    const batches = createArtifactUploadBatches(uploadNames, batchSize);
     const uploaded = [];
 
+    if (uploadNames.length === 0) {
+        $.info('没有需要上传的同步配置');
+        return uploaded;
+    }
+
     $.info(
-        `准备分批上传同步配置: 共 ${valid.length} 个, 每批 ${batchSize} 个, 批次数 ${batches.length}`,
+        `准备分批上传同步配置: 共 ${uploadNames.length} 个, 每批 ${batchSize} 个, 批次数 ${batches.length}`,
     );
 
     for (let index = 0; index < batches.length; index++) {
@@ -778,9 +796,9 @@ async function uploadArtifactBatches({ allArtifacts, files, valid, invalid }) {
 
         try {
             $.info(
-                `正在上传第 ${index + 1}/${batches.length} 批同步配置: ${batchNames.join(
-                    ', ',
-                )}`,
+                `正在上传第 ${index + 1}/${
+                    batches.length
+                } 批同步配置: ${batchNames.join(', ')}`,
             );
             const resp = await syncToGist(batchFiles);
             const body = JSON.parse(resp.body);
@@ -810,9 +828,11 @@ async function uploadArtifactBatches({ allArtifacts, files, valid, invalid }) {
             }
         } catch (e) {
             $.error(
-                `第 ${index + 1}/${batches.length} 批同步配置上传失败: ${batchNames.join(
-                    ', ',
-                )}, 原因: ${e.message ?? e}`,
+                `第 ${index + 1}/${
+                    batches.length
+                } 批同步配置上传失败: ${batchNames.join(', ')}, 原因: ${
+                    e.message ?? e
+                }`,
             );
             invalid.push(...batchNames);
         }
@@ -829,6 +849,7 @@ async function syncArtifacts() {
     try {
         const valid = [];
         const invalid = [];
+        const producedWithoutUpload = [];
         const allSubs = $.read(SUBS_KEY);
         const allCols = $.read(COLLECTIONS_KEY);
         const subNames = [];
@@ -909,11 +930,15 @@ async function syncArtifacts() {
                         // if (!output || output.length === 0)
                         //     throw new Error('该配置的结果为空 不进行上传');
 
-                        files[encodeURIComponent(artifact.name)] = {
-                            content: output,
-                        };
-
-                        valid.push(artifact.name);
+                        if (shouldUploadArtifact(artifact)) {
+                            files[encodeURIComponent(artifact.name)] = {
+                                content: output,
+                            };
+                            valid.push(artifact.name);
+                        } else {
+                            markArtifactProducedWithoutUpload(artifact);
+                            producedWithoutUpload.push(artifact.name);
+                        }
                     }
                 } catch (e) {
                     $.error(
@@ -926,10 +951,22 @@ async function syncArtifacts() {
             }),
         );
 
-        $.info(`${valid.length} 个同步配置生成成功: ${valid.join(', ')}`);
+        const producedCount = valid.length + producedWithoutUpload.length;
+        $.info(
+            `${producedCount} 个同步配置生成成功: ${valid
+                .concat(producedWithoutUpload)
+                .join(', ')}`,
+        );
         $.info(`${invalid.length} 个同步配置生成失败: ${invalid.join(', ')}`);
+        if (producedWithoutUpload.length > 0) {
+            $.info(
+                `${
+                    producedWithoutUpload.length
+                } 个同步配置仅生成未上传: ${producedWithoutUpload.join(', ')}`,
+            );
+        }
 
-        if (valid.length === 0) {
+        if (producedCount === 0) {
             throw new Error(
                 `同步配置 ${invalid.join(', ')} 生成失败 详情请查看日志`,
             );
@@ -943,14 +980,20 @@ async function syncArtifacts() {
         });
 
         $.write(allArtifacts, ARTIFACTS_KEY);
-        $.info('上传配置成功');
+        $.info('同步配置执行完成');
 
         if (invalid.length > 0) {
             throw new Error(
-                `同步配置成功 ${uploaded.length} 个, 失败 ${invalid.length} 个, 详情请查看日志`,
+                `同步配置成功 ${
+                    uploaded.length + producedWithoutUpload.length
+                } 个, 失败 ${invalid.length} 个, 详情请查看日志`,
             );
         } else {
-            $.info(`同步配置成功 ${uploaded.length} 个`);
+            $.info(
+                `同步配置成功 ${
+                    uploaded.length + producedWithoutUpload.length
+                } 个`,
+            );
         }
     } catch (e) {
         $.error(`同步配置失败，原因：${e.message ?? e}`);
@@ -1024,6 +1067,16 @@ async function syncArtifact(req, res) {
             },
         });
 
+        // if (!output || output.length === 0)
+        //     throw new Error('该配置的结果为空 不进行上传');
+        if (!shouldUploadArtifact(artifact)) {
+            $.info(`配置 ${artifact.name} 已关闭上传, 仅更新执行时间`);
+            markArtifactProducedWithoutUpload(artifact);
+            $.write(allArtifacts, ARTIFACTS_KEY);
+            success(res, artifact);
+            return;
+        }
+
         $.info(
             `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
                 artifact,
@@ -1031,8 +1084,6 @@ async function syncArtifact(req, res) {
                 2,
             )}`,
         );
-        // if (!output || output.length === 0)
-        //     throw new Error('该配置的结果为空 不进行上传');
         const resp = await syncToGist({
             [encodeURIComponent(artifact.name)]: {
                 content: output,
@@ -1059,4 +1110,10 @@ async function syncArtifact(req, res) {
     }
 }
 
-export { produceArtifact, syncArtifacts, uploadArtifactBatches };
+export {
+    markArtifactProducedWithoutUpload,
+    produceArtifact,
+    shouldUploadArtifact,
+    syncArtifacts,
+    uploadArtifactBatches,
+};

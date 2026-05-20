@@ -333,4 +333,79 @@ describe('Gist GitHub API URL', function () {
             Gist.prototype.upload = originalUpload;
         }
     });
+
+    it('skips artifact batches for items that disabled upload', async function () {
+        const originalRead = $.read.bind($);
+        const originalWrite = $.write.bind($);
+        const originalInfo = $.info.bind($);
+        const originalLog = $.log.bind($);
+        const originalError = $.error.bind($);
+        const originalUpload = Gist.prototype.upload;
+        let capturedFiles;
+
+        $.read = (key) => {
+            if (key === SETTINGS_KEY) {
+                return {
+                    gistToken: 'token',
+                    artifactSyncBatchSize: 10,
+                };
+            }
+            return originalRead(key);
+        };
+        $.write = (data, key) => {
+            if (key === SETTINGS_KEY) {
+                return true;
+            }
+            return originalWrite(data, key);
+        };
+        $.info = () => {};
+        $.log = () => {};
+        $.error = () => {};
+        Gist.prototype.upload = async function (files) {
+            capturedFiles = files;
+            return {
+                body: JSON.stringify({
+                    html_url: 'https://gist.example.com/sub-store',
+                    files: {
+                        b: {
+                            raw_url: 'https://gist.example.com/raw/hash/b',
+                        },
+                    },
+                }),
+            };
+        };
+
+        const allArtifacts = [
+            { name: 'a', sync: true, source: 'sub-a', upload: false },
+            { name: 'b', sync: true, source: 'sub-b' },
+        ];
+        const invalid = [];
+
+        try {
+            const uploaded = await uploadArtifactBatches({
+                allArtifacts,
+                files: {
+                    a: { content: 'A' },
+                    b: { content: 'B' },
+                },
+                valid: ['a', 'b'],
+                invalid,
+            });
+
+            expect(Object.keys(capturedFiles)).to.deep.equal(['b']);
+            expect(uploaded).to.deep.equal(['b']);
+            expect(invalid).to.deep.equal([]);
+            expect(allArtifacts[0].url).to.equal(undefined);
+            expect(allArtifacts[1].url).to.equal(
+                'https://gist.example.com/raw/b',
+            );
+        } finally {
+            $.read = originalRead;
+            $.write = originalWrite;
+            $.info = originalInfo;
+            $.log = originalLog;
+            $.error = originalError;
+            Gist.prototype.upload = originalUpload;
+        }
+    });
 });

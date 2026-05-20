@@ -6,9 +6,17 @@ import {
     COLLECTIONS_KEY,
 } from '@/constants';
 import $ from '@/core/app';
-import { produceArtifact, uploadArtifactBatches } from '@/restful/sync';
+import {
+    markArtifactProducedWithoutUpload,
+    produceArtifact,
+    shouldUploadArtifact,
+    uploadArtifactBatches,
+} from '@/restful/sync';
 import { findByName } from '@/utils/database';
-import { hasGistSyncCredentials } from '@/utils/gist';
+import {
+    resolveCronArtifactSyncPolicy,
+    shouldSkipCronArtifactWithoutUploadCredentials,
+} from '@/utils/artifact-sync-policy';
 
 !(async function () {
     let arg;
@@ -35,14 +43,12 @@ import { hasGistSyncCredentials } from '@/utils/gist';
             await produceArtifacts(col_names, 'collection');
     } else {
         const settings = $.read(SETTINGS_KEY);
-        // if GitHub token is not configured
-        if (!hasGistSyncCredentials(settings)) return;
-
         const artifacts = $.read(ARTIFACTS_KEY);
         if (!artifacts || artifacts.length === 0) return;
 
-        const shouldSync = artifacts.some((artifact) => artifact.sync);
-        if (shouldSync) await doSync(arg);
+        const policy = resolveCronArtifactSyncPolicy({ artifacts, settings });
+
+        if (policy.shouldRun) await doSync(arg, policy);
     }
 })().finally(() => $.done());
 
@@ -91,7 +97,7 @@ async function produceArtifacts(names, type) {
         $.error(`produceArtifacts error: ${e.message ?? e}`);
     }
 }
-async function doSync(arg = {}) {
+async function doSync(arg = {}, { canUpload = true } = {}) {
     const syncSuccessNotify = isTruthyArgument(arg.sync_success_notify);
     console.log(
         `
@@ -108,6 +114,8 @@ async function doSync(arg = {}) {
     try {
         const valid = [];
         const invalid = [];
+        const producedWithoutUpload = [];
+        const skippedWithoutUploadCredentials = [];
         const allSubs = $.read(SUBS_KEY);
         const allCols = $.read(COLLECTIONS_KEY);
         const subNames = [];
@@ -115,6 +123,13 @@ async function doSync(arg = {}) {
         allArtifacts.map((artifact) => {
             if (artifact.sync && artifact.source) {
                 enabledCount++;
+                if (
+                    shouldSkipCronArtifactWithoutUploadCredentials(artifact, {
+                        canUpload,
+                    })
+                ) {
+                    return;
+                }
                 if (artifact.type === 'subscription') {
                     const subName = artifact.source;
                     const sub = findByName(allSubs, subName);
@@ -161,6 +176,16 @@ async function doSync(arg = {}) {
             allArtifacts.map(async (artifact) => {
                 try {
                     if (artifact.sync && artifact.source) {
+                        if (
+                            shouldSkipCronArtifactWithoutUploadCredentials(
+                                artifact,
+                                { canUpload },
+                            )
+                        ) {
+                            skippedWithoutUploadCredentials.push(artifact.name);
+                            return;
+                        }
+
                         $.info(`正在同步云配置：${artifact.name}...`);
 
                         const useMihomoExternal =
@@ -186,11 +211,15 @@ async function doSync(arg = {}) {
                         // if (!output || output.length === 0)
                         //     throw new Error('该配置的结果为空 不进行上传');
 
-                        files[encodeURIComponent(artifact.name)] = {
-                            content: output,
-                        };
-
-                        valid.push(artifact.name);
+                        if (shouldUploadArtifact(artifact)) {
+                            files[encodeURIComponent(artifact.name)] = {
+                                content: output,
+                            };
+                            valid.push(artifact.name);
+                        } else {
+                            markArtifactProducedWithoutUpload(artifact);
+                            producedWithoutUpload.push(artifact.name);
+                        }
                     }
                 } catch (e) {
                     $.error(
@@ -203,10 +232,31 @@ async function doSync(arg = {}) {
             }),
         );
 
-        $.info(`${valid.length} 个同步配置生成成功: ${valid.join(', ')}`);
+        const producedCount = valid.length + producedWithoutUpload.length;
+        $.info(
+            `${producedCount} 个同步配置生成成功: ${valid
+                .concat(producedWithoutUpload)
+                .join(', ')}`,
+        );
         $.info(`${invalid.length} 个同步配置生成失败: ${invalid.join(', ')}`);
+        if (producedWithoutUpload.length > 0) {
+            $.info(
+                `${
+                    producedWithoutUpload.length
+                } 个同步配置仅生成未上传: ${producedWithoutUpload.join(', ')}`,
+            );
+        }
+        if (skippedWithoutUploadCredentials.length > 0) {
+            $.info(
+                `${
+                    skippedWithoutUploadCredentials.length
+                } 个同步配置因未设置 GitHub Token 已跳过上传: ${skippedWithoutUploadCredentials.join(
+                    ', ',
+                )}`,
+            );
+        }
 
-        if (valid.length === 0) {
+        if (producedCount === 0) {
             throw new Error(
                 `同步配置 ${invalid.join(', ')} 生成失败 详情请查看日志`,
             );
@@ -220,15 +270,27 @@ async function doSync(arg = {}) {
         });
 
         $.write(allArtifacts, ARTIFACTS_KEY);
-        $.info('上传配置成功');
+        $.info('同步配置执行完成');
 
         if (invalid.length > 0) {
             $.notify(
                 '🌍 Sub-Store',
-                `同步配置成功 ${uploaded.length} 个, 失败 ${invalid.length} 个, 详情请查看日志`,
+                `同步配置成功 ${
+                    uploaded.length + producedWithoutUpload.length
+                } 个, 失败 ${invalid.length} 个${
+                    skippedWithoutUploadCredentials.length
+                        ? `, 跳过 ${skippedWithoutUploadCredentials.length} 个需上传配置`
+                        : ''
+                }, 详情请查看日志`,
             );
         } else if (syncSuccessNotify) {
-            $.notify('🌍 Sub-Store', '同步配置完成');
+            $.notify(
+                '🌍 Sub-Store',
+                '同步配置完成',
+                skippedWithoutUploadCredentials.length
+                    ? `已跳过 ${skippedWithoutUploadCredentials.length} 个需上传配置（未设置 GitHub Token）`
+                    : undefined,
+            );
         }
     } catch (e) {
         $.notify('🌍 Sub-Store', '同步配置失败', `原因：${e.message ?? e}`);
