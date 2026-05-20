@@ -287,9 +287,7 @@ describe('Proxy URI parser coverage', function () {
                     'early-data-header-name': 'Sec-WebSocket-Protocol',
                 },
             });
-            expect(proxy['ws-opts']).to.not.have.property(
-                'v2ray-http-upgrade',
-            );
+            expect(proxy['ws-opts']).to.not.have.property('v2ray-http-upgrade');
         });
 
         it('does not double-decode shadowsocks path query values before extracting early data', function () {
@@ -349,6 +347,27 @@ describe('Proxy URI parser coverage', function () {
                     host: 'mask.example.com',
                     password: 'tls-pass',
                     version: 3,
+                },
+            });
+        });
+
+        it('parses Shadowrocket shadowsocks gost-plugin payloads', function () {
+            const proxy = parseOne(
+                'ss://MjAyMi1ibGFrZTMtYWVzLTEyOC1nY206WVRFMVpXVTRaVEV5WmpjM1ltRXpaQT09OlkySmhaVFUzT0RZdFpqZzNNQzAwTkE9PUBvcGVuYWkuY29tOjEx?gost=eyJwYXRoIjoiXC93cyIsInBvcnQiOiIxMSIsImhvc3QiOiJhIiwicm91dGUiOiJ3cyIsImFkZHJlc3MiOiJhIn0#%F0%9F%87%AF%F0%9F%87%B5%20%E6%97%A5%E6%9C%AC-A77ACD92',
+            );
+
+            expectSubset(proxy, {
+                type: 'ss',
+                name: '🇯🇵 日本-A77ACD92',
+                server: 'a',
+                port: 11,
+                cipher: '2022-blake3-aes-128-gcm',
+                password: 'YTE1ZWU4ZTEyZjc3YmEzZA==:Y2JhZTU3ODYtZjg3MC00NA==',
+                plugin: 'gost-plugin',
+                'plugin-opts': {
+                    mode: 'websocket',
+                    host: 'a',
+                    path: '/ws',
                 },
             });
         });

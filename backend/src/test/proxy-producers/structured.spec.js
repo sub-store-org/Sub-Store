@@ -1557,7 +1557,7 @@ describe('Proxy structured producers', function () {
         });
     });
 
-    it('preserves numeric v2ray-plugin mux values across Clash-family YAML producers', function () {
+    it('preserves numeric v2ray-plugin mux values across non-Mihomo Clash-family YAML producers', function () {
         const buildProxy = (name, mux) => ({
             type: 'ss',
             name,
@@ -1577,12 +1577,7 @@ describe('Proxy structured producers', function () {
             },
         });
 
-        for (const platform of [
-            'Clash',
-            'ClashMeta',
-            'Shadowrocket',
-            'Stash',
-        ]) {
+        for (const platform of ['Clash', 'Shadowrocket', 'Stash']) {
             const internal = produceInternal(platform, [
                 buildProxy(`${platform} Mux On`, 1),
                 buildProxy(`${platform} Mux Off`, 0),
@@ -1606,6 +1601,109 @@ describe('Proxy structured producers', function () {
                 },
             });
         }
+    });
+
+    it('normalizes plugin mux values to booleans for Mihomo-compatible YAML producers', function () {
+        const buildProxy = (name, mux) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'v2ray-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                host: 'cdn.example.com',
+                path: '/socket',
+                tls: true,
+                mux,
+            },
+        });
+        const cases = [
+            ['Number On', 1, true],
+            ['Number Off', 0, false],
+            ['Boolean On', true, true],
+            ['Boolean Off', false, false],
+            ['String True', ' TRUE ', true],
+            ['String False', ' false ', false],
+            ['String One', '1', true],
+            ['String Zero', '0', false],
+        ];
+        const proxies = cases.map(([name, mux]) =>
+            buildProxy(`Mihomo ${name}`, mux),
+        );
+
+        for (const platform of ['Mihomo', 'ClashMeta']) {
+            const internal = produceInternal(platform, proxies);
+            const external = loadProducedYaml(platform, proxies);
+
+            expect(internal, platform).to.have.length(cases.length);
+            expect(external.proxies, platform).to.have.length(cases.length);
+
+            cases.forEach(([name, , expected], index) => {
+                expect(
+                    internal[index]['plugin-opts'].mux,
+                    `${platform} internal ${name}`,
+                ).to.equal(expected);
+                expect(
+                    external.proxies[index]['plugin-opts'].mux,
+                    `${platform} external ${name}`,
+                ).to.equal(expected);
+            });
+        }
+    });
+
+    it('preserves Mihomo shadowsocks gost-plugin options with boolean mux', function () {
+        const proxy = {
+            type: 'ss',
+            name: 'Mihomo Gost Plugin',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'gost-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                tls: true,
+                fingerprint: 'SHA256:TEST',
+                certificate: 'inline-test-client-cert',
+                'private-key': 'inline-test-client-key',
+                'skip-cert-verify': true,
+                host: 'cdn.example.com',
+                path: '/socket',
+                mux: 1,
+                headers: {
+                    custom: 'value',
+                },
+            },
+        };
+
+        const internal = produceInternal('Mihomo', proxy);
+        const external = loadProducedYaml('Mihomo', proxy);
+        const expected = {
+            type: 'ss',
+            name: 'Mihomo Gost Plugin',
+            plugin: 'gost-plugin',
+            'plugin-opts': {
+                mode: 'websocket',
+                tls: true,
+                fingerprint: 'SHA256:TEST',
+                certificate: 'inline-test-client-cert',
+                'private-key': 'inline-test-client-key',
+                'skip-cert-verify': true,
+                host: 'cdn.example.com',
+                path: '/socket',
+                mux: true,
+                headers: {
+                    custom: 'value',
+                },
+            },
+        };
+
+        expect(internal).to.have.length(1);
+        expectSubset(internal[0], expected);
+        expectSubset(external.proxies[0], expected);
     });
 
     it('keeps legacy single-line proxy output by default for Clash-style YAML producers', function () {

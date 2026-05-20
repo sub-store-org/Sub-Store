@@ -405,6 +405,7 @@ function URI_SS() {
         // handle obfs
         const pluginMatch = content.match(/[?&]plugin=([^&]+)/);
         const shadowTlsMatch = content.match(/[?&]shadow-tls=([^&]+)/);
+        const gostMatch = content.match(/[?&]gost=([^&]+)/);
 
         if (pluginMatch) {
             const pluginInfo = (
@@ -479,6 +480,33 @@ function URI_SS() {
                 password: getIfNotBlank(params['password']),
                 version: version ? parseInt(version, 10) : undefined,
             };
+            if (address) {
+                proxy.server = address;
+            }
+            if (port) {
+                proxy.port = parseInt(port, 10);
+            }
+        }
+        if (gostMatch) {
+            const params = JSON.parse(
+                Base64.decode(decodeURIComponent(gostMatch[1])),
+            );
+            const address = getIfNotBlank(params['address']);
+            const port = getIfNotBlank(params['port']);
+            const route = getIfNotBlank(params['route']);
+            const normalizedRoute = route?.trim().toLowerCase();
+            const isWebsocketRoute = ['ws', 'wss', 'websocket'].includes(
+                normalizedRoute,
+            );
+            proxy.plugin = 'gost-plugin';
+            proxy['plugin-opts'] = {
+                mode: isWebsocketRoute ? 'websocket' : route,
+                host: getIfNotBlank(params['host']),
+                path: getIfNotBlank(params['path']),
+            };
+            if (normalizedRoute === 'wss') {
+                proxy['plugin-opts'].tls = true;
+            }
             if (address) {
                 proxy.server = address;
             }

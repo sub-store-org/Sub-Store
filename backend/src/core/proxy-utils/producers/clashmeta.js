@@ -1,6 +1,7 @@
 import {
     getWireGuardAddressWithCIDR,
     isPresent,
+    normalizePluginMuxBooleanValue,
     produceProxyListOutput,
     supportsShadowsocksV2rayPluginMode,
 } from '@/core/proxy-utils/producers/utils';
@@ -259,6 +260,12 @@ export default function ClashMeta_Producer() {
                         delete proxy['shadow-tls-sni'];
                         delete proxy['shadow-tls-version'];
                     }
+                }
+
+                if (isPresent(proxy, 'plugin-opts.mux')) {
+                    proxy['plugin-opts'].mux = normalizePluginMuxBooleanValue(
+                        proxy['plugin-opts'].mux,
+                    );
                 }
 
                 if (

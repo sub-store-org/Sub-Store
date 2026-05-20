@@ -55,6 +55,10 @@ export function normalizePluginMuxValue(mux) {
     return mux;
 }
 
+export function normalizePluginMuxBooleanValue(mux) {
+    return Boolean(normalizePluginMuxValue(mux));
+}
+
 export function supportsShadowsocksV2rayPluginMode(proxy, supportedModes) {
     if (proxy?.type !== 'ss' || proxy?.plugin !== 'v2ray-plugin') return true;
 
@@ -138,16 +142,15 @@ export function getWireGuardAddressWithCIDR(proxy = {}, family = 'ipv4') {
         proxy[config.cidrKey],
         config.defaultCIDR,
     );
-    return `${parsed.address}/${normalizedCIDR ?? parsed.cidr ?? config.defaultCIDR}`;
+    return `${parsed.address}/${
+        normalizedCIDR ?? parsed.cidr ?? config.defaultCIDR
+    }`;
 }
 
 export function produceProxyListOutput(list, type, opts = {}) {
     if (type === 'internal') return list;
 
-    if (
-        opts.prettyYaml ||
-        opts['pretty-yaml']
-    ) {
+    if (opts.prettyYaml || opts['pretty-yaml']) {
         return YAML.safeDump(
             {
                 proxies: list,
@@ -158,6 +161,8 @@ export function produceProxyListOutput(list, type, opts = {}) {
         );
     }
 
-    return 'proxies:\n' +
-        list.map((proxy) => '  - ' + JSON.stringify(proxy) + '\n').join('');
+    return (
+        'proxies:\n' +
+        list.map((proxy) => '  - ' + JSON.stringify(proxy) + '\n').join('')
+    );
 }
