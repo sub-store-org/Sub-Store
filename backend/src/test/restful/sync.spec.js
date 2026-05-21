@@ -164,6 +164,39 @@ describe('sync routes', function () {
         expect(state[ARTIFACTS_KEY][0]).to.not.have.property('url');
     });
 
+    it('preserves artifact edits made while a single artifact sync is running', async function () {
+        const startedAt = new Date().getTime();
+        let artifactReads = 0;
+        $.read = (key) => {
+            if (key === ARTIFACTS_KEY) {
+                artifactReads++;
+                if (artifactReads === 2) {
+                    state[ARTIFACTS_KEY] = [
+                        {
+                            ...state[ARTIFACTS_KEY][0],
+                            remark: 'edited while syncing',
+                            cron: '55 23 * * *',
+                        },
+                    ];
+                }
+            }
+            return state[key] || [];
+        };
+
+        const res = await requestSyncArtifact('local-artifact');
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.body.status).to.equal('success');
+        expect(res.body.data.remark).to.equal('edited while syncing');
+        expect(res.body.data.cron).to.equal('55 23 * * *');
+        expect(res.body.data.updated).to.be.at.least(startedAt);
+        expect(res.body.data).to.not.have.property('url');
+        expect(state[ARTIFACTS_KEY][0].remark).to.equal('edited while syncing');
+        expect(state[ARTIFACTS_KEY][0].cron).to.equal('55 23 * * *');
+        expect(state[ARTIFACTS_KEY][0].updated).to.be.at.least(startedAt);
+        expect(state[ARTIFACTS_KEY][0]).to.not.have.property('url');
+    });
+
     it('does not try to delete a remote file when only run time exists', async function () {
         delete state[ARTIFACTS_KEY][0].url;
 

@@ -4,9 +4,14 @@ import express from '@/vendor/express';
 import $ from '@/core/app';
 import migrate from '@/utils/migration';
 import download, { downloadFile } from '@/utils/download';
-import { syncArtifacts, produceArtifact } from '@/restful/sync';
+import {
+    syncArtifacts,
+    produceArtifact,
+    syncArtifactItem,
+} from '@/restful/sync';
 import { gistBackupAction } from '@/restful/miscs';
 import { TOKENS_KEY, SETTINGS_KEY } from '@/constants';
+import { startArtifactCronJobs } from '@/utils/artifact-cron';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
@@ -145,6 +150,8 @@ export default function serve() {
     $app.start();
 
     if ($.env.isNode) {
+        startArtifactCronJobs(syncArtifactItem);
+
         // Deprecated: SUB_STORE_BACKEND_CRON, SUB_STORE_CRON
         const backend_sync_cron = eval(
             'process.env.SUB_STORE_BACKEND_SYNC_CRON',
@@ -158,7 +165,7 @@ export default function serve() {
                 async function () {
                     try {
                         $.info(`[SYNC CRON] ${backend_sync_cron} started`);
-                        await syncArtifacts();
+                        await syncArtifacts({ skipCronArtifacts: true });
                         $.info(`[SYNC CRON] ${backend_sync_cron} finished`);
                     } catch (e) {
                         $.error(

@@ -9,7 +9,11 @@ import {
 } from '@/constants';
 import { failed, success } from '@/restful/response';
 import { InternalServerError, ResourceNotFoundError } from '@/restful/errors';
-import { findByName } from '@/utils/database';
+import {
+    formatArtifactLogName,
+    shouldSyncArtifactInGlobalCron,
+} from '@/utils/artifact-cron';
+import { findByName, updateByName } from '@/utils/database';
 import download from '@/utils/download';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { RuleUtils } from '@/core/rule-utils';
@@ -764,6 +768,20 @@ function markArtifactProducedWithoutUpload(artifact) {
     delete artifact.url;
 }
 
+function patchArtifactSyncResult(name, patcher) {
+    const latestArtifacts = $.read(ARTIFACTS_KEY);
+    const currentArtifact = findByName(latestArtifacts, name);
+    if (!currentArtifact) {
+        $.info(`远程配置 ${name} 已不存在, 跳过同步结果写入`);
+        return null;
+    }
+
+    const nextArtifact = patcher({ ...currentArtifact });
+    updateByName(latestArtifacts, name, nextArtifact);
+    $.write(latestArtifacts, ARTIFACTS_KEY);
+    return nextArtifact;
+}
+
 async function uploadArtifactBatches({ allArtifacts, files, valid, invalid }) {
     const settings = $.read(SETTINGS_KEY) || {};
     const batchSize = normalizeArtifactSyncBatchSize(
@@ -841,7 +859,15 @@ async function uploadArtifactBatches({ allArtifacts, files, valid, invalid }) {
     return uploaded;
 }
 
-async function syncArtifacts() {
+function shouldSyncArtifact(artifact, { skipCronArtifacts = false } = {}) {
+    return (
+        artifact.sync &&
+        artifact.source &&
+        (!skipCronArtifacts || shouldSyncArtifactInGlobalCron(artifact))
+    );
+}
+
+async function syncArtifacts(options = {}) {
     $.info('开始同步所有远程配置...');
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const files = {};
@@ -855,7 +881,7 @@ async function syncArtifacts() {
         const subNames = [];
         let enabledCount = 0;
         allArtifacts.map((artifact) => {
-            if (artifact.sync && artifact.source) {
+            if (shouldSyncArtifact(artifact, options)) {
                 enabledCount++;
                 if (artifact.type === 'subscription') {
                     const subName = artifact.source;
@@ -903,8 +929,12 @@ async function syncArtifacts() {
         await Promise.all(
             allArtifacts.map(async (artifact) => {
                 try {
-                    if (artifact.sync && artifact.source) {
-                        $.info(`正在同步云配置：${artifact.name}...`);
+                    if (shouldSyncArtifact(artifact, options)) {
+                        $.info(
+                            `正在同步云配置：${formatArtifactLogName(
+                                artifact,
+                            )}...`,
+                        );
 
                         const useMihomoExternal =
                             artifact.platform === 'SurgeMac';
@@ -942,7 +972,9 @@ async function syncArtifacts() {
                     }
                 } catch (e) {
                     $.error(
-                        `生成同步配置 ${artifact.name} 发生错误: ${
+                        `生成同步配置 ${formatArtifactLogName(
+                            artifact,
+                        )} 发生错误: ${
                             e.message ?? e
                         }`,
                     );
@@ -1018,94 +1050,123 @@ async function syncAllArtifacts(_, res) {
     }
 }
 
-async function syncArtifact(req, res) {
-    let { name } = req.params;
-    $.info(`开始同步远程配置 ${name}...`);
+async function syncArtifactItem(name) {
     const allArtifacts = $.read(ARTIFACTS_KEY);
     const artifact = findByName(allArtifacts, name);
 
     if (!artifact) {
         $.error(`找不到远程配置 ${name}`);
-        failed(
-            res,
-            new ResourceNotFoundError(
-                'RESOURCE_NOT_FOUND',
-                `找不到远程配置 ${name}`,
-            ),
-            404,
+        throw new ResourceNotFoundError(
+            'RESOURCE_NOT_FOUND',
+            `找不到远程配置 ${name}`,
         );
-        return;
     }
 
     if (!artifact.source) {
-        $.error(`远程配置 ${name} 未设置来源`);
-        failed(
-            res,
-            new ResourceNotFoundError(
-                'RESOURCE_HAS_NO_SOURCE',
-                `远程配置 ${name} 未设置来源`,
-            ),
-            404,
+        $.error(`远程配置 ${formatArtifactLogName(artifact)} 未设置来源`);
+        throw new ResourceNotFoundError(
+            'RESOURCE_HAS_NO_SOURCE',
+            `远程配置 ${formatArtifactLogName(artifact)} 未设置来源`,
         );
-        return;
     }
 
-    try {
-        const useMihomoExternal = artifact.platform === 'SurgeMac';
+    $.info(`开始同步远程配置 ${formatArtifactLogName(artifact)}...`);
 
-        if (useMihomoExternal) {
-            $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
-        }
-        const output = await produceArtifact({
-            type: artifact.type,
-            name: artifact.source,
-            platform: artifact.platform,
-            produceOpts: {
-                'include-unsupported-proxy': artifact.includeUnsupportedProxy,
-                useMihomoExternal,
-                prettyYaml: artifact.prettyYaml,
-            },
-        });
+    const useMihomoExternal = artifact.platform === 'SurgeMac';
 
-        // if (!output || output.length === 0)
-        //     throw new Error('该配置的结果为空 不进行上传');
-        if (!shouldUploadArtifact(artifact)) {
-            $.info(`配置 ${artifact.name} 已关闭上传, 仅更新执行时间`);
-            markArtifactProducedWithoutUpload(artifact);
-            $.write(allArtifacts, ARTIFACTS_KEY);
-            success(res, artifact);
-            return;
-        }
+    if (useMihomoExternal) {
+        $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
+    }
+    const output = await produceArtifact({
+        type: artifact.type,
+        name: artifact.source,
+        platform: artifact.platform,
+        produceOpts: {
+            'include-unsupported-proxy': artifact.includeUnsupportedProxy,
+            useMihomoExternal,
+            prettyYaml: artifact.prettyYaml,
+        },
+    });
 
+    // if (!output || output.length === 0)
+    //     throw new Error('该配置的结果为空 不进行上传');
+    if (!shouldUploadArtifact(artifact)) {
         $.info(
-            `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
+            `配置 ${formatArtifactLogName(
                 artifact,
-                null,
-                2,
-            )}`,
+            )} 已关闭上传, 仅更新执行时间`,
         );
-        const resp = await syncToGist({
-            [encodeURIComponent(artifact.name)]: {
-                content: output,
+        const updated = new Date().getTime();
+        const patchedArtifact = patchArtifactSyncResult(
+            name,
+            (currentArtifact) => {
+                currentArtifact.updated = updated;
+                delete currentArtifact.url;
+                return currentArtifact;
             },
-        });
-        artifact.updated = new Date().getTime();
-        const body = JSON.parse(resp.body);
+        );
+        if (patchedArtifact) return patchedArtifact;
 
-        logUploadResponse(body);
-        const new_url = resolveArtifactUploadUrl(body, artifact.name);
-        artifact.url = new_url;
-        $.write(allArtifacts, ARTIFACTS_KEY);
+        const fallbackArtifact = {
+            ...artifact,
+            updated,
+        };
+        delete fallbackArtifact.url;
+        return fallbackArtifact;
+    }
+
+    $.info(
+        `正在上传配置：${formatArtifactLogName(artifact)}\n>>>${JSON.stringify(
+            artifact,
+            null,
+            2,
+        )}`,
+    );
+    const resp = await syncToGist({
+        [encodeURIComponent(artifact.name)]: {
+            content: output,
+        },
+    });
+    const updated = new Date().getTime();
+    const body = JSON.parse(resp.body);
+
+    logUploadResponse(body);
+    const new_url = resolveArtifactUploadUrl(body, artifact.name);
+    const patchedArtifact = patchArtifactSyncResult(
+        name,
+        (currentArtifact) => ({
+            ...currentArtifact,
+            updated,
+            url: new_url,
+        }),
+    );
+    return (
+        patchedArtifact || {
+            ...artifact,
+            updated,
+            url: new_url,
+        }
+    );
+}
+
+async function syncArtifact(req, res) {
+    let { name } = req.params;
+
+    try {
+        const artifact = await syncArtifactItem(name);
         success(res, artifact);
     } catch (err) {
-        $.error(`远程配置 ${artifact.name} 发生错误: ${err.message ?? err}`);
+        $.error(`远程配置 ${name} 发生错误: ${err.message ?? err}`);
         failed(
             res,
-            new InternalServerError(
-                `FAILED_TO_SYNC_ARTIFACT`,
-                `Failed to sync artifact ${name}`,
-                `Reason: ${err}`,
-            ),
+            err instanceof ResourceNotFoundError
+                ? err
+                : new InternalServerError(
+                      `FAILED_TO_SYNC_ARTIFACT`,
+                      `Failed to sync artifact ${name}`,
+                      `Reason: ${err}`,
+                  ),
+            err instanceof ResourceNotFoundError ? 404 : undefined,
         );
     }
 }
@@ -1114,6 +1175,7 @@ export {
     markArtifactProducedWithoutUpload,
     produceArtifact,
     shouldUploadArtifact,
+    syncArtifactItem,
     syncArtifacts,
     uploadArtifactBatches,
 };
