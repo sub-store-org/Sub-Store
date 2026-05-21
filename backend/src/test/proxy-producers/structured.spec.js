@@ -161,6 +161,104 @@ describe('Proxy structured producers', function () {
         }
     });
 
+    it('keeps Mihomo Snell versions 1 through 5', function () {
+        const proxies = [1, 2, 3, 4, 5, 6].map((version) => ({
+            type: 'snell',
+            name: `Snell ${version}`,
+            server: 'snell.example.com',
+            port: 44046,
+            psk: 'secret',
+            version,
+            udp: true,
+        }));
+
+        const internal = produceInternal('Mihomo', proxies);
+        const external = loadProducedYaml('Mihomo', proxies);
+
+        expect(internal.map((proxy) => proxy.version)).to.deep.equal([
+            1, 2, 3, 4, 5,
+        ]);
+        expect(external.proxies.map((proxy) => proxy.version)).to.deep.equal([
+            1, 2, 3, 4, 5,
+        ]);
+        expect(
+            internal.find((proxy) => proxy.version === 1),
+        ).to.not.have.property('udp');
+        expect(
+            internal.find((proxy) => proxy.version === 2),
+        ).to.not.have.property('udp');
+        expect(internal.find((proxy) => proxy.version === 4).udp).to.equal(
+            true,
+        );
+        expect(internal.find((proxy) => proxy.version === 5).udp).to.equal(
+            true,
+        );
+    });
+
+    it('keeps only Shadowsocks shadow-tls versions 1 through 3 for Mihomo', function () {
+        const buildShadowTlsProxy = (name, version) => ({
+            type: 'ss',
+            name,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            'shadow-tls-password': 'shadow-pass',
+            'shadow-tls-sni': 'mask.example.com',
+            'shadow-tls-version': version,
+        });
+        const proxies = [
+            buildShadowTlsProxy('ShadowTLS 1', 1),
+            {
+                type: 'ss',
+                name: 'ShadowTLS 2',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    host: 'mask.example.com',
+                    password: 'shadow-pass',
+                    version: 2,
+                },
+            },
+            buildShadowTlsProxy('ShadowTLS 3', 3),
+            buildShadowTlsProxy('ShadowTLS 4', 4),
+            {
+                type: 'vmess',
+                name: 'VMess ShadowTLS',
+                server: 'vmess.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    host: 'mask.example.com',
+                    password: 'shadow-pass',
+                    version: 3,
+                },
+            },
+        ];
+
+        const internal = produceInternal('Mihomo', proxies);
+        const external = loadProducedYaml('Mihomo', proxies);
+
+        expect(internal.map((proxy) => proxy.name)).to.deep.equal([
+            'ShadowTLS 1',
+            'ShadowTLS 2',
+            'ShadowTLS 3',
+        ]);
+        expect(
+            internal.map((proxy) => proxy['plugin-opts'].version),
+        ).to.deep.equal([1, 2, 3]);
+        expect(external.proxies.map((proxy) => proxy.name)).to.deep.equal([
+            'ShadowTLS 1',
+            'ShadowTLS 2',
+            'ShadowTLS 3',
+        ]);
+    });
+
     it('keeps only supported shadowsocks v2ray-plugin modes for Shadowrocket by default', function () {
         const buildProxy = (name, mode) => ({
             type: 'ss',
