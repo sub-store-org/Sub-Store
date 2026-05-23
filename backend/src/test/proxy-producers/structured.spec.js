@@ -195,6 +195,320 @@ describe('Proxy structured producers', function () {
         );
     });
 
+    it('keeps Snell in sing-box only when include-unsupported-proxy is enabled', function () {
+        const proxy = {
+            type: 'snell',
+            name: 'sing-box Snell',
+            server: 'snell.example.com',
+            port: 44046,
+            psk: 'secret',
+            version: 4,
+            udp: false,
+            tfo: true,
+            'fast-open': true,
+            reuse: true,
+            'dialer-proxy': 'proxy-out',
+            'ip-version': 'v4-only',
+            _dns_server: 'dns-out',
+            _domain_resolver: {
+                client_subnet: '1.2.3.0/24',
+            },
+            'obfs-opts': {
+                mode: 'tls',
+                host: 'obfs.example.com',
+                path: '/ignored-by-sing-box',
+            },
+        };
+
+        const { result, errors } = captureErrors(() =>
+            produceInternal('sing-box', proxy),
+        );
+        const internal = produceInternal('sing-box', proxy, {
+            'include-unsupported-proxy': true,
+        });
+        const external = loadProducedJson('sing-box', proxy, {
+            'include-unsupported-proxy': true,
+        });
+
+        expect(result).to.deep.equal([]);
+        expect(errors).to.have.length(1);
+        expect(errors[0]).to.include(
+            'Platform sing-box does not support proxy type: snell',
+        );
+        expect(internal).to.have.length(1);
+        expectSubset(internal[0], {
+            tag: 'sing-box Snell',
+            type: 'snell',
+            server: 'snell.example.com',
+            server_port: 44046,
+            psk: 'secret',
+            version: 4,
+            reuse: true,
+            network: 'tcp',
+            obfs_mode: 'tls',
+            obfs_host: 'obfs.example.com',
+            tcp_fast_open: true,
+            udp_fragment: true,
+            detour: 'proxy-out',
+            domain_resolver: {
+                server: 'dns-out',
+                strategy: 'ipv4_only',
+                client_subnet: '1.2.3.0/24',
+            },
+        });
+        expect(internal[0]).to.not.have.property('obfs_uri');
+        expectSubset(external.outbounds[0], internal[0]);
+    });
+
+    it('keeps sing-box Snell versions documented by reF1nd and rejects newer versions', function () {
+        const proxies = [1, 2, 3, 4, 5, 6, '4x'].map((version) => ({
+            type: 'snell',
+            name: `sing-box Snell ${version}`,
+            server: 'snell.example.com',
+            port: 44046,
+            psk: 'secret',
+            version,
+            udp: true,
+            reuse: true,
+        }));
+
+        const { result, errors } = captureErrors(() =>
+            produceInternal('sing-box', proxies, {
+                'include-unsupported-proxy': true,
+            }),
+        );
+
+        expect(result.map((proxy) => proxy.version)).to.deep.equal([
+            1, 2, 3, 4, 5,
+        ]);
+        expect(
+            result.find((proxy) => proxy.version === 1),
+        ).to.not.have.property('network');
+        expect(
+            result.find((proxy) => proxy.version === 3),
+        ).to.not.have.property('reuse');
+        expect(result.find((proxy) => proxy.version === 4).reuse).to.equal(
+            true,
+        );
+        expect(errors).to.have.length(2);
+        expect(errors[0]).to.include(
+            'Platform sing-box does not support snell version 6',
+        );
+        expect(errors[1]).to.include(
+            'Platform sing-box does not support snell version 4x',
+        );
+    });
+
+    it('exports parsed Surge Snell lines to sing-box Snell outbounds', function () {
+        const [proxy] = ProxyUtils.parse(
+            'Surge Snell = snell,surge-snell.example.com,443,psk=secret,version=5,obfs=http,obfs-host=obfs.example.com,obfs-uri=/snell,reuse=true,tfo=true,udp-relay=false,underlying-proxy=proxy-out',
+        );
+
+        const output = loadProducedJson('sing-box', proxy, {
+            'include-unsupported-proxy': true,
+        });
+
+        expectSubset(output.outbounds[0], {
+            tag: 'Surge Snell',
+            type: 'snell',
+            server: 'surge-snell.example.com',
+            server_port: 443,
+            psk: 'secret',
+            version: 5,
+            reuse: true,
+            network: 'tcp',
+            obfs_mode: 'http',
+            obfs_host: 'obfs.example.com',
+            tcp_fast_open: true,
+            detour: 'proxy-out',
+        });
+        expect(output.outbounds[0]).to.not.have.property('obfs_uri');
+    });
+
+    it('exports Snell shadow-tls field form to sing-box chained outbounds', function () {
+        const output = loadProducedJson(
+            'sing-box',
+            {
+                type: 'snell',
+                name: 'sing-box Snell ShadowTLS',
+                server: 'snell.example.com',
+                port: 44046,
+                psk: 'secret',
+                version: 4,
+                udp: false,
+                tfo: true,
+                'fast-open': true,
+                reuse: true,
+                'dialer-proxy': 'proxy-out',
+                'ip-version': 'v6-only',
+                _dns_server: 'dns-out',
+                'shadow-tls-password': 'shadow-pass',
+                'shadow-tls-sni': 'mask.example.com',
+                'shadow-tls-version': 3,
+            },
+            { 'include-unsupported-proxy': true },
+        );
+
+        expect(output.outbounds).to.have.length(2);
+        expectSubset(output.outbounds[0], {
+            tag: 'sing-box Snell ShadowTLS',
+            type: 'snell',
+            psk: 'secret',
+            version: 4,
+            reuse: true,
+            network: 'tcp',
+            detour: 'sing-box Snell ShadowTLS_shadowtls',
+        });
+        expect(output.outbounds[0]).to.not.have.property('server');
+        expect(output.outbounds[0]).to.not.have.property('server_port');
+        expect(output.outbounds[0]).to.not.have.property('tcp_fast_open');
+        expectSubset(output.outbounds[1], {
+            tag: 'sing-box Snell ShadowTLS_shadowtls',
+            type: 'shadowtls',
+            server: 'snell.example.com',
+            server_port: 44046,
+            version: 3,
+            password: 'shadow-pass',
+            udp_fragment: true,
+            tcp_fast_open: true,
+            detour: 'proxy-out',
+            tls: {
+                enabled: true,
+                server_name: 'mask.example.com',
+                utls: {
+                    enabled: true,
+                },
+            },
+            domain_resolver: {
+                server: 'dns-out',
+                strategy: 'ipv6_only',
+            },
+        });
+    });
+
+    it('exports parsed Surge Snell shadow-tls lines to sing-box chained outbounds', function () {
+        const [proxy] = ProxyUtils.parse(
+            'Surge Snell ShadowTLS = snell,surge-snell.example.com,443,psk=secret,version=5,reuse=true,tfo=true,udp-relay=false,underlying-proxy=proxy-out,shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3',
+        );
+
+        const output = loadProducedJson('sing-box', proxy, {
+            'include-unsupported-proxy': true,
+        });
+
+        expectSubset(output.outbounds[0], {
+            tag: 'Surge Snell ShadowTLS',
+            type: 'snell',
+            psk: 'secret',
+            version: 5,
+            reuse: true,
+            network: 'tcp',
+            detour: 'Surge Snell ShadowTLS_shadowtls',
+        });
+        expectSubset(output.outbounds[1], {
+            tag: 'Surge Snell ShadowTLS_shadowtls',
+            type: 'shadowtls',
+            server: 'surge-snell.example.com',
+            server_port: 443,
+            version: 3,
+            password: 'shadow-pass',
+            detour: 'proxy-out',
+            tls: {
+                server_name: 'mask.example.com',
+            },
+        });
+    });
+
+    it('exports Mihomo-style Snell shadow-tls plugin objects to sing-box chained outbounds', function () {
+        const [proxy] = ProxyUtils.parse(`proxies:
+  - name: Mihomo Snell ShadowTLS
+    type: snell
+    server: mihomo-snell.example.com
+    port: 443
+    psk: secret
+    version: 4
+    udp: false
+    plugin: shadow-tls
+    plugin-opts:
+      host: mask.example.com
+      password: shadow-pass
+      version: 2
+      alpn:
+        - h2
+        - http/1.1`);
+
+        const output = loadProducedJson('sing-box', proxy, {
+            'include-unsupported-proxy': true,
+        });
+
+        expectSubset(output.outbounds[0], {
+            tag: 'Mihomo Snell ShadowTLS',
+            type: 'snell',
+            psk: 'secret',
+            version: 4,
+            network: 'tcp',
+            detour: 'Mihomo Snell ShadowTLS_shadowtls',
+        });
+        expectSubset(output.outbounds[1], {
+            tag: 'Mihomo Snell ShadowTLS_shadowtls',
+            type: 'shadowtls',
+            server: 'mihomo-snell.example.com',
+            server_port: 443,
+            version: 2,
+            password: 'shadow-pass',
+            tls: {
+                server_name: 'mask.example.com',
+                alpn: ['h2', 'http/1.1'],
+            },
+        });
+    });
+
+    it('exports Shadowsocks shadow-tls plugin ALPN to sing-box shadowtls tls options', function () {
+        const [proxy] = ProxyUtils.parse(`proxies:
+  - name: SS ShadowTLS ALPN
+    type: ss
+    server: ss.example.com
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: password
+    plugin: shadow-tls
+    client-fingerprint: chrome
+    plugin-opts:
+      host: cloud.tencent.com
+      password: shadow_tls_password
+      version: 2
+      alpn:
+        - h2
+        - http/1.1`);
+
+        const output = loadProducedJson('sing-box', proxy);
+
+        expect(output.outbounds).to.have.length(2);
+        expectSubset(output.outbounds[0], {
+            tag: 'SS ShadowTLS ALPN',
+            type: 'shadowsocks',
+            method: 'chacha20-ietf-poly1305',
+            password: 'password',
+            detour: 'SS ShadowTLS ALPN_shadowtls',
+        });
+        expectSubset(output.outbounds[1], {
+            tag: 'SS ShadowTLS ALPN_shadowtls',
+            type: 'shadowtls',
+            server: 'ss.example.com',
+            server_port: 443,
+            version: 2,
+            password: 'shadow_tls_password',
+            tls: {
+                enabled: true,
+                server_name: 'cloud.tencent.com',
+                alpn: ['h2', 'http/1.1'],
+                utls: {
+                    enabled: true,
+                    fingerprint: 'chrome',
+                },
+            },
+        });
+    });
+
     it('keeps only Shadowsocks shadow-tls versions 1 through 3 for Mihomo', function () {
         const buildShadowTlsProxy = (name, version) => ({
             type: 'ss',
