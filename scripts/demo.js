@@ -319,6 +319,23 @@ function operator(proxies = [], targetPlatform, context) {
 
   // context 为传入的上下文, 可在多个脚本中共享使用
   // 其中 env 为 环境信息, 包含运行版本和其他后端信息
+  // 可通过 context.process 动态控制本次处理中后续 action 是否执行
+  // 只按 customName 匹配, 只影响当前脚本之后的 action
+  // type 为 disable 时, 跳过 customNames 中的后续 action
+  // type 为 enable 时, 只执行 customNames 中的后续 action
+  // 示例: 准备 A/B/C 三个脚本操作, A 根据请求 UA 决定后续使用 B 还是 C
+  // if ($options?._req) {
+  //   const { headers, url, path } = $options?._req || {};
+  //   // 获取 user-agent
+  //   const ua = headers?.["user-agent"] || headers?.["User-Agent"];
+  //   console.log(`User-Agent: ${ua}`);
+  //   context.process = /Surge/i.test(ua)
+  //     ? { type: 'enable', customNames: ['branch-b'] }
+  //     : { type: 'enable', customNames: ['branch-c'] };
+  // }
+  // 脚本操作和修改响应(Response Transformer)各自有独立的 context.process 控制, 两者不互相跨
+  // 脚本操作只控制后续非修改响应操作
+  // 修改响应中设置 context.process 只控制后续修改响应操作
 
   // 其中 source 为 订阅和组合订阅的数据, 有三种情况, 按需判断 (若只需要取订阅/组合订阅名称 直接用 `_subName` `_subDisplayName` `_collectionName` `_collectionDisplayName` 即可)
 

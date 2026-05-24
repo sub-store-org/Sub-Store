@@ -109,6 +109,21 @@ function parse(raw) {
     });
 }
 
+function shouldSkipByContext(item, context) {
+    const control = context.process;
+    if (!control || typeof control !== 'object') return false;
+
+    const { type, customNames } = control;
+    if (!Array.isArray(customNames)) return false;
+
+    const matched =
+        item.customName != null && customNames.includes(item.customName);
+
+    if (type === 'disable') return matched;
+    if (type === 'enable') return !matched;
+    return false;
+}
+
 async function processFn(
     proxies,
     operators = [],
@@ -125,6 +140,14 @@ async function processFn(
                 }" with arguments:\n >>> ${
                     JSON.stringify(item.args, null, 2) || 'None'
                 }`,
+            );
+            continue;
+        }
+        if (shouldSkipByContext(item, context)) {
+            $.info(
+                `Skipping context-controlled operator: "${
+                    item.type
+                }" with customName "${item.customName || ''}"`,
             );
             continue;
         }
@@ -184,6 +207,14 @@ async function processResponseFn(
     let output = normalizeResponse(response);
     for (const item of operators) {
         if (!isResponseTransformerType(item.type)) continue;
+        if (shouldSkipByContext(item, context)) {
+            $.info(
+                `Skipping context-controlled response transformer: "${
+                    item.type
+                }" with customName "${item.customName || ''}"`,
+            );
+            continue;
+        }
         if (item.disabled) {
             $.log(
                 `Skipping disabled response transformer: "${
