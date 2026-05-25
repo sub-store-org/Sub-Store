@@ -1952,6 +1952,31 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces URI VMess h2 links from mihomo h2-opts host', function () {
+        const output = produceExternal('URI', {
+            type: 'vmess',
+            name: 'URI VMess H2',
+            server: 'vmess-h2.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            tls: true,
+            network: 'h2',
+            'h2-opts': {
+                path: '/h2',
+                host: ['h2.example.com'],
+            },
+        });
+        const payload = JSON.parse(
+            Base64.decode(output.replace(/^vmess:\/\//, '')),
+        );
+
+        expect(payload.net).to.equal('h2');
+        expect(payload.path).to.equal('/h2');
+        expect(payload.host).to.equal('h2.example.com');
+    });
+
     it('produces URI VLESS h2 links using share-link http transport type', function () {
         const output = produceExternal('URI', {
             type: 'vless',
@@ -1965,9 +1990,7 @@ describe('Proxy text producers', function () {
             _h2: true,
             'h2-opts': {
                 path: '/h2',
-                headers: {
-                    host: ['h2.example.com'],
-                },
+                host: ['h2.example.com'],
             },
         });
 

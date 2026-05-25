@@ -310,12 +310,27 @@ export default function ClashMeta_Producer() {
                     ) {
                         proxy['h2-opts'].path = path[0];
                     }
-                    let host = proxy['h2-opts']?.headers?.host;
+                    let host =
+                        proxy['h2-opts']?.host ??
+                        proxy['h2-opts']?.headers?.host ??
+                        proxy['h2-opts']?.headers?.Host;
                     if (
-                        isPresent(proxy, 'h2-opts.headers.Host') &&
-                        !Array.isArray(host)
+                        (isPresent(proxy, 'h2-opts.host') ||
+                            isPresent(proxy, 'h2-opts.headers.host') ||
+                            isPresent(proxy, 'h2-opts.headers.Host'))
                     ) {
-                        proxy['h2-opts'].headers.host = [host];
+                        proxy['h2-opts'].host = Array.isArray(host)
+                            ? host
+                            : [host];
+                    }
+                    if (proxy['h2-opts']?.headers) {
+                        delete proxy['h2-opts'].headers.host;
+                        delete proxy['h2-opts'].headers.Host;
+                        if (
+                            Object.keys(proxy['h2-opts'].headers).length === 0
+                        ) {
+                            delete proxy['h2-opts'].headers;
+                        }
                     }
                 }
                 if (['ws'].includes(proxy.network)) {

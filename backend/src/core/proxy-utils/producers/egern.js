@@ -61,13 +61,15 @@ export default function Egern_Producer() {
                                 '2022-blake3-aes-256-gcm',
                             ].includes(proxy.cipher))) ||
                     (proxy.type === 'vmess' &&
-                        !['http', 'ws', 'tcp'].includes(proxy.network) &&
+                        !['h2', 'http', 'ws', 'tcp'].includes(proxy.network) &&
                         proxy.network) ||
                     (proxy.type === 'trojan' &&
                         !['http', 'ws', 'tcp'].includes(proxy.network) &&
                         proxy.network) ||
                     (proxy.type === 'vless' &&
-                        ((!['http', 'ws', 'tcp'].includes(proxy.network) &&
+                        ((!['h2', 'http', 'ws', 'tcp'].includes(
+                            proxy.network,
+                        ) &&
                             proxy.network) ||
                             (typeof proxy.flow !== 'undefined' &&
                                 !['xtls-rprx-vision', ''].includes(
@@ -131,6 +133,24 @@ export default function Egern_Producer() {
                                           proxy['skip-cert-verify'],
                                   }
                                 : {}),
+                        };
+                    } else if (proxy.type === 'https') {
+                        proxy = {
+                            type: 'https',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            username: proxy.username,
+                            password: proxy.password,
+                            ...(hasHeaders(proxy)
+                                ? {
+                                      headers: proxy.headers,
+                                  }
+                                : {}),
+                            tfo: proxy.tfo || proxy['fast-open'],
+                            next_hop: proxy.next_hop,
+                            sni: proxy.sni,
+                            skip_tls_verify: proxy['skip-cert-verify'],
                         };
                     } else if (proxy.type === 'socks5') {
                         proxy = {
@@ -312,13 +332,8 @@ export default function Egern_Producer() {
                                     path: Array.isArray(proxy['h2-opts']?.path)
                                         ? proxy['h2-opts']?.path[0]
                                         : proxy['h2-opts']?.path,
-                                    headers: {
-                                        Host: Array.isArray(
-                                            proxy['h2-opts']?.headers?.Host,
-                                        )
-                                            ? proxy['h2-opts']?.headers?.Host[0]
-                                            : proxy['h2-opts']?.headers?.Host,
-                                    },
+                                    headers: getH2Headers(proxy['h2-opts']),
+                                    sni: proxy.sni,
                                     skip_tls_verify: proxy['skip-cert-verify'],
                                 },
                             };
@@ -390,6 +405,18 @@ export default function Egern_Producer() {
                                                   ?.Host[0]
                                             : proxy['http-opts']?.headers?.Host,
                                     },
+                                    skip_tls_verify: proxy['skip-cert-verify'],
+                                },
+                            };
+                        } else if (proxy.network === 'h2') {
+                            proxy.transport = {
+                                http2: {
+                                    method: proxy['h2-opts']?.method,
+                                    path: Array.isArray(proxy['h2-opts']?.path)
+                                        ? proxy['h2-opts']?.path[0]
+                                        : proxy['h2-opts']?.path,
+                                    headers: getH2Headers(proxy['h2-opts']),
+                                    sni: proxy.sni,
                                     skip_tls_verify: proxy['skip-cert-verify'],
                                 },
                             };
@@ -518,6 +545,16 @@ export default function Egern_Producer() {
                             };
                         }
                     }
+                    const fingerprintSha256 = getFingerprintSha256(original);
+                    if (fingerprintSha256) {
+                        if (supportsRootFingerprintSha256(original, proxy)) {
+                            proxy.fingerprint_sha256 = fingerprintSha256;
+                        }
+                        addTransportFingerprintSha256(
+                            proxy.transport,
+                            fingerprintSha256,
+                        );
+                    }
                     if (
                         [
                             'socks5',
@@ -610,4 +647,73 @@ function hasHeaders(proxy) {
         typeof proxy.headers === 'object' &&
         Object.keys(proxy.headers).length > 0
     );
+}
+
+function getFirstHeaderValue(headers, ...keys) {
+    for (const key of keys) {
+        const value = getFirstValue(headers?.[key]);
+        if (value) return value;
+    }
+    return undefined;
+}
+
+function getFirstH2Host(h2Opts) {
+    return (
+        getFirstValue(h2Opts?.host) ||
+        getFirstHeaderValue(h2Opts?.headers, 'host', 'Host')
+    );
+}
+
+function getH2Headers(h2Opts) {
+    const headers = {};
+    if (
+        h2Opts?.headers &&
+        typeof h2Opts.headers === 'object' &&
+        !Array.isArray(h2Opts.headers)
+    ) {
+        for (const [key, value] of Object.entries(h2Opts.headers)) {
+            if (/^host$/i.test(key)) continue;
+            const headerValue = getFirstValue(value);
+            if (headerValue != null) {
+                headers[key] = headerValue;
+            }
+        }
+    }
+    const host = getFirstH2Host(h2Opts);
+    if (host) {
+        headers.Host = host;
+    }
+    return Object.keys(headers).length > 0 ? headers : undefined;
+}
+
+function getFirstValue(value) {
+    if (Array.isArray(value)) return value[0];
+    if (value != null) return value;
+    return undefined;
+}
+
+function getFingerprintSha256(proxy) {
+    const fingerprint = proxy?.['tls-fingerprint'];
+    if (typeof fingerprint !== 'string') return undefined;
+    const trimmedFingerprint = fingerprint.trim();
+    return trimmedFingerprint.length > 0 ? trimmedFingerprint : undefined;
+}
+
+function supportsRootFingerprintSha256(original, proxy) {
+    return (
+        ['anytls', 'https', 'hysteria2', 'trojan', 'tuic'].includes(
+            original.type,
+        ) ||
+        (original.type === 'http' && proxy.type === 'https')
+    );
+}
+
+function addTransportFingerprintSha256(transport, fingerprintSha256) {
+    if (!transport) return;
+
+    for (const key of ['http2', 'tls', 'wss']) {
+        if (transport[key]) {
+            transport[key].fingerprint_sha256 = fingerprintSha256;
+        }
+    }
 }

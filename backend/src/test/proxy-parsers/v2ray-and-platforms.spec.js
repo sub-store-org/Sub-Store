@@ -151,12 +151,12 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
-        it('parses V2rayN http shares and normalizes http paths', function () {
+        it('parses V2rayN http transport shares as h2', function () {
             const share = Base64.encode(
                 JSON.stringify({
-                    ps: 'VMess HTTP',
+                    ps: 'VMess H2',
                     add: 'vmess-http.example.com',
-                    port: '80',
+                    port: '443',
                     id: UUID,
                     aid: '1',
                     scy: 'unknown-cipher',
@@ -169,8 +169,41 @@ describe('VMess and VLESS parser coverage', function () {
 
             expectSubset(proxy, {
                 type: 'vmess',
-                name: 'VMess HTTP',
+                name: 'VMess H2',
                 server: 'vmess-http.example.com',
+                port: 443,
+                uuid: UUID,
+                alterId: 1,
+                cipher: 'auto',
+                network: 'h2',
+                'h2-opts': {
+                    host: ['h1.example.com', 'h2.example.com'],
+                    path: '/a,/b',
+                },
+            });
+        });
+
+        it('parses V2rayN tcp fake-http shares as http header transport', function () {
+            const share = Base64.encode(
+                JSON.stringify({
+                    ps: 'VMess HTTP Header',
+                    add: 'vmess-http-header.example.com',
+                    port: '80',
+                    id: UUID,
+                    aid: '1',
+                    scy: 'auto',
+                    net: 'tcp',
+                    type: 'http',
+                    host: 'h1.example.com,h2.example.com',
+                    path: '/a,/b',
+                }),
+            );
+            const proxy = parseOne(`vmess://${share}`);
+
+            expectSubset(proxy, {
+                type: 'vmess',
+                name: 'VMess HTTP Header',
+                server: 'vmess-http-header.example.com',
                 port: 80,
                 uuid: UUID,
                 alterId: 1,
@@ -796,7 +829,7 @@ describe('VMess and VLESS parser coverage', function () {
 
         it('parses h2 VLESS shares from share-link http transport', function () {
             const proxy = parseOne(
-                `vless://${UUID}@vless-h2.example.com:443?type=http&host=h2.example.com&path=%2Fh2&h2=1&packetEncoding=none#VLESS%20H2`,
+                `vless://${UUID}@vless-h2.example.com:443?type=http&host=h2.example.com,h2-alt.example.com&path=%2Fh2&h2=1&packetEncoding=none#VLESS%20H2`,
             );
 
             expectSubset(proxy, {
@@ -808,13 +841,36 @@ describe('VMess and VLESS parser coverage', function () {
                 network: 'h2',
                 _h2: true,
                 'h2-opts': {
-                    headers: {
-                        host: ['h2.example.com'],
-                    },
+                    host: ['h2.example.com', 'h2-alt.example.com'],
                     path: '/h2',
                 },
             });
             expect(proxy).to.not.have.property('xudp');
+        });
+
+        it('keeps non-Host h2 headers while lifting Host into h2-opts host', function () {
+            const headers = encodeURIComponent(
+                JSON.stringify({
+                    Host: 'cdn.example.com',
+                    'User-Agent': 'curl/7.77.0',
+                }),
+            );
+            const proxy = parseOne(
+                `vless://${UUID}@vless-h2.example.com:443?type=http&obfsParam=${headers}&path=%2Fh2#VLESS%20H2%20Headers`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS H2 Headers',
+                network: 'h2',
+                'h2-opts': {
+                    headers: {
+                        'User-Agent': 'curl/7.77.0',
+                    },
+                    host: ['cdn.example.com'],
+                    path: '/h2',
+                },
+            });
         });
 
         it('parses xhttp VLESS shares with mihomo transport extras', function () {

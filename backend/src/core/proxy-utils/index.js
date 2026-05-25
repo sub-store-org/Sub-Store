@@ -819,24 +819,28 @@ function lastParse(proxy) {
     if (proxy.network) {
         let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
         let transporthost = proxy[`${proxy.network}-opts`]?.headers?.host;
-        if (proxy.network === 'h2') {
-            if (!transporthost && transportHost) {
-                proxy[`${proxy.network}-opts`].headers.host = transportHost;
-                delete proxy[`${proxy.network}-opts`].headers.Host;
-            }
-        } else if (transporthost && !transportHost) {
+        if (proxy.network !== 'h2' && transporthost && !transportHost) {
             proxy[`${proxy.network}-opts`].headers.Host = transporthost;
             delete proxy[`${proxy.network}-opts`].headers.host;
         }
     }
     if (proxy.network === 'h2') {
-        const host = proxy['h2-opts']?.headers?.host;
-        const path = proxy['h2-opts']?.path;
-        if (host && !Array.isArray(host)) {
-            proxy['h2-opts'].headers.host = [host];
+        const h2Opts = proxy['h2-opts'];
+        const host =
+            h2Opts?.host ?? h2Opts?.headers?.host ?? h2Opts?.headers?.Host;
+        const path = h2Opts?.path;
+        if (host) {
+            h2Opts.host = Array.isArray(host) ? host : [host];
+        }
+        if (h2Opts?.headers) {
+            delete h2Opts.headers.host;
+            delete h2Opts.headers.Host;
+            if (Object.keys(h2Opts.headers).length === 0) {
+                delete h2Opts.headers;
+            }
         }
         if (Array.isArray(path)) {
-            proxy['h2-opts'].path = path[0];
+            h2Opts.path = path[0];
         }
     }
 
@@ -872,7 +876,10 @@ function lastParse(proxy) {
     if (proxy.tls && !proxy.sni && proxy.sni !== '') {
         // 传输层若有设置就使用
         if (proxy.network) {
-            let transportHost = proxy[`${proxy.network}-opts`]?.headers?.Host;
+            let transportHost =
+                proxy.network === 'h2'
+                    ? proxy['h2-opts']?.host
+                    : proxy[`${proxy.network}-opts`]?.headers?.Host;
             transportHost = Array.isArray(transportHost)
                 ? transportHost[0]
                 : transportHost;

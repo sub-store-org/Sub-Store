@@ -1017,7 +1017,10 @@ export default function URI_Producer() {
                         proxy.network === 'ws' &&
                         vmessTransportOpts?.['v2ray-http-upgrade'];
                     let vmessTransportPath = vmessTransportOpts?.path;
-                    let vmessTransportHost = vmessTransportOpts?.headers?.Host;
+                    let vmessTransportHost = getTransportHost(
+                        proxy.network,
+                        vmessTransportOpts,
+                    );
 
                     if (['grpc'].includes(proxy.network)) {
                         result.path =

@@ -102,6 +102,20 @@ function parseEarlyDataSize(value) {
     return parsed;
 }
 
+function splitURIHostList(host) {
+    if (Array.isArray(host)) {
+        return host.flatMap((item) => splitURIHostList(item) || []);
+    }
+    if (typeof host !== 'string') {
+        return host == null ? undefined : [host];
+    }
+    const hosts = host
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    return hosts.length > 0 ? hosts : undefined;
+}
+
 function parseWireGuardURIAddressValue(value) {
     if (value == null) return null;
     const raw = `${value}`.trim();
@@ -740,11 +754,12 @@ function URI_VMess() {
             if (params.net === 'ws' || params.obfs === 'websocket') {
                 proxy.network = 'ws';
             } else if (
-                ['http'].includes(params.net) ||
                 ['http'].includes(params.obfs) ||
                 ['http'].includes(params.type)
             ) {
                 proxy.network = 'http';
+            } else if (params.net === 'http') {
+                proxy.network = 'h2';
             } else if (['grpc', 'kcp', 'quic'].includes(params.net)) {
                 proxy.network = params.net;
             } else if (
@@ -805,6 +820,10 @@ function URI_VMess() {
                     } else {
                         transportPath = '/';
                     }
+                } else if (proxy.network === 'h2') {
+                    if (!transportPath) {
+                        transportPath = '/';
+                    }
                 }
                 // 传输层应该有配置, 暂时不考虑兼容不给配置的节点
                 if (
@@ -832,8 +851,18 @@ function URI_VMess() {
                     } else {
                         const opts = {
                             path: getIfNotBlank(transportPath),
-                            headers: { Host: getIfNotBlank(transportHost) },
                         };
+                        const normalizedTransportHost =
+                            getIfNotBlank(transportHost);
+                        if (proxy.network === 'h2') {
+                            const h2Hosts =
+                                splitURIHostList(normalizedTransportHost);
+                            if (h2Hosts) {
+                                opts.host = h2Hosts;
+                            }
+                        } else {
+                            opts.headers = { Host: normalizedTransportHost };
+                        }
                         if (httpupgrade) {
                             opts['v2ray-http-upgrade'] = true;
                             httpUpgradeEd =
@@ -1860,6 +1889,15 @@ function URI_VLESS() {
                         delete opts.headers;
                     }
                 }
+                const h2Host = opts.headers?.Host ?? opts.headers?.host;
+                if (['h2'].includes(proxy.network) && h2Host) {
+                    opts.host = splitURIHostList(h2Host);
+                    delete opts.headers.Host;
+                    delete opts.headers.host;
+                    if (Object.keys(opts.headers).length === 0) {
+                        delete opts.headers;
+                    }
+                }
             }
             if (params.serviceName) {
                 opts[`${proxy.network}-service-name`] = params.serviceName;
@@ -1880,6 +1918,8 @@ function URI_VLESS() {
                     pathEarlyData = extracted.ed;
                 }
                 opts.path = transportPath;
+            } else if (proxy.network === 'h2') {
+                opts.path = '/';
             }
             if (proxy.network === 'http' && params.method) {
                 opts.method = params.method;

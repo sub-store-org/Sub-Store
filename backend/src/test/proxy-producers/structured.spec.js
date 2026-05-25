@@ -1781,6 +1781,424 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('emits Egern fingerprint_sha256 for supported TLS proxy types and transports', function () {
+        const fingerprint = 'SHA256:FINGERPRINT';
+        const proxies = [
+            {
+                type: 'http',
+                name: 'Egern HTTPS Fingerprint',
+                server: 'https.example.com',
+                port: 443,
+                tls: true,
+                sni: 'sni.example.com',
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'https',
+                name: 'Egern Direct HTTPS Fingerprint',
+                server: 'direct-https.example.com',
+                port: 443,
+                sni: 'direct-sni.example.com',
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'trojan',
+                name: 'Egern Trojan Fingerprint',
+                server: 'trojan.example.com',
+                port: 443,
+                password: 'secret',
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'anytls',
+                name: 'Egern AnyTLS Fingerprint',
+                server: 'anytls.example.com',
+                port: 443,
+                password: 'secret',
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'hysteria2',
+                name: 'Egern Hysteria2 Fingerprint',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'secret',
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'tuic',
+                name: 'Egern TUIC Fingerprint',
+                server: 'tuic.example.com',
+                port: 443,
+                uuid: UUID,
+                password: 'secret',
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'vmess',
+                name: 'Egern VMess H2 Fingerprint',
+                server: 'vmess-h2.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                tls: true,
+                network: 'h2',
+                sni: 'vmess-h2.example.com',
+                'h2-opts': {
+                    path: '/h2',
+                    host: ['h2.example.com'],
+                    headers: {
+                        Host: 'fallback-h2.example.com',
+                        b: 'a,b',
+                    },
+                },
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'vmess',
+                name: 'Egern VMess TLS Fingerprint',
+                server: 'vmess-tls.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                tls: true,
+                network: 'tcp',
+                sni: 'vmess-tls.example.com',
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'vmess',
+                name: 'Egern VMess WSS Fingerprint',
+                server: 'vmess-wss.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                tls: true,
+                network: 'ws',
+                sni: 'vmess-wss.example.com',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'vless',
+                name: 'Egern VLESS H2 Fingerprint',
+                server: 'vless-h2.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'h2',
+                sni: 'vless-h2.example.com',
+                'h2-opts': {
+                    path: '/h2',
+                    host: ['h2.example.com'],
+                    headers: {
+                        Host: 'fallback-h2.example.com',
+                        b: 'a,b',
+                    },
+                },
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'vless',
+                name: 'Egern VLESS TLS Fingerprint',
+                server: 'vless-tls.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'tcp',
+                sni: 'vless-tls.example.com',
+                'tls-fingerprint': fingerprint,
+            },
+            {
+                type: 'vless',
+                name: 'Egern VLESS WSS Fingerprint',
+                server: 'vless-wss.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'ws',
+                sni: 'vless-wss.example.com',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+                'tls-fingerprint': fingerprint,
+            },
+        ];
+        const getProxy = (items, type, name) =>
+            items.find((item) => item[type]?.name === name)?.[type];
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        for (const output of [internal, external.proxies]) {
+            for (const [type, name] of [
+                ['https', 'Egern HTTPS Fingerprint'],
+                ['https', 'Egern Direct HTTPS Fingerprint'],
+                ['trojan', 'Egern Trojan Fingerprint'],
+                ['anytls', 'Egern AnyTLS Fingerprint'],
+                ['hysteria2', 'Egern Hysteria2 Fingerprint'],
+                ['tuic', 'Egern TUIC Fingerprint'],
+            ]) {
+                const producedProxy = getProxy(output, type, name);
+                expectSubset(producedProxy, {
+                    fingerprint_sha256: fingerprint,
+                });
+                expect(producedProxy).to.not.have.property('tls-fingerprint');
+            }
+
+            for (const [type, name, transport] of [
+                ['vmess', 'Egern VMess H2 Fingerprint', 'http2'],
+                ['vmess', 'Egern VMess TLS Fingerprint', 'tls'],
+                ['vmess', 'Egern VMess WSS Fingerprint', 'wss'],
+                ['vless', 'Egern VLESS H2 Fingerprint', 'http2'],
+                ['vless', 'Egern VLESS TLS Fingerprint', 'tls'],
+                ['vless', 'Egern VLESS WSS Fingerprint', 'wss'],
+            ]) {
+                const producedProxy = getProxy(output, type, name);
+                expectSubset(producedProxy, {
+                    transport: {
+                        [transport]: {
+                            fingerprint_sha256: fingerprint,
+                        },
+                    },
+                });
+                expect(producedProxy).to.not.have.property('tls-fingerprint');
+            }
+
+            expectSubset(
+                getProxy(output, 'vmess', 'Egern VMess H2 Fingerprint'),
+                {
+                    transport: {
+                        http2: {
+                            headers: {
+                                Host: 'h2.example.com',
+                                b: 'a,b',
+                            },
+                            sni: 'vmess-h2.example.com',
+                        },
+                    },
+                },
+            );
+            expectSubset(
+                getProxy(output, 'vless', 'Egern VLESS H2 Fingerprint'),
+                {
+                    transport: {
+                        http2: {
+                            headers: {
+                                Host: 'h2.example.com',
+                                b: 'a,b',
+                            },
+                            sni: 'vless-h2.example.com',
+                        },
+                    },
+                },
+            );
+        }
+    });
+
+    it('omits Egern fingerprint_sha256 for blank fingerprints and non-TLS transports', function () {
+        const proxies = [
+            {
+                type: 'http',
+                name: 'Egern HTTP Plain Fingerprint',
+                server: 'http.example.com',
+                port: 8080,
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+            {
+                type: 'https',
+                name: 'Egern HTTPS Blank Fingerprint',
+                server: 'https.example.com',
+                port: 443,
+                'tls-fingerprint': '   ',
+            },
+            {
+                type: 'vmess',
+                name: 'Egern VMess HTTP1 Fingerprint',
+                server: 'vmess-http.example.com',
+                port: 80,
+                uuid: UUID,
+                cipher: 'auto',
+                network: 'http',
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+            {
+                type: 'vmess',
+                name: 'Egern VMess WS Fingerprint',
+                server: 'vmess-ws.example.com',
+                port: 80,
+                uuid: UUID,
+                cipher: 'auto',
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                },
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+            {
+                type: 'vmess',
+                name: 'Egern VMess TCP Fingerprint',
+                server: 'vmess-tcp.example.com',
+                port: 80,
+                uuid: UUID,
+                cipher: 'auto',
+                network: 'tcp',
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+            {
+                type: 'vless',
+                name: 'Egern VLESS HTTP1 Fingerprint',
+                server: 'vless-http.example.com',
+                port: 80,
+                uuid: UUID,
+                network: 'http',
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+            {
+                type: 'vless',
+                name: 'Egern VLESS WS Fingerprint',
+                server: 'vless-ws.example.com',
+                port: 80,
+                uuid: UUID,
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                },
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+            {
+                type: 'vless',
+                name: 'Egern VLESS TCP Fingerprint',
+                server: 'vless-tcp.example.com',
+                port: 80,
+                uuid: UUID,
+                network: 'tcp',
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+        ];
+        const findByName = (items, name) =>
+            Object.values(
+                items.find((item) =>
+                    Object.values(item).some((proxy) => proxy?.name === name),
+                ),
+            )[0];
+        const expectNoFingerprint = (proxy) => {
+            expect(proxy).to.not.have.property('fingerprint_sha256');
+            expect(proxy).to.not.have.property('tls-fingerprint');
+            if (proxy.transport) {
+                for (const transport of Object.values(proxy.transport)) {
+                    expect(transport).to.not.have.property(
+                        'fingerprint_sha256',
+                    );
+                }
+            }
+        };
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        for (const output of [internal, external.proxies]) {
+            for (const proxy of proxies) {
+                expectNoFingerprint(findByName(output, proxy.name));
+            }
+        }
+    });
+
+    it('trims Egern fingerprint_sha256 values', function () {
+        const external = loadProducedYaml('Egern', {
+            type: 'https',
+            name: 'Egern HTTPS Trimmed Fingerprint',
+            server: 'https.example.com',
+            port: 443,
+            'tls-fingerprint': '  SHA256:FINGERPRINT  ',
+        });
+
+        expect(external.proxies[0].https.fingerprint_sha256).to.equal(
+            'SHA256:FINGERPRINT',
+        );
+    });
+
+    it('keeps Mihomo h2 headers while lifting Host into h2-opts host', function () {
+        const input = `proxies:
+  - name: vmess-h2
+    type: vmess
+    server: server
+    port: 443
+    uuid: ${UUID}
+    alterId: 32
+    cipher: auto
+    network: h2
+    tls: true
+    fingerprint: xxxx
+    h2-opts:
+      host:
+        - http.example.com
+        - http-alt.example.com
+      headers:
+        Host: v2ray.com
+        b: a
+      path:
+`;
+        const [proxy] = ProxyUtils.parse(input);
+        const external = loadProducedYaml('Mihomo', [proxy]);
+        const h2Opts = external.proxies[0]['h2-opts'];
+
+        expect(h2Opts).to.deep.equal({
+            host: ['http.example.com', 'http-alt.example.com'],
+            headers: {
+                b: 'a',
+            },
+            path: '/',
+        });
+        expect(external.proxies[0].servername).to.equal('http.example.com');
+        expect(h2Opts.headers).to.not.have.property('Host');
+        expect(h2Opts.headers).to.not.have.property('host');
+    });
+
+    it('keeps h2 Host arrays when lifting legacy headers into h2-opts host', function () {
+        const proxy = {
+            type: 'vmess',
+            name: 'VMess H2 Legacy Host Array',
+            server: 'server',
+            port: 443,
+            uuid: UUID,
+            alterId: 0,
+            cipher: 'auto',
+            tls: true,
+            network: 'h2',
+            'h2-opts': {
+                path: '/',
+                headers: {
+                    Host: ['cdn.example.com', 'alt.example.com'],
+                    'User-Agent': 'curl/7.77.0',
+                },
+            },
+        };
+
+        for (const platform of ['Clash', 'Mihomo', 'Stash', 'Shadowrocket']) {
+            const external = loadProducedYaml(platform, proxy);
+            const h2Opts = external.proxies[0]['h2-opts'];
+
+            expect(h2Opts).to.deep.equal({
+                host: ['cdn.example.com', 'alt.example.com'],
+                headers: {
+                    'User-Agent': 'curl/7.77.0',
+                },
+                path: '/',
+            });
+            expect(h2Opts.headers).to.not.have.property('Host');
+            expect(h2Opts.headers).to.not.have.property('host');
+        }
+    });
+
     it('keeps Mihomo HTTP headers and filters unsupported h2-connect/trusttunnel header variants', function () {
         const { result, errors } = captureErrors(() =>
             produceInternal('Mihomo', [
