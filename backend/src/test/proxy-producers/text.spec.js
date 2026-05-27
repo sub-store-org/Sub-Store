@@ -637,10 +637,10 @@ describe('Proxy text producers', function () {
         );
 
         expect(output.split('\n')).to.deep.equal([
-            'Surge HTTP Headers=http,http.example.com,8080,username="user",password="pass",headers="X-Client:"Surge";X-Token:"abc""',
-            'Surge HTTPS Headers=https,https.example.com,443,headers="X-Padding:"<random-string(16)>"",sni="sni.example.com"',
-            'Surge H2 Headers=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",sni="sni.example.com"',
-            'Surge Trust Headers=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",sni="sni.example.com"',
+            `Surge HTTP Headers=http,http.example.com,8080,username="user",password="pass",headers="X-Client:"Surge";X-Token:"abc""`,
+            `Surge HTTPS Headers=https,https.example.com,443,headers="X-Padding:"<random-string(16)>"",sni="sni.example.com"`,
+            `Surge H2 Headers=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",sni="sni.example.com"`,
+            `Surge Trust Headers=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",sni="sni.example.com"`,
         ]);
     });
 
@@ -678,8 +678,8 @@ describe('Proxy text producers', function () {
         );
 
         expect(output.split('\n')).to.deep.equal([
-            'Surge H2 Max Streams=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com"',
-            'Surge Trust Max Streams=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"',
+            `Surge H2 Max Streams=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com"`,
+            `Surge Trust Max Streams=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"`,
         ]);
     });
 
@@ -732,8 +732,8 @@ describe('Proxy text producers', function () {
         const output = ProxyUtils.produce(proxies, 'Surge', 'external');
 
         expect(output.split('\n')).to.deep.equal([
-            'Surge H2 Round Trip=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com"',
-            'Surge Trust Round Trip=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"',
+            `Surge H2 Round Trip=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com"`,
+            `Surge Trust Round Trip=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"`,
         ]);
     });
 
@@ -769,9 +769,48 @@ describe('Proxy text producers', function () {
             'X-Quote': 'a",b',
             'X-Backslash': 'c\\d',
         });
-        expect(output).to.include(String.raw`X-Quote:"a\",b"`);
-        expect(output).to.include(String.raw`X-Backslash:"c\\d"`);
+        expect(output).to.include(String.raw`X-Quote:"a",b"`);
+        expect(output).to.include(String.raw`X-Backslash:"c\d"`);
         expect(proxy.sni).to.equal('sni.example.com');
+    });
+
+    it('round-trips Surge websocket headers with pipe separators', function () {
+        const output = ProxyUtils.produce(
+            [
+                {
+                    type: 'vmess',
+                    name: 'Surge WS Headers',
+                    server: 'ws.example.com',
+                    port: 443,
+                    uuid: UUID,
+                    aead: true,
+                    tls: true,
+                    sni: 'sni.example.com',
+                    network: 'ws',
+                    'ws-opts': {
+                        path: '/ws',
+                        headers: {
+                            Host: 'cdn.example.com',
+                            'X-Comma': 'a,b',
+                            'X-Quote': 'a",b',
+                        },
+                    },
+                },
+            ],
+            'Surge',
+            'external',
+        );
+
+        const [proxy] = ProxyUtils.parse(output);
+
+        expect(proxy['ws-opts'].headers).to.deep.equal({
+            Host: 'cdn.example.com',
+            'X-Comma': 'a,b',
+            'X-Quote': 'a",b',
+        });
+        expect(output).to.include(
+            String.raw`ws-headers="Host:"cdn.example.com"|X-Comma:"a,b"|X-Quote:"a",b""`,
+        );
     });
 
     it('filters root proxy headers for unsupported text targets with an error log', function () {
