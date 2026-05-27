@@ -32,16 +32,15 @@ function stripSurgeQuotes(value) {
         (quote === '"' || quote === "'") &&
         trimmed[trimmed.length - 1] === quote
     ) {
-        return trimmed.slice(1, -1).replace(/\\(["'\\])/g, '$1');
+        return trimmed.slice(1, -1);
     }
 
-    return trimmed.replace(/\\(["'\\])/g, '$1');
+    return trimmed;
 }
 
 function quoteSurgeValue(value) {
-    return `"${String(stripSurgeQuotes(value))
-        .replace(/\\/g, '\\\\')
-        .replace(/"/g, '\\"')}"`;
+    const text = String(stripSurgeQuotes(value));
+    return `"${text}"`;
 }
 
 function hasNonBlankValue(value) {
@@ -961,23 +960,23 @@ function socks5(proxy) {
 function appendHeaders(result, proxy) {
     const value = formatHeaders(proxy.headers);
     if (isNotBlank(value)) {
-        result.append(`,headers="${value}"`);
+        result.append(`,headers=${quoteSurgeValue(value)}`);
     }
 }
 
 function formatHeaders(headers) {
+    return formatHeaderMap(headers, ';');
+}
+
+function formatHeaderMap(headers, separator) {
     if (!headers || typeof headers !== 'object') {
         return '';
     }
 
     return Object.entries(headers)
         .filter(([key, value]) => isNotBlank(key) && value != null)
-        .map(([key, value]) => `${key}:"${escapeHeaderValue(value)}"`)
-        .join(';');
-}
-
-function escapeHeaderValue(value) {
-    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        .map(([key, value]) => `${key}:${quoteSurgeValue(value)}`)
+        .join(separator);
 }
 
 function snell(proxy) {
@@ -1458,17 +1457,9 @@ function handleTransport(result, proxy, includeUnsupportedProxy) {
                 );
                 if (isPresent(proxy, 'ws-opts.headers')) {
                     const headers = proxy['ws-opts'].headers;
-                    const value = Object.keys(headers)
-                        .map((k) => {
-                            let v = headers[k];
-                            // if (['Host'].includes(k)) {
-                            v = `"${v}"`;
-                            // }
-                            return `${k}:${v}`;
-                        })
-                        .join('|');
+                    const value = formatHeaderMap(headers, '|');
                     if (isNotBlank(value)) {
-                        result.append(`,ws-headers=${value}`);
+                        result.append(`,ws-headers=${quoteSurgeValue(value)}`);
                     }
                 }
             }

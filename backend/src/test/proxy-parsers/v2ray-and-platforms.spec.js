@@ -3023,8 +3023,8 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
-                title: 'keeps quoted Surge headers with semicolons inside User-Agent values',
-                input: '1=http,163.177.17.6,443,headers="Host:153.3.236.22:443;X-T5-Auth:683556433;Connection:Keep-Alive;User-Agent:okhttp/3.11.0 Dalvik/2.1.0 (Linux; U; Android 11; Redmi K30 5G Build/RKQ1.200826.002) baiduboxapp/11.0.5.12 (Baidu; P1 11)"',
+                title: 'keeps quoted Surge headers with nested quoted User-Agent values',
+                input: '1=http,163.177.17.6,443,headers="Host:153.3.236.22:443;X-T5-Auth:683556433;Connection:Keep-Alive;User-Agent:"okhttp/3.11.0 Dalvik/2.1.0 (Linux; U; Android 11; Redmi K30 5G Build/RKQ1.200826.002) baiduboxapp/11.0.5.12 (Baidu; P1 11)""',
                 expected: {
                     type: 'http',
                     name: '1',
@@ -3060,7 +3060,7 @@ describe('Platform raw-format parser coverage', function () {
             },
             {
                 title: 'parses Surge headers with nested quote values containing commas',
-                input: `Surge Nested Headers = https,nested.example.com,443,headers="Host:"nested.example.com";X-Comma:"a,b";User-Agent:"client/1.0 (Linux; U; Android 11)"",sni=sni.example.com`,
+                input: `Surge Nested Headers = https,nested.example.com,443,headers="Host:"nested.example.com" ; X-Comma:"a,b" ; User-Agent:"client/1.0 (Linux; U; Android 11)"",sni=sni.example.com`,
                 expected: {
                     type: 'http',
                     name: 'Surge Nested Headers',
@@ -3157,6 +3157,32 @@ describe('Platform raw-format parser coverage', function () {
                         path: '/vmess',
                         headers: {
                             Host: 'cdn.example.com',
+                        },
+                    },
+                },
+            },
+            {
+                title: 'parses vmess websocket headers with quoted comma values and pipe separators',
+                input: `Surge VMess WS Headers = vmess,surge-vmess.example.com,443,username=${UUID},ws=true,ws-path=/vmess,ws-headers="Host:"cdn.example.com" | X-Comma:"a,b" | User-Agent:"okhttp/3.11.0 Dalvik/2.1.0 (Linux; U; Android 11)"",skip-cert-verify=true,sni=sni.example.com,tls=true,vmess-aead=true`,
+                expected: {
+                    type: 'vmess',
+                    name: 'Surge VMess WS Headers',
+                    server: 'surge-vmess.example.com',
+                    port: 443,
+                    uuid: UUID,
+                    aead: true,
+                    alterId: 0,
+                    tls: true,
+                    sni: 'sni.example.com',
+                    'skip-cert-verify': true,
+                    network: 'ws',
+                    'ws-opts': {
+                        path: '/vmess',
+                        headers: {
+                            Host: 'cdn.example.com',
+                            'X-Comma': 'a,b',
+                            'User-Agent':
+                                'okhttp/3.11.0 Dalvik/2.1.0 (Linux; U; Android 11)',
                         },
                     },
                 },

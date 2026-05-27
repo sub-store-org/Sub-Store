@@ -1,12 +1,9 @@
 name: build
+permissions:
+  contents: write
 on:
   workflow_dispatch:
   push:
-    branches:
-      - master
-    paths:
-      - "backend/package.json"
-  pull_request:
     branches:
       - master
     paths:
@@ -82,7 +79,7 @@ jobs:
           pnpm i -D conventional-changelog-cli
           pnpm run changelog
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: ${{ success() }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
