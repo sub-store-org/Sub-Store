@@ -14,11 +14,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          ref: "master"
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
@@ -74,16 +74,16 @@ jobs:
         name: Generate release tag
         run: |
           cd backend
-          SUBSTORE_RELEASE=`node --eval="process.stdout.write(require('./package.json').version)"`
-          echo "release_tag=$SUBSTORE_RELEASE" >> $GITHUB_OUTPUT
+          SUBSTORE_RELEASE="$(node --eval="process.stdout.write(require('./package.json').version)")"
+          echo "release_tag=${SUBSTORE_RELEASE}" >> "${GITHUB_OUTPUT}"
       - name: Prepare release
         run: |
           cd backend
           pnpm i -D conventional-changelog-cli
           pnpm run changelog
       - name: Release
-        uses: softprops/action-gh-release@v1
-        if: ${{ success() }}
+        uses: softprops/action-gh-release@v3
+        if: ${{ success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/master' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -99,16 +99,36 @@ jobs:
             ./backend/dist/proxy-utils.esm.mjs
             ./backend/dist/sub-store.bundle.js
       - name: Git push assets to "release" branch
+        if: ${{ success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/master' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd backend/dist || exit 1
-          git init
+          set -euo pipefail
+
+          auth_header="AUTHORIZATION: bearer ${GITHUB_TOKEN}"
+          repo_url="https://github.com/${GITHUB_REPOSITORY}.git"
+          release_dir="${RUNNER_TEMP}/release-dist"
+
+          rm -rf "${release_dir}"
+          if git -c http.https://github.com/.extraheader="${auth_header}" ls-remote --exit-code --heads "${repo_url}" release > /dev/null; then
+            git -c http.https://github.com/.extraheader="${auth_header}" clone --depth 1 --branch release "${repo_url}" "${release_dir}"
+          else
+            git init -b release "${release_dir}"
+            git -C "${release_dir}" remote add origin "${repo_url}"
+          fi
+
+          rsync -a --delete --exclude='.git' backend/dist/ "${release_dir}/"
+
+          cd "${release_dir}"
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b release
-          git add .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No release asset changes to push."
+            exit 0
+          fi
           git commit -m "release: ${{ steps.tag.outputs.release_tag }}"
-          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git push -f -u origin release
+          git -c http.https://github.com/.extraheader="${auth_header}" push origin release
       # - name: Sync to GitLab
       #   env:
       #     GITLAB_PIPELINE_TOKEN: ${{ secrets.GITLAB_PIPELINE_TOKEN }}
