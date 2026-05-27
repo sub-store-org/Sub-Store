@@ -34,6 +34,7 @@ export default function Stash_Producer() {
                         'juicity',
                         'anytls',
                         'tailscale',
+                        'trusttunnel',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ![
