@@ -126,7 +126,7 @@ function snell(proxy) {
     const result = new Result(proxy);
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,version=${proxy.version}`, 'version');
-    result.appendIfPresent(`,psk=${proxy.psk}`, 'psk');
+    result.appendIfPresent(`,psk="${proxy.psk}"`, 'psk');
 
     // obfs
     result.appendIfPresent(

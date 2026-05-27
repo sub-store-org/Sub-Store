@@ -244,7 +244,7 @@ function shadowsocks(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -261,7 +261,7 @@ function shadowsocks(proxy) {
         const host = proxy['plugin-opts'].host;
         const version = proxy['plugin-opts'].version;
         if (password) {
-            result.append(`,shadow-tls-password=${password}`);
+            result.append(`,shadow-tls-password="${password}"`);
             if (host) {
                 result.append(`,shadow-tls-sni=${host}`);
             }
@@ -353,7 +353,7 @@ function trojan(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -571,7 +571,7 @@ function h2Connect(proxy) {
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -659,7 +659,7 @@ function vmess(proxy, includeUnsupportedProxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -803,7 +803,7 @@ function http(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -934,7 +934,7 @@ function socks5(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -984,7 +984,7 @@ function snell(proxy) {
     const result = new Result(proxy);
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,version=${proxy.version}`, 'version');
-    result.appendIfPresent(`,psk=${proxy.psk}`, 'psk');
+    result.appendIfPresent(`,psk="${proxy.psk}"`, 'psk');
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
@@ -1035,7 +1035,7 @@ function snell(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -1140,7 +1140,7 @@ function tuic(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -1218,7 +1218,7 @@ function wireguard(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -1319,7 +1319,7 @@ function wireguard_surge(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -1415,7 +1415,7 @@ function hysteria2(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
+        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,

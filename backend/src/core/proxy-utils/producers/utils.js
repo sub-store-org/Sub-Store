@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import YAML from '@/utils/yaml';
 import { isIPv4, isIPv6 } from '@/utils';
+import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 
 export class Result {
     constructor(proxy) {
@@ -151,13 +152,15 @@ export function produceProxyListOutput(list, type, opts = {}) {
     if (type === 'internal') return list;
 
     if (opts.prettyYaml || opts['pretty-yaml']) {
-        return YAML.safeDump(
-            {
-                proxies: list,
-            },
-            {
-                lineWidth: -1,
-            },
+        return normalizeClashYaml(
+            YAML.safeDump(
+                {
+                    proxies: list,
+                },
+                {
+                    lineWidth: -1,
+                },
+            ),
         );
     }
 
