@@ -131,6 +131,23 @@ function getTransportHost(network, transportOpts = {}) {
     );
 }
 
+function normalizeVmessSecurity(security) {
+    if (
+        security &&
+        ![
+            'aes-128-gcm',
+            'chacha20-poly1305',
+            'auto',
+            'none',
+            'zero',
+        ].includes(security)
+    ) {
+        return 'auto';
+    }
+
+    return security;
+}
+
 function mapReuseSettingsToXmux(reuseSettings) {
     if (!isPlainObject(reuseSettings)) {
         return undefined;
@@ -997,7 +1014,7 @@ export default function URI_Producer() {
                     port: `${proxy.port}`,
                     id: proxy.uuid,
                     aid: `${proxy.alterId || 0}`,
-                    scy: proxy.cipher,
+                    scy: normalizeVmessSecurity(proxy.cipher),
                     net,
                     type,
                     tls: proxy.tls ? 'tls' : '',

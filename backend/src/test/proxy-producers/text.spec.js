@@ -1991,6 +1991,25 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('normalizes unsupported URI VMess scy values to auto', function () {
+        const output = produceExternal('URI', {
+            type: 'vmess',
+            name: 'URI VMess Invalid Security',
+            server: 'vmess-invalid.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'aes-128-ctr',
+            alterId: 0,
+            tls: true,
+            network: 'ws',
+        });
+        const payload = JSON.parse(
+            Base64.decode(output.replace(/^vmess:\/\//, '')),
+        );
+
+        expect(payload.scy).to.equal('auto');
+    });
+
     it('produces URI VMess h2 links from mihomo h2-opts host', function () {
         const output = produceExternal('URI', {
             type: 'vmess',
