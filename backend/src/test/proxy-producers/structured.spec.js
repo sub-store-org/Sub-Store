@@ -1689,6 +1689,110 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('emits Egern SSH nodes with auth, host keys, flags, and shadow-tls', function () {
+        const proxies = [
+            {
+                type: 'ssh',
+                name: 'Egern SSH Direct Fields',
+                server: 'ssh.example.com',
+                port: 443,
+                username: 'user',
+                password: 'pass',
+                'private-key': 'ssh-key',
+                'host-key': ['ssh-ed25519 AAAATEST'],
+                tfo: true,
+                'block-quic': 'off',
+                'shadow-tls-password': 'shadow-pass',
+                'shadow-tls-sni': 'mask.example.com',
+                'shadow-tls-version': 3,
+            },
+            {
+                type: 'ss',
+                name: 'Healthy SS',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+            },
+        ];
+        const getProxy = (items, type, name) =>
+            items.find((item) => item[type]?.name === name)?.[type];
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        for (const output of [internal, external.proxies]) {
+            expectSubset(getProxy(output, 'ssh', 'Egern SSH Direct Fields'), {
+                name: 'Egern SSH Direct Fields',
+                server: 'ssh.example.com',
+                port: 443,
+                username: 'user',
+                password: 'pass',
+                private_key: 'ssh-key',
+                host_keys: ['ssh-ed25519 AAAATEST'],
+                tfo: true,
+                block_quic: false,
+                shadow_tls: {
+                    password: 'shadow-pass',
+                    sni: 'mask.example.com',
+                },
+            });
+            expectSubset(getProxy(output, 'shadowsocks', 'Healthy SS'), {
+                method: 'aes-128-gcm',
+                password: 'secret',
+            });
+        }
+    });
+
+    it('skips Egern SSH with unsupported shadow-tls versions', function () {
+        const proxies = [
+            {
+                type: 'ssh',
+                name: 'Invalid SSH ShadowTLS',
+                server: 'ssh.example.com',
+                port: 443,
+                username: 'user',
+                'shadow-tls-password': 'shadow-pass',
+                'shadow-tls-sni': 'mask.example.com',
+                'shadow-tls-version': 2,
+            },
+            {
+                type: 'ss',
+                name: 'Healthy SS',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+            },
+        ];
+
+        const { result, errors } = captureErrors(() =>
+            produceInternal('Egern', proxies),
+        );
+        const { result: external, errors: externalErrors } = captureErrors(() =>
+            loadProducedYaml('Egern', proxies),
+        );
+
+        expect(result).to.have.length(1);
+        expect(errors).to.have.length(1);
+        expect(errors[0]).to.include('shadow-tls version 2 is not supported');
+        expect(externalErrors).to.have.length(1);
+        expect(externalErrors[0]).to.include(
+            'shadow-tls version 2 is not supported',
+        );
+        expectSubset(result[0], {
+            shadowsocks: {
+                name: 'Healthy SS',
+            },
+        });
+        expect(external.proxies).to.have.length(1);
+        expectSubset(external.proxies[0], {
+            shadowsocks: {
+                name: 'Healthy SS',
+            },
+        });
+    });
+
     it('emits Egern HTTP and HTTPS root headers', function () {
         const proxies = [
             {

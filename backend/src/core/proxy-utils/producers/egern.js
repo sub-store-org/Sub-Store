@@ -24,6 +24,7 @@ export default function Egern_Producer() {
                         'tuic',
                         'wireguard',
                         'anytls',
+                        'ssh',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ((proxy.plugin === 'obfs' &&
@@ -125,7 +126,6 @@ export default function Egern_Producer() {
                                   }
                                 : {}),
                             tfo: proxy.tfo || proxy['fast-open'],
-                            next_hop: proxy.next_hop,
                             ...(proxy.tls
                                 ? {
                                       sni: proxy.sni,
@@ -148,7 +148,6 @@ export default function Egern_Producer() {
                                   }
                                 : {}),
                             tfo: proxy.tfo || proxy['fast-open'],
-                            next_hop: proxy.next_hop,
                             sni: proxy.sni,
                             skip_tls_verify: proxy['skip-cert-verify'],
                         };
@@ -163,7 +162,6 @@ export default function Egern_Producer() {
                             tfo: proxy.tfo || proxy['fast-open'],
                             udp_relay:
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                            next_hop: proxy.next_hop,
                         };
                     } else if (proxy.type === 'ss') {
                         proxy = {
@@ -179,7 +177,6 @@ export default function Egern_Producer() {
                             tfo: proxy.tfo || proxy['fast-open'],
                             udp_relay:
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                            next_hop: proxy.next_hop,
                         };
                         if (isPresent(original, 'plugin')) {
                             if (original.plugin === 'obfs') {
@@ -212,7 +209,6 @@ export default function Egern_Producer() {
                             tfo: proxy.tfo || proxy['fast-open'],
                             udp_relay:
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                            next_hop: proxy.next_hop,
                             sni: proxy.sni,
                             skip_tls_verify: proxy['skip-cert-verify'],
                             port_hopping: proxy.ports,
@@ -233,7 +229,6 @@ export default function Egern_Producer() {
                             port: proxy.port,
                             uuid: proxy.uuid,
                             password: proxy.password,
-                            next_hop: proxy.next_hop,
                             sni: proxy.sni,
                             alpn: Array.isArray(proxy.alpn)
                                 ? proxy.alpn
@@ -258,7 +253,6 @@ export default function Egern_Producer() {
                             tfo: proxy.tfo || proxy['fast-open'],
                             udp_relay:
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                            next_hop: proxy.next_hop,
                             sni: proxy.sni,
                             skip_tls_verify: proxy['skip-cert-verify'],
                             websocket: proxy.websocket,
@@ -273,7 +267,6 @@ export default function Egern_Producer() {
                             tfo: proxy.tfo || proxy['fast-open'],
                             udp_relay:
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                            next_hop: proxy.next_hop,
                             sni: proxy.sni,
                             skip_tls_verify: proxy['skip-cert-verify'],
                         };
@@ -367,7 +360,6 @@ export default function Egern_Producer() {
                             legacy,
                             udp_relay:
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                            next_hop: proxy.next_hop,
                             transport: proxy.transport,
                         };
                     } else if (proxy.type === 'vless') {
@@ -454,7 +446,6 @@ export default function Egern_Producer() {
                             tfo: proxy.tfo || proxy['fast-open'],
                             udp_relay:
                                 proxy.udp || proxy.udp_relay || proxy.udp_relay,
-                            next_hop: proxy.next_hop,
                             transport: proxy.transport,
                             flow,
                         };
@@ -509,6 +500,19 @@ export default function Egern_Producer() {
                             mtu: proxy.mtu,
                             keepalive: proxy.keepalive,
                         };
+                    } else if (proxy.type === 'ssh') {
+                        proxy = {
+                            type: 'ssh',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            username: proxy.username,
+                            password: proxy.password,
+                            private_key: proxy['private-key'],
+                            // private_key_passphrase: proxy['private-key-passphrase'],
+                            host_keys: proxy['host-key'],
+                            tfo: proxy.tfo || proxy['fast-open'],
+                        };
                     }
                     if (
                         [
@@ -520,6 +524,7 @@ export default function Egern_Producer() {
                             'vless',
                             'vmess',
                             'anytls',
+                            'ssh',
                         ].includes(original.type)
                     ) {
                         if (isPresent(original, 'shadow-tls-password')) {
@@ -566,6 +571,7 @@ export default function Egern_Producer() {
                             'tuic',
                             'hysteria2',
                             'anytls',
+                            'ssh',
                         ].includes(original.type)
                     ) {
                         if (
