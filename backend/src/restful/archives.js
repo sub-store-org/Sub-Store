@@ -93,6 +93,8 @@ function restoreArchivedEntry(entry) {
                 mode: snapshot.mode,
                 expiresIn: snapshot.expiresIn,
                 exp: snapshot.exp,
+                count: snapshot.count,
+                usedCount: snapshot.usedCount,
             });
         default:
             throw new RequestInvalidError(

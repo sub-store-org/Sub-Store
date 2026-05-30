@@ -10,7 +10,7 @@ import {
     syncArtifactItem,
 } from '@/restful/sync';
 import { gistBackupAction } from '@/restful/miscs';
-import { TOKENS_KEY, SETTINGS_KEY } from '@/constants';
+import { SETTINGS_KEY } from '@/constants';
 import { startArtifactCronJobs } from '@/utils/artifact-cron';
 
 import registerSubscriptionRoutes from './subscriptions';
@@ -29,6 +29,7 @@ import registerMiscRoutes from './miscs';
 import registerNodeInfoRoutes from './node-info';
 import registerParserRoutes from './parser';
 import registerLogRoutes from './logs';
+import { consumeShareToken } from './token';
 
 export default function serve() {
     let port;
@@ -74,16 +75,10 @@ export default function serve() {
                         res.status(405).send('Method not allowed');
                         return;
                     }
-                    const tokens = $.read(TOKENS_KEY) || [];
-                    const token = tokens.find(
-                        (t) =>
-                            t.token === req.query.token &&
-                            (`/share/${t.type}/${t.name}` === pathname ||
-                                pathname.startsWith(
-                                    `/share/${t.type}/${t.name}/`,
-                                )) &&
-                            (t.exp == null || t.exp > Date.now()),
-                    );
+                    const token = consumeShareToken({
+                        token: req.query.token,
+                        pathname,
+                    });
                     if (token) {
                         next();
                         return;
@@ -401,14 +396,11 @@ export default function serve() {
                         pathRewrite: async (path, req) => {
                             if (req.method.toLowerCase() !== 'get')
                                 throw new Error('Method not allowed');
-                            const tokens = $.read(TOKENS_KEY) || [];
-                            const token = tokens.find(
-                                (t) =>
-                                    t.token === req.query.token &&
-                                    t.type === req.params.type &&
-                                    t.name === req.params.name &&
-                                    (t.exp == null || t.exp > Date.now()),
-                            );
+                            const token = consumeShareToken({
+                                token: req.query.token,
+                                type: req.params.type,
+                                name: req.params.name,
+                            });
                             if (!token) {
                                 const settings = $.read(SETTINGS_KEY);
                                 if (
