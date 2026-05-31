@@ -1065,6 +1065,16 @@ const tailscaleParser = (proxy = {}) => {
         ipVersionParser(proxy, parsedProxy);
         domainResolverParser(proxy, parsedProxy);
     }
+    if (isPlainObject(proxy['ssh-server'])) {
+        parsedProxy.ssh_server = {
+            enabled: proxy['ssh-server'].enabled !== false,
+            disable_pty: proxy['ssh-server']['disable-pty'],
+            disable_sftp: proxy['ssh-server']['disable-sftp'],
+            disable_forwarding: proxy['ssh-server']['disable-forwarding'],
+        };
+    } else if (proxy['ssh-server']) {
+        parsedProxy.ssh_server = !!proxy['ssh-server'];
+    }
     return parsedProxy;
 };
 

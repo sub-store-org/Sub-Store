@@ -50,7 +50,8 @@ function operator(proxies = [], targetPlatform, context) {
   // 26. `_qx_obfs_http` 为 QX 的 http obfs 原始值, 例如 `http`, `vmess-http`, `vemss-http`, `shadowsocks-http`, 用于 QX 输入输出时保留原始写法. `vemss-http` 应该是 huaqian 的 typo, 没测过, 反正也支持, 报错就自己改成 `vmess-http` 吧
   // 27. WireGuard 支持 `ip-cidr`(IPv4 前缀长度) 和 `ipv6-cidr`(IPv6 前缀长度) 字段: 内部会保存前缀长度, 若未设置则默认分别为 `32` 和 `128`. 输出到 `mihomo`/`Shadowrocket`/`sing-box`/`URI` 时会带上该后缀
   // 28. sing-box 1.14.0 起才有 `control_http_client` , 暂时可使用 `control-http-client` 字段设置 sing-box 的 `control_http_client`
-  //     若 `control-http-client` 非空, 输出 sing-box Tailscale endpoint 时会跳过旧版拨号字段映射, 避免和 `detour`/`dialer-proxy` 等 legacy dialer options 冲突. 需要给控制面设置前置代理时, 请写到 `control-http-client.detour`
+  //     若 `control-http-client` 非空, 输出 sing-box Tailscale endpoint 时会跳过旧版拨号字段映射, 避免和 `detour`/`dialer-proxy` 等 legacy dialer options 冲突. 需要给控制面设置前置代理时, 请写到 `control-http-client.detour`(1.14.0-alpha.26 又改回去了...)
+  // 29. sing-box 支持使用 `ssh-server` 给 tailscale 设置 `ssh_server`, 直接设为 `true` 或 `{ "enabled": true, "disable-pty": true, "disable-sftp": true, "disable-forwarding": true }`
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
