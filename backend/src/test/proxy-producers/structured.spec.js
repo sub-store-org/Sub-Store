@@ -2855,6 +2855,183 @@ describe('Proxy structured producers', function () {
         expect(tailscale).to.not.have.property('detour');
     });
 
+    it('emits boolean ssh_server for sing-box Tailscale endpoints', function () {
+        const output = loadProducedJson('sing-box', {
+            type: 'tailscale',
+            name: 'Tailscale SSH Boolean',
+            'ssh-server': true,
+        });
+
+        const tailscale = output.endpoints.find(
+            (endpoint) => endpoint.tag === 'Tailscale SSH Boolean',
+        );
+
+        expect(tailscale.ssh_server).to.equal(true);
+    });
+
+    it('emits object ssh_server for sing-box Tailscale endpoints', function () {
+        const output = loadProducedJson('sing-box', {
+            type: 'tailscale',
+            name: 'Tailscale SSH Object',
+            'ssh-server': {
+                enabled: false,
+                'disable-pty': true,
+                'disable-sftp': true,
+                'disable-forwarding': true,
+            },
+        });
+
+        const tailscale = output.endpoints.find(
+            (endpoint) => endpoint.tag === 'Tailscale SSH Object',
+        );
+
+        expect(tailscale.ssh_server).to.deep.equal({
+            enabled: false,
+            disable_pty: true,
+            disable_sftp: true,
+            disable_forwarding: true,
+        });
+    });
+
+    it('does not emit gecko packet sizes for sing-box when using default values', function () {
+        const output = loadProducedJson('sing-box', {
+            type: 'hysteria2',
+            name: 'Gecko Default Sizes',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            obfs: 'gecko',
+            'obfs-password': 'mask',
+        });
+
+        const hysteria2 = output.outbounds.find(
+            (outbound) => outbound.tag === 'Gecko Default Sizes',
+        );
+
+        expectSubset(hysteria2, {
+            type: 'hysteria2',
+            obfs: {
+                type: 'gecko',
+                password: 'mask',
+            },
+        });
+        expect(hysteria2.obfs).to.not.have.property('min_packet_size');
+        expect(hysteria2.obfs).to.not.have.property('max_packet_size');
+    });
+
+    it('emits a single gecko packet size for sing-box and relies on the other default', function () {
+        const minOnlyOutput = loadProducedJson('sing-box', {
+            type: 'hysteria2',
+            name: 'Gecko Min Only',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            obfs: 'gecko',
+            'obfs-password': 'mask',
+            'obfs-min-packet-size': 600,
+        });
+        const maxOnlyOutput = loadProducedJson('sing-box', {
+            type: 'hysteria2',
+            name: 'Gecko Max Only',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            obfs: 'gecko',
+            'obfs-password': 'mask',
+            'obfs-max-packet-size': 1300,
+        });
+
+        const minOnly = minOnlyOutput.outbounds.find(
+            (outbound) => outbound.tag === 'Gecko Min Only',
+        );
+        const maxOnly = maxOnlyOutput.outbounds.find(
+            (outbound) => outbound.tag === 'Gecko Max Only',
+        );
+
+        expectSubset(minOnly, {
+            obfs: {
+                type: 'gecko',
+                password: 'mask',
+                min_packet_size: 600,
+            },
+        });
+        expect(minOnly.obfs).to.not.have.property('max_packet_size');
+
+        expectSubset(maxOnly, {
+            obfs: {
+                type: 'gecko',
+                password: 'mask',
+                max_packet_size: 1300,
+            },
+        });
+        expect(maxOnly.obfs).to.not.have.property('min_packet_size');
+    });
+
+    it('does not emit invalid gecko packet sizes for sing-box', function () {
+        const { result, errors } = captureErrors(() =>
+            produceInternal('sing-box', [
+                {
+                    type: 'hysteria2',
+                    name: 'Gecko Invalid Decimal',
+                    server: 'hy2.example.com',
+                    port: 443,
+                    password: 'secret',
+                    obfs: 'gecko',
+                    'obfs-password': 'mask',
+                    'obfs-min-packet-size': '600.5',
+                },
+                {
+                    type: 'hysteria2',
+                    name: 'Gecko Invalid Range',
+                    server: 'hy2.example.com',
+                    port: 443,
+                    password: 'secret',
+                    obfs: 'gecko',
+                    'obfs-password': 'mask',
+                    'obfs-min-packet-size': 1300,
+                },
+            ]),
+        );
+
+        expect(errors).to.have.length(2);
+        expect(errors[0]).to.include('Gecko Invalid Decimal');
+        expect(errors[1]).to.include('Gecko Invalid Range');
+        for (const hysteria2 of result) {
+            expect(hysteria2.obfs).to.deep.equal({
+                type: 'gecko',
+                password: 'mask',
+            });
+        }
+    });
+
+    it('clamps oversized gecko max packet size for sing-box and logs a warning', function () {
+        const { result, warnings } = captureWarns(() =>
+            produceInternal('sing-box', {
+                type: 'hysteria2',
+                name: 'Gecko Oversized Max',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'secret',
+                obfs: 'gecko',
+                'obfs-password': 'mask',
+                'obfs-min-packet-size': 1024,
+                'obfs-max-packet-size': 4096,
+            }),
+        );
+
+        expect(warnings).to.have.length(1);
+        expect(warnings[0]).to.include('Gecko Oversized Max');
+        expect(warnings[0]).to.include('clamped to 2048');
+        expectSubset(result[0], {
+            obfs: {
+                type: 'gecko',
+                password: 'mask',
+                min_packet_size: 1024,
+                max_packet_size: 2048,
+            },
+        });
+    });
+
     it('emits WireGuard interface CIDR suffixes for Egern exports', function () {
         const proxies = [
             {

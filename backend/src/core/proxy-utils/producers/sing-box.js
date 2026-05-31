@@ -5,6 +5,7 @@ import { getWireGuardAddressWithCIDR, normalizePluginMuxValue } from './utils';
 import {
     extractPathQueryParam,
     getSafeIntegerPathQueryParam,
+    parseSafeIntegerValue,
 } from '../transport-path';
 
 const ipVersions = {
@@ -927,6 +928,7 @@ const hysteriaParser = (proxy = {}) => {
     domainResolverParser(proxy, parsedProxy);
     return parsedProxy;
 };
+
 const hysteria2Parser = (proxy = {}) => {
     const parsedProxy = {
         tag: proxy.name,
@@ -950,7 +952,50 @@ const hysteria2Parser = (proxy = {}) => {
         });
     if (proxy.up) parsedProxy.up_mbps = parseInt(`${proxy.up}`, 10);
     if (proxy.down) parsedProxy.down_mbps = parseInt(`${proxy.down}`, 10);
-    if (proxy.obfs === 'salamander') parsedProxy.obfs.type = 'salamander';
+    if (['salamander', 'gecko'].includes(proxy.obfs))
+        parsedProxy.obfs.type = proxy.obfs;
+    if (proxy.obfs === 'gecko') {
+        const minRaw = proxy['obfs-min-packet-size'];
+        const maxRaw = proxy['obfs-max-packet-size'];
+        const hasMin =
+            minRaw !== undefined && minRaw !== null && `${minRaw}` !== '';
+        const hasMax =
+            maxRaw !== undefined && maxRaw !== null && `${maxRaw}` !== '';
+        if (hasMin || hasMax) {
+            const minPacketSize = hasMin
+                ? parseSafeIntegerValue(`${minRaw}`.trim())
+                : undefined;
+            const rawMaxPacketSize = hasMax
+                ? parseSafeIntegerValue(`${maxRaw}`.trim())
+                : undefined;
+            const maxPacketSize =
+                rawMaxPacketSize != null
+                    ? Math.min(rawMaxPacketSize, 2048)
+                    : rawMaxPacketSize;
+            const effectiveMinPacketSize = minPacketSize ?? 512;
+            const effectiveMaxPacketSize = maxPacketSize ?? 1200;
+
+            if (hasMax && rawMaxPacketSize != null && rawMaxPacketSize > 2048) {
+                $.warn(
+                    `Gecko obfs max packet size for proxy ${proxy.name} exceeds 2048, clamped to 2048: ${maxRaw}`,
+                );
+            }
+
+            if (
+                (hasMin && (minPacketSize == null || minPacketSize <= 0)) ||
+                (hasMax &&
+                    (rawMaxPacketSize == null || rawMaxPacketSize <= 0)) ||
+                effectiveMaxPacketSize < effectiveMinPacketSize
+            ) {
+                $.error(
+                    `Invalid obfs packet size for proxy ${proxy.name}: min=${minRaw} max=${maxRaw}`,
+                );
+            } else {
+                if (hasMin) parsedProxy.obfs.min_packet_size = minPacketSize;
+                if (hasMax) parsedProxy.obfs.max_packet_size = maxPacketSize;
+            }
+        }
+    }
     if (proxy['obfs-password'])
         parsedProxy.obfs.password = proxy['obfs-password'];
     if (!parsedProxy.obfs.type) delete parsedProxy.obfs;
