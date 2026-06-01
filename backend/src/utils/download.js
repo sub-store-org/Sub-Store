@@ -15,6 +15,7 @@ import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
 import PROXY_PREPROCESSORS from '@/core/proxy-utils/preprocessors';
 import { ProxyUtils } from '@/core/proxy-utils';
+import { runBackendRequestTask } from '@/utils/request-concurrency';
 
 const clashPreprocessor = PROXY_PREPROCESSORS.find(
     (processor) => processor.name === 'Clash Pre-processor',
@@ -288,14 +289,18 @@ export default async function download(
             }\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nPreprocess: ${preprocess}\nURL: ${url}`,
         );
         try {
-            let { body, headers, statusCode } = await http.get({
-                url,
-                ...(proxy ? { proxy } : {}),
-                ...(isLoon && proxy ? { node: proxy } : {}),
-                ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
-                ...(proxy ? getPolicyDescriptor(proxy) : {}),
-                ...(insecure ? insecure : {}),
-            });
+            let { body, headers, statusCode } = await runBackendRequestTask(
+                () =>
+                    http.get({
+                        url,
+                        ...(proxy ? { proxy } : {}),
+                        ...(isLoon && proxy ? { node: proxy } : {}),
+                        ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
+                        ...(proxy ? getPolicyDescriptor(proxy) : {}),
+                        ...(insecure ? insecure : {}),
+                    }),
+                'download',
+            );
             $.info(`statusCode: ${statusCode}`);
             if (statusCode < 200 || statusCode >= 400) {
                 throw new Error(`statusCode: ${statusCode}`);

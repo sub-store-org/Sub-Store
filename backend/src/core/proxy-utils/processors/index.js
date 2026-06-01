@@ -530,7 +530,7 @@ function parseIP4P(IP4P) {
     return { server, port };
 }
 
-const DEFAULT_RESOLVE_DOMAIN_CONCURRENCY = 15;
+const DEFAULT_RESOLVE_DOMAIN_CONCURRENCY = 10;
 const RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD = 20;
 
 function normalizeResolveDomainConcurrency(concurrency) {

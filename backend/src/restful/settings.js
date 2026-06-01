@@ -4,6 +4,10 @@ import { InternalServerError } from '@/restful/errors';
 import $ from '@/core/app';
 import Gist, { getGithubGistBaseURL } from '@/utils/gist';
 import { clearLogSettingsCache } from '@/utils/debug-logs';
+import {
+    BACKEND_REQUEST_CONCURRENCY_SETTING,
+    BACKEND_REQUEST_CONCURRENCY_WAIT_TIME_SETTING,
+} from '@/utils/request-concurrency';
 
 const ARTIFACT_STORE_SETTING_KEYS = [
     'gistToken',
@@ -90,6 +94,36 @@ async function updateSettings(req, res) {
                 value < 0
             ) {
                 delete newSettings.logsMaxCount;
+            }
+        }
+        if (BACKEND_REQUEST_CONCURRENCY_SETTING in newSettings) {
+            const rawConcurrency =
+                newSettings[BACKEND_REQUEST_CONCURRENCY_SETTING];
+            const value = Number(rawConcurrency);
+            if (
+                rawConcurrency === null ||
+                rawConcurrency === undefined ||
+                rawConcurrency === '' ||
+                !Number.isInteger(value) ||
+                value < 1
+            ) {
+                delete newSettings[BACKEND_REQUEST_CONCURRENCY_SETTING];
+            }
+        }
+        if (BACKEND_REQUEST_CONCURRENCY_WAIT_TIME_SETTING in newSettings) {
+            const rawWaitTime =
+                newSettings[BACKEND_REQUEST_CONCURRENCY_WAIT_TIME_SETTING];
+            const value = Number(rawWaitTime);
+            if (
+                rawWaitTime === null ||
+                rawWaitTime === undefined ||
+                rawWaitTime === '' ||
+                !Number.isInteger(value) ||
+                value < 0
+            ) {
+                delete newSettings[
+                    BACKEND_REQUEST_CONCURRENCY_WAIT_TIME_SETTING
+                ];
             }
         }
         $.write(newSettings, SETTINGS_KEY);

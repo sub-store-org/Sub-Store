@@ -16,6 +16,13 @@ let originalENV;
 let state;
 let capturedRequests;
 let infoLogs;
+let activeRequests;
+let maxActiveRequests;
+let requestDelay;
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 describe('flow headers requests', function () {
     before(function () {
@@ -51,6 +58,9 @@ describe('flow headers requests', function () {
     beforeEach(function () {
         capturedRequests = [];
         infoLogs = [];
+        activeRequests = 0;
+        maxActiveRequests = 0;
+        requestDelay = 0;
         state = {
             [SETTINGS_KEY]: {
                 defaultFlowUserAgent: 'DefaultFlowUA',
@@ -82,6 +92,10 @@ describe('flow headers requests', function () {
         openApi.HTTP = () => ({
             head: async (options) => {
                 capturedRequests.push({ method: 'HEAD', options });
+                activeRequests += 1;
+                maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+                if (requestDelay > 0) await sleep(requestDelay);
+                activeRequests -= 1;
                 return {
                     headers: {
                         'subscription-userinfo':
@@ -91,6 +105,10 @@ describe('flow headers requests', function () {
             },
             get: async (options) => {
                 capturedRequests.push({ method: 'GET', options });
+                activeRequests += 1;
+                maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+                if (requestDelay > 0) await sleep(requestDelay);
+                activeRequests -= 1;
                 return {
                     body: 'upload=1; download=2; total=10',
                     headers: {},
@@ -147,5 +165,28 @@ describe('flow headers requests', function () {
         expect(infoLogs[0]).to.include(
             '{"user-agent":"DefaultFlowUA","x-sub-token":"token-2"}',
         );
+    });
+
+    it('limits concurrent outbound flow requests by backend setting', async function () {
+        state[SETTINGS_KEY].backendRequestConcurrency = 2;
+        requestDelay = 5;
+
+        await Promise.all(
+            Array.from({ length: 5 }, (_, index) =>
+                getFlowHeaders(`https://example.com/sub-${index}`),
+            ),
+        );
+
+        expect(maxActiveRequests).to.equal(2);
+    });
+
+    it('uses cached flow headers without a new outbound request', async function () {
+        await getFlowHeaders('https://example.com/cached-flow');
+        await getFlowHeaders('https://example.com/cached-flow');
+
+        expect(capturedRequests.map((request) => request.options.url)).to.deep.equal([
+            'https://example.com/cached-flow',
+        ]);
+        expect(maxActiveRequests).to.equal(1);
     });
 });
