@@ -3,6 +3,7 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 
 import $ from '@/core/app';
 import PROCESSORS, { ApplyProcessor } from '@/core/proxy-utils/processors';
+import { SETTINGS_KEY } from '@/constants';
 import resourceCache from '@/utils/resource-cache';
 import { hex_md5 } from '@/vendor/md5';
 
@@ -14,15 +15,18 @@ function sleep(ms) {
 
 describe('Resolve Domain Operator', function () {
     let originalGoogleResolver;
+    let originalRead;
     let cacheKeys;
 
     beforeEach(function () {
         originalGoogleResolver = ResolveDomainOperator.resolver.Google;
+        originalRead = $.read.bind($);
         cacheKeys = [];
     });
 
     afterEach(function () {
         ResolveDomainOperator.resolver.Google = originalGoogleResolver;
+        $.read = originalRead;
         cacheKeys.forEach((key) => {
             delete resourceCache.resourceCache[key];
         });
@@ -144,6 +148,67 @@ describe('Resolve Domain Operator', function () {
         await ApplyProcessor(processor, domains);
 
         expect(maxActiveRequests).to.equal(15);
+    });
+
+    it('does not use backend request concurrency as the default', async function () {
+        $.read = (key) => {
+            if (key === SETTINGS_KEY) return { backendRequestConcurrency: 1 };
+            return originalRead(key);
+        };
+        const domains = Array.from({ length: 20 }, (_, index) => ({
+            name: `Node ${index}`,
+            server: `backend-setting-${index}.example.com`,
+            port: 443,
+        }));
+        let activeRequests = 0;
+        let maxActiveRequests = 0;
+
+        ResolveDomainOperator.resolver.Google = async (domain) => {
+            activeRequests += 1;
+            maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+            await sleep(5);
+            activeRequests -= 1;
+            return `192.0.2.${Number(domain.match(/\d+/)[0]) + 1}`;
+        };
+
+        const processor = ResolveDomainOperator({
+            provider: 'Google',
+            type: 'IPv4',
+        });
+        await ApplyProcessor(processor, domains);
+
+        expect(maxActiveRequests).to.equal(15);
+    });
+
+    it('prefers explicit domain resolver concurrency over backend request concurrency', async function () {
+        $.read = (key) => {
+            if (key === SETTINGS_KEY) return { backendRequestConcurrency: 1 };
+            return originalRead(key);
+        };
+        const domains = Array.from({ length: 5 }, (_, index) => ({
+            name: `Node ${index}`,
+            server: `explicit-domain-${index}.example.com`,
+            port: 443,
+        }));
+        let activeRequests = 0;
+        let maxActiveRequests = 0;
+
+        ResolveDomainOperator.resolver.Google = async (domain) => {
+            activeRequests += 1;
+            maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+            await sleep(5);
+            activeRequests -= 1;
+            return `192.0.2.${Number(domain.match(/\d+/)[0]) + 1}`;
+        };
+
+        const processor = ResolveDomainOperator({
+            provider: 'Google',
+            type: 'IPv4',
+            concurrency: 2,
+        });
+        await ApplyProcessor(processor, domains);
+
+        expect(maxActiveRequests).to.equal(2);
     });
 
     it('rejects invalid concurrency values', function () {

@@ -26,6 +26,13 @@ let tempDir;
 let previousDataBasePath;
 let capturedUrls;
 let errorLogs;
+let activeRequests;
+let maxActiveRequests;
+let requestDelay;
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 describe('download github proxy regex', function () {
     before(function () {
@@ -76,6 +83,9 @@ describe('download github proxy regex', function () {
     beforeEach(function () {
         capturedUrls = [];
         errorLogs = [];
+        activeRequests = 0;
+        maxActiveRequests = 0;
+        requestDelay = 0;
         state = {
             [SETTINGS_KEY]: {
                 githubProxy: 'https://ghproxy.test',
@@ -109,6 +119,10 @@ describe('download github proxy regex', function () {
         openApi.HTTP = () => ({
             get: async ({ url }) => {
                 capturedUrls.push(url);
+                activeRequests += 1;
+                maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+                if (requestDelay > 0) await sleep(requestDelay);
+                activeRequests -= 1;
                 return {
                     body: 'test-body',
                     headers: {},
@@ -163,5 +177,28 @@ describe('download github proxy regex', function () {
         ]);
         expect(errorLogs).to.have.length(1);
         expect(errorLogs[0]).to.contain('GitHub 加速代理匹配正则无效');
+    });
+
+    it('limits concurrent outbound download requests by backend setting', async function () {
+        state[SETTINGS_KEY].backendRequestConcurrency = 2;
+        requestDelay = 5;
+
+        await Promise.all(
+            Array.from({ length: 5 }, (_, index) =>
+                download(`https://example.com/archive-${index}.txt`),
+            ),
+        );
+
+        expect(maxActiveRequests).to.equal(2);
+    });
+
+    it('uses cached download content without a new outbound request', async function () {
+        await download('https://example.com/cached.txt');
+        await download('https://example.com/cached.txt');
+
+        expect(capturedUrls).to.deep.equal([
+            'https://example.com/cached.txt',
+        ]);
+        expect(maxActiveRequests).to.equal(1);
     });
 });
