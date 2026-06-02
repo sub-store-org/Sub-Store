@@ -727,6 +727,39 @@ const snellParser = (proxy = {}) => {
     return parsedProxy;
 };
 
+const singBoxPacketEncodings = ['', 'packetaddr', 'xudp'];
+
+const normalizeSingBoxPacketEncoding = (value) => {
+    const packetEncoding = `${value}`.trim().toLowerCase();
+    if (singBoxPacketEncodings.includes(packetEncoding)) {
+        return packetEncoding;
+    }
+    return undefined;
+};
+
+const vmessVlessPacketEncodingParser = (proxy, parsedProxy) => {
+    if (proxy['packet-encoding'] != null) {
+        const packetEncoding = normalizeSingBoxPacketEncoding(
+            proxy['packet-encoding'],
+        );
+        if (packetEncoding != null) parsedProxy.packet_encoding = packetEncoding;
+    } else if (proxy.xudp) {
+        parsedProxy.packet_encoding = 'xudp';
+    } else if (proxy['packet-addr']) {
+        parsedProxy.packet_encoding = 'packetaddr';
+    }
+};
+
+const vmessProtocolOptionsParser = (proxy, parsedProxy) => {
+    vmessVlessPacketEncodingParser(proxy, parsedProxy);
+    if (proxy['global-padding'] != null) {
+        parsedProxy.global_padding = !!proxy['global-padding'];
+    }
+    if (proxy['authenticated-length'] != null) {
+        parsedProxy.authenticated_length = !!proxy['authenticated-length'];
+    }
+};
+
 const vmessParser = (proxy = {}) => {
     const parsedProxy = {
         tag: proxy.name,
@@ -751,7 +784,7 @@ const vmessParser = (proxy = {}) => {
         parsedProxy.security = 'auto';
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
-    if (proxy.xudp) parsedProxy.packet_encoding = 'xudp';
+    vmessProtocolOptionsParser(proxy, parsedProxy);
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     if (proxy.network === 'ws') wsParser(proxy, parsedProxy);
     if (proxy.network === 'h2') h2Parser(proxy, parsedProxy);
@@ -778,7 +811,7 @@ const vlessParser = (proxy = {}) => {
     };
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
-    if (proxy.xudp) parsedProxy.packet_encoding = 'xudp';
+    vmessVlessPacketEncodingParser(proxy, parsedProxy);
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     // if (['xtls-rprx-vision', ''].includes(proxy.flow)) parsedProxy.flow = proxy.flow;
     if (proxy.flow != null) parsedProxy.flow = proxy.flow;

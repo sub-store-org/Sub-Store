@@ -437,7 +437,7 @@ describe('VMess and VLESS parser coverage', function () {
                 'client-fingerprint': 'chrome',
                 alpn: ['h2'],
                 udp: true,
-                xudp: true,
+                'packet-encoding': 'xudp',
                 network: 'ws',
                 'ws-opts': {
                     path: '/ws',
@@ -465,7 +465,7 @@ describe('VMess and VLESS parser coverage', function () {
                 'client-fingerprint': 'chrome',
                 alpn: ['h2'],
                 udp: true,
-                xudp: true,
+                'packet-encoding': 'xudp',
                 network: 'ws',
                 'ws-opts': {
                     path: '/ws',
@@ -489,7 +489,7 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 udp: true,
-                'packet-addr': true,
+                'packet-encoding': 'packetaddr',
                 network: 'ws',
                 'ws-opts': {
                     path: '/ws',
@@ -501,6 +501,31 @@ describe('VMess and VLESS parser coverage', function () {
                 },
             });
             expect(proxy).to.not.have.property('xudp');
+            expect(proxy).to.not.have.property('packet-addr');
+        });
+
+        it('parses websocket VLESS shares with xudp packet encoding', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xudp.example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws&packetEncoding=xudp#VLESS%20WS%20XUDP`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS WS XUDP',
+                server: 'vless-xudp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                udp: true,
+                'packet-encoding': 'xudp',
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+            });
         });
 
         it('parses websocket VLESS shares with pcs as tls fingerprint', function () {
@@ -516,7 +541,7 @@ describe('VMess and VLESS parser coverage', function () {
                 uuid: UUID,
                 tls: true,
                 udp: true,
-                xudp: true,
+                'packet-encoding': 'xudp',
                 'tls-fingerprint': 'fingerprint',
                 network: 'ws',
                 'ws-opts': {
@@ -838,6 +863,7 @@ describe('VMess and VLESS parser coverage', function () {
                 server: 'vless-h2.example.com',
                 port: 443,
                 udp: true,
+                'packet-encoding': '',
                 network: 'h2',
                 _h2: true,
                 'h2-opts': {
@@ -2658,7 +2684,7 @@ describe('Platform raw-format parser coverage', function () {
             },
             {
                 title: 'parses vmess http tls lines',
-                input: `Loon VMess=vmess,loon-vmess.example.com,443,auto,"${UUID}",transport=http,host=cdn.example.com,path=/http,over-tls=true,tls-name=sni.example.com,skip-cert-verify=true,alterId=0`,
+                input: `Loon VMess=vmess,loon-vmess.example.com,443,auto,"${UUID}",transport=http,host=cdn.example.com,path=/http,over-tls=true,tls-name=sni.example.com,skip-cert-verify=true,tls-profile=chrome,alterId=0`,
                 expected: {
                     type: 'vmess',
                     name: 'Loon VMess',
@@ -2670,6 +2696,7 @@ describe('Platform raw-format parser coverage', function () {
                     tls: true,
                     sni: 'sni.example.com',
                     'skip-cert-verify': true,
+                    'client-fingerprint': 'chrome',
                     network: 'http',
                     'http-opts': {
                         path: ['/http'],

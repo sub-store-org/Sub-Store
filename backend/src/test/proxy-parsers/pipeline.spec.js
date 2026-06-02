@@ -202,6 +202,26 @@ FINAL,DIRECT
         }
     });
 
+    it('prefers xudp over packet-addr when normalizing legacy packet fields', function () {
+        const proxy = parseOne(
+            JSON.stringify({
+                name: 'vless-legacy-packet-conflict',
+                type: 'vless',
+                server: 'vless.example.com',
+                port: 443,
+                uuid: UUID,
+                xudp: true,
+                'packet-addr': true,
+            }),
+        );
+
+        expectSubset(proxy, {
+            type: 'vless',
+            name: 'vless-legacy-packet-conflict',
+            'packet-encoding': 'xudp',
+        });
+    });
+
     it('accepts every Clash-supported proxy type as inline objects', function () {
         const supportedTypes = [
             'tailscale',

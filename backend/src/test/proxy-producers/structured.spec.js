@@ -3671,6 +3671,229 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('emits sing-box VMess and VLESS packet protocol options', function () {
+        const output = loadProducedJson('sing-box', [
+            {
+                type: 'vmess',
+                name: 'VMess Packet Options',
+                server: 'vmess-packet.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                'packet-encoding': 'packetaddr',
+                'global-padding': true,
+                'authenticated-length': false,
+            },
+            {
+                type: 'vless',
+                name: 'VLESS Packet Options',
+                server: 'vless-packet.example.com',
+                port: 443,
+                uuid: UUID,
+                'packet-encoding': 'packetaddr',
+                'global-padding': true,
+                'authenticated-length': false,
+            },
+            {
+                type: 'vmess',
+                name: 'VMess XUDP Packet Options',
+                server: 'vmess-xudp-packet.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                'packet-encoding': ' XUDP ',
+                'global-padding': false,
+                'authenticated-length': true,
+            },
+            {
+                type: 'vless',
+                name: 'VLESS XUDP Packet Options',
+                server: 'vless-xudp-packet.example.com',
+                port: 443,
+                uuid: UUID,
+                'packet-encoding': 'xudp',
+                'global-padding': false,
+                'authenticated-length': true,
+            },
+            {
+                type: 'vmess',
+                name: 'VMess Invalid Packet Encoding',
+                server: 'vmess-invalid-packet.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                xudp: true,
+                'packet-encoding': 'invalid',
+                'global-padding': 'yes',
+                'authenticated-length': 1,
+            },
+            {
+                type: 'vless',
+                name: 'VLESS Invalid Packet Encoding',
+                server: 'vless-invalid-packet.example.com',
+                port: 443,
+                uuid: UUID,
+                xudp: true,
+                'packet-encoding': 'invalid',
+                'global-padding': 'yes',
+                'authenticated-length': 1,
+            },
+            {
+                type: 'vmess',
+                name: 'VMess Empty Packet',
+                server: 'vmess-empty.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                xudp: true,
+                'packet-encoding': '',
+            },
+            {
+                type: 'vless',
+                name: 'VLESS Empty Packet',
+                server: 'vless-empty.example.com',
+                port: 443,
+                uuid: UUID,
+                xudp: true,
+                'packet-encoding': '',
+            },
+            {
+                type: 'vmess',
+                name: 'VMess Legacy XUDP',
+                server: 'vmess-xudp.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                xudp: true,
+            },
+            {
+                type: 'vless',
+                name: 'VLESS Legacy XUDP',
+                server: 'vless-xudp.example.com',
+                port: 443,
+                uuid: UUID,
+                xudp: true,
+            },
+            {
+                type: 'vmess',
+                name: 'VMess Legacy Packet Addr',
+                server: 'vmess-packet-addr.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                'packet-addr': true,
+            },
+            {
+                type: 'vless',
+                name: 'VLESS Legacy Packet Addr',
+                server: 'vless-packet-addr.example.com',
+                port: 443,
+                uuid: UUID,
+                'packet-addr': true,
+            },
+            {
+                type: 'vmess',
+                name: 'VMess Legacy XUDP Packet Addr',
+                server: 'vmess-xudp-packet-addr.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                xudp: true,
+                'packet-addr': true,
+            },
+            {
+                type: 'vless',
+                name: 'VLESS Legacy XUDP Packet Addr',
+                server: 'vless-xudp-packet-addr.example.com',
+                port: 443,
+                uuid: UUID,
+                xudp: true,
+                'packet-addr': true,
+            },
+        ]);
+        const findOutbound = (tag) =>
+            output.outbounds.find((item) => item.tag === tag);
+
+        expectSubset(findOutbound('VMess Packet Options'), {
+            packet_encoding: 'packetaddr',
+            global_padding: true,
+            authenticated_length: false,
+        });
+        expectSubset(findOutbound('VLESS Packet Options'), {
+            packet_encoding: 'packetaddr',
+        });
+        expect(findOutbound('VLESS Packet Options')).to.not.have.property(
+            'global_padding',
+        );
+        expect(findOutbound('VLESS Packet Options')).to.not.have.property(
+            'authenticated_length',
+        );
+        expectSubset(findOutbound('VMess XUDP Packet Options'), {
+            packet_encoding: 'xudp',
+            global_padding: false,
+            authenticated_length: true,
+        });
+        expectSubset(findOutbound('VLESS XUDP Packet Options'), {
+            packet_encoding: 'xudp',
+        });
+        expect(findOutbound('VLESS XUDP Packet Options')).to.not.have.property(
+            'global_padding',
+        );
+        expect(findOutbound('VLESS XUDP Packet Options')).to.not.have.property(
+            'authenticated_length',
+        );
+        for (const tag of ['VMess Empty Packet', 'VLESS Empty Packet']) {
+            expectSubset(findOutbound(tag), {
+                packet_encoding: '',
+            });
+            expect(findOutbound(tag)).to.not.have.property('global_padding');
+            expect(findOutbound(tag)).to.not.have.property(
+                'authenticated_length',
+            );
+        }
+        expect(
+            findOutbound('VMess Invalid Packet Encoding'),
+        ).to.not.have.property('packet_encoding');
+        expectSubset(findOutbound('VMess Invalid Packet Encoding'), {
+            global_padding: true,
+            authenticated_length: true,
+        });
+        expect(
+            findOutbound('VLESS Invalid Packet Encoding'),
+        ).to.not.have.property('packet_encoding');
+        expect(
+            findOutbound('VLESS Invalid Packet Encoding'),
+        ).to.not.have.property('global_padding');
+        expect(
+            findOutbound('VLESS Invalid Packet Encoding'),
+        ).to.not.have.property('authenticated_length');
+        expectSubset(findOutbound('VMess Legacy XUDP'), {
+            packet_encoding: 'xudp',
+        });
+        expectSubset(findOutbound('VLESS Legacy XUDP'), {
+            packet_encoding: 'xudp',
+        });
+        expectSubset(findOutbound('VMess Legacy Packet Addr'), {
+            packet_encoding: 'packetaddr',
+        });
+        expectSubset(findOutbound('VLESS Legacy Packet Addr'), {
+            packet_encoding: 'packetaddr',
+        });
+        expectSubset(findOutbound('VMess Legacy XUDP Packet Addr'), {
+            packet_encoding: 'xudp',
+        });
+        expectSubset(findOutbound('VLESS Legacy XUDP Packet Addr'), {
+            packet_encoding: 'xudp',
+        });
+    });
+
     it('emits sing-box httpupgrade transport without websocket early data fields', function () {
         const output = loadProducedJson('sing-box', {
             type: 'vless',

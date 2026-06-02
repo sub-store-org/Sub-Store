@@ -433,6 +433,147 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('emits Loon tls-profile for TLS protocol outputs', function () {
+        const output = produceExternal('Loon', [
+            {
+                type: 'vmess',
+                name: 'Loon VMess TLS',
+                server: 'vmess.example.com',
+                port: 443,
+                cipher: 'auto',
+                uuid: UUID,
+                alterId: 0,
+                tls: true,
+                sni: 'sni.example.com',
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'vless',
+                name: 'Loon VLESS TLS',
+                server: 'vless.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                sni: 'sni.example.com',
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'vless',
+                name: 'Loon VLESS Reality',
+                server: 'vless-reality.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                sni: 'sni.example.com',
+                flow: 'xtls-rprx-vision',
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'vless',
+                name: 'Loon VLESS XTLS',
+                server: 'vless-xtls.example.com',
+                port: 443,
+                uuid: UUID,
+                flow: 'xtls-rprx-vision',
+                sni: 'sni.example.com',
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'trojan',
+                name: 'Loon Trojan TLS',
+                server: 'trojan.example.com',
+                port: 443,
+                password: 'secret',
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'anytls',
+                name: 'Loon AnyTLS Profile',
+                server: 'anytls.example.com',
+                port: 443,
+                password: 'secret',
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'http',
+                name: 'Loon HTTPS Profile',
+                server: 'https.example.com',
+                port: 443,
+                tls: true,
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'socks5',
+                name: 'Loon SOCKS TLS',
+                server: 'socks.example.com',
+                port: 1080,
+                tls: true,
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'hysteria2',
+                name: 'Loon Hysteria2 Profile',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'secret',
+                'client-fingerprint': 'chrome',
+            },
+        ]);
+
+        expect(output.match(/tls-profile=chrome/g)).to.have.length(9);
+    });
+
+    it('omits Loon tls-profile for non-TLS outputs and empty fingerprints', function () {
+        const output = produceExternal('Loon', [
+            {
+                type: 'http',
+                name: 'Loon HTTP Plain',
+                server: 'http.example.com',
+                port: 80,
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'socks5',
+                name: 'Loon SOCKS Plain',
+                server: 'socks.example.com',
+                port: 1080,
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'vmess',
+                name: 'Loon VMess Plain',
+                server: 'vmess.example.com',
+                port: 80,
+                cipher: 'auto',
+                uuid: UUID,
+                alterId: 0,
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'vless',
+                name: 'Loon VLESS Plain',
+                server: 'vless.example.com',
+                port: 80,
+                uuid: UUID,
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'trojan',
+                name: 'Loon Trojan Empty Profile',
+                server: 'trojan-empty.example.com',
+                port: 443,
+                password: 'secret',
+                'client-fingerprint': '',
+            },
+        ]);
+
+        expect(output).to.not.include('tls-profile=');
+    });
+
     it('produces Loon Hysteria2 lines with port hopping', function () {
         const output = produceExternal('Loon', {
             type: 'hysteria2',
@@ -1487,7 +1628,7 @@ describe('Proxy text producers', function () {
             tls: true,
             sni: 'sni.example.com',
             udp: true,
-            'packet-addr': true,
+            'packet-encoding': 'packetaddr',
             network: 'ws',
             'ws-opts': {
                 path: '/ws',
@@ -1501,6 +1642,55 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             `vless://${UUID}@vless.example.com:443?security=tls&type=ws&path=%2Fws&host=cdn.example.com&ed=2048&eh=X-Data&packetEncoding=packet&sni=sni.example.com#URI%20WS%20Early`,
+        );
+    });
+
+    it('produces URI VLESS websocket links with xudp packet encoding', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI WS XUDP',
+            server: 'vless-xudp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            udp: true,
+            'packet-encoding': 'xudp',
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-xudp.example.com:443?security=tls&type=ws&path=%2Fws&host=cdn.example.com&packetEncoding=xudp#URI%20WS%20XUDP`,
+        );
+    });
+
+    it('prefers legacy xudp over legacy packet addr for URI VLESS links', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI WS Legacy XUDP',
+            server: 'vless-legacy-xudp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            udp: true,
+            xudp: true,
+            'packet-addr': true,
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-legacy-xudp.example.com:443?security=tls&type=ws&path=%2Fws&host=cdn.example.com&packetEncoding=xudp#URI%20WS%20Legacy%20XUDP`,
         );
     });
 
@@ -1708,6 +1898,7 @@ describe('Proxy text producers', function () {
             uuid: UUID,
             network: 'http',
             udp: true,
+            'packet-encoding': '',
             'http-opts': {
                 path: ['/edge'],
                 method: 'GET',
@@ -2044,6 +2235,7 @@ describe('Proxy text producers', function () {
             uuid: UUID,
             tls: true,
             udp: true,
+            'packet-encoding': '',
             network: 'h2',
             _h2: true,
             'h2-opts': {

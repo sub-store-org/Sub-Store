@@ -802,6 +802,16 @@ function lastParse(proxy) {
         proxy.network = proxy.network || 'tcp';
     }
     if (
+        ['vmess', 'vless'].includes(proxy.type) &&
+        proxy['packet-encoding'] == null
+    ) {
+        if (proxy.xudp) {
+            proxy['packet-encoding'] = 'xudp';
+        } else if (proxy['packet-addr']) {
+            proxy['packet-encoding'] = 'packetaddr';
+        }
+    }
+    if (
         [
             'trojan',
             'tuic',

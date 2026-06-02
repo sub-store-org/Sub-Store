@@ -855,8 +855,9 @@ function URI_VMess() {
                         const normalizedTransportHost =
                             getIfNotBlank(transportHost);
                         if (proxy.network === 'h2') {
-                            const h2Hosts =
-                                splitURIHostList(normalizedTransportHost);
+                            const h2Hosts = splitURIHostList(
+                                normalizedTransportHost,
+                            );
                             if (h2Hosts) {
                                 opts.host = h2Hosts;
                             }
@@ -1820,14 +1821,15 @@ function URI_VLESS() {
         proxy['tls-fingerprint'] = getIfPresent(params.pcs);
         proxy._h2 = /(TRUE)|1/i.test(params.h2);
 
-        switch (`${params.packetEncoding || ''}`.toLowerCase()) {
+        switch (`${params.packetEncoding || ''}`.trim().toLowerCase()) {
             case 'none':
+                proxy['packet-encoding'] = '';
                 break;
             case 'packet':
-                proxy['packet-addr'] = true;
+                proxy['packet-encoding'] = 'packetaddr';
                 break;
             default:
-                proxy.xudp = true;
+                proxy['packet-encoding'] = 'xudp';
                 break;
         }
 
