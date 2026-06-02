@@ -18,6 +18,7 @@ import {
     buildXrayEchConfigListFromMihomo,
     buildXrayEchFieldsFromMihomo,
 } from '../ech-utils';
+import { normalizeVmessSecurity } from '../vmess-security';
 
 function toStringHeaderMap(headers, { excludeHost = false } = {}) {
     if (!isPlainObject(headers)) {
@@ -129,19 +130,6 @@ function getTransportHost(network, transportOpts = {}) {
         transportOpts.headers?.host ??
         transportOpts.host
     );
-}
-
-function normalizeVmessSecurity(security) {
-    if (
-        security &&
-        !['aes-128-gcm', 'chacha20-poly1305', 'auto', 'none', 'zero'].includes(
-            security,
-        )
-    ) {
-        return 'auto';
-    }
-
-    return security;
 }
 
 function mapReuseSettingsToXmux(reuseSettings) {

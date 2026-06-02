@@ -1,4 +1,5 @@
 import { isPresent, isShadowsocksOverTls, Result } from './utils';
+import { formatQXVmessMethod } from '../vmess-security';
 
 const targetPlatform = 'QX';
 
@@ -333,12 +334,7 @@ function vmess(proxy) {
     append(`vmess=${proxy.server}:${proxy.port}`);
 
     // cipher
-    let cipher;
-    if (proxy.cipher === 'auto') {
-        cipher = 'chacha20-ietf-poly1305';
-    } else {
-        cipher = proxy.cipher;
-    }
+    let cipher = formatQXVmessMethod(proxy.cipher);
     append(`,method=${cipher}`);
 
     append(`,password=${proxy.uuid}`);

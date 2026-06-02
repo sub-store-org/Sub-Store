@@ -10,6 +10,7 @@ import {
     normalizeWebSocketEarlyDataPath,
 } from '../transport-path';
 import $ from '@/core/app';
+import { normalizeVmessSecurity } from '../vmess-security';
 
 export default function Shadowrocket_Producer() {
     const type = 'ALL';
@@ -63,18 +64,7 @@ export default function Shadowrocket_Producer() {
                     }
                     // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L400
                     // https://stash.wiki/proxy-protocols/proxy-types#vmess
-                    if (
-                        isPresent(proxy, 'cipher') &&
-                        ![
-                            'auto',
-                            'none',
-                            'zero',
-                            'aes-128-gcm',
-                            'chacha20-poly1305',
-                        ].includes(proxy.cipher)
-                    ) {
-                        proxy.cipher = 'auto';
-                    }
+                    proxy.cipher = normalizeVmessSecurity(proxy.cipher);
                 } else if (proxy.type === 'tuic') {
                     if (isPresent(proxy, 'alpn')) {
                         proxy.alpn = Array.isArray(proxy.alpn)

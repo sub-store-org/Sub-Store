@@ -52,7 +52,9 @@ describe('Proxy parser pipeline coverage', function () {
             ],
         };
 
-        const proxy = parseOne(`ssd://${Base64.encode(JSON.stringify(payload))}`);
+        const proxy = parseOne(
+            `ssd://${Base64.encode(JSON.stringify(payload))}`,
+        );
 
         expectSubset(proxy, {
             type: 'ss',
@@ -159,6 +161,25 @@ FINAL,DIRECT
             type: 'hysteria2',
             'hop-interval': 15,
             'hop-interval-max': 30,
+        });
+    });
+
+    it('defaults invalid VMess cipher to auto for Clash-style object inputs', function () {
+        const proxy = parseOne(
+            JSON.stringify({
+                name: 'vmess-invalid-cipher',
+                type: 'vmess',
+                server: 'vmess.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'aes-128-ctr',
+            }),
+        );
+
+        expectSubset(proxy, {
+            type: 'vmess',
+            name: 'vmess-invalid-cipher',
+            cipher: 'auto',
         });
     });
 

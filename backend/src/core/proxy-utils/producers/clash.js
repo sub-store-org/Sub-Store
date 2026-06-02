@@ -2,6 +2,7 @@ import {
     isPresent,
     produceProxyListOutput,
 } from '@/core/proxy-utils/producers/utils';
+import { normalizeClashVmessSecurity } from '../vmess-security';
 import {
     deleteHttpUpgradeEarlyDataMetadata,
     normalizeWebSocketEarlyDataPath,
@@ -81,17 +82,7 @@ export default function Clash_Producer() {
                         delete proxy.sni;
                     }
                     // https://dreamacro.github.io/clash/configuration/outbound.html#vmess
-                    if (
-                        isPresent(proxy, 'cipher') &&
-                        ![
-                            'auto',
-                            'aes-128-gcm',
-                            'chacha20-poly1305',
-                            'none',
-                        ].includes(proxy.cipher)
-                    ) {
-                        proxy.cipher = 'auto';
-                    }
+                    proxy.cipher = normalizeClashVmessSecurity(proxy.cipher);
                 } else if (proxy.type === 'wireguard') {
                     proxy.keepalive =
                         proxy.keepalive ?? proxy['persistent-keepalive'];

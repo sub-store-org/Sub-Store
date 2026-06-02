@@ -3,6 +3,7 @@ const targetPlatform = 'Loon';
 import { isPresent, Result } from './utils';
 import { isIPv4, isIPv6 } from '@/utils';
 import $ from '@/core/app';
+import { formatLoonVmessSecurity } from '../vmess-security';
 
 const ipVersions = {
     dual: 'dual',
@@ -405,10 +406,11 @@ function anytls(proxy) {
 
 function vmess(proxy) {
     const isReality = !!proxy['reality-opts'];
+    const security = formatLoonVmessSecurity(proxy.cipher);
 
     const result = new Result(proxy);
     result.append(
-        `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.uuid}"`,
+        `${proxy.name}=vmess,${proxy.server},${proxy.port},${security},"${proxy.uuid}"`,
     );
     if (proxy.network === 'tcp') {
         delete proxy.network;

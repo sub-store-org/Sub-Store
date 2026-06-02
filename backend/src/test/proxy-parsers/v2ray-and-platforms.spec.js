@@ -151,6 +151,30 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
+        it('keeps supported zero VMess security values', function () {
+            const share = Base64.encode(
+                JSON.stringify({
+                    ps: 'VMess Zero Security',
+                    add: 'vmess-zero.example.com',
+                    port: '443',
+                    id: UUID,
+                    aid: '0',
+                    scy: 'zero',
+                }),
+            );
+            const proxy = parseOne(`vmess://${share}`);
+
+            expectSubset(proxy, {
+                type: 'vmess',
+                name: 'VMess Zero Security',
+                server: 'vmess-zero.example.com',
+                port: 443,
+                cipher: 'zero',
+                uuid: UUID,
+                alterId: 0,
+            });
+        });
+
         it('parses V2rayN http transport shares as h2', function () {
             const share = Base64.encode(
                 JSON.stringify({
@@ -2641,7 +2665,6 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
         ]);
-
     });
 
     describe('Loon raw inputs', function () {
@@ -2704,6 +2727,32 @@ describe('Platform raw-format parser coverage', function () {
                             Host: ['cdn.example.com'],
                         },
                     },
+                },
+            },
+            {
+                title: 'canonicalizes Loon vmess chacha20 security',
+                input: `Loon VMess Chacha=vmess,loon-vmess-chacha.example.com,443,chacha20-ietf-poly1305,"${UUID}"`,
+                expected: {
+                    type: 'vmess',
+                    name: 'Loon VMess Chacha',
+                    server: 'loon-vmess-chacha.example.com',
+                    port: 443,
+                    cipher: 'chacha20-poly1305',
+                    uuid: UUID,
+                    alterId: 0,
+                },
+            },
+            {
+                title: 'defaults invalid Loon vmess security to auto',
+                input: `Loon VMess Invalid=vmess,loon-vmess-invalid.example.com,443,unknown-cipher,"${UUID}"`,
+                expected: {
+                    type: 'vmess',
+                    name: 'Loon VMess Invalid',
+                    server: 'loon-vmess-invalid.example.com',
+                    port: 443,
+                    cipher: 'auto',
+                    uuid: UUID,
+                    alterId: 0,
                 },
             },
             {
@@ -3186,6 +3235,34 @@ describe('Platform raw-format parser coverage', function () {
                             Host: 'cdn.example.com',
                         },
                     },
+                },
+            },
+            {
+                title: 'canonicalizes Surge vmess chacha20 encrypt-method',
+                input: `Surge VMess Chacha = vmess,surge-vmess-chacha.example.com,443,username=${UUID},encrypt-method=chacha20-ietf-poly1305,vmess-aead=true`,
+                expected: {
+                    type: 'vmess',
+                    name: 'Surge VMess Chacha',
+                    server: 'surge-vmess-chacha.example.com',
+                    port: 443,
+                    uuid: UUID,
+                    cipher: 'chacha20-poly1305',
+                    aead: true,
+                    alterId: 0,
+                },
+            },
+            {
+                title: 'defaults invalid Surge vmess encrypt-method to auto',
+                input: `Surge VMess Invalid = vmess,surge-vmess-invalid.example.com,443,username=${UUID},encrypt-method=none,vmess-aead=true`,
+                expected: {
+                    type: 'vmess',
+                    name: 'Surge VMess Invalid',
+                    server: 'surge-vmess-invalid.example.com',
+                    port: 443,
+                    uuid: UUID,
+                    cipher: 'auto',
+                    aead: true,
+                    alterId: 0,
                 },
             },
             {

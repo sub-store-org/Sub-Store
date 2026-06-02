@@ -3,6 +3,7 @@ import {
     produceProxyListOutput,
     supportsShadowsocksV2rayPluginMode,
 } from '@/core/proxy-utils/producers/utils';
+import { normalizeClashVmessSecurity } from '../vmess-security';
 import {
     deleteHttpUpgradeEarlyDataMetadata,
     normalizeWebSocketEarlyDataPath,
@@ -108,17 +109,7 @@ export default function Stash_Producer() {
                     }
                     // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L400
                     // https://stash.wiki/proxy-protocols/proxy-types#vmess
-                    if (
-                        isPresent(proxy, 'cipher') &&
-                        ![
-                            'auto',
-                            'aes-128-gcm',
-                            'chacha20-poly1305',
-                            'none',
-                        ].includes(proxy.cipher)
-                    ) {
-                        proxy.cipher = 'auto';
-                    }
+                    proxy.cipher = normalizeClashVmessSecurity(proxy.cipher);
                 } else if (proxy.type === 'tuic') {
                     if (isPresent(proxy, 'alpn')) {
                         proxy.alpn = Array.isArray(proxy.alpn)

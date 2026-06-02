@@ -94,6 +94,132 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('normalizes VMess security values for documented target platforms', function () {
+        const invalidSecurityProxy = {
+            type: 'vmess',
+            name: 'VMess Invalid Security',
+            server: 'vmess-invalid.example.com',
+            port: 443,
+            uuid: UUID,
+            cipher: 'aes-128-ctr',
+            alterId: 0,
+        };
+        const chachaProxy = {
+            ...invalidSecurityProxy,
+            name: 'VMess Chacha Security',
+            cipher: 'chacha20-poly1305',
+        };
+        const legacyChachaAliasProxy = {
+            ...invalidSecurityProxy,
+            name: 'VMess Chacha Alias Security',
+            cipher: 'chacha20-ietf-poly1305',
+        };
+        const noneSecurityProxy = {
+            ...invalidSecurityProxy,
+            name: 'VMess None Security',
+            cipher: 'none',
+        };
+        const zeroSecurityProxy = {
+            ...invalidSecurityProxy,
+            name: 'VMess Zero Security',
+            cipher: 'zero',
+        };
+        const getEgernVmess = (items, name) =>
+            items.find((item) => item.vmess?.name === name)?.vmess;
+
+        expectSubset(
+            getEgernVmess(
+                produceInternal('Egern', invalidSecurityProxy),
+                'VMess Invalid Security',
+            ),
+            {
+                security: 'auto',
+            },
+        );
+        expectSubset(
+            getEgernVmess(
+                loadProducedYaml('Egern', invalidSecurityProxy).proxies,
+                'VMess Invalid Security',
+            ),
+            {
+                security: 'auto',
+            },
+        );
+
+        expect(produceExternal('Loon', invalidSecurityProxy)).to.include(
+            ',auto,"',
+        );
+        expect(produceExternal('Loon', chachaProxy)).to.include(
+            ',chacha20-ietf-poly1305,"',
+        );
+
+        expect(produceExternal('Surge', invalidSecurityProxy)).to.not.include(
+            'encrypt-method=',
+        );
+        expect(produceExternal('Surge', chachaProxy)).to.include(
+            ',encrypt-method=chacha20-ietf-poly1305',
+        );
+
+        expect(produceExternal('QX', invalidSecurityProxy)).to.include(
+            'method=chacha20-poly1305',
+        );
+        expect(produceExternal('QX', legacyChachaAliasProxy)).to.include(
+            'method=chacha20-poly1305',
+        );
+        expect(produceExternal('QX', noneSecurityProxy)).to.include(
+            'method=none',
+        );
+
+        for (const platform of ['Clash', 'Stash']) {
+            expect(
+                loadProducedYaml(platform, invalidSecurityProxy).proxies[0]
+                    .cipher,
+            ).to.equal('auto');
+            expect(
+                loadProducedYaml(platform, legacyChachaAliasProxy).proxies[0]
+                    .cipher,
+            ).to.equal('chacha20-poly1305');
+            expect(
+                loadProducedYaml(platform, noneSecurityProxy).proxies[0].cipher,
+            ).to.equal('none');
+            expect(
+                loadProducedYaml(platform, zeroSecurityProxy).proxies[0].cipher,
+            ).to.equal('auto');
+        }
+
+        expect(
+            loadProducedYaml('Mihomo', invalidSecurityProxy).proxies[0].cipher,
+        ).to.equal('auto');
+        expect(
+            loadProducedYaml('Mihomo', legacyChachaAliasProxy).proxies[0]
+                .cipher,
+        ).to.equal('chacha20-poly1305');
+        expect(
+            loadProducedYaml('Mihomo', zeroSecurityProxy).proxies[0].cipher,
+        ).to.equal('zero');
+        expect(
+            loadProducedYaml('Shadowrocket', invalidSecurityProxy).proxies[0]
+                .cipher,
+        ).to.equal('auto');
+        expect(
+            loadProducedYaml('Shadowrocket', legacyChachaAliasProxy).proxies[0]
+                .cipher,
+        ).to.equal('chacha20-poly1305');
+        expect(
+            loadProducedYaml('Shadowrocket', zeroSecurityProxy).proxies[0]
+                .cipher,
+        ).to.equal('zero');
+
+        expect(
+            loadProducedJson('sing-box', invalidSecurityProxy).outbounds[0]
+                .security,
+        ).to.equal('auto');
+        expect(
+            loadProducedJson('sing-box', legacyChachaAliasProxy).outbounds[0]
+                .security,
+        ).to.equal('chacha20-poly1305');
+    });
+
     it('keeps unsupported Clash proxies when include-unsupported-proxy is enabled', function () {
         const internal = produceInternal(
             'Clash',

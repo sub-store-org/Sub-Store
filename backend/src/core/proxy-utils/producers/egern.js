@@ -4,6 +4,7 @@ import {
     isPresent,
     produceProxyListOutput,
 } from './utils';
+import { normalizeVmessSecurity } from '../vmess-security';
 
 export default function Egern_Producer() {
     const type = 'ALL';
@@ -272,19 +273,7 @@ export default function Egern_Producer() {
                         };
                     } else if (proxy.type === 'vmess') {
                         // Egern：传输层，支持 ws/wss/http1/http2/tls，不配置则为 tcp
-                        let security = proxy.cipher;
-                        if (
-                            security &&
-                            ![
-                                'auto',
-                                'none',
-                                'zero',
-                                'aes-128-gcm',
-                                'chacha20-poly1305',
-                            ].includes(security)
-                        ) {
-                            security = 'auto';
-                        }
+                        const security = normalizeVmessSecurity(proxy.cipher);
                         if (proxy.network === 'ws') {
                             proxy.transport = {
                                 [proxy.tls ? 'wss' : 'ws']: {

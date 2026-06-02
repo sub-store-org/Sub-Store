@@ -339,6 +339,12 @@ const grammars = String.raw`
         });
         return result;
     }
+    function normalizeVmessSecurity(security) {
+        const normalized = String(security || "").trim().toLowerCase();
+        const supported = ["aes-128-gcm", "chacha20-ietf-poly1305"];
+        if (!supported.includes(normalized)) return "auto";
+        return normalized === "chacha20-ietf-poly1305" ? "chacha20-poly1305" : normalized;
+    }
 }
 
 start = (anytls/shadowsocks/vmess/trojan/h2_connect/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard/hysteria2/ssh/trust_tunnel/direct) {
@@ -356,9 +362,9 @@ shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/
     }
     handleShadowTLS();
 }
-vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/method/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/tls_fingerprint/tls_verification/client_cert/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/vmess_method/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/tls_fingerprint/tls_verification/client_cert/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "vmess";
-    proxy.cipher = proxy.cipher || "none";
+    proxy.cipher = proxy.cipher || "auto";
     // Surfboard 与 Surge 默认不一致, 不管 Surfboard https://getsurfboard.com/docs/profile-format/proxy/external-proxy/vmess
     if (proxy.aead) {
         proxy.alterId = 0;
@@ -522,6 +528,9 @@ vmess_aead = comma "vmess-aead" equals flag:bool { proxy.aead = flag; }
 
 method = comma "encrypt-method" equals cipher:cipher {
     proxy.cipher = cipher;
+}
+vmess_method = comma "encrypt-method" equals cipher:$[^,]+ {
+    proxy.cipher = normalizeVmessSecurity(cipher);
 }
 cipher = ("aes-128-cfb"/"aes-128-ctr"/"aes-128-gcm"/"aes-192-cfb"/"aes-192-ctr"/"aes-192-gcm"/"aes-256-cfb"/"aes-256-ctr"/"aes-256-gcm"/"bf-cfb"/"camellia-128-cfb"/"camellia-192-cfb"/"camellia-256-cfb"/"cast5-cfb"/"chacha20-ietf-poly1305"/"chacha20-ietf"/"chacha20-poly1305"/"chacha20"/"des-cfb"/"idea-cfb"/"none"/"rc2-cfb"/"rc4-md5"/"rc4"/"salsa20"/"seed-cfb"/"xchacha20-ietf-poly1305"/"2022-blake3-aes-128-gcm"/"2022-blake3-aes-256-gcm");
 

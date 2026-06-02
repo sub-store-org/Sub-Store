@@ -12,6 +12,7 @@ import {
 } from '../transport-path';
 import { ECH_DNS_FIELD } from '../ech-utils';
 import $ from '@/core/app';
+import { normalizeVmessSecurity } from '../vmess-security';
 
 const ipVersions = {
     dual: 'dual',
@@ -161,18 +162,7 @@ export default function ClashMeta_Producer() {
                     }
                     // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L400
                     // https://stash.wiki/proxy-protocols/proxy-types#vmess
-                    if (
-                        isPresent(proxy, 'cipher') &&
-                        ![
-                            'auto',
-                            'none',
-                            'zero',
-                            'aes-128-gcm',
-                            'chacha20-poly1305',
-                        ].includes(proxy.cipher)
-                    ) {
-                        proxy.cipher = 'auto';
-                    }
+                    proxy.cipher = normalizeVmessSecurity(proxy.cipher);
                 } else if (proxy.type === 'tuic') {
                     if (isPresent(proxy, 'alpn')) {
                         proxy.alpn = Array.isArray(proxy.alpn)
@@ -315,9 +305,9 @@ export default function ClashMeta_Producer() {
                         proxy['h2-opts']?.headers?.host ??
                         proxy['h2-opts']?.headers?.Host;
                     if (
-                        (isPresent(proxy, 'h2-opts.host') ||
-                            isPresent(proxy, 'h2-opts.headers.host') ||
-                            isPresent(proxy, 'h2-opts.headers.Host'))
+                        isPresent(proxy, 'h2-opts.host') ||
+                        isPresent(proxy, 'h2-opts.headers.host') ||
+                        isPresent(proxy, 'h2-opts.headers.Host')
                     ) {
                         proxy['h2-opts'].host = Array.isArray(host)
                             ? host

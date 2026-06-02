@@ -1,6 +1,7 @@
 import { Result, isPresent } from './utils';
 import { isNotBlank, getIfNotBlank } from '@/utils';
 import $ from '@/core/app';
+import { formatSurgeVmessEncryptMethod } from '../vmess-security';
 
 const targetPlatform = 'Surge';
 
@@ -595,6 +596,10 @@ function vmess(proxy, includeUnsupportedProxy) {
     const result = new Result(proxy);
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,username=${proxy.uuid}`, 'uuid');
+    const encryptMethod = formatSurgeVmessEncryptMethod(proxy.cipher);
+    if (encryptMethod) {
+        result.append(`,encrypt-method=${encryptMethod}`);
+    }
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');

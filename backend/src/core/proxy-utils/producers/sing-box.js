@@ -7,6 +7,7 @@ import {
     getSafeIntegerPathQueryParam,
     parseSafeIntegerValue,
 } from '../transport-path';
+import { normalizeVmessSecurity } from '../vmess-security';
 
 const ipVersions = {
     ipv4: 'ipv4_only',
@@ -742,7 +743,8 @@ const vmessVlessPacketEncodingParser = (proxy, parsedProxy) => {
         const packetEncoding = normalizeSingBoxPacketEncoding(
             proxy['packet-encoding'],
         );
-        if (packetEncoding != null) parsedProxy.packet_encoding = packetEncoding;
+        if (packetEncoding != null)
+            parsedProxy.packet_encoding = packetEncoding;
     } else if (proxy.xudp) {
         parsedProxy.packet_encoding = 'xudp';
     } else if (proxy['packet-addr']) {
@@ -767,21 +769,10 @@ const vmessParser = (proxy = {}) => {
         server: proxy.server,
         server_port: parseInt(`${proxy.port}`, 10),
         uuid: proxy.uuid,
-        security: proxy.cipher,
+        security: normalizeVmessSecurity(proxy.cipher),
         alter_id: parseInt(`${proxy.alterId}`, 10),
         tls: { enabled: false, server_name: proxy.server, insecure: false },
     };
-    if (
-        [
-            'auto',
-            'none',
-            'zero',
-            'aes-128-gcm',
-            'chacha20-poly1305',
-            'aes-128-ctr',
-        ].indexOf(parsedProxy.security) === -1
-    )
-        parsedProxy.security = 'auto';
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     vmessProtocolOptionsParser(proxy, parsedProxy);
