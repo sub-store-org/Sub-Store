@@ -15,6 +15,7 @@ let originalRead;
 let originalWarn;
 let originalWrite;
 let state;
+let ageUtils;
 
 function createRouteApp() {
     const handlers = new Map();
@@ -111,10 +112,63 @@ async function downloadCollection(query) {
     return res.sent;
 }
 
+async function requestDownloadCollection(query) {
+    const handler = getHandler('/download/collection/:name');
+    const res = createResponse('/download/collection/:name');
+
+    await handler(
+        {
+            body: {},
+            headers: {},
+            method: 'GET',
+            params: { name: 'local-col' },
+            path: '/download/collection/local-col',
+            query,
+            url: '/download/collection/local-col',
+        },
+        res,
+    );
+
+    return res;
+}
+
+async function requestShareSubscription({ query = {}, shareToken } = {}) {
+    const handler = getHandler('/share/sub/:name');
+    const res = createResponse('/share/sub/:name');
+
+    await handler(
+        {
+            body: {},
+            headers: {},
+            method: 'GET',
+            params: { name: 'local-vless' },
+            path: '/share/sub/local-vless',
+            query,
+            subStoreShareToken: shareToken,
+            url: '/share/sub/local-vless',
+        },
+        res,
+    );
+
+    return res;
+}
+
+async function expectDecryptFailure(armored, secretKey) {
+    try {
+        await ageUtils.decryptArmorIfPresent(armored, secretKey);
+    } catch (e) {
+        expect(e.message).to.contain('age 解密失败');
+        return;
+    }
+
+    throw new Error('Expected age decrypt to fail');
+}
+
 describe('download routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
         ({ default: registerDownloadRoutes } = require('@/restful/download'));
+        ageUtils = require('@/utils/age');
 
         originalRead = $.read.bind($);
         originalWrite = $.write.bind($);
@@ -272,4 +326,73 @@ describe('download routes', function () {
         expect(res.statusCode).to.equal(201);
         expect(res.sent).to.equal('local-vless');
     });
+
+    it('encrypts transformed subscription output with source age-public-key', async function () {
+        const pair = await ageUtils.generateKeyPair();
+        state[SUBS_KEY][0]['age-public-key'] = pair['age-public-key'];
+        state[SUBS_KEY][0].process = [
+            {
+                type: 'Response Transformer',
+                args: {
+                    mode: 'script',
+                    content:
+                        "$res.header['x-test'] = 'ok'\n$res.body = 'changed'",
+                },
+            },
+        ];
+
+        const res = await requestDownloadSubscription({ target: 'JSON' });
+        const decrypted = await ageUtils.decryptArmorIfPresent(
+            res.sent,
+            pair['age-secret-key'],
+        );
+
+        expect(res.headers['x-test']).to.equal('ok');
+        expect(res.headers['Content-Type']).to.equal(
+            'text/plain; charset=utf-8',
+        );
+        expect(res.sent).to.contain(ageUtils.AGE_ARMOR_HEADER);
+        expect(decrypted).to.equal('changed');
+    });
+
+    it('encrypts collection output with collection age-public-key', async function () {
+        const pair = await ageUtils.generateKeyPair();
+        state[COLLECTIONS_KEY][0]['age-public-key'] = pair['age-public-key'];
+
+        const res = await requestDownloadCollection({ target: 'JSON' });
+        const decrypted = await ageUtils.decryptArmorIfPresent(
+            res.sent,
+            pair['age-secret-key'],
+        );
+
+        expect(res.headers['Content-Type']).to.equal(
+            'text/plain; charset=utf-8',
+        );
+        expect(res.sent).to.contain(ageUtils.AGE_ARMOR_HEADER);
+        expect(decrypted).to.include('VLESS WS');
+    });
+
+    it('uses share age-public-key before source subscription key', async function () {
+        const sourcePair = await ageUtils.generateKeyPair();
+        const sharePair = await ageUtils.generateKeyPair();
+        state[SUBS_KEY][0]['age-public-key'] = sourcePair['age-public-key'];
+
+        const res = await requestShareSubscription({
+            query: { target: 'JSON' },
+            shareToken: {
+                type: 'sub',
+                name: 'local-vless',
+                'age-public-key': sharePair['age-public-key'],
+            },
+        });
+        const decrypted = await ageUtils.decryptArmorIfPresent(
+            res.sent,
+            sharePair['age-secret-key'],
+        );
+
+        expect(res.sent).to.contain(ageUtils.AGE_ARMOR_HEADER);
+        expect(decrypted).to.include('VLESS WS');
+        await expectDecryptFailure(res.sent, sourcePair['age-secret-key']);
+    });
+
 });

@@ -9,6 +9,7 @@ import $ from '@/core/app';
 import {
     markArtifactProducedWithoutUpload,
     produceArtifact,
+    produceSyncArtifactOutput,
     shouldUploadArtifact,
     uploadArtifactBatches,
 } from '@/restful/sync';
@@ -196,17 +197,9 @@ async function doSync(arg = {}, { canUpload = true } = {}) {
                                 `手动指定了 target 为 SurgeMac, 将使用 Mihomo External`,
                             );
                         }
-                        const output = await produceArtifact({
-                            type: artifact.type,
-                            name: artifact.source,
-                            platform: artifact.platform,
-                            produceOpts: {
-                                'include-unsupported-proxy':
-                                    artifact.includeUnsupportedProxy,
-                                useMihomoExternal,
-                                prettyYaml: artifact.prettyYaml,
-                            },
-                        });
+                        const output = await produceSyncArtifactOutput(
+                            artifact,
+                        );
 
                         // if (!output || output.length === 0)
                         //     throw new Error('该配置的结果为空 不进行上传');

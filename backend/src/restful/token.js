@@ -10,6 +10,7 @@ import {
 import { insertByPosition } from '@/utils/database';
 import { getCreateItemPosition } from '@/utils/create-item-position';
 import { archiveShare } from '@/utils/archive';
+import { normalizeAgePublicKeyConfig } from '@/utils/age';
 
 export default function register($app) {
     if (!$.read(TOKENS_KEY)) $.write([], TOKENS_KEY);
@@ -315,6 +316,7 @@ function createTokenItem(payload, options = {}) {
     delete safePayload.expiresIn;
     delete safePayload.count;
     delete safePayload.usedCount;
+    normalizeAgePublicKeyConfig(safePayload);
     const tokenData = {
         ...safePayload,
         token,
@@ -413,6 +415,15 @@ function consumeShareToken(query) {
     return nextToken;
 }
 
+function findShareToken(query) {
+    const allTokens = $.read(TOKENS_KEY) || [];
+    return (
+        allTokens.find(
+            (item) => matchesShareToken(item, query) && isShareTokenUsable(item),
+        ) || null
+    );
+}
+
 function shouldArchiveDeletion(mode) {
     if (mode == null || mode === '' || mode === 'permanent') {
         return false;
@@ -426,4 +437,4 @@ function shouldArchiveDeletion(mode) {
     );
 }
 
-export { createTokenItem, deleteTokenItem, consumeShareToken };
+export { createTokenItem, deleteTokenItem, consumeShareToken, findShareToken };

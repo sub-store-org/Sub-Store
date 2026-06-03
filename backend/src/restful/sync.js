@@ -29,6 +29,8 @@ import {
     shouldFallbackIgnoreFailedRemoteSub,
 } from '@/restful/ignore-failed-remote-sub';
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
+import { applyAgeOutputEncryption } from '@/restful/age-output';
+import { maskAgeSecretInUrl } from '@/utils/age';
 
 export default function register($app) {
     // Initialization
@@ -37,6 +39,10 @@ export default function register($app) {
     // sync all artifacts
     $app.get('/api/sync/artifacts', syncAllArtifacts);
     $app.get('/api/sync/artifact/:name', syncArtifact);
+}
+
+function formatAgeSafeUrls(errors) {
+    return Object.keys(errors).map(maskAgeSecretInUrl).join(', ');
 }
 
 async function produceArtifact({
@@ -105,7 +111,9 @@ async function produceArtifact({
                             } catch (err) {
                                 errors[url] = err;
                                 $.error(
-                                    `订阅 ${sub.name} 的远程订阅 ${url} 发生错误: ${err}`,
+                                    `订阅 ${sub.name} 的远程订阅 ${maskAgeSecretInUrl(
+                                        url,
+                                    )} 发生错误: ${err}`,
                                 );
                                 return '';
                             }
@@ -113,9 +121,11 @@ async function produceArtifact({
                 );
 
                 if (Object.keys(errors).length > 0) {
-                    const message = `订阅 ${sub.name} 的远程订阅 ${Object.keys(
+                    const message = `订阅 ${
+                        sub.name
+                    } 的远程订阅 ${formatAgeSafeUrls(
                         errors,
-                    ).join(', ')} 发生错误, 请查看日志`;
+                    )} 发生错误, 请查看日志`;
                     handleIgnoreFailedRemoteSubError({
                         mode: subIgnoreFailedRemoteSub,
                         message,
@@ -160,7 +170,9 @@ async function produceArtifact({
                             } catch (err) {
                                 errors[url] = err;
                                 $.error(
-                                    `订阅 ${sub.name} 的远程订阅 ${url} 发生错误: ${err}`,
+                                    `订阅 ${sub.name} 的远程订阅 ${maskAgeSecretInUrl(
+                                        url,
+                                    )} 发生错误: ${err}`,
                                 );
                                 return '';
                             }
@@ -168,9 +180,11 @@ async function produceArtifact({
                 );
 
                 if (Object.keys(errors).length > 0) {
-                    const message = `订阅 ${sub.name} 的远程订阅 ${Object.keys(
+                    const message = `订阅 ${
+                        sub.name
+                    } 的远程订阅 ${formatAgeSafeUrls(
                         errors,
-                    ).join(', ')} 发生错误, 请查看日志`;
+                    )} 发生错误, 请查看日志`;
                     handleIgnoreFailedRemoteSubError({
                         mode: subIgnoreFailedRemoteSub,
                         message,
@@ -339,7 +353,11 @@ async function produceArtifact({
                                         } catch (err) {
                                             errors[url] = err;
                                             $.error(
-                                                `订阅 ${sub.name} 的远程订阅 ${url} 发生错误: ${err}`,
+                                                `订阅 ${
+                                                    sub.name
+                                                } 的远程订阅 ${maskAgeSecretInUrl(
+                                                    url,
+                                                )} 发生错误: ${err}`,
                                             );
                                             return '';
                                         }
@@ -347,9 +365,11 @@ async function produceArtifact({
                             );
 
                             if (Object.keys(errors).length > 0) {
-                                const message = `订阅 ${sub.name} 的远程订阅 ${Object.keys(
+                                const message = `订阅 ${
+                                    sub.name
+                                } 的远程订阅 ${formatAgeSafeUrls(
                                     errors,
-                                ).join(', ')} 发生错误, 请查看日志`;
+                                )} 发生错误, 请查看日志`;
                                 handleIgnoreFailedRemoteSubError({
                                     mode: subMode,
                                     message,
@@ -589,7 +609,9 @@ async function produceArtifact({
                             } catch (err) {
                                 errors[url] = err;
                                 $.error(
-                                    `文件 ${file.name} 的远程文件 ${url} 发生错误: ${err}`,
+                                    `文件 ${file.name} 的远程文件 ${maskAgeSecretInUrl(
+                                        url,
+                                    )} 发生错误: ${err}`,
                                 );
                                 return '';
                             }
@@ -607,9 +629,11 @@ async function produceArtifact({
                     Object.keys(errors).length > 0
                 ) {
                     throw new Error(
-                        `文件 ${file.name} 的远程文件 ${Object.keys(
+                        `文件 ${
+                            file.name
+                        } 的远程文件 ${formatAgeSafeUrls(
                             errors,
-                        ).join(', ')} 发生错误, 请查看日志`,
+                        )} 发生错误, 请查看日志`,
                     );
                 }
                 if (mergeSources === 'localFirst') {
@@ -643,7 +667,9 @@ async function produceArtifact({
                             } catch (err) {
                                 errors[url] = err;
                                 $.error(
-                                    `文件 ${file.name} 的远程文件 ${url} 发生错误: ${err}`,
+                                    `文件 ${file.name} 的远程文件 ${maskAgeSecretInUrl(
+                                        url,
+                                    )} 发生错误: ${err}`,
                                 );
                                 return '';
                             }
@@ -660,16 +686,18 @@ async function produceArtifact({
                 if (Object.keys(errors).length > 0) {
                     if (!fileIgnoreFailedRemoteFile) {
                         throw new Error(
-                            `文件 ${file.name} 的远程文件 ${Object.keys(
+                            `文件 ${
+                                file.name
+                            } 的远程文件 ${formatAgeSafeUrls(
                                 errors,
-                            ).join(', ')} 发生错误, 请查看日志`,
+                            )} 发生错误, 请查看日志`,
                         );
                     } else if (fileIgnoreFailedRemoteFile === 'enabled') {
                         $.notify(
                             `🌍 Sub-Store 处理文件失败`,
                             `❌ ${file.name}`,
-                            `远程文件 ${Object.keys(errors).join(
-                                ', ',
+                            `远程文件 ${formatAgeSafeUrls(
+                                errors,
                             )} 发生错误, 请查看日志`,
                         );
                     }
@@ -761,6 +789,41 @@ function resolveArtifactUploadUrl(body, artifactName) {
 
 function shouldUploadArtifact(artifact) {
     return artifact?.upload !== false;
+}
+
+function findArtifactSourceConfig(artifact) {
+    if (!artifact?.source) return null;
+
+    if (['subscription', 'sub'].includes(artifact.type)) {
+        return findByName($.read(SUBS_KEY), artifact.source);
+    }
+    if (['collection', 'col'].includes(artifact.type)) {
+        return findByName($.read(COLLECTIONS_KEY), artifact.source);
+    }
+    if (artifact.type === 'file') {
+        return findByName($.read(FILES_KEY), artifact.source);
+    }
+
+    return null;
+}
+
+async function produceSyncArtifactOutput(artifact) {
+    const useMihomoExternal = artifact.platform === 'SurgeMac';
+    const output = await produceArtifact({
+        type: artifact.type,
+        name: artifact.source,
+        platform: artifact.platform,
+        produceOpts: {
+            'include-unsupported-proxy': artifact.includeUnsupportedProxy,
+            useMihomoExternal,
+            prettyYaml: artifact.prettyYaml,
+        },
+    });
+
+    return applyAgeOutputEncryption({
+        body: output,
+        configs: [artifact, findArtifactSourceConfig(artifact)],
+    });
 }
 
 function markArtifactProducedWithoutUpload(artifact) {
@@ -945,17 +1008,9 @@ async function syncArtifacts(options = {}) {
                             );
                         }
 
-                        const output = await produceArtifact({
-                            type: artifact.type,
-                            name: artifact.source,
-                            platform: artifact.platform,
-                            produceOpts: {
-                                'include-unsupported-proxy':
-                                    artifact.includeUnsupportedProxy,
-                                useMihomoExternal,
-                                prettyYaml: artifact.prettyYaml,
-                            },
-                        });
+                        const output = await produceSyncArtifactOutput(
+                            artifact,
+                        );
 
                         // if (!output || output.length === 0)
                         //     throw new Error('该配置的结果为空 不进行上传');
@@ -1077,16 +1132,7 @@ async function syncArtifactItem(name) {
     if (useMihomoExternal) {
         $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
     }
-    const output = await produceArtifact({
-        type: artifact.type,
-        name: artifact.source,
-        platform: artifact.platform,
-        produceOpts: {
-            'include-unsupported-proxy': artifact.includeUnsupportedProxy,
-            useMihomoExternal,
-            prettyYaml: artifact.prettyYaml,
-        },
-    });
+    const output = await produceSyncArtifactOutput(artifact);
 
     // if (!output || output.length === 0)
     //     throw new Error('该配置的结果为空 不进行上传');
@@ -1174,6 +1220,7 @@ async function syncArtifact(req, res) {
 export {
     markArtifactProducedWithoutUpload,
     produceArtifact,
+    produceSyncArtifactOutput,
     shouldUploadArtifact,
     syncArtifactItem,
     syncArtifacts,

@@ -18,6 +18,12 @@ import { produceArtifact } from '@/restful/sync';
 import { archiveFile } from '@/utils/archive';
 import { formatDateTime } from '@/utils';
 import { applyResponseTransformers } from '@/restful/response-transformer';
+import {
+    applyAgeOutputEncryption,
+    resolveShareAgeConfig,
+} from '@/restful/age-output';
+import { findShareToken } from '@/restful/token';
+import { maskAgeSecretInUrl, normalizeAgePublicKeyConfig } from '@/utils/age';
 
 export default function register($app) {
     if (!$.read(FILES_KEY)) $.write([], FILES_KEY);
@@ -95,7 +101,7 @@ async function getFile(req, res, next) {
         Object.assign($options, options);
     }
     if (url) {
-        $.info(`指定远程文件 URL: ${url}`);
+        $.info(`指定远程文件 URL: ${maskAgeSecretInUrl(url)}`);
     }
     if (proxy) {
         $.info(`指定远程订阅使用代理/策略 proxy: ${proxy}`);
@@ -210,7 +216,21 @@ async function getFile(req, res, next) {
                 source: { $file: file },
                 $options: output?.$options ?? $options,
             });
-            res.send(body);
+            res.send(
+                await applyAgeOutputEncryption({
+                    res,
+                    body,
+                    configs: [
+                        resolveShareAgeConfig({
+                            req,
+                            type: 'file',
+                            name,
+                            findShareToken,
+                        }),
+                        file,
+                    ],
+                }),
+            );
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载文件失败`,
@@ -282,6 +302,7 @@ function updateFile(req, res) {
             ...oldFile,
             ...file,
         };
+        normalizeAgePublicKeyConfig(newFile);
         $.info(`正在更新文件：${name}...`);
 
         if (name !== newFile.name) {
@@ -341,15 +362,21 @@ function getAllWholeFiles(req, res) {
 }
 
 function replaceFile(req, res) {
-    const allFiles = req.body;
-    $.write(allFiles, FILES_KEY);
-    success(res);
+    try {
+        const allFiles = req.body;
+        allFiles.forEach(normalizeAgePublicKeyConfig);
+        $.write(allFiles, FILES_KEY);
+        success(res);
+    } catch (error) {
+        failed(res, error);
+    }
 }
 
 function createFileItem(rawFile) {
     const file = {
         ...rawFile,
     };
+    normalizeAgePublicKeyConfig(file);
     file.name = `${file.name ?? Date.now()}`;
     $.info(`正在创建文件：${file.name}`);
     const allFiles = $.read(FILES_KEY);

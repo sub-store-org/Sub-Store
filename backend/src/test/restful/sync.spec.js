@@ -6,11 +6,13 @@ import { ARTIFACTS_KEY, FILES_KEY, SETTINGS_KEY } from '@/constants';
 let $;
 let registerArtifactRoutes;
 let registerSyncRoutes;
+let produceSyncArtifactOutput;
 let originalError;
 let originalInfo;
 let originalRead;
 let originalWrite;
 let state;
+let ageUtils;
 
 function createRouteApp() {
     const handlers = new Map();
@@ -102,7 +104,10 @@ describe('sync routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
         ({ default: registerArtifactRoutes } = require('@/restful/artifacts'));
-        ({ default: registerSyncRoutes } = require('@/restful/sync'));
+        ({ default: registerSyncRoutes, produceSyncArtifactOutput } = require(
+            '@/restful/sync'
+        ));
+        ageUtils = require('@/utils/age');
 
         originalRead = $.read.bind($);
         originalWrite = $.write.bind($);
@@ -209,5 +214,59 @@ describe('sync routes', function () {
             status: 'not_attempted',
         });
         expect(state[ARTIFACTS_KEY]).to.deep.equal([]);
+    });
+
+    it('encrypts sync artifact output with artifact age-public-key', async function () {
+        const pair = await ageUtils.generateKeyPair();
+        state[ARTIFACTS_KEY][0]['age-public-key'] = pair['age-public-key'];
+
+        const output = await produceSyncArtifactOutput(state[ARTIFACTS_KEY][0]);
+        const decrypted = await ageUtils.decryptArmorIfPresent(
+            output,
+            pair['age-secret-key'],
+        );
+
+        expect(output).to.contain(ageUtils.AGE_ARMOR_HEADER);
+        expect(decrypted).to.equal('local content');
+    });
+
+    it('uses source age-public-key when artifact has no key', async function () {
+        const pair = await ageUtils.generateKeyPair();
+        state[FILES_KEY][0]['age-public-key'] = pair['age-public-key'];
+
+        const output = await produceSyncArtifactOutput(state[ARTIFACTS_KEY][0]);
+        const decrypted = await ageUtils.decryptArmorIfPresent(
+            output,
+            pair['age-secret-key'],
+        );
+
+        expect(output).to.contain(ageUtils.AGE_ARMOR_HEADER);
+        expect(decrypted).to.equal('local content');
+    });
+
+    it('uses artifact age-public-key before source key', async function () {
+        const sourcePair = await ageUtils.generateKeyPair();
+        const artifactPair = await ageUtils.generateKeyPair();
+        state[FILES_KEY][0]['age-public-key'] = sourcePair['age-public-key'];
+        state[ARTIFACTS_KEY][0]['age-public-key'] =
+            artifactPair['age-public-key'];
+
+        const output = await produceSyncArtifactOutput(state[ARTIFACTS_KEY][0]);
+        const decrypted = await ageUtils.decryptArmorIfPresent(
+            output,
+            artifactPair['age-secret-key'],
+        );
+
+        expect(output).to.contain(ageUtils.AGE_ARMOR_HEADER);
+        expect(decrypted).to.equal('local content');
+        try {
+            await ageUtils.decryptArmorIfPresent(
+                output,
+                sourcePair['age-secret-key'],
+            );
+            throw new Error('Expected source key decrypt to fail');
+        } catch (e) {
+            expect(e.message).to.contain('age 解密失败');
+        }
     });
 });

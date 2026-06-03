@@ -29,7 +29,9 @@ import registerMiscRoutes from './miscs';
 import registerNodeInfoRoutes from './node-info';
 import registerParserRoutes from './parser';
 import registerLogRoutes from './logs';
+import registerAgeRoutes from './age';
 import { consumeShareToken } from './token';
+import { AGE_PUBLIC_KEY } from '@/utils/age';
 
 export default function serve() {
     let port;
@@ -80,6 +82,7 @@ export default function serve() {
                         pathname,
                     });
                     if (token) {
+                        req.subStoreShareToken = token;
                         next();
                         return;
                     } else {
@@ -141,6 +144,7 @@ export default function serve() {
     registerMiscRoutes($app);
     registerParserRoutes($app);
     registerLogRoutes($app);
+    registerAgeRoutes($app);
 
     $app.start();
 
@@ -416,6 +420,11 @@ export default function serve() {
                                 } else {
                                     return '/404';
                                 }
+                            }
+                            if (token?.[AGE_PUBLIC_KEY]) {
+                                req.headers[
+                                    'x-sub-store-share-age-public-key'
+                                ] = token[AGE_PUBLIC_KEY];
                             }
                             return req.originalUrl;
                         },

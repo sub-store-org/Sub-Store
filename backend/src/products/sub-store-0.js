@@ -25,6 +25,7 @@ import registerTokenRoutes from '@/restful/token';
 import registerArchiveRoutes from '@/restful/archives';
 import registerModuleRoutes from '@/restful/module';
 import registerLogRoutes from '@/restful/logs';
+import registerAgeRoutes from '@/restful/age';
 
 migrate();
 serve();
@@ -44,6 +45,7 @@ function serve() {
     registerArchiveRoutes($app);
     registerMiscRoutes($app);
     registerLogRoutes($app);
+    registerAgeRoutes($app);
 
     $app.start();
 }

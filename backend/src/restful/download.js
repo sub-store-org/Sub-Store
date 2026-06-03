@@ -12,6 +12,12 @@ import { isIPv4, isIPv6 } from '@/utils';
 import { getISO } from '@/utils/geo';
 import env from '@/utils/env';
 import { applyResponseTransformers } from '@/restful/response-transformer';
+import {
+    applyAgeOutputEncryption,
+    resolveShareAgeConfig,
+} from '@/restful/age-output';
+import { findShareToken } from '@/restful/token';
+import { maskAgeSecretInUrl } from '@/utils/age';
 
 function buildEmptyNezhaPayload() {
     return JSON.stringify(
@@ -176,7 +182,7 @@ async function downloadSubscription(req, res) {
         Object.assign($options, options);
     }
     if (url) {
-        $.info(`指定远程订阅 URL: ${url}`);
+        $.info(`指定远程订阅 URL: ${maskAgeSecretInUrl(url)}`);
         if (!/^https?:\/\//.test(url)) {
             content = url;
             $.info(`URL 不是链接，视为本地订阅`);
@@ -426,7 +432,21 @@ async function downloadSubscription(req, res) {
                 source: { [sub.name]: sub },
                 $options,
             });
-            res.send(body);
+            res.send(
+                await applyAgeOutputEncryption({
+                    res,
+                    body,
+                    configs: [
+                        resolveShareAgeConfig({
+                            req,
+                            type: 'sub',
+                            name,
+                            findShareToken,
+                        }),
+                        sub,
+                    ],
+                }),
+            );
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载订阅失败`,
@@ -753,7 +773,21 @@ async function downloadCollection(req, res) {
                 source: { _collection: collection },
                 $options,
             });
-            res.send(body);
+            res.send(
+                await applyAgeOutputEncryption({
+                    res,
+                    body,
+                    configs: [
+                        resolveShareAgeConfig({
+                            req,
+                            type: 'col',
+                            name,
+                            findShareToken,
+                        }),
+                        collection,
+                    ],
+                }),
+            );
         } catch (err) {
             $.notify(
                 `🌍 Sub-Store 下载组合订阅失败`,

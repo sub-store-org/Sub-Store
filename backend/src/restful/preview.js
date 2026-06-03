@@ -12,6 +12,11 @@ import {
     shouldFallbackIgnoreFailedRemoteSub,
 } from '@/restful/ignore-failed-remote-sub';
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
+import { maskAgeSecretInUrl } from '@/utils/age';
+
+function formatAgeSafeUrls(errors) {
+    return Object.keys(errors).map(maskAgeSecretInUrl).join(', ');
+}
 
 export default function register($app) {
     $app.post('/api/preview/sub', compareSub);
@@ -47,7 +52,9 @@ async function previewFile(req, res) {
                             } catch (err) {
                                 errors[url] = err;
                                 $.error(
-                                    `文件 ${file.name} 的远程文件 ${url} 发生错误: ${err}`,
+                                    `文件 ${file.name} 的远程文件 ${maskAgeSecretInUrl(
+                                        url,
+                                    )} 发生错误: ${err}`,
                                 );
                                 return '';
                             }
@@ -57,16 +64,18 @@ async function previewFile(req, res) {
                 if (Object.keys(errors).length > 0) {
                     if (!file.ignoreFailedRemoteFile) {
                         throw new Error(
-                            `文件 ${file.name} 的远程文件 ${Object.keys(
+                            `文件 ${
+                                file.name
+                            } 的远程文件 ${formatAgeSafeUrls(
                                 errors,
-                            ).join(', ')} 发生错误, 请查看日志`,
+                            )} 发生错误, 请查看日志`,
                         );
                     } else if (file.ignoreFailedRemoteFile === 'enabled') {
                         $.notify(
                             `🌍 Sub-Store 预览文件失败`,
                             `❌ ${file.name}`,
-                            `远程文件 ${Object.keys(errors).join(
-                                ', ',
+                            `远程文件 ${formatAgeSafeUrls(
+                                errors,
                             )} 发生错误, 请查看日志`,
                         );
                     }
@@ -145,7 +154,9 @@ async function compareSub(req, res) {
                         } catch (err) {
                             errors[url] = err;
                             $.error(
-                                `订阅 ${sub.name} 的远程订阅 ${url} 发生错误: ${err}`,
+                                `订阅 ${sub.name} 的远程订阅 ${maskAgeSecretInUrl(
+                                    url,
+                                )} 发生错误: ${err}`,
                             );
                             return '';
                         }
@@ -153,9 +164,11 @@ async function compareSub(req, res) {
             );
 
             if (Object.keys(errors).length > 0) {
-                const message = `订阅 ${sub.name} 的远程订阅 ${Object.keys(
+                const message = `订阅 ${
+                    sub.name
+                } 的远程订阅 ${formatAgeSafeUrls(
                     errors,
-                ).join(', ')} 发生错误, 请查看日志`;
+                )} 发生错误, 请查看日志`;
                 handleIgnoreFailedRemoteSubError({
                     mode,
                     message,
@@ -291,7 +304,11 @@ async function compareCollection(req, res) {
                                     } catch (err) {
                                         errors[url] = err;
                                         $.error(
-                                            `订阅 ${sub.name} 的远程订阅 ${url} 发生错误: ${err}`,
+                                            `订阅 ${
+                                                sub.name
+                                            } 的远程订阅 ${maskAgeSecretInUrl(
+                                                url,
+                                            )} 发生错误: ${err}`,
                                         );
                                         return '';
                                     }
@@ -299,9 +316,11 @@ async function compareCollection(req, res) {
                         );
 
                         if (Object.keys(errors).length > 0) {
-                            const message = `订阅 ${sub.name} 的远程订阅 ${Object.keys(
+                            const message = `订阅 ${
+                                sub.name
+                            } 的远程订阅 ${formatAgeSafeUrls(
                                 errors,
-                            ).join(', ')} 发生错误, 请查看日志`;
+                            )} 发生错误, 请查看日志`;
                             handleIgnoreFailedRemoteSubError({
                                 mode: subMode,
                                 message,

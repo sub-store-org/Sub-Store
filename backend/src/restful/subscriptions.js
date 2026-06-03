@@ -26,6 +26,7 @@ import { archiveSubscription } from '@/utils/archive';
 import { success, failed } from './response';
 import $ from '@/core/app';
 import { formatDateTime } from '@/utils';
+import { maskAgeSecretInUrl, normalizeAgePublicKeyConfig } from '@/utils/age';
 
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 
@@ -48,7 +49,7 @@ async function getFlowInfo(req, res) {
     let { name } = req.params;
     let { url } = req.query;
     if (url) {
-        $.info(`指定远程订阅 URL: ${url}`);
+        $.info(`指定远程订阅 URL: ${maskAgeSecretInUrl(url)}`);
     }
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
@@ -290,6 +291,7 @@ function updateSubscription(req, res) {
             ...oldSub,
             ...sub,
         };
+        normalizeAgePublicKeyConfig(newSub);
         $.info(`正在更新订阅： ${name}`);
         // allow users to update the subscription name
         if (name !== sub.name) {
@@ -362,15 +364,21 @@ function getAllSubscriptions(req, res) {
 }
 
 function replaceSubscriptions(req, res) {
-    const allSubs = req.body;
-    $.write(allSubs, SUBS_KEY);
-    success(res);
+    try {
+        const allSubs = req.body;
+        allSubs.forEach(normalizeAgePublicKeyConfig);
+        $.write(allSubs, SUBS_KEY);
+        success(res);
+    } catch (error) {
+        failed(res, error);
+    }
 }
 
 function createSubscriptionItem(rawSub) {
     const sub = {
         ...rawSub,
     };
+    normalizeAgePublicKeyConfig(sub);
     delete sub.subscriptions;
     $.info(`正在创建订阅： ${sub.name}`);
     if (/\//.test(sub.name)) {

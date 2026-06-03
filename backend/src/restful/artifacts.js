@@ -24,6 +24,7 @@ import {
     normalizeArtifactCron,
     refreshArtifactCronJobs,
 } from '@/utils/artifact-cron';
+import { normalizeAgePublicKeyConfig } from '@/utils/age';
 
 const ARTIFACT_GIST_PLACEHOLDER_FILENAME = '.sub-store-placeholder';
 const ARTIFACT_GIST_PLACEHOLDER_CONTENT = [
@@ -140,6 +141,7 @@ function getAllArtifacts(req, res) {
 function replaceArtifact(req, res) {
     try {
         const allArtifacts = req.body;
+        allArtifacts.forEach(normalizeAgePublicKeyConfig);
         allArtifacts.forEach(normalizeArtifactCron);
         $.write(allArtifacts, ARTIFACTS_KEY);
         refreshArtifactCronJobs();
@@ -189,6 +191,7 @@ function updateArtifact(req, res) {
             ...oldArtifact,
             ...artifact,
         };
+        normalizeAgePublicKeyConfig(newArtifact);
         if (!validateArtifactName(newArtifact.name)) {
             failed(
                 res,
@@ -254,6 +257,7 @@ function validateArtifactName(name) {
 }
 
 function createArtifactItem(artifact) {
+    normalizeAgePublicKeyConfig(artifact);
     if (!validateArtifactName(artifact.name)) {
         throw new RequestInvalidError(
             'INVALID_ARTIFACT_NAME',

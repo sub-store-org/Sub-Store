@@ -16,6 +16,11 @@ import { produceArtifact } from '@/restful/sync';
 import PROXY_PREPROCESSORS from '@/core/proxy-utils/preprocessors';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { runBackendRequestTask } from '@/utils/request-concurrency';
+import {
+    AGE_SECRET_KEY,
+    decryptArmorIfPresent,
+    maskAgeSecretInUrl,
+} from '@/utils/age';
 
 const clashPreprocessor = PROXY_PREPROCESSORS.find(
     (processor) => processor.name === 'Clash Pre-processor',
@@ -59,6 +64,52 @@ function maybePrefixGithubProxyUrl(url, githubProxy, githubProxyRegex) {
     return `${githubProxy}/${url}`;
 }
 
+function maskDownloadUrl(url) {
+    return maskAgeSecretInUrl(url);
+}
+
+async function finalizeDownloadedBody(body, { ageSecretKey, preprocess, url }) {
+    let result = ageSecretKey
+        ? await decryptArmorIfPresent(body, ageSecretKey)
+        : body;
+
+    if (preprocess) {
+        try {
+            if (clashPreprocessor.test(result)) {
+                result = clashPreprocessor.parse(result, true);
+            }
+        } catch (e) {
+            $.error(`Clash Pre-processor error: ${e}`);
+        }
+    }
+
+    if (preprocess) {
+        try {
+            const proxies = ProxyUtils.parse(result);
+            if (!Array.isArray(proxies) || proxies.length === 0) {
+                return {
+                    result,
+                    shouldCache: false,
+                    cacheReason: `URL ${url} 不包含有效节点, 不缓存`,
+                };
+            }
+        } catch (e) {
+            return {
+                result,
+                shouldCache: false,
+                cacheReason: `URL ${url} 尝试解析节点失败 ${
+                    e.message ?? e
+                }, 不缓存`,
+            };
+        }
+    }
+
+    return {
+        result,
+        shouldCache: true,
+    };
+}
+
 export default async function download(
     rawUrl = '',
     ua,
@@ -89,6 +140,7 @@ export default async function download(
             }
         }
     }
+    const ageSecretKey = $arguments?.[AGE_SECRET_KEY];
     const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
     const {
         githubProxy,
@@ -127,6 +179,7 @@ export default async function download(
 
     const requestTimeout = timeout || defaultTimeout || 8000;
     url = maybePrefixGithubProxyUrl(url, githubProxy, githubProxyRegex);
+    const safeUrl = maskDownloadUrl(url);
     const id = hex_md5(
         `${customHeaders ? JSON.stringify(customHeaders) : userAgent}${url}`,
     );
@@ -145,13 +198,19 @@ export default async function download(
         const cached = resourceCache.get(id);
         if (!noCache && !$arguments?.noCache && cached) {
             $.info(
-                `乐观缓存: URL ${url}\n存在有效的常规缓存\n使用常规缓存以避免重复请求`,
+                `乐观缓存: URL ${safeUrl}\n存在有效的常规缓存\n使用常规缓存以避免重复请求`,
             );
-            return cached;
+            return (
+                await finalizeDownloadedBody(cached, {
+                    ageSecretKey,
+                    preprocess,
+                    url: safeUrl,
+                })
+            ).result;
         }
         if (customCached) {
             if (awaitCustomCache) {
-                $.info(`乐观缓存: URL ${url}\n本次进行请求 尝试更新缓存`);
+                $.info(`乐观缓存: URL ${safeUrl}\n本次进行请求 尝试更新缓存`);
                 try {
                     await download(
                         rawUrl.replace(/(\?|&)cacheKey=.*?(&|$)/, ''),
@@ -165,7 +224,7 @@ export default async function download(
                     );
                 } catch (e) {
                     $.error(
-                        `乐观缓存: URL ${url} 更新缓存发生错误 ${
+                        `乐观缓存: URL ${safeUrl} 更新缓存发生错误 ${
                             e.message ?? e
                         }`,
                     );
@@ -174,7 +233,7 @@ export default async function download(
                 }
             } else {
                 $.info(
-                    `乐观缓存: URL ${url}\n本次返回自定义缓存 ${$arguments?.cacheKey}\n并进行请求 尝试异步更新缓存`,
+                    `乐观缓存: URL ${safeUrl}\n本次返回自定义缓存 ${$arguments?.cacheKey}\n并进行请求 尝试异步更新缓存`,
                 );
                 download(
                     rawUrl.replace(/(\?|&)cacheKey=.*?(&|$)/, ''),
@@ -187,13 +246,19 @@ export default async function download(
                     preprocess,
                 ).catch((e) => {
                     $.error(
-                        `乐观缓存: URL ${url} 异步更新缓存发生错误 ${
+                        `乐观缓存: URL ${safeUrl} 异步更新缓存发生错误 ${
                             e.message ?? e
                         }`,
                     );
                 });
             }
-            return customCached;
+            return (
+                await finalizeDownloadedBody(customCached, {
+                    ageSecretKey,
+                    preprocess,
+                    url: safeUrl,
+                })
+            ).result;
         }
     }
 
@@ -246,7 +311,13 @@ export default async function download(
     }
 
     if (!isNode && tasks.has(id)) {
-        return tasks.get(id);
+        return (
+            await finalizeDownloadedBody(await tasks.get(id), {
+                ageSecretKey,
+                preprocess,
+                url: safeUrl,
+            })
+        ).result;
     }
 
     const http = HTTP({
@@ -261,18 +332,26 @@ export default async function download(
     });
 
     let result;
+    let rawResult;
 
     // try to find in app cache
     const cached = resourceCache.get(id);
     if (!noCache && !$arguments?.noCache && cached) {
         $.info(
-            `使用缓存: ${url}, ${
+            `使用缓存: ${safeUrl}, ${
                 customHeaders ? JSON.stringify(customHeaders) : userAgent
             }`,
         );
-        result = cached;
+        rawResult = cached;
+        result = (
+            await finalizeDownloadedBody(cached, {
+                ageSecretKey,
+                preprocess,
+                url: safeUrl,
+            })
+        ).result;
         if (customCacheKey) {
-            $.info(`URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`);
+            $.info(`URL ${safeUrl}\n写入自定义缓存 ${$arguments?.cacheKey}`);
             $.write(cached, customCacheKey);
         }
     } else {
@@ -286,7 +365,7 @@ export default async function download(
                 customHeaders
                     ? JSON.stringify(customHeaders)
                     : `User-Agent: ${userAgent}`
-            }\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nPreprocess: ${preprocess}\nURL: ${url}`,
+            }\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nPreprocess: ${preprocess}\nURL: ${safeUrl}`,
         );
         try {
             let { body, headers, statusCode } = await runBackendRequestTask(
@@ -320,15 +399,11 @@ export default async function download(
             }
             if (body.replace(/\s/g, '').length === 0)
                 throw new Error(new Error('远程资源内容为空'));
-            if (preprocess) {
-                try {
-                    if (clashPreprocessor.test(body)) {
-                        body = clashPreprocessor.parse(body, true);
-                    }
-                } catch (e) {
-                    $.error(`Clash Pre-processor error: ${e}`);
-                }
-            }
+            const finalized = await finalizeDownloadedBody(body, {
+                ageSecretKey,
+                preprocess,
+                url: safeUrl,
+            });
             let shouldCache = true;
             if (cacheThreshold) {
                 const size = body.length / 1024;
@@ -341,22 +416,11 @@ export default async function download(
                     shouldCache = false;
                 }
             }
-            if (preprocess) {
-                try {
-                    const proxies = ProxyUtils.parse(body);
-                    if (!Array.isArray(proxies) || proxies.length === 0) {
-                        $.error(`URL ${url} 不包含有效节点, 不缓存`);
-                        shouldCache = false;
-                    }
-                } catch (e) {
-                    $.error(
-                        `URL ${url} 尝试解析节点失败 ${e.message ?? e}, 不缓存`,
-                    );
-                    shouldCache = false;
-                }
+            if (!finalized.shouldCache) {
+                $.error(finalized.cacheReason);
+                shouldCache = false;
             }
             if (shouldCache) {
-                // console.log($arguments);
                 resourceCache.set(
                     id,
                     body,
@@ -366,26 +430,33 @@ export default async function download(
                 );
                 if (customCacheKey) {
                     $.info(
-                        `URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`,
+                        `URL ${safeUrl}\n写入自定义缓存 ${$arguments?.cacheKey}`,
                     );
                     $.write(body, customCacheKey);
                 }
             }
 
-            result = body;
+            rawResult = body;
+            result = finalized.result;
         } catch (e) {
             if (customCacheKey) {
                 const cached = $.read(customCacheKey);
                 if (cached) {
                     $.info(
-                        `无法下载 URL ${url}: ${
+                        `无法下载 URL ${safeUrl}: ${
                             e.message ?? e
                         }\n使用自定义缓存 ${$arguments?.cacheKey}`,
                     );
-                    return cached;
+                    return (
+                        await finalizeDownloadedBody(cached, {
+                            ageSecretKey,
+                            preprocess,
+                            url: safeUrl,
+                        })
+                    ).result;
                 }
             }
-            throw new Error(`无法下载 URL ${url}: ${e.message ?? e}`);
+            throw new Error(`无法下载 URL ${safeUrl}: ${e.message ?? e}`);
         }
     }
 
@@ -407,7 +478,7 @@ export default async function download(
     }
 
     if (!isNode) {
-        tasks.set(id, result);
+        tasks.set(id, rawResult);
     }
     return result;
 }

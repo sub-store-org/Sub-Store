@@ -9,16 +9,22 @@ import {
 
 let $;
 let createTokenItem;
+let consumeShareToken;
+let findShareToken;
 let state;
 let originalRead;
 let originalWrite;
 let originalInfo;
 let originalError;
+let ageUtils;
 
 describe('token routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
-        ({ createTokenItem } = require('@/restful/token'));
+        ({ createTokenItem, consumeShareToken, findShareToken } = require(
+            '@/restful/token'
+        ));
+        ageUtils = require('@/utils/age');
 
         originalRead = $.read.bind($);
         originalWrite = $.write.bind($);
@@ -268,5 +274,57 @@ describe('token routes', function () {
         expect(state[TOKENS_KEY][0]).to.not.have.property('mode');
         expect(state[TOKENS_KEY][0]).to.not.have.property('exp');
         expect(state[TOKENS_KEY][0]).to.not.have.property('expiresIn');
+    });
+
+    it('preserves age-public-key in share token payload', async function () {
+        const pair = await ageUtils.generateKeyPair();
+        const token = createTokenItem(
+            {
+                type: 'sub',
+                name: 'shared-sub',
+                token: 'age-token',
+                'age-public-key': pair['age-public-key'],
+                mode: 'datetime',
+                exp: Date.now() + 60 * 1000,
+            },
+            {},
+        );
+
+        expect(token['age-public-key']).to.equal(pair['age-public-key']);
+        expect(token).to.not.have.property('mode');
+        expect(token).to.not.have.property('exp');
+        expect(state[TOKENS_KEY][0]['age-public-key']).to.equal(pair['age-public-key']);
+    });
+
+    it('lets routes read consumed count token metadata without another count increment', async function () {
+        const pair = await ageUtils.generateKeyPair();
+        createTokenItem(
+            {
+                type: 'sub',
+                name: 'shared-sub',
+                token: 'count-age-token',
+                'age-public-key': pair['age-public-key'],
+            },
+            {
+                mode: 'count',
+                count: 2,
+            },
+        );
+
+        const consumed = consumeShareToken({
+            token: 'count-age-token',
+            type: 'sub',
+            name: 'shared-sub',
+        });
+        const found = findShareToken({
+            token: 'count-age-token',
+            type: 'sub',
+            name: 'shared-sub',
+        });
+
+        expect(consumed.usedCount).to.equal(1);
+        expect(consumed['age-public-key']).to.equal(pair['age-public-key']);
+        expect(found.usedCount).to.equal(1);
+        expect(state[TOKENS_KEY][0].usedCount).to.equal(1);
     });
 });
