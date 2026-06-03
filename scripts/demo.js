@@ -52,6 +52,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 28. sing-box 1.14.0 起才有 `control_http_client` , 暂时可使用 `control-http-client` 字段设置 sing-box 的 `control_http_client`
   //     若 `control-http-client` 非空, 输出 sing-box Tailscale endpoint 时会跳过旧版拨号字段映射, 避免和 `detour`/`dialer-proxy` 等 legacy dialer options 冲突. 需要给控制面设置前置代理时, 请写到 `control-http-client.detour`(1.14.0-alpha.26 又改回去了...)
   // 29. sing-box 支持使用 `ssh-server` 给 tailscale 设置 `ssh_server`, 直接设为 `true` 或 `{ "enabled": true, "disable-pty": true, "disable-sftp": true, "disable-forwarding": true }`
+  // 30. Loon 支持使用 `_loon_tls_profile` 设置 `tls-profile` 字段('default', 'chrome', 'ios18', 'ios26'), 否则则使用 client-fingerprint 自动转换部分对应的值
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件

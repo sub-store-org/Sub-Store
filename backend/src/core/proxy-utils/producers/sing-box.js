@@ -290,6 +290,24 @@ const normalizePemLines = (value, label) => {
     return [`-----BEGIN ${label}-----`, ...lines, `-----END ${label}-----`];
 };
 
+const singBoxUtlsFingerprints = [
+    'chrome',
+    'firefox',
+    'edge',
+    'safari',
+    '360',
+    'qq',
+    'ios',
+    'android',
+    'random',
+    'randomized',
+];
+
+const getSingBoxUtlsFingerprint = (value) => {
+    const fingerprint = `${value || ''}`.trim().toLowerCase();
+    if (singBoxUtlsFingerprints.includes(fingerprint)) return fingerprint;
+};
+
 const tlsParser = (proxy, parsedProxy) => {
     if (proxy.tls) parsedProxy.tls.enabled = true;
     if (proxy.servername && proxy.servername !== '')
@@ -320,11 +338,17 @@ const tlsParser = (proxy, parsedProxy) => {
         !['hysteria', 'hysteria2', 'tuic'].includes(proxy.type) &&
         proxy['client-fingerprint'] &&
         proxy['client-fingerprint'] !== ''
-    )
-        parsedProxy.tls.utls = {
-            enabled: true,
-            fingerprint: proxy['client-fingerprint'],
-        };
+    ) {
+        const fingerprint = getSingBoxUtlsFingerprint(
+            proxy['client-fingerprint'],
+        );
+        if (fingerprint)
+            parsedProxy.tls.utls = {
+                ...parsedProxy.tls.utls,
+                enabled: true,
+                fingerprint,
+            };
+    }
     if (proxy._ech && isPlainObject(proxy._ech)) {
         parsedProxy.tls.ech = proxy._ech;
     } else if (proxy['ech-opts'] && isPlainObject(proxy['ech-opts'])) {
@@ -532,6 +556,7 @@ const normalizeALPN = (alpn) => {
 
 const shadowTLSOutboundParser = (proxy = {}, pluginOpts) => {
     if (!pluginOpts) throw new Error('shadow-tls plugin options are missing');
+    const fingerprint = getSingBoxUtlsFingerprint(proxy['client-fingerprint']);
 
     const stPart = {
         tag: getShadowTLSTag(proxy),
@@ -545,7 +570,7 @@ const shadowTLSOutboundParser = (proxy = {}, pluginOpts) => {
             server_name: pluginOpts.host,
             utls: {
                 enabled: true,
-                fingerprint: proxy['client-fingerprint'],
+                fingerprint,
             },
         },
     };

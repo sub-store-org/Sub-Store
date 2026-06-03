@@ -94,6 +94,19 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('normalizes Loon tls-profile before emitting Mihomo client fingerprints', function () {
+        const [proxy] = ProxyUtils.parse(
+            `Loon IOS26=vmess,loon-ios26.example.com,443,auto,"${UUID}",over-tls=true,tls-profile=ios26,alterId=0`,
+        );
+        const output = loadProducedYaml('Mihomo', proxy);
+
+        expect(proxy._loon_tls_profile).to.equal('ios26');
+        expect(proxy['client-fingerprint']).to.equal('ios');
+        expect(output.proxies[0]['client-fingerprint']).to.equal('ios');
+        expect(output.proxies[0]['client-fingerprint']).to.not.equal('ios26');
+        expect(output.proxies[0]).to.not.have.property('_loon_tls_profile');
+    });
+
     it('normalizes VMess security values for documented target platforms', function () {
         const invalidSecurityProxy = {
             type: 'vmess',
@@ -633,6 +646,38 @@ describe('Proxy structured producers', function () {
                 },
             },
         });
+    });
+
+    it('omits unsupported sing-box ShadowTLS uTLS fingerprints', function () {
+        const [proxy] = ProxyUtils.parse(`proxies:
+  - name: SS ShadowTLS Unsupported Fingerprint
+    type: ss
+    server: ss.example.com
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: password
+    plugin: shadow-tls
+    client-fingerprint: chrome120
+    plugin-opts:
+      host: cloud.tencent.com
+      password: shadow_tls_password
+      version: 2`);
+
+        const output = loadProducedJson('sing-box', proxy);
+        const shadowtls = output.outbounds.find(
+            (item) =>
+                item.tag === 'SS ShadowTLS Unsupported Fingerprint_shadowtls',
+        );
+
+        expectSubset(shadowtls, {
+            tls: {
+                enabled: true,
+                utls: {
+                    enabled: true,
+                },
+            },
+        });
+        expect(shadowtls.tls.utls).to.not.have.property('fingerprint');
     });
 
     it('keeps only Shadowsocks shadow-tls versions 1 through 3 for Mihomo', function () {
@@ -3795,6 +3840,80 @@ describe('Proxy structured producers', function () {
                 max_early_data: 2048,
             },
         });
+    });
+
+    it('validates sing-box uTLS fingerprints for regular TLS and Reality outbounds', function () {
+        const output = loadProducedJson('sing-box', [
+            {
+                type: 'vmess',
+                name: 'VMess Supported Fingerprint',
+                server: 'vmess-supported.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                tls: true,
+                'client-fingerprint': 'chrome',
+            },
+            {
+                type: 'vmess',
+                name: 'VMess Unsupported Fingerprint',
+                server: 'vmess-unsupported.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                alterId: 0,
+                tls: true,
+                'client-fingerprint': 'chrome120',
+            },
+            {
+                type: 'vless',
+                name: 'Reality Unsupported Fingerprint',
+                server: 'reality-unsupported.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                flow: 'xtls-rprx-vision',
+                'client-fingerprint': 'chrome120',
+                'reality-opts': {
+                    'public-key': 'pubkey',
+                    'short-id': '08',
+                },
+            },
+        ]);
+
+        const supported = output.outbounds.find(
+            (item) => item.tag === 'VMess Supported Fingerprint',
+        );
+        const unsupported = output.outbounds.find(
+            (item) => item.tag === 'VMess Unsupported Fingerprint',
+        );
+        const reality = output.outbounds.find(
+            (item) => item.tag === 'Reality Unsupported Fingerprint',
+        );
+
+        expectSubset(supported, {
+            tls: {
+                utls: {
+                    enabled: true,
+                    fingerprint: 'chrome',
+                },
+            },
+        });
+        expect(unsupported.tls).to.not.have.property('utls');
+        expectSubset(reality, {
+            tls: {
+                reality: {
+                    enabled: true,
+                    public_key: 'pubkey',
+                    short_id: '08',
+                },
+                utls: {
+                    enabled: true,
+                },
+            },
+        });
+        expect(reality.tls.utls).to.not.have.property('fingerprint');
     });
 
     it('emits sing-box VMess and VLESS packet protocol options', function () {

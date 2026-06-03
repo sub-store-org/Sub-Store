@@ -2707,7 +2707,7 @@ describe('Platform raw-format parser coverage', function () {
             },
             {
                 title: 'parses vmess http tls lines',
-                input: `Loon VMess=vmess,loon-vmess.example.com,443,auto,"${UUID}",transport=http,host=cdn.example.com,path=/http,over-tls=true,tls-name=sni.example.com,skip-cert-verify=true,tls-profile=chrome,alterId=0`,
+                input: `Loon VMess=vmess,loon-vmess.example.com,443,auto,"${UUID}",transport=http,host=cdn.example.com,path=/http,over-tls=true,tls-name=sni.example.com,skip-cert-verify=true,tls-profile=chrome,alpn="http/1.1,h2,h3",alterId=0`,
                 expected: {
                     type: 'vmess',
                     name: 'Loon VMess',
@@ -2719,7 +2719,9 @@ describe('Platform raw-format parser coverage', function () {
                     tls: true,
                     sni: 'sni.example.com',
                     'skip-cert-verify': true,
+                    _loon_tls_profile: 'chrome',
                     'client-fingerprint': 'chrome',
+                    alpn: ['http/1.1', 'h2', 'h3'],
                     network: 'http',
                     'http-opts': {
                         path: ['/http'],
@@ -2977,6 +2979,37 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
         ]);
+
+        it('normalizes Loon tls-profile values into client fingerprints', function () {
+            const cases = [
+                ['default'],
+                ['chrome', 'chrome'],
+                ['ios18', 'ios'],
+                ['ios26', 'ios'],
+            ];
+
+            for (const [profile, fingerprint] of cases) {
+                const proxy = parseOne(
+                    `Loon ${profile}=vmess,loon-${profile}.example.com,443,auto,"${UUID}",over-tls=true,tls-profile=${profile},alterId=0`,
+                );
+
+                expect(proxy._loon_tls_profile).to.equal(profile);
+                if (fingerprint) {
+                    expect(proxy['client-fingerprint']).to.equal(fingerprint);
+                } else {
+                    expect(proxy).to.not.have.property('client-fingerprint');
+                }
+            }
+        });
+
+        it('keeps unknown Loon tls-profile values out of client-fingerprint', function () {
+            const proxy = parseOne(
+                `Loon Unknown Profile=vmess,loon-unknown.example.com,443,auto,"${UUID}",over-tls=true,tls-profile=unknown-browser,alterId=0`,
+            );
+
+            expect(proxy._loon_tls_profile).to.equal('unknown-browser');
+            expect(proxy).to.not.have.property('client-fingerprint');
+        });
 
         it('rejects hysteria2 hop interval ranges', function () {
             expect(

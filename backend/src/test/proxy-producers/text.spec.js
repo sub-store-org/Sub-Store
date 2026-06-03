@@ -433,7 +433,8 @@ describe('Proxy text producers', function () {
         );
     });
 
-    it('emits Loon tls-profile for TLS protocol outputs', function () {
+    it('emits Loon tls-profile and alpn for TLS protocol outputs', function () {
+        const alpn = ['http/1.1', 'h2', 'h3'];
         const output = produceExternal('Loon', [
             {
                 type: 'vmess',
@@ -446,6 +447,7 @@ describe('Proxy text producers', function () {
                 tls: true,
                 sni: 'sni.example.com',
                 'client-fingerprint': 'chrome',
+                alpn,
             },
             {
                 type: 'vless',
@@ -456,6 +458,7 @@ describe('Proxy text producers', function () {
                 tls: true,
                 sni: 'sni.example.com',
                 'client-fingerprint': 'chrome',
+                alpn,
             },
             {
                 type: 'vless',
@@ -471,6 +474,7 @@ describe('Proxy text producers', function () {
                     'short-id': '08',
                 },
                 'client-fingerprint': 'chrome',
+                alpn,
             },
             {
                 type: 'vless',
@@ -481,6 +485,7 @@ describe('Proxy text producers', function () {
                 flow: 'xtls-rprx-vision',
                 sni: 'sni.example.com',
                 'client-fingerprint': 'chrome',
+                alpn,
             },
             {
                 type: 'trojan',
@@ -489,6 +494,7 @@ describe('Proxy text producers', function () {
                 port: 443,
                 password: 'secret',
                 'client-fingerprint': 'chrome',
+                alpn,
             },
             {
                 type: 'anytls',
@@ -497,6 +503,7 @@ describe('Proxy text producers', function () {
                 port: 443,
                 password: 'secret',
                 'client-fingerprint': 'chrome',
+                alpn,
             },
             {
                 type: 'http',
@@ -505,6 +512,7 @@ describe('Proxy text producers', function () {
                 port: 443,
                 tls: true,
                 'client-fingerprint': 'chrome',
+                alpn,
             },
             {
                 type: 'socks5',
@@ -513,6 +521,7 @@ describe('Proxy text producers', function () {
                 port: 1080,
                 tls: true,
                 'client-fingerprint': 'chrome',
+                alpn,
             },
             {
                 type: 'hysteria2',
@@ -521,10 +530,72 @@ describe('Proxy text producers', function () {
                 port: 443,
                 password: 'secret',
                 'client-fingerprint': 'chrome',
+                alpn,
             },
         ]);
 
         expect(output.match(/tls-profile=chrome/g)).to.have.length(9);
+        expect(output.match(/alpn="http\/1\.1,h2,h3"/g)).to.have.length(9);
+    });
+
+    it('selects Loon tls-profile before client fingerprint fallback', function () {
+        const buildTrojan = (name, fields) => ({
+            type: 'trojan',
+            name,
+            server: `${name.toLowerCase().replace(/\s+/g, '-')}.example.com`,
+            port: 443,
+            password: 'secret',
+            ...fields,
+        });
+        const output = produceExternal('Loon', [
+            buildTrojan('Loon Source IOS18', {
+                _loon_tls_profile: 'ios18',
+                'client-fingerprint': 'ios',
+            }),
+            buildTrojan('Loon Source Default', {
+                _loon_tls_profile: 'default',
+                'client-fingerprint': 'chrome',
+            }),
+            buildTrojan('Loon Source Chrome', {
+                _loon_tls_profile: 'chrome',
+                'client-fingerprint': 'ios',
+            }),
+            buildTrojan('Loon Fallback Chrome', {
+                'client-fingerprint': 'chrome',
+            }),
+            buildTrojan('Loon Fallback IOS', {
+                'client-fingerprint': 'ios',
+            }),
+        ]);
+
+        expect(output).to.include('Loon Source IOS18=trojan');
+        expect(output).to.include('tls-profile=ios18');
+        expect(output).to.include('tls-profile=default');
+        expect(output).to.include('tls-profile=chrome');
+        expect(output).to.include('tls-profile=ios26');
+        expect(output.match(/tls-profile=/g)).to.have.length(5);
+    });
+
+    it('omits invalid Loon tls-profile fallback values', function () {
+        const buildTrojan = (fingerprint) => ({
+            type: 'trojan',
+            name: `Loon ${fingerprint || 'Blank'} Profile`,
+            server: 'trojan-profile.example.com',
+            port: 443,
+            password: 'secret',
+            'client-fingerprint': fingerprint,
+        });
+        const output = produceExternal('Loon', [
+            buildTrojan('default'),
+            buildTrojan('ios18'),
+            buildTrojan('ios26'),
+            buildTrojan('firefox'),
+            buildTrojan('random'),
+            buildTrojan('chrome120'),
+            buildTrojan(''),
+        ]);
+
+        expect(output).to.not.include('tls-profile=');
     });
 
     it('omits Loon tls-profile for non-TLS outputs and empty fingerprints', function () {
@@ -535,6 +606,7 @@ describe('Proxy text producers', function () {
                 server: 'http.example.com',
                 port: 80,
                 'client-fingerprint': 'chrome',
+                alpn: ['http/1.1', 'h2'],
             },
             {
                 type: 'socks5',
@@ -542,6 +614,7 @@ describe('Proxy text producers', function () {
                 server: 'socks.example.com',
                 port: 1080,
                 'client-fingerprint': 'chrome',
+                alpn: ['http/1.1', 'h2'],
             },
             {
                 type: 'vmess',
@@ -552,6 +625,7 @@ describe('Proxy text producers', function () {
                 uuid: UUID,
                 alterId: 0,
                 'client-fingerprint': 'chrome',
+                alpn: ['http/1.1', 'h2'],
             },
             {
                 type: 'vless',
@@ -560,6 +634,7 @@ describe('Proxy text producers', function () {
                 port: 80,
                 uuid: UUID,
                 'client-fingerprint': 'chrome',
+                alpn: ['http/1.1', 'h2'],
             },
             {
                 type: 'trojan',
@@ -572,6 +647,7 @@ describe('Proxy text producers', function () {
         ]);
 
         expect(output).to.not.include('tls-profile=');
+        expect(output).to.not.include('alpn=');
     });
 
     it('produces Loon Hysteria2 lines with port hopping', function () {

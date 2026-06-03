@@ -64,11 +64,36 @@ export default function Loon_Producer() {
 }
 
 function appendTlsProfile(result, proxy) {
-    if (
-        isPresent(proxy, 'client-fingerprint') &&
-        `${proxy['client-fingerprint']}`.trim() !== ''
-    ) {
-        result.append(`,tls-profile=${proxy['client-fingerprint']}`);
+    const tlsProfile = getLoonTlsProfile(proxy);
+    if (tlsProfile) result.append(`,tls-profile=${tlsProfile}`);
+}
+
+function appendAlpn(result, proxy) {
+    const alpn = getLoonAlpn(proxy);
+    if (alpn) result.append(`,alpn="${alpn}"`);
+}
+
+function getLoonAlpn(proxy) {
+    const values = Array.isArray(proxy.alpn)
+        ? proxy.alpn
+        : `${proxy.alpn || ''}`.split(',');
+    return values
+        .map((item) => `${item}`.trim())
+        .filter((item) => item !== '')
+        .join(',');
+}
+
+function getLoonTlsProfile(proxy) {
+    const tlsProfile = `${proxy._loon_tls_profile || ''}`.trim();
+    if (['default', 'chrome', 'ios18', 'ios26'].includes(tlsProfile)) {
+        return tlsProfile;
+    }
+
+    switch (`${proxy['client-fingerprint'] || ''}`.trim()) {
+        case 'chrome':
+            return 'chrome';
+        case 'ios':
+            return 'ios26';
     }
 }
 
@@ -316,6 +341,7 @@ function trojan(proxy) {
         'skip-cert-verify',
     );
     appendTlsProfile(result, proxy);
+    appendAlpn(result, proxy);
 
     // sni
     result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
@@ -372,6 +398,7 @@ function anytls(proxy) {
         'skip-cert-verify',
     );
     appendTlsProfile(result, proxy);
+    appendAlpn(result, proxy);
 
     // sni
     result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
@@ -456,6 +483,7 @@ function vmess(proxy) {
     );
     if (proxy.tls || isReality) {
         appendTlsProfile(result, proxy);
+        appendAlpn(result, proxy);
     }
 
     if (isReality) {
@@ -569,6 +597,7 @@ function vless(proxy) {
     );
     if (proxy.tls || isReality || isXtls) {
         appendTlsProfile(result, proxy);
+        appendAlpn(result, proxy);
     }
 
     if (isXtls) {
@@ -633,6 +662,7 @@ function http(proxy) {
     );
     if (proxy.tls) {
         appendTlsProfile(result, proxy);
+        appendAlpn(result, proxy);
     }
 
     // tfo
@@ -669,6 +699,7 @@ function socks5(proxy) {
     );
     if (proxy.tls) {
         appendTlsProfile(result, proxy);
+        appendAlpn(result, proxy);
     }
 
     // tfo
@@ -800,6 +831,7 @@ function hysteria2(proxy) {
         'skip-cert-verify',
     );
     appendTlsProfile(result, proxy);
+    appendAlpn(result, proxy);
 
     if (proxy['obfs-password'] && proxy.obfs == 'salamander') {
         result.append(`,salamander-password=${proxy['obfs-password']}`);
