@@ -46,9 +46,9 @@ describe('download github proxy regex', function () {
         ({ default: $ } = require('@/core/app'));
         openApi = require('@/vendor/open-api');
         ({ default: resourceCache } = require('@/utils/resource-cache'));
-        ({ default: headersResourceCache } = require(
-            '@/utils/headers-resource-cache'
-        ));
+        ({
+            default: headersResourceCache,
+        } = require('@/utils/headers-resource-cache'));
         ({ default: download } = require('@/utils/download'));
         ageUtils = require('@/utils/age');
 
@@ -156,13 +156,12 @@ describe('download github proxy regex', function () {
     it('keeps download urls unchanged when the regex does not match', async function () {
         await download('https://example.com/archive.txt');
 
-        expect(capturedUrls).to.deep.equal([
-            'https://example.com/archive.txt',
-        ]);
+        expect(capturedUrls).to.deep.equal(['https://example.com/archive.txt']);
     });
 
     it('matches regex patterns case-insensitively by default', async function () {
-        state[SETTINGS_KEY].githubProxyRegex = '^https://RAW\\.GITHUBUSERCONTENT\\.COM';
+        state[SETTINGS_KEY].githubProxyRegex =
+            '^https://RAW\\.GITHUBUSERCONTENT\\.COM';
 
         await download(
             'https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/README.md',
@@ -204,9 +203,7 @@ describe('download github proxy regex', function () {
         await download('https://example.com/cached.txt');
         await download('https://example.com/cached.txt');
 
-        expect(capturedUrls).to.deep.equal([
-            'https://example.com/cached.txt',
-        ]);
+        expect(capturedUrls).to.deep.equal(['https://example.com/cached.txt']);
         expect(maxActiveRequests).to.equal(1);
     });
 
@@ -228,6 +225,33 @@ describe('download github proxy regex', function () {
         expect(unkeyed).to.contain(ageUtils.AGE_ARMOR_HEADER);
         expect(unkeyed).to.not.equal('decrypted-body');
         expect(capturedUrls).to.deep.equal(['https://example.com/age.txt']);
+    });
+
+    it('decrypts age-armored downloads with an explicit age secret option', async function () {
+        const pair = await ageUtils.generateKeyPair();
+        responseBody = await ageUtils.encryptArmor(
+            'explicit-decrypted-body',
+            pair['age-public-key'],
+        );
+
+        const body = await download(
+            'https://example.com/explicit-age.txt',
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            {
+                'age-secret-key': pair['age-secret-key'],
+            },
+        );
+
+        expect(body).to.equal('explicit-decrypted-body');
+        expect(capturedUrls).to.deep.equal([
+            'https://example.com/explicit-age.txt',
+        ]);
     });
 
     it('leaves non-armor downloads unchanged when age-secret-key is present', async function () {

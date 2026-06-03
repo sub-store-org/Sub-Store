@@ -119,6 +119,7 @@ export default async function download(
     awaitCustomCache,
     noCache,
     preprocess,
+    options = {},
 ) {
     let $arguments = {};
     let url = rawUrl.replace(/#noFlow$/, '');
@@ -140,7 +141,11 @@ export default async function download(
             }
         }
     }
-    const ageSecretKey = $arguments?.[AGE_SECRET_KEY];
+    const explicitAgeSecretKey =
+        options && typeof options === 'object'
+            ? options?.[AGE_SECRET_KEY] || options?.ageSecretKey
+            : undefined;
+    const ageSecretKey = explicitAgeSecretKey || $arguments?.[AGE_SECRET_KEY];
     const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
     const {
         githubProxy,
