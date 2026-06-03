@@ -1,11 +1,19 @@
 /* eslint-disable no-undef */
 import { ENV } from './open-api';
+import {
+    describeCorsPolicy,
+    getCorsHeaders,
+    isOriginAllowed,
+    resolveRuntimeCorsPolicy,
+} from '@/utils/cors';
 
 export default function express({ substore: $, port, host }) {
     const { isNode } = ENV();
+    const corsPolicy = resolveRuntimeCorsPolicy({ isNode });
+    $.info(`[CORS] allowed origins: ${describeCorsPolicy(corsPolicy)}`);
+
     const DEFAULT_HEADERS = {
         'Content-Type': 'text/plain;charset=UTF-8',
-        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST,GET,OPTIONS,PATCH,PUT,DELETE',
         'Access-Control-Allow-Headers':
             'Origin, X-Requested-With, Content-Type, Accept',
@@ -21,16 +29,6 @@ export default function express({ substore: $, port, host }) {
         const app = express_();
         const limit = eval('process.env.SUB_STORE_BODY_JSON_LIMIT') || '1mb';
         $.info(`[BACKEND] body JSON limit: ${limit}`);
-        app.use(
-            bodyParser.json({
-                verify: rawBodySaver,
-                limit,
-            }),
-        );
-        app.use(
-            bodyParser.urlencoded({ verify: rawBodySaver, extended: true }),
-        );
-        app.use(bodyParser.raw({ verify: rawBodySaver, type: '*/*' }));
         app.use((req, res, next) => {
             const originalSetHeader = res.setHeader.bind(res);
 
@@ -67,10 +65,32 @@ export default function express({ substore: $, port, host }) {
 
             next();
         });
-        app.use((_, res, next) => {
-            res.set(DEFAULT_HEADERS);
+        app.use((req, res, next) => {
+            const result = applyCors(req.headers?.origin, req.method);
+            res.set({
+                ...DEFAULT_HEADERS,
+                ...result.headers,
+            });
+            if (!result.allowed) {
+                res.status(403).end('CORS origin not allowed');
+                return;
+            }
+            if (result.preflight) {
+                res.status(200).end();
+                return;
+            }
             next();
         });
+        app.use(
+            bodyParser.json({
+                verify: rawBodySaver,
+                limit,
+            }),
+        );
+        app.use(
+            bodyParser.urlencoded({ verify: rawBodySaver, extended: true }),
+        );
+        app.use(bodyParser.raw({ verify: rawBodySaver, type: '*/*' }));
 
         // adapter
         app.start = () => {
@@ -110,6 +130,17 @@ export default function express({ substore: $, port, host }) {
 
         method = method.toUpperCase();
         const { path, query } = extractURL(url);
+        const cors = applyCors(headers.origin, method);
+        if (!cors.allowed) {
+            const res = Response();
+            res.status(403).send('CORS origin not allowed');
+            return;
+        }
+        if (cors.preflight) {
+            const res = Response(cors.headers);
+            res.status(200).end();
+            return;
+        }
 
         // pattern match
         let handler = null;
@@ -140,7 +171,7 @@ export default function express({ substore: $, port, host }) {
                 headers,
                 body,
             };
-            const res = Response();
+            const res = Response(cors.headers);
             const cb = handler.callback;
 
             const errFunc = (err) => {
@@ -161,7 +192,7 @@ export default function express({ substore: $, port, host }) {
             }
         } else {
             // no route, return 404
-            const res = Response();
+            const res = Response(cors.headers);
             res.status(404).json({
                 status: 'failed',
                 message: 'ERROR: 404 not found',
@@ -208,16 +239,20 @@ export default function express({ substore: $, port, host }) {
         }
     }
 
-    function Response() {
+    function Response(corsHeaders = {}) {
         let statusCode = 200;
         const { isQX, isLoon, isSurge, isGUIforCores } = ENV();
-        const headers = DEFAULT_HEADERS;
+        const headers = {
+            ...DEFAULT_HEADERS,
+            ...corsHeaders,
+        };
         const STATUS_CODE_MAP = {
             200: 'HTTP/1.1 200 OK',
             201: 'HTTP/1.1 201 Created',
             302: 'HTTP/1.1 302 Found',
             307: 'HTTP/1.1 307 Temporary Redirect',
             308: 'HTTP/1.1 308 Permanent Redirect',
+            403: 'HTTP/1.1 403 Forbidden',
             404: 'HTTP/1.1 404 Not Found',
             500: 'HTTP/1.1 500 Internal Server Error',
         };
@@ -266,6 +301,16 @@ export default function express({ substore: $, port, host }) {
                 return this;
             }
         })();
+    }
+
+    function applyCors(origin, method) {
+        const allowed = isOriginAllowed(corsPolicy, origin);
+        return {
+            allowed,
+            preflight:
+                Boolean(origin) && allowed && method?.toUpperCase() === 'OPTIONS',
+            headers: allowed ? getCorsHeaders(corsPolicy, origin) : {},
+        };
     }
 }
 

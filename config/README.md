@@ -12,6 +12,18 @@ https://xream.notion.site/Sub-Store-abe6a96944724dc6a36833d5c9ab7c87
 
 ## App 版
 
+### CORS 允许来源
+
+Sub-Store 后端会根据请求的 `Origin` 判断浏览器跨域访问是否允许。允许值是 origin, 需要包含协议、域名和端口, 不包含路径。例如 `https://sub-store.vercel.app` 或 `http://127.0.0.1:8888`。
+
+Node/服务器/Docker/Android 版可以通过环境变量 `SUB_STORE_CORS_ALLOWED_ORIGINS` 设置, 默认值为 `*`, 以保持旧行为。多个 origin 用 `,` 分隔, 例如:
+
+```bash
+SUB_STORE_CORS_ALLOWED_ORIGINS=https://sub-store.vercel.app,http://127.0.0.1:8888
+```
+
+支持参数配置的 App 模块使用 `cors` 参数设置, 默认值为 `https://sub-store.vercel.app`。如果需要使用本地前端 `http://127.0.0.1:8888?api=http://127.0.0.1:3001/123` 测试代理 App 后端, 需要把模块里的 `cors` 改成 `https://sub-store.vercel.app,http://127.0.0.1:8888`。设为 `*` 可恢复旧的任意来源访问行为, 但任意网站都可能通过浏览器 CORS 读取本机 Sub-Store 后端响应, 不建议长期使用。
+
 ### 1. Loon
 
 安装使用 插件 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin) 即可。
