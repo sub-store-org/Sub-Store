@@ -17,7 +17,7 @@ DOMAIN,sub-store.vercel.app,PROXY
 hostname=sub.store
 
 [Script]
-http-request ^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))) script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js, requires-body=true, timeout=120, tag=Sub-Store Core, argument="cors={cors}"
-http-request ^https?:\/\/sub\.store script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js, requires-body=true, timeout=120, tag=Sub-Store Simple, argument="cors={cors}"
+http-request ^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))) script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js, requires-body=true, timeout=120, tag=Sub-Store Core, argument=[{cors}]
+http-request ^https?:\/\/sub\.store script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js, requires-body=true, timeout=120, tag=Sub-Store Simple, argument=[{cors}]
 
-cron {cron} script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js, timeout=120, tag=Sub-Store Sync, argument=[{sync_success_notify}]
+cron {cron} script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js, timeout=120, tag=Sub-Store Sync, argument=[{sync_success_notify,cors}]
