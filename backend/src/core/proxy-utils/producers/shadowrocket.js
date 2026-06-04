@@ -28,7 +28,10 @@ export default function Shadowrocket_Producer() {
                     ])
                 ) {
                     return false;
-                } else if (proxy.type === 'snell' && proxy.version >= 4) {
+                } else if (
+                    proxy.type === 'snell' &&
+                    ![1, 2, 3, 4, 5].includes(proxy.version)
+                ) {
                     return false;
                 } else if (
                     [

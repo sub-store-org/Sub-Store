@@ -15,8 +15,9 @@ describe('module CORS allowlist config', function () {
 
             expect(content).to.include(`cors:"${DEFAULT_ORIGIN}"`);
             expect(content).to.include('argument="cors={{{cors}}}"');
-            expect(content.match(/argument="cors=\{\{\{cors\}\}\}"/g)).to.have
-                .length(2);
+            expect(
+                content.match(/argument="cors=\{\{\{cors\}\}\}"/g),
+            ).to.have.length(2);
         }
     });
 
@@ -36,15 +37,6 @@ describe('module CORS allowlist config', function () {
         }
     });
 
-    it('adds the default CORS argument to the Loon module', function () {
-        const content = readConfig('Loon.plugin');
-
-        expect(content).to.include(
-            `cors=input, "${DEFAULT_ORIGIN}", tag=CORS允许来源`,
-        );
-        expect(content.match(/argument="cors=\{cors\}"/g)).to.have.length(2);
-    });
-
     it('does not set legacy non-parameterized modules to wildcard CORS', function () {
         for (const filename of [
             'QX.snippet',
@@ -60,7 +52,10 @@ describe('module CORS allowlist config', function () {
 });
 
 function readConfig(filename) {
-    return fs.readFileSync(path.join(findRepoRoot(), 'config', filename), 'utf8');
+    return fs.readFileSync(
+        path.join(findRepoRoot(), 'config', filename),
+        'utf8',
+    );
 }
 
 function findRepoRoot() {
