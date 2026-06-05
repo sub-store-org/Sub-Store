@@ -509,11 +509,11 @@ function produce(proxies, targetPlatform, type, opts = {}) {
                 proxy.sni = 'off';
             } else if (!['tuic'].includes(proxy.type)) {
                 $.error(
-                    `Target platform ${targetPlatform} does not support sni off. Proxy's fields (sni, tls-fingerprint and skip-cert-verify) will be modified.`,
+                    `Target platform ${targetPlatform} does not support sni off, proxy ${proxy.name} sni will be set to empty string instead.`,
                 );
                 proxy.sni = '';
-                proxy['skip-cert-verify'] = true;
-                delete proxy['tls-fingerprint'];
+                // proxy['skip-cert-verify'] = true;
+                // delete proxy['tls-fingerprint'];
             }
         }
 
