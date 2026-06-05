@@ -205,6 +205,10 @@ function operator(proxies = [], targetPlatform, context) {
   //     Gist, // Gist 类
   //     download, // 内部的下载方法, 见 backend/src/utils/download.js
   //     downloadFile, // 下载二进制文件, 见 backend/src/utils/download.js
+  //     age: {
+  //         encrypt, // age 加密, 返回 armored 文本
+  //         decrypt, // age 解密, 非 armored 文本会原样返回
+  //     },
   //     MMDB, // Node.js 环境 可用于模拟 Surge/Loon 的 $utils.ipasn, $utils.ipaso, $utils.geoip. 具体见 https://t.me/zhetengsha/1269
   //     isValidUUID, // 辅助判断是否为有效的 UUID
   //     doh, // DNS over HTTPS 解析, 源码见 backend/src/utils/dns.js, 使用参考本项目里调用方式 backend/src/core/proxy-utils/processors/index.js
@@ -240,6 +244,20 @@ function operator(proxies = [], targetPlatform, context) {
   //     name: 'config' // 文件名
   // }))
   // $server.reuse = config.reuse
+
+  // 示例: 使用 ProxyUtils.age.encrypt 加密文本
+  // const armored = await ProxyUtils.age.encrypt(
+  //     'hello age',
+  //     'age1...'
+  // )
+  // console.log(armored)
+
+  // 示例: 使用 ProxyUtils.age.decrypt 解密 armored 文本
+  // const plaintext = await ProxyUtils.age.decrypt(
+  //     armored,
+  //     'AGE-SECRET-KEY-1...'
+  // )
+  // console.log(plaintext)
 
   // 1. Surge 输出 WireGuard 完整配置
 

@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
 import { ProxyUtils } from '@/core/proxy-utils';
+import { generateKeyPair } from '@/utils/age';
 
 describe('Process context control', function () {
     it('disables later actions by customName from shared context', async function () {
@@ -188,5 +189,43 @@ describe('Process context control', function () {
         const output = await ProxyUtils.processResponse({ body: '' }, operators);
 
         expect(output.body).to.equal('AC');
+    });
+
+    it('exposes age encrypt/decrypt helpers in script operators', async function () {
+        this.timeout(10000);
+
+        const pair = await generateKeyPair();
+        const operators = [
+            {
+                type: 'Script Operator',
+                args: {
+                    mode: 'script',
+                    arguments: {
+                        publicKey: pair['age-public-key'],
+                        secretKey: pair['age-secret-key'],
+                    },
+                    content: `async function operator(proxies) {
+                        const encrypted = await ProxyUtils.age.encrypt(
+                            'hello age',
+                            $arguments.publicKey,
+                        );
+                        const decrypted = await ProxyUtils.age.decrypt(
+                            encrypted,
+                            $arguments.secretKey,
+                        );
+                        return proxies.map((proxy) => ({
+                            ...proxy,
+                            name: proxy.name + '-' + decrypted,
+                        }));
+                    }`,
+                },
+            },
+        ];
+
+        const output = await ProxyUtils.process([{ name: 'A' }], operators);
+
+        expect(output.map((proxy) => proxy.name)).to.deep.equal([
+            'A-hello age',
+        ]);
     });
 });
