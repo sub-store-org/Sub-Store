@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { build } = require('esbuild');
 
+const objectHasOwnPolyfill = require.resolve('core-js/actual/object/has-own');
+
 !(async () => {
     const version = JSON.parse(
         fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'),
@@ -31,6 +33,7 @@ const { build } = require('esbuild');
             platform: 'browser',
             format: 'iife',
             outfile: artifact.dest,
+            inject: [objectHasOwnPolyfill],
         });
     }
 
@@ -50,6 +53,7 @@ const { build } = require('esbuild');
             platform: 'browser',
             format: 'esm',
             outfile: artifact.dest,
+            inject: [objectHasOwnPolyfill],
         });
     }
 
@@ -76,6 +80,8 @@ const { build } = require('esbuild');
         platform: 'node',
         format: 'cjs',
         outfile: 'dist/sub-store.bundle.js',
+        // `sub-store.no-bundle.js` comes from `sub-store.min.js`, which already
+        // has the Object.hasOwn polyfill injected in the first build stage.
     });
     fs.writeFileSync(
         path.join(__dirname, 'dist/sub-store.bundle.js'),

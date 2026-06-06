@@ -4,6 +4,7 @@ const { spawn } = require('child_process');
 const { context } = require('esbuild');
 
 const outfile = path.join(__dirname, 'sub-store.min.js');
+const objectHasOwnPolyfill = require.resolve('core-js/actual/object/has-own');
 
 let serverProcess = null;
 let buildContext = null;
@@ -102,6 +103,7 @@ async function shutdown(signal) {
         platform: 'node',
         format: 'cjs',
         outfile,
+        inject: [objectHasOwnPolyfill],
         logOverride: {
             'direct-eval': 'silent',
         },
