@@ -158,7 +158,7 @@ function shadowsocks(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -175,7 +175,7 @@ function shadowsocks(proxy) {
         const host = proxy['plugin-opts'].host;
         const version = proxy['plugin-opts'].version;
         if (password) {
-            result.append(`,shadow-tls-password="${password}"`);
+            result.append(`,shadow-tls-password=${password}`);
             if (host) {
                 result.append(`,shadow-tls-sni=${host}`);
             }
@@ -252,7 +252,7 @@ function shadowsocksr(proxy) {
 
     // shadow-tls
     if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
+        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
 
         result.appendIfPresent(
             `,shadow-tls-version=${proxy['shadow-tls-version']}`,
@@ -269,7 +269,7 @@ function shadowsocksr(proxy) {
         const host = proxy['plugin-opts'].host;
         const version = proxy['plugin-opts'].version;
         if (password) {
-            result.append(`,shadow-tls-password="${password}"`);
+            result.append(`,shadow-tls-password=${password}`);
             if (host) {
                 result.append(`,shadow-tls-sni=${host}`);
             }
