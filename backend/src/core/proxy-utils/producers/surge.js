@@ -48,7 +48,20 @@ function hasNonBlankValue(value) {
     return value != null && `${value}`.trim().length > 0;
 }
 
-function appendClientCert(result, proxy) {
+function appendTlsProxyParams(result, proxy, enabled = true) {
+    if (!enabled) {
+        return;
+    }
+
+    result.appendIfPresent(
+        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
     const clientCert = isPresent(proxy, 'keystore-client-cert')
         ? proxy['keystore-client-cert']
         : proxy['client-cert'];
@@ -312,19 +325,8 @@ function trojan(proxy) {
     // tls
     result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
 
-    // tls fingerprint
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
+    appendTlsProxyParams(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -390,19 +392,8 @@ function anytls(proxy) {
         'no-error-alert',
     );
 
-    // tls fingerprint
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
+    appendTlsProxyParams(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -463,19 +454,8 @@ function trusttunnel(proxy) {
         'no-error-alert',
     );
 
-    // tls fingerprint
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
+    appendTlsProxyParams(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -536,16 +516,7 @@ function h2Connect(proxy) {
         'no-error-alert',
     );
 
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
+    appendTlsProxyParams(result, proxy);
 
     if (proxy.tfo) {
         $.info(`Option tfo is not supported by Surge, thus omitted`);
@@ -619,22 +590,11 @@ function vmess(proxy, includeUnsupportedProxy) {
         result.append(`,vmess-aead=${proxy.alterId === 0}`);
     }
 
-    // tls fingerprint
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-
     // tls
     result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
+    appendTlsProxyParams(result, proxy, Boolean(proxy.tls));
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -766,19 +726,8 @@ function http(proxy) {
         'no-error-alert',
     );
 
-    // tls fingerprint
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
+    appendTlsProxyParams(result, proxy, Boolean(proxy.tls));
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -895,19 +844,8 @@ function socks5(proxy) {
         'no-error-alert',
     );
 
-    // tls fingerprint
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
+    appendTlsProxyParams(result, proxy, Boolean(proxy.tls));
 
     // tfo
     if (proxy.tfo) {
@@ -1103,18 +1041,7 @@ function tuic(proxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
-
-    // tls fingerprint
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
+    appendTlsProxyParams(result, proxy);
 
     // tfo
     if (isPresent(proxy, 'tfo')) {
@@ -1380,16 +1307,7 @@ function hysteria2(proxy) {
     );
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
-    appendClientCert(result, proxy);
-    result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
+    appendTlsProxyParams(result, proxy);
 
     // tfo
     if (isPresent(proxy, 'tfo')) {

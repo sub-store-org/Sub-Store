@@ -8,6 +8,22 @@ function hasNonBlankValue(value) {
     return value != null && `${value}`.trim().length > 0;
 }
 
+function appendTlsProxyParams(result, proxy, enabled = true) {
+    if (!enabled) {
+        return;
+    }
+
+    result.appendIfPresent(
+        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        'tls-fingerprint',
+    );
+    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+}
+
 export default function Surfboard_Producer() {
     const produce = (proxy) => {
         if (
@@ -77,11 +93,7 @@ function hysteria2(proxy) {
     }
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
+    appendTlsProxyParams(result, proxy);
 
     // download-bandwidth
     result.appendIfPresent(
@@ -92,6 +104,8 @@ function hysteria2(proxy) {
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+
     return result.toString();
 }
 function anytls(proxy) {
@@ -100,11 +114,7 @@ function anytls(proxy) {
     result.appendIfPresent(`,password="${proxy.password}"`, 'password');
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
+    appendTlsProxyParams(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
@@ -115,10 +125,15 @@ function anytls(proxy) {
     // reuse
     result.appendIfPresent(`,reuse=${proxy['reuse']}`, 'reuse');
 
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+
     return result.toString();
 }
 function snell(proxy) {
-    if (proxy.version > 3) {
+    if (
+        isPresent(proxy, 'version') &&
+        ![1, 2, 3, 4, 5].includes(Number(proxy.version))
+    ) {
         throw new Error(
             `Platform ${targetPlatform} does not support snell version ${proxy.version}`,
         );
@@ -149,6 +164,8 @@ function snell(proxy) {
     if (proxy.version >= 3) {
         result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
     }
+
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
     return result.toString();
 }
@@ -206,6 +223,8 @@ function shadowsocks(proxy) {
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+
     return result.toString();
 }
 
@@ -221,17 +240,15 @@ function trojan(proxy) {
     result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
+    appendTlsProxyParams(result, proxy);
 
     // tfo
     result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
     return result.toString();
 }
@@ -255,14 +272,12 @@ function vmess(proxy) {
     result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
+    appendTlsProxyParams(result, proxy, Boolean(proxy.tls));
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
     return result.toString();
 }
@@ -275,14 +290,12 @@ function http(proxy) {
     result.appendIfPresent(`,${proxy.password}`, 'password');
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
+    appendTlsProxyParams(result, proxy, Boolean(proxy.tls));
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
     return result.toString();
 }
@@ -295,14 +308,12 @@ function socks5(proxy) {
     result.appendIfPresent(`,${proxy.password}`, 'password');
 
     // tls verification
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    result.appendIfPresent(
-        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
-        'skip-cert-verify',
-    );
+    appendTlsProxyParams(result, proxy, Boolean(proxy.tls));
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
     return result.toString();
 }
@@ -316,6 +327,8 @@ function wireguard(proxy) {
         `,section-name=${proxy['section-name']}`,
         'section-name',
     );
+
+    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
     return result.toString();
 }

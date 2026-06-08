@@ -807,6 +807,54 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('omits Surge TLS-only params for plain HTTP, SOCKS5, and VMess nodes', function () {
+        const cases = [
+            {
+                type: 'http',
+                name: 'Surge HTTP Plain TLS Params',
+                server: 'http.example.com',
+                port: 80,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+                'client-cert': 'client-cert',
+            },
+            {
+                type: 'socks5',
+                name: 'Surge Socks5 Plain TLS Params',
+                server: 'socks.example.com',
+                port: 1080,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+                'client-cert': 'client-cert',
+            },
+            {
+                type: 'vmess',
+                name: 'Surge VMess Plain TLS Params',
+                server: 'vmess.example.com',
+                port: 80,
+                uuid: UUID,
+                alterId: 0,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+                'client-cert': 'client-cert',
+            },
+        ];
+
+        for (const proxy of cases) {
+            const output = produceExternal('Surge', proxy);
+
+            expect(output, proxy.name).to.not.include(',sni=');
+            expect(output, proxy.name).to.not.include(',skip-cert-verify=');
+            expect(output, proxy.name).to.not.include(
+                ',server-cert-fingerprint-sha256=',
+            );
+            expect(output, proxy.name).to.not.include(',client-cert=');
+        }
+    });
+
     it('quotes Surge SSH private-key and TLS client-cert keystore values', function () {
         const output = ProxyUtils.produce(
             [
@@ -1247,6 +1295,238 @@ describe('Proxy text producers', function () {
         );
 
         expect(output).to.equal('');
+    });
+
+    it('produces Surfboard TLS server certificate fingerprints', function () {
+        const fingerprint = 'SHA256:FINGERPRINT';
+        const cases = [
+            {
+                name: 'Surfboard HTTPS Fingerprint',
+                proxy: {
+                    type: 'http',
+                    name: 'Surfboard HTTPS Fingerprint',
+                    server: 'https.example.com',
+                    port: 443,
+                    tls: true,
+                    sni: 'https.example.com',
+                    'tls-fingerprint': fingerprint,
+                },
+                prefix: 'Surfboard HTTPS Fingerprint=https',
+            },
+            {
+                name: 'Surfboard Socks5 TLS Fingerprint',
+                proxy: {
+                    type: 'socks5',
+                    name: 'Surfboard Socks5 TLS Fingerprint',
+                    server: 'socks.example.com',
+                    port: 443,
+                    tls: true,
+                    sni: 'socks.example.com',
+                    'tls-fingerprint': fingerprint,
+                },
+                prefix: 'Surfboard Socks5 TLS Fingerprint=socks5-tls',
+            },
+            {
+                name: 'Surfboard Trojan Fingerprint',
+                proxy: {
+                    type: 'trojan',
+                    name: 'Surfboard Trojan Fingerprint',
+                    server: 'trojan.example.com',
+                    port: 443,
+                    password: 'secret',
+                    tls: true,
+                    sni: 'trojan.example.com',
+                    'tls-fingerprint': fingerprint,
+                },
+                prefix: 'Surfboard Trojan Fingerprint=trojan',
+            },
+            {
+                name: 'Surfboard VMess TLS Fingerprint',
+                proxy: {
+                    type: 'vmess',
+                    name: 'Surfboard VMess TLS Fingerprint',
+                    server: 'vmess.example.com',
+                    port: 443,
+                    uuid: UUID,
+                    alterId: 0,
+                    tls: true,
+                    sni: 'vmess.example.com',
+                    'tls-fingerprint': fingerprint,
+                },
+                prefix: 'Surfboard VMess TLS Fingerprint=vmess',
+            },
+            {
+                name: 'Surfboard Hysteria2 Fingerprint',
+                proxy: {
+                    type: 'hysteria2',
+                    name: 'Surfboard Hysteria2 Fingerprint',
+                    server: 'hy2.example.com',
+                    port: 443,
+                    password: 'secret',
+                    sni: 'hy2.example.com',
+                    'tls-fingerprint': fingerprint,
+                },
+                prefix: 'Surfboard Hysteria2 Fingerprint=hysteria2',
+            },
+            {
+                name: 'Surfboard AnyTLS Fingerprint',
+                proxy: {
+                    type: 'anytls',
+                    name: 'Surfboard AnyTLS Fingerprint',
+                    server: 'anytls.example.com',
+                    port: 443,
+                    password: 'secret',
+                    sni: 'anytls.example.com',
+                    'tls-fingerprint': fingerprint,
+                },
+                prefix: 'Surfboard AnyTLS Fingerprint=anytls',
+            },
+        ];
+
+        for (const { name, proxy, prefix } of cases) {
+            const output = produceExternal('Surfboard', proxy);
+
+            expect(output, name).to.include(prefix);
+            expect(output, name).to.include(
+                `,server-cert-fingerprint-sha256=${fingerprint}`,
+            );
+        }
+    });
+
+    it('omits Surfboard TLS-only params for plain HTTP, SOCKS5, and VMess nodes', function () {
+        const cases = [
+            {
+                type: 'http',
+                name: 'Surfboard HTTP Plain TLS Params',
+                server: 'http.example.com',
+                port: 80,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+            {
+                type: 'socks5',
+                name: 'Surfboard Socks5 Plain TLS Params',
+                server: 'socks.example.com',
+                port: 1080,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+            {
+                type: 'vmess',
+                name: 'Surfboard VMess Plain TLS Params',
+                server: 'vmess.example.com',
+                port: 80,
+                uuid: UUID,
+                alterId: 0,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                'tls-fingerprint': 'SHA256:FINGERPRINT',
+            },
+        ];
+
+        for (const proxy of cases) {
+            const output = produceExternal('Surfboard', proxy);
+
+            expect(output, proxy.name).to.not.include(',sni=');
+            expect(output, proxy.name).to.not.include(',skip-cert-verify=');
+            expect(output, proxy.name).to.not.include(
+                ',server-cert-fingerprint-sha256=',
+            );
+        }
+    });
+
+    it('produces Surfboard Snell versions 1 through 5', function () {
+        for (const version of [1, 2, 3, 4, 5]) {
+            const output = produceExternal('Surfboard', {
+                type: 'snell',
+                name: `Surfboard Snell ${version}`,
+                server: 'snell.example.com',
+                port: 443,
+                psk: 'secret',
+                version,
+            });
+
+            expect(output).to.equal(
+                `Surfboard Snell ${version}=snell,snell.example.com,443,version=${version},psk="secret"`,
+            );
+        }
+    });
+
+    it('appends Surfboard block-quic to supported protocols', function () {
+        const proxies = [
+            {
+                type: 'ss',
+                name: 'Surfboard SS Block QUIC',
+                server: 'ss.example.com',
+                port: 443,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+            },
+            {
+                type: 'snell',
+                name: 'Surfboard Snell Block QUIC',
+                server: 'snell.example.com',
+                port: 443,
+                psk: 'secret',
+                version: 5,
+            },
+            {
+                type: 'http',
+                name: 'Surfboard HTTP Block QUIC',
+                server: 'http.example.com',
+                port: 80,
+            },
+            {
+                type: 'socks5',
+                name: 'Surfboard Socks5 Block QUIC',
+                server: 'socks.example.com',
+                port: 1080,
+            },
+            {
+                type: 'trojan',
+                name: 'Surfboard Trojan Block QUIC',
+                server: 'trojan.example.com',
+                port: 443,
+                password: 'secret',
+            },
+            {
+                type: 'vmess',
+                name: 'Surfboard VMess Block QUIC',
+                server: 'vmess.example.com',
+                port: 443,
+                uuid: UUID,
+                alterId: 0,
+            },
+            {
+                type: 'hysteria2',
+                name: 'Surfboard Hysteria2 Block QUIC',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'secret',
+            },
+            {
+                type: 'anytls',
+                name: 'Surfboard AnyTLS Block QUIC',
+                server: 'anytls.example.com',
+                port: 443,
+                password: 'secret',
+            },
+            {
+                type: 'wireguard-surge',
+                name: 'Surfboard WireGuard Block QUIC',
+            },
+        ];
+
+        for (const proxy of proxies) {
+            const output = produceExternal('Surfboard', {
+                ...proxy,
+                'block-quic': 'on',
+            });
+
+            expect(output, proxy.name).to.include(',block-quic=on');
+        }
     });
 
     it('produces SurgeMac external lines', function () {
