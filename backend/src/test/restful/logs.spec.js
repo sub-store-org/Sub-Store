@@ -8,6 +8,7 @@ let appendLogEntry;
 let getLogEntries;
 let clearLogEntries;
 let clearLogSettingsCache;
+let prependConsoleTimestamp;
 let registerLogRoutes;
 let registerSettingsRoutes;
 let originalRead;
@@ -28,10 +29,7 @@ ${'\u2505'.repeat(44)}
 const DEFAULT_IGNORED_NOISE_LOGS = [
     '[sub-store] INFO: Surge AnyTLS Parser is activated',
     '[sub-store] ERROR: Fallback Base64 Pre-processor error: decoded line does not start with protocol',
-];
-const DEFAULT_VISIBLE_PREPROCESSOR_LOGS = [
-    '[sub-store] INFO: Pre-processor [Fallback Base64 Pre-processor] activated',
-    '[sub-store] INFO: Pre-processor [Clash Pre-processor] activated',
+    '[sub-store] INFO: [CORS] allowed origins: https://sub-store.vercel.app,http://127.0.0.1:8888 (env:SUB_STORE_CORS_ALLOWED_ORIGINS)',
 ];
 
 function createRouteApp() {
@@ -88,6 +86,12 @@ function createResponse(routePath) {
     };
 }
 
+function loadDebugLogsModuleFresh() {
+    const modulePath = require.resolve('../../utils/debug-logs');
+    delete require.cache[modulePath];
+    return require('../../utils/debug-logs');
+}
+
 describe('logs routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
@@ -96,6 +100,7 @@ describe('logs routes', function () {
             getLogEntries,
             clearLogEntries,
             clearLogSettingsCache,
+            prependConsoleTimestamp,
         } = require('@/utils/debug-logs'));
         ({ default: registerLogRoutes } = require('@/restful/logs'));
         ({ default: registerSettingsRoutes } = require('@/restful/settings'));
@@ -136,6 +141,157 @@ describe('logs routes', function () {
         expect(storedLogs).to.have.length(2);
         expect(storedLogs[0].message).to.equal('[unknown] WARN: second');
         expect(storedLogs[1].message).to.equal('[unknown] ERROR: third');
+    });
+
+    it('prefixes locale timestamp in string console output arguments', function () {
+        const args = ['route log', { ok: true }];
+        const originalToLocaleString = Date.prototype.toLocaleString;
+
+        try {
+            Date.prototype.toLocaleString = () => 'TEST_LOCALE_TIME';
+
+            const timestampedArgs = prependConsoleTimestamp(args, {
+                isNode: true,
+            });
+
+            expect(timestampedArgs).to.deep.equal([
+                'TEST_LOCALE_TIME route log',
+                { ok: true },
+            ]);
+            expect(args).to.deep.equal(['route log', { ok: true }]);
+        } finally {
+            Date.prototype.toLocaleString = originalToLocaleString;
+        }
+    });
+
+    it('preserves node console format placeholders when timestamping', function () {
+        const { format } = require('util');
+        const originalToLocaleString = Date.prototype.toLocaleString;
+
+        try {
+            Date.prototype.toLocaleString = () => 'TEST_LOCALE_TIME';
+
+            const timestampedArgs = prependConsoleTimestamp(
+                ['route log %s %d', 'ok', 1],
+                { isNode: true },
+            );
+
+            expect(timestampedArgs).to.deep.equal([
+                'TEST_LOCALE_TIME route log %s %d',
+                'ok',
+                1,
+            ]);
+            expect(format(...timestampedArgs)).to.equal(
+                'TEST_LOCALE_TIME route log ok 1',
+            );
+        } finally {
+            Date.prototype.toLocaleString = originalToLocaleString;
+        }
+    });
+
+    it('does not treat timestamp percent signs as console format placeholders', function () {
+        const { format } = require('util');
+        const originalToLocaleString = Date.prototype.toLocaleString;
+
+        try {
+            Date.prototype.toLocaleString = () => 'TEST_%s_TIME';
+
+            const stringArgs = prependConsoleTimestamp(['route log %s', 'ok'], {
+                isNode: true,
+            });
+            const objectArgs = prependConsoleTimestamp([{ ok: true }], {
+                isNode: true,
+            });
+
+            expect(format(...stringArgs)).to.equal('TEST_%s_TIME route log ok');
+            expect(format(...objectArgs)).to.equal('TEST_%s_TIME { ok: true }');
+        } finally {
+            Date.prototype.toLocaleString = originalToLocaleString;
+        }
+    });
+
+    it('keeps locale timestamp separate for non-string console output arguments', function () {
+        const args = [{ ok: true }, 'route log'];
+        const originalToLocaleString = Date.prototype.toLocaleString;
+
+        try {
+            Date.prototype.toLocaleString = () => 'TEST_LOCALE_TIME';
+
+            const timestampedArgs = prependConsoleTimestamp(args, {
+                isNode: true,
+            });
+
+            expect(timestampedArgs).to.deep.equal([
+                'TEST_LOCALE_TIME',
+                { ok: true },
+                'route log',
+            ]);
+            expect(args).to.deep.equal([{ ok: true }, 'route log']);
+        } finally {
+            Date.prototype.toLocaleString = originalToLocaleString;
+        }
+    });
+
+    it('prints locale timestamp for empty node console output arguments', function () {
+        const originalToLocaleString = Date.prototype.toLocaleString;
+
+        try {
+            Date.prototype.toLocaleString = () => 'TEST_LOCALE_TIME';
+
+            expect(prependConsoleTimestamp([], { isNode: true })).to.deep.equal(
+                ['TEST_LOCALE_TIME'],
+            );
+        } finally {
+            Date.prototype.toLocaleString = originalToLocaleString;
+        }
+    });
+
+    it('does not prepend locale timestamp outside node runtime', function () {
+        const args = ['route log', { ok: true }];
+
+        expect(prependConsoleTimestamp(args, { isNode: false })).to.deep.equal(
+            args,
+        );
+    });
+
+    it('captures console logs outside node runtime', function () {
+        const consoleMethods = ['log', 'info', 'warn', 'error', 'debug'];
+        const originalConsole = Object.fromEntries(
+            consoleMethods.map((method) => [method, console[method]]),
+        );
+        const testState = {
+            [SETTINGS_KEY]: { logsMaxCount: 500 },
+            [LOGS_KEY]: '[]',
+        };
+        const testApp = {
+            env: { isNode: false },
+            read(key) {
+                return testState[key];
+            },
+            write(data, key) {
+                testState[key] = data;
+                return true;
+            },
+        };
+        const { installConsoleLogCapture: installConsoleLogCaptureFresh } =
+            loadDebugLogsModuleFresh();
+
+        try {
+            consoleMethods.forEach((method) => {
+                console[method] = () => {};
+            });
+
+            installConsoleLogCaptureFresh(testApp);
+            console.log('route log');
+
+            const storedLogs = JSON.parse(testState[LOGS_KEY]);
+            expect(storedLogs).to.have.length(1);
+            expect(storedLogs[0].message).to.equal('[unknown] LOG: route log');
+        } finally {
+            consoleMethods.forEach((method) => {
+                console[method] = originalConsole[method];
+            });
+        }
     });
 
     it('disables persistent log cache IO when logsMaxCount is zero', function () {
@@ -488,7 +644,10 @@ describe('logs routes', function () {
         appendLogEntry($, 'info', ['before change 2']);
         appendLogEntry($, 'info', ['before change 3']);
 
-        await patchHandler({ body: { logsMaxCount: 1 } }, createResponse('/api/settings'));
+        await patchHandler(
+            { body: { logsMaxCount: 1 } },
+            createResponse('/api/settings'),
+        );
 
         appendLogEntry($, 'info', ['after change']);
 
@@ -496,5 +655,4 @@ describe('logs routes', function () {
         expect(storedLogs).to.have.length(1);
         expect(storedLogs[0].message).to.equal('[unknown] INFO: after change');
     });
-
 });

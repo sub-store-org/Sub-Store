@@ -17,12 +17,38 @@ const DEFAULT_IGNORED_SINGLE_LINE_LOG_MESSAGE_RES = [
     // /^Pre-processor \[Fallback Base64 Pre-processor\] activated$/,
     /^Pre-processor \[.+\] activated!?$/,
     /^Fallback Base64 Pre-processor error: decoded line does not start with protocol$/,
+    /^\[CORS\] allowed origins: .+$/,
 ];
 
 let consoleCaptureInstalled = false;
 let isAppendingConsoleLog = false;
 let cachedLogsMaxCount = null;
 let cachedLogsMaxCountExpiresAt = 0;
+
+export function prependConsoleTimestamp(args, { isNode } = {}) {
+    const consoleArgs = Array.from(args || []);
+    if (!isNode) {
+        return consoleArgs;
+    }
+
+    const timestamp = new Date().toLocaleString();
+    if (typeof consoleArgs[0] === 'string') {
+        const [format, ...restArgs] = consoleArgs;
+        const safeTimestamp = restArgs.length
+            ? escapeConsoleFormatLiteral(timestamp)
+            : timestamp;
+        return [`${safeTimestamp} ${format}`, ...restArgs];
+    }
+
+    const safeTimestamp = consoleArgs.length
+        ? escapeConsoleFormatLiteral(timestamp)
+        : timestamp;
+    return [safeTimestamp, ...consoleArgs];
+}
+
+function escapeConsoleFormatLiteral(value) {
+    return `${value}`.replace(/%/g, '%%');
+}
 
 export function normalizeLogLimit(value, fallback = DEFAULT_LOG_LIMIT) {
     const normalizedFallback = normalizePositiveInteger(
@@ -149,14 +175,19 @@ export function clearLogEntries($) {
 }
 
 export function installConsoleLogCapture($) {
-    if (consoleCaptureInstalled || typeof console === 'undefined') return;
+    if (consoleCaptureInstalled || typeof console === 'undefined') {
+        return;
+    }
     consoleCaptureInstalled = true;
 
     LOG_LEVELS.forEach((level) => {
         const original = console[level];
         if (typeof original !== 'function') return;
         console[level] = function (...args) {
-            original.apply(console, args);
+            original.apply(
+                console,
+                prependConsoleTimestamp(args, { isNode: $.env.isNode }),
+            );
             if (isAppendingConsoleLog) return;
             try {
                 isAppendingConsoleLog = true;
