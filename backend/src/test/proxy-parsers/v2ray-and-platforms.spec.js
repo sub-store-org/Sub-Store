@@ -929,6 +929,8 @@ describe('VMess and VLESS parser coverage', function () {
                 xPaddingBytes: '64-128',
                 scMaxEachPostBytes: 1000000,
                 scMinPostsIntervalMs: 300,
+                sessionIDTable: 'abcXYZ012',
+                sessionIDLength: 16,
                 xmux: {
                     maxConnections: 0,
                     maxConcurrency: '16-32',
@@ -959,6 +961,8 @@ describe('VMess and VLESS parser coverage', function () {
                     'x-padding-bytes': '64-128',
                     'sc-max-each-post-bytes': 1000000,
                     'sc-min-posts-interval-ms': 300,
+                    'session-table': 'abcXYZ012',
+                    'session-length': '16',
                     'reuse-settings': {
                         'max-connections': '0',
                         'max-concurrency': '16-32',
@@ -1014,9 +1018,11 @@ describe('VMess and VLESS parser coverage', function () {
                         host: 'download-host.example.com',
                         noGRPCHeader: true,
                         xPaddingBytes: '32-64',
+                        sessionIDTable: 'Base62',
                         scMaxEachPostBytes: '500000-1000000',
                         scMinPostsIntervalMs: '0-300',
                         extra: {
+                            sessionIDLength: '8-12',
                             xmux: {
                                 maxConnections: '8',
                                 hMaxReusableSecs: '900',
@@ -1054,7 +1060,9 @@ describe('VMess and VLESS parser coverage', function () {
                         host: 'download-host.example.com',
                         'no-grpc-header': true,
                         'x-padding-bytes': '32-64',
-                        'sc-max-each-post-bytes': 1000000,
+                        'session-table': 'Base62',
+                        'session-length': '8-12',
+                        'sc-max-each-post-bytes': '500000-1000000',
                         'sc-min-posts-interval-ms': '0-300',
                         'reuse-settings': {
                             'max-connections': '8',
@@ -1395,11 +1403,11 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
-        it('parses xhttp VLESS shares with Mihomo-style leading-zero sc scalars', function () {
+        it('parses xhttp VLESS shares with Mihomo-style leading-zero sc values', function () {
             const extra = JSON.stringify({
                 noGRPCHeader: true,
                 xPaddingBytes: '64-128',
-                scMaxEachPostBytes: '000-1000000',
+                scMaxEachPostBytes: '000001-1000000',
                 scMinPostsIntervalMs: '0300',
                 downloadSettings: {
                     address: 'download.example.com',
@@ -1408,7 +1416,7 @@ describe('VMess and VLESS parser coverage', function () {
                     xhttpSettings: {
                         path: '/download',
                         host: 'download-host.example.com',
-                        scMaxEachPostBytes: '000-1000000',
+                        scMaxEachPostBytes: '000001-1000000',
                         scMinPostsIntervalMs: '000-300',
                     },
                 },
@@ -1433,7 +1441,7 @@ describe('VMess and VLESS parser coverage', function () {
                     host: 'cdn.example.com',
                     'no-grpc-header': true,
                     'x-padding-bytes': '64-128',
-                    'sc-max-each-post-bytes': 1000000,
+                    'sc-max-each-post-bytes': '1-1000000',
                     'sc-min-posts-interval-ms': 300,
                     'download-settings': {
                         server: 'download.example.com',
@@ -1441,14 +1449,14 @@ describe('VMess and VLESS parser coverage', function () {
                         tls: true,
                         path: '/download',
                         host: 'download-host.example.com',
-                        'sc-max-each-post-bytes': 1000000,
+                        'sc-max-each-post-bytes': '1-1000000',
                         'sc-min-posts-interval-ms': '0-300',
                     },
                 },
             });
         });
 
-        it('parses xhttp VLESS shares with Mihomo-style explicit-plus sc scalars', function () {
+        it('parses xhttp VLESS shares with Mihomo-style explicit-plus sc values', function () {
             const extra = JSON.stringify({
                 noGRPCHeader: true,
                 xPaddingBytes: '64-128',
@@ -1461,7 +1469,7 @@ describe('VMess and VLESS parser coverage', function () {
                     xhttpSettings: {
                         path: '/download',
                         host: 'download-host.example.com',
-                        scMaxEachPostBytes: '+0-+1000000',
+                        scMaxEachPostBytes: '+1-+1000000',
                         scMinPostsIntervalMs: '+0-+300',
                     },
                 },
@@ -1486,7 +1494,7 @@ describe('VMess and VLESS parser coverage', function () {
                     host: 'cdn.example.com',
                     'no-grpc-header': true,
                     'x-padding-bytes': '64-128',
-                    'sc-max-each-post-bytes': 1000000,
+                    'sc-max-each-post-bytes': '500000-1000000',
                     'sc-min-posts-interval-ms': 300,
                     'download-settings': {
                         server: 'download.example.com',
@@ -1494,7 +1502,7 @@ describe('VMess and VLESS parser coverage', function () {
                         tls: true,
                         path: '/download',
                         host: 'download-host.example.com',
-                        'sc-max-each-post-bytes': 1000000,
+                        'sc-max-each-post-bytes': '1-1000000',
                         'sc-min-posts-interval-ms': '0-300',
                     },
                 },
@@ -1618,6 +1626,102 @@ describe('VMess and VLESS parser coverage', function () {
                 downloadSettings: {
                     xhttpSettings: {
                         scMinPostsIntervalMs: '0-0',
+                    },
+                },
+            });
+        });
+
+        it('parses empty xhttp VLESS session id tables as supported strings', function () {
+            const extra = JSON.stringify({
+                sessionIDTable: '',
+                downloadSettings: {
+                    network: 'xhttp',
+                    xhttpSettings: {
+                        sessionIDTable: '',
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Empty%20Session%20Table`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    host: 'cdn.example.com',
+                    'session-table': '',
+                    'download-settings': {
+                        network: 'xhttp',
+                        'session-table': '',
+                    },
+                },
+            });
+            expect(proxy).to.not.have.property('_extra');
+            expect(proxy).to.not.have.property('_extra_unsupported');
+        });
+
+        it('keeps invalid xhttp VLESS session id fields in _extra_unsupported', function () {
+            const extra = JSON.stringify({
+                sessionIDTable: 123,
+                sessionIDLength: '0-32',
+                downloadSettings: {
+                    network: 'xhttp',
+                    xhttpSettings: {
+                        sessionIDTable: false,
+                        extra: {
+                            sessionIDLength: '0-0',
+                        },
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Invalid%20Session%20ID`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    host: 'cdn.example.com',
+                    'download-settings': {
+                        network: 'xhttp',
+                    },
+                },
+            });
+            expect(proxy['xhttp-opts']).to.not.have.property('session-table');
+            expect(proxy['xhttp-opts']).to.not.have.property('session-length');
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('session-table');
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('session-length');
+            expect(proxy._extra_unsupported).to.deep.equal({
+                sessionIDTable: 123,
+                sessionIDLength: '0-32',
+                downloadSettings: {
+                    xhttpSettings: {
+                        sessionIDTable: false,
+                        extra: {
+                            sessionIDLength: '0-0',
+                        },
                     },
                 },
             });
@@ -1787,6 +1891,123 @@ describe('VMess and VLESS parser coverage', function () {
             ).to.not.have.property('sockopt');
         });
 
+        it('normalizes xhttp VLESS extra field types from Xray JSON', function () {
+            const extra = JSON.stringify({
+                headers: {
+                    'X-Empty': '',
+                    'X-Number': 1,
+                },
+                noGRPCHeader: false,
+                xPaddingBytes: 128,
+                xPaddingObfsMode: false,
+                xPaddingKey: '',
+                xPaddingHeader: '',
+                xPaddingPlacement: '',
+                xPaddingMethod: '',
+                uplinkHTTPMethod: '',
+                sessionIDPlacement: 'header',
+                sessionIDKey: 'X-Session-ID',
+                sessionPlacement: 'query',
+                sessionKey: 'legacy-session',
+                seqPlacement: '',
+                seqKey: '',
+                uplinkDataPlacement: '',
+                uplinkDataKey: '',
+                downloadSettings: {
+                    network: 'xhttp',
+                    xhttpSettings: {
+                        headers: {
+                            'X-Download-Empty': '',
+                        },
+                        noGRPCHeader: false,
+                        xPaddingBytes: 32,
+                        xPaddingObfsMode: false,
+                        sessionIDPlacement: 'query',
+                        sessionIDKey: 'x_session_id',
+                    },
+                },
+            });
+            const proxy = parseOne(
+                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
+                    extra,
+                )}#VLESS%20XHTTP%20Typed%20Extra`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vless',
+                name: 'VLESS XHTTP Typed Extra',
+                server: 'vless-xhttp.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-up',
+                    path: '/xhttp',
+                    host: 'cdn.example.com',
+                    headers: {
+                        'X-Empty': '',
+                    },
+                    'x-padding-bytes': '128',
+                    'session-placement': 'header',
+                    'session-key': 'X-Session-ID',
+                    'download-settings': {
+                        network: 'xhttp',
+                        headers: {
+                            'X-Download-Empty': '',
+                        },
+                        'x-padding-bytes': '32',
+                        'session-placement': 'query',
+                        'session-key': 'x_session_id',
+                    },
+                },
+            });
+            expect(proxy['xhttp-opts']).to.not.have.property('no-grpc-header');
+            expect(proxy['xhttp-opts']).to.not.have.property(
+                'x-padding-obfs-mode',
+            );
+            expect(proxy['xhttp-opts']).to.not.have.property('x-padding-key');
+            expect(proxy['xhttp-opts']).to.not.have.property(
+                'x-padding-header',
+            );
+            expect(proxy['xhttp-opts']).to.not.have.property(
+                'x-padding-placement',
+            );
+            expect(proxy['xhttp-opts']).to.not.have.property(
+                'x-padding-method',
+            );
+            expect(proxy['xhttp-opts']).to.not.have.property(
+                'uplink-http-method',
+            );
+            expect(proxy['xhttp-opts']).to.not.have.property('seq-placement');
+            expect(proxy['xhttp-opts']).to.not.have.property('seq-key');
+            expect(proxy['xhttp-opts']).to.not.have.property(
+                'uplink-data-placement',
+            );
+            expect(proxy['xhttp-opts']).to.not.have.property(
+                'uplink-data-key',
+            );
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('no-grpc-header');
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('x-padding-obfs-mode');
+            expect(proxy._extra_unsupported).to.deep.equal({
+                headers: {
+                    'X-Number': 1,
+                },
+                noGRPCHeader: false,
+                xPaddingObfsMode: false,
+                downloadSettings: {
+                    xhttpSettings: {
+                        noGRPCHeader: false,
+                        xPaddingObfsMode: false,
+                    },
+                },
+            });
+        });
+
         it('parses nested xhttp download TLS ECH DNS fields into mihomo sidecar fields', function () {
             const extra = JSON.stringify({
                 downloadSettings: {
@@ -1908,8 +2129,9 @@ describe('VMess and VLESS parser coverage', function () {
             expect(proxy).to.not.have.property('_extra_unsupported');
         });
 
-        it('keeps malformed xhttp VLESS uplinkChunkSize values in _extra_unsupported', function () {
+        it('keeps malformed xhttp VLESS range values in _extra_unsupported', function () {
             const extra = JSON.stringify({
+                xPaddingBytes: 'fast',
                 uplinkChunkSize: 'fast',
                 downloadSettings: {
                     address: 'download.example.com',
@@ -1917,6 +2139,7 @@ describe('VMess and VLESS parser coverage', function () {
                     security: 'tls',
                     xhttpSettings: {
                         path: '/download',
+                        xPaddingBytes: 'faster',
                         uplinkChunkSize: 'faster',
                     },
                 },
@@ -1943,15 +2166,23 @@ describe('VMess and VLESS parser coverage', function () {
                 },
             });
             expect(proxy['xhttp-opts']).to.not.have.property(
+                'x-padding-bytes',
+            );
+            expect(proxy['xhttp-opts']).to.not.have.property(
                 'uplink-chunk-size',
             );
             expect(
                 proxy['xhttp-opts']?.['download-settings'],
+            ).to.not.have.property('x-padding-bytes');
+            expect(
+                proxy['xhttp-opts']?.['download-settings'],
             ).to.not.have.property('uplink-chunk-size');
             expect(proxy._extra_unsupported).to.deep.equal({
+                xPaddingBytes: 'fast',
                 uplinkChunkSize: 'fast',
                 downloadSettings: {
                     xhttpSettings: {
+                        xPaddingBytes: 'faster',
                         uplinkChunkSize: 'faster',
                     },
                 },
@@ -2038,7 +2269,7 @@ describe('VMess and VLESS parser coverage', function () {
                     host: 'cdn.example.com',
                     'no-grpc-header': true,
                     'x-padding-bytes': '64-128',
-                    'sc-max-each-post-bytes': 1000000,
+                    'sc-max-each-post-bytes': '500000-1000000',
                     'reuse-settings': {
                         'max-connections': '0',
                         'max-concurrency': '16-32',
@@ -2095,57 +2326,15 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
-        it('parses xhttp VLESS shares with zero-lower-bound scMaxEachPostBytes range', function () {
-            const extra = JSON.stringify({
-                noGRPCHeader: true,
-                xPaddingBytes: '64-128',
-                scMaxEachPostBytes: '0-1000000',
-                xmux: {
-                    maxConnections: 0,
-                    maxConcurrency: '16-32',
-                    cMaxReuseTimes: '64-128',
-                    hMaxRequestTimes: '600-900',
-                    hMaxReusableSecs: '1800-3000',
-                },
-            });
-            const proxy = parseOne(
-                `vless://${UUID}@vless-xhttp.example.com:443?type=xhttp&security=tls&host=cdn.example.com&path=%2Fxhttp&mode=stream-up&extra=${encodeURIComponent(
-                    extra,
-                )}#VLESS%20XHTTP%20Zero%20Lower%20Bound`,
-            );
-
-            expectSubset(proxy, {
-                type: 'vless',
-                name: 'VLESS XHTTP Zero Lower Bound',
-                server: 'vless-xhttp.example.com',
-                port: 443,
-                uuid: UUID,
-                tls: true,
-                network: 'xhttp',
-                'xhttp-opts': {
-                    mode: 'stream-up',
-                    path: '/xhttp',
-                    host: 'cdn.example.com',
-                    'no-grpc-header': true,
-                    'x-padding-bytes': '64-128',
-                    'sc-max-each-post-bytes': 1000000,
-                    'reuse-settings': {
-                        'max-connections': '0',
-                        'max-concurrency': '16-32',
-                        'c-max-reuse-times': '64-128',
-                        'h-max-request-times': '600-900',
-                        'h-max-reusable-secs': '1800-3000',
-                    },
-                },
-            });
-        });
-
         it('ignores invalid xhttp VLESS scMaxEachPostBytes values', function () {
             const invalidValues = [
                 '1.5',
                 1.5,
                 '0',
                 0,
+                '0-1000000',
+                '+0-+1000000',
+                '000-1000000',
                 'fast',
                 '10-1',
                 '9007199254740993',

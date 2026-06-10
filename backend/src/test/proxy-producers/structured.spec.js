@@ -1107,6 +1107,8 @@ describe('Proxy structured producers', function () {
                 'no-grpc-header': true,
                 'x-padding-bytes': '64-128',
                 'sc-min-posts-interval-ms': 300,
+                'session-table': 'Base62',
+                'session-length': '16-32',
             },
         };
 
@@ -1129,6 +1131,8 @@ describe('Proxy structured producers', function () {
                 'no-grpc-header': true,
                 'x-padding-bytes': '64-128',
                 'sc-min-posts-interval-ms': 300,
+                'session-table': 'Base62',
+                'session-length': '16-32',
             },
         });
         expectSubset(external.proxies[0], {
@@ -1138,6 +1142,8 @@ describe('Proxy structured producers', function () {
             servername: 'sni.example.com',
             'xhttp-opts': {
                 'sc-min-posts-interval-ms': 300,
+                'session-table': 'Base62',
+                'session-length': '16-32',
             },
         });
     });
@@ -1214,6 +1220,8 @@ describe('Proxy structured producers', function () {
                     path: '/download',
                     host: 'download-host.example.com',
                     'sc-min-posts-interval-ms': 300,
+                    'session-table': 'Base62',
+                    'session-length': '8-12',
                     'reuse-settings': {
                         'max-connections': '8',
                         'h-max-reusable-secs': '900',
@@ -1241,6 +1249,8 @@ describe('Proxy structured producers', function () {
                     path: '/download',
                     host: 'download-host.example.com',
                     'sc-min-posts-interval-ms': 300,
+                    'session-table': 'Base62',
+                    'session-length': '8-12',
                     'reuse-settings': {
                         'max-connections': '8',
                         'h-max-reusable-secs': '900',
@@ -1262,6 +1272,8 @@ describe('Proxy structured producers', function () {
                     path: '/download',
                     host: 'download-host.example.com',
                     'sc-min-posts-interval-ms': 300,
+                    'session-table': 'Base62',
+                    'session-length': '8-12',
                     'reuse-settings': {
                         'max-connections': '8',
                         'h-max-reusable-secs': '900',

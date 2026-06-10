@@ -2647,6 +2647,8 @@ describe('Proxy text producers', function () {
         const extra = JSON.stringify({
             noGRPCHeader: true,
             xPaddingBytes: '64-128',
+            sessionIDTable: 'Base62',
+            sessionIDLength: 16,
         });
         const output = produceExternal('URI', {
             type: 'vless',
@@ -2665,6 +2667,8 @@ describe('Proxy text producers', function () {
                 mode: 'stream-up',
                 'no-grpc-header': true,
                 'x-padding-bytes': '64-128',
+                'session-table': 'Base62',
+                'session-length': 16,
             },
         });
 
@@ -2673,6 +2677,41 @@ describe('Proxy text producers', function () {
                 extra,
             )}#URI%20XHTTP`,
         );
+    });
+
+    it('produces URI VLESS xhttp links with explicit empty session table strings', function () {
+        const extra = JSON.stringify({
+            sessionIDTable: '',
+        });
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI XHTTP Empty Session Table',
+            server: 'vless-xhttp.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'sni.example.com',
+            network: 'xhttp',
+            'xhttp-opts': {
+                path: '/xhttp',
+                headers: {
+                    Host: 'cdn.example.com',
+                },
+                mode: 'stream-up',
+                'session-table': '',
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&host=cdn.example.com&sni=sni.example.com&mode=stream-up&extra=${encodeURIComponent(
+                extra,
+            )}#URI%20XHTTP%20Empty%20Session%20Table`,
+        );
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(reparsed[0]['xhttp-opts']?.['session-table']).to.equal('');
+        expect(reparsed[0]).to.not.have.property('_extra_unsupported');
     });
 
     it('preserves _extra_unsupported without letting it override structured xhttp fields when producing URI VLESS links', function () {
@@ -2687,11 +2726,15 @@ describe('Proxy text producers', function () {
             network: 'xhttp',
             _extra_unsupported: {
                 customField: 'keep-me',
+                sessionIDTable: 'stale-table',
                 downloadSettings: {
                     sockopt: {
                         mark: 255,
                     },
                     address: 'old.example.com',
+                    xhttpSettings: {
+                        sessionIDLength: '1-2',
+                    },
                 },
             },
             'xhttp-opts': {
@@ -2701,12 +2744,16 @@ describe('Proxy text producers', function () {
                     Host: 'cdn.example.com',
                 },
                 'no-grpc-header': true,
+                'session-table': 'Base62',
+                'session-length': '16-32',
                 'download-settings': {
                     server: 'download.example.com',
                     port: 8443,
                     tls: true,
                     path: '/download',
                     host: 'download-host.example.com',
+                    'session-table': 'abcXYZ012',
+                    'session-length': '8-12',
                 },
             },
         });
@@ -2715,6 +2762,8 @@ describe('Proxy text producers', function () {
         const extra = JSON.parse(decodeURIComponent(encodedExtra));
         expect(extra.customField).to.equal('keep-me');
         expect(extra.noGRPCHeader).to.equal(true);
+        expect(extra.sessionIDTable).to.equal('Base62');
+        expect(extra.sessionIDLength).to.equal('16-32');
         expect(extra.downloadSettings?.address).to.equal(
             'download.example.com',
         );
@@ -2730,12 +2779,34 @@ describe('Proxy text producers', function () {
         expect(extra.downloadSettings?.xhttpSettings?.host).to.equal(
             'download-host.example.com',
         );
+        expect(extra.downloadSettings?.xhttpSettings?.sessionIDTable).to.equal(
+            'abcXYZ012',
+        );
+        expect(extra.downloadSettings?.xhttpSettings?.sessionIDLength).to.equal(
+            '8-12',
+        );
 
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.server,
         ).to.equal('download.example.com');
+        expect(reparsed[0]['xhttp-opts']?.['session-table']).to.equal(
+            'Base62',
+        );
+        expect(reparsed[0]['xhttp-opts']?.['session-length']).to.equal(
+            '16-32',
+        );
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'session-table'
+            ],
+        ).to.equal('abcXYZ012');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'session-length'
+            ],
+        ).to.equal('8-12');
         expect(reparsed[0]._extra_unsupported).to.deep.equal({
             customField: 'keep-me',
             downloadSettings: {
@@ -2750,6 +2821,8 @@ describe('Proxy text producers', function () {
         const rawExtra = JSON.stringify({
             customField: 'keep-me',
             scMinPostsIntervalMs: '0-300',
+            sessionIDTable: 'raw-table',
+            sessionIDLength: '8-12',
         });
         const output = produceExternal('URI', {
             type: 'vless',
@@ -2768,6 +2841,8 @@ describe('Proxy text producers', function () {
                     Host: 'cdn.example.com',
                 },
                 'sc-min-posts-interval-ms': 300,
+                'session-table': 'structured-table',
+                'session-length': '16-32',
             },
         });
 
@@ -2779,6 +2854,10 @@ describe('Proxy text producers', function () {
         expect(
             reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
         ).to.equal('0-300');
+        expect(reparsed[0]['xhttp-opts']?.['session-table']).to.equal(
+            'raw-table',
+        );
+        expect(reparsed[0]['xhttp-opts']?.['session-length']).to.equal('8-12');
     });
 
     it('stringifies plain-object _extra before using it as the final xhttp URI extra', function () {
@@ -3259,8 +3338,8 @@ describe('Proxy text producers', function () {
             xPaddingPlacement: 'header',
             xPaddingMethod: 'tokenish',
             uplinkHTTPMethod: 'PUT',
-            sessionPlacement: 'query',
-            sessionKey: 'x_session_id',
+            sessionIDPlacement: 'query',
+            sessionIDKey: 'x_session_id',
             seqPlacement: 'header',
             seqKey: 'X-Seq',
             uplinkDataPlacement: 'header',
@@ -3297,8 +3376,8 @@ describe('Proxy text producers', function () {
                     xPaddingPlacement: 'query',
                     xPaddingMethod: 'repeat-x',
                     uplinkHTTPMethod: 'PATCH',
-                    sessionPlacement: 'header',
-                    sessionKey: 'X-Session',
+                    sessionIDPlacement: 'header',
+                    sessionIDKey: 'X-Session',
                     seqPlacement: 'query',
                     seqKey: 'x_seq',
                     uplinkDataPlacement: 'cookie',
@@ -3419,9 +3498,9 @@ describe('Proxy text producers', function () {
         ).to.equal(-1);
     });
 
-    it('normalizes Mihomo leading-zero structured xhttp scalars when producing URI VLESS links', function () {
+    it('normalizes Mihomo leading-zero structured xhttp values when producing URI VLESS links', function () {
         const extra = JSON.stringify({
-            scMaxEachPostBytes: 1000000,
+            scMaxEachPostBytes: '1-1000000',
             scMinPostsIntervalMs: 300,
             downloadSettings: {
                 address: 'download.example.com',
@@ -3432,7 +3511,7 @@ describe('Proxy text producers', function () {
                     path: '/download',
                     host: 'download-host.example.com',
                     mode: 'stream-up',
-                    scMaxEachPostBytes: 1000000,
+                    scMaxEachPostBytes: '1-1000000',
                     scMinPostsIntervalMs: '0-300',
                 },
             },
@@ -3452,7 +3531,7 @@ describe('Proxy text producers', function () {
                 headers: {
                     Host: 'cdn.example.com',
                 },
-                'sc-max-each-post-bytes': '000-1000000',
+                'sc-max-each-post-bytes': '000001-1000000',
                 'sc-min-posts-interval-ms': '0300',
                 'download-settings': {
                     server: 'download.example.com',
@@ -3460,7 +3539,7 @@ describe('Proxy text producers', function () {
                     tls: true,
                     path: '/download',
                     host: 'download-host.example.com',
-                    'sc-max-each-post-bytes': '000-1000000',
+                    'sc-max-each-post-bytes': '000001-1000000',
                     'sc-min-posts-interval-ms': '000-300',
                 },
             },
@@ -3475,7 +3554,7 @@ describe('Proxy text producers', function () {
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
         expect(reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes']).to.equal(
-            1000000,
+            '1-1000000',
         );
         expect(
             reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
@@ -3484,7 +3563,7 @@ describe('Proxy text producers', function () {
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-max-each-post-bytes'
             ],
-        ).to.equal(1000000);
+        ).to.equal('1-1000000');
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-min-posts-interval-ms'
@@ -3492,9 +3571,9 @@ describe('Proxy text producers', function () {
         ).to.equal('0-300');
     });
 
-    it('normalizes Mihomo explicit-plus structured xhttp scalars when producing URI VLESS links', function () {
+    it('normalizes Mihomo explicit-plus structured xhttp values when producing URI VLESS links', function () {
         const extra = JSON.stringify({
-            scMaxEachPostBytes: 1000000,
+            scMaxEachPostBytes: '500000-1000000',
             scMinPostsIntervalMs: 300,
             downloadSettings: {
                 address: 'download.example.com',
@@ -3505,7 +3584,7 @@ describe('Proxy text producers', function () {
                     path: '/download',
                     host: 'download-host.example.com',
                     mode: 'stream-up',
-                    scMaxEachPostBytes: 1000000,
+                    scMaxEachPostBytes: '1-1000000',
                     scMinPostsIntervalMs: '0-300',
                 },
             },
@@ -3533,7 +3612,7 @@ describe('Proxy text producers', function () {
                     tls: true,
                     path: '/download',
                     host: 'download-host.example.com',
-                    'sc-max-each-post-bytes': '+0-+1000000',
+                    'sc-max-each-post-bytes': '+1-+1000000',
                     'sc-min-posts-interval-ms': '+0-+300',
                 },
             },
@@ -3548,7 +3627,7 @@ describe('Proxy text producers', function () {
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
         expect(reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes']).to.equal(
-            1000000,
+            '500000-1000000',
         );
         expect(
             reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
@@ -3557,7 +3636,7 @@ describe('Proxy text producers', function () {
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-max-each-post-bytes'
             ],
-        ).to.equal(1000000);
+        ).to.equal('1-1000000');
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-min-posts-interval-ms'
@@ -4167,11 +4246,87 @@ describe('Proxy text producers', function () {
         });
     });
 
+    it('preserves empty xhttp header values when round-tripping URI VLESS links', function () {
+        const extra = JSON.stringify({
+            headers: {
+                'X-Empty': '',
+                'X-Value': '1',
+            },
+            noGRPCHeader: false,
+            xPaddingObfsMode: false,
+            downloadSettings: {
+                network: 'xhttp',
+                xhttpSettings: {
+                    path: '/download',
+                    headers: {
+                        'X-Download-Empty': '',
+                        'X-Download': '1',
+                    },
+                    noGRPCHeader: false,
+                    xPaddingObfsMode: false,
+                },
+            },
+        });
+        const input = `vless://${UUID}@vless-xhttp.example.com:443?security=tls&type=xhttp&path=%2Fxhttp&extra=${encodeURIComponent(
+            extra,
+        )}#URI%20XHTTP%20Empty%20Headers`;
+
+        const parsed = ProxyUtils.parse(input);
+        expect(parsed, input).to.have.length(1);
+        expect(parsed[0]['xhttp-opts']?.headers).to.deep.equal({
+            'X-Empty': '',
+            'X-Value': '1',
+        });
+        expect(
+            parsed[0]['xhttp-opts']?.['download-settings']?.headers,
+        ).to.deep.equal({
+            'X-Download-Empty': '',
+            'X-Download': '1',
+        });
+
+        const output = produceExternal('URI', parsed[0]);
+        const [, encodedExtra] = output.match(/[?&]extra=([^#]+)/);
+        const reparsedExtra = JSON.parse(decodeURIComponent(encodedExtra));
+        expect(reparsedExtra.headers).to.deep.equal({
+            'X-Empty': '',
+            'X-Value': '1',
+        });
+        expect(reparsedExtra.noGRPCHeader).to.equal(false);
+        expect(reparsedExtra.xPaddingObfsMode).to.equal(false);
+        expect(
+            reparsedExtra.downloadSettings?.xhttpSettings?.headers,
+        ).to.deep.equal({
+            'X-Download-Empty': '',
+            'X-Download': '1',
+        });
+        expect(
+            reparsedExtra.downloadSettings?.xhttpSettings?.noGRPCHeader,
+        ).to.equal(false);
+        expect(
+            reparsedExtra.downloadSettings?.xhttpSettings?.xPaddingObfsMode,
+        ).to.equal(false);
+
+        const reparsed = ProxyUtils.parse(output);
+        expect(reparsed, output).to.have.length(1);
+        expect(reparsed[0]['xhttp-opts']?.headers).to.deep.equal({
+            'X-Empty': '',
+            'X-Value': '1',
+        });
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.headers,
+        ).to.deep.equal({
+            'X-Download-Empty': '',
+            'X-Download': '1',
+        });
+    });
+
     it('normalizes structured xhttp range-form scalars when producing URI VLESS links', function () {
         const extra = JSON.stringify({
             noGRPCHeader: true,
             xPaddingBytes: '64-128',
-            scMaxEachPostBytes: 1000000,
+            sessionIDTable: 'Base62',
+            sessionIDLength: '16-32',
+            scMaxEachPostBytes: '1-1000000',
             scMinPostsIntervalMs: '0-300',
             xmux: {
                 maxConnections: '8',
@@ -4185,7 +4340,9 @@ describe('Proxy text producers', function () {
                     path: '/download',
                     host: 'download-host.example.com',
                     mode: 'stream-up',
-                    scMaxEachPostBytes: 1000000,
+                    sessionIDTable: 'abcXYZ012',
+                    sessionIDLength: '8-12',
+                    scMaxEachPostBytes: '500000-1000000',
                     scMinPostsIntervalMs: '0-300',
                     extra: {
                         xmux: {
@@ -4212,7 +4369,9 @@ describe('Proxy text producers', function () {
                 },
                 'no-grpc-header': true,
                 'x-padding-bytes': '64-128',
-                'sc-max-each-post-bytes': '0-1000000',
+                'session-table': 'Base62',
+                'session-length': '16-32',
+                'sc-max-each-post-bytes': '1-1000000',
                 'sc-min-posts-interval-ms': '0-300',
                 'reuse-settings': {
                     'max-connections': '8',
@@ -4223,6 +4382,8 @@ describe('Proxy text producers', function () {
                     tls: true,
                     path: '/download',
                     host: 'download-host.example.com',
+                    'session-table': 'abcXYZ012',
+                    'session-length': '8-12',
                     'sc-max-each-post-bytes': '500000 - 1000000',
                     'sc-min-posts-interval-ms': '0 - 300',
                     'reuse-settings': {
@@ -4241,21 +4402,37 @@ describe('Proxy text producers', function () {
         const reparsed = ProxyUtils.parse(output);
         expect(reparsed, output).to.have.length(1);
         expect(reparsed[0]['xhttp-opts']?.['sc-max-each-post-bytes']).to.equal(
-            1000000,
+            '1-1000000',
         );
         expect(
             reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
         ).to.equal('0-300');
+        expect(reparsed[0]['xhttp-opts']?.['session-table']).to.equal(
+            'Base62',
+        );
+        expect(reparsed[0]['xhttp-opts']?.['session-length']).to.equal(
+            '16-32',
+        );
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-max-each-post-bytes'
             ],
-        ).to.equal(1000000);
+        ).to.equal('500000-1000000');
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-min-posts-interval-ms'
             ],
         ).to.equal('0-300');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'session-table'
+            ],
+        ).to.equal('abcXYZ012');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings']?.[
+                'session-length'
+            ],
+        ).to.equal('8-12');
     });
 
     it('does not truncate malformed nested download port strings when producing URI VLESS links', function () {
@@ -4357,6 +4534,7 @@ describe('Proxy text producers', function () {
                 'x-padding-bytes': '64-128',
                 'sc-max-each-post-bytes': '9007199254740993',
                 'sc-min-posts-interval-ms': 0,
+                'session-length': '0-32',
                 'uplink-chunk-size': '64-fast',
                 'reuse-settings': {
                     'max-connections': '8',
@@ -4371,6 +4549,7 @@ describe('Proxy text producers', function () {
                     'x-padding-bytes': '32-64',
                     'sc-max-each-post-bytes': '1-9007199254740993',
                     'sc-min-posts-interval-ms': 'fast',
+                    'session-length': 0,
                     'uplink-chunk-size': 'fast',
                     'reuse-settings': {
                         'max-concurrency': '16-32',
@@ -4396,6 +4575,9 @@ describe('Proxy text producers', function () {
         expect(reparsed[0]['xhttp-opts']).to.not.have.property(
             'uplink-chunk-size',
         );
+        expect(reparsed[0]['xhttp-opts']).to.not.have.property(
+            'session-length',
+        );
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings'],
         ).to.not.have.property('sc-max-each-post-bytes');
@@ -4405,6 +4587,9 @@ describe('Proxy text producers', function () {
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings'],
         ).to.not.have.property('uplink-chunk-size');
+        expect(
+            reparsed[0]['xhttp-opts']?.['download-settings'],
+        ).to.not.have.property('session-length');
     });
 
     it('omits top-level URI xhttp extra when only invalid structured scalars remain', function () {
@@ -4425,6 +4610,8 @@ describe('Proxy text producers', function () {
                 },
                 'sc-max-each-post-bytes': '9007199254740993',
                 'sc-min-posts-interval-ms': 0,
+                'session-table': 123,
+                'session-length': '0-32',
                 'uplink-chunk-size': 'fast',
             },
         });
@@ -4470,6 +4657,8 @@ describe('Proxy text producers', function () {
                     tls: true,
                     'sc-max-each-post-bytes': '1-9007199254740993',
                     'sc-min-posts-interval-ms': 'fast',
+                    'session-table': false,
+                    'session-length': 0,
                     'uplink-chunk-size': 'fast',
                 },
             },

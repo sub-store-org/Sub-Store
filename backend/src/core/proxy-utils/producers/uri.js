@@ -7,7 +7,7 @@ import {
     normalizeXhttpIntegerValue,
     normalizeXhttpNonNegativeRange,
     normalizeXhttpPositiveRange,
-    normalizeXhttpScalarUpperBound,
+    normalizeXhttpStrictPositiveRangeValue,
 } from '../xhttp-utils';
 import {
     extractPathQueryParam,
@@ -27,7 +27,7 @@ function toStringHeaderMap(headers, { excludeHost = false } = {}) {
 
     const parsedHeaders = {};
     for (const [key, value] of Object.entries(headers)) {
-        if (typeof value !== 'string' || value === '') {
+        if (typeof value !== 'string') {
             continue;
         }
         if (excludeHost && /^host$/i.test(key)) {
@@ -209,10 +209,28 @@ function applyStructuredXhttpExtraFields(
         target.uplinkHTTPMethod = xhttpOpts['uplink-http-method'];
     }
     if (xhttpOpts['session-placement']) {
-        target.sessionPlacement = xhttpOpts['session-placement'];
+        target.sessionIDPlacement = xhttpOpts['session-placement'];
     }
     if (xhttpOpts['session-key']) {
-        target.sessionKey = xhttpOpts['session-key'];
+        target.sessionIDKey = xhttpOpts['session-key'];
+    }
+    if (typeof xhttpOpts['session-table'] === 'string') {
+        // NOTE: This mirrors the current structured field mapping only.
+        // Xray-core/mihomo still apply coupled validation with
+        // session-length when the table is non-empty: ASCII-only table,
+        // strictly positive length range, and enough total ID space.
+        target.sessionIDTable = xhttpOpts['session-table'];
+    }
+    if (xhttpOpts['session-length'] != null) {
+        // NOTE: The normalized range here is only a local serialization check.
+        // Upstream compatibility still depends on the session-table/session-
+        // length pair satisfying the extra Xray-core/mihomo constraints.
+        const sessionIDLength = normalizeXhttpStrictPositiveRangeValue(
+            xhttpOpts['session-length'],
+        );
+        if (sessionIDLength != null) {
+            target.sessionIDLength = sessionIDLength;
+        }
     }
     if (xhttpOpts['seq-placement']) {
         target.seqPlacement = xhttpOpts['seq-placement'];
@@ -235,7 +253,7 @@ function applyStructuredXhttpExtraFields(
     }
 
     if (xhttpOpts['sc-max-each-post-bytes'] != null) {
-        const scMaxEachPostBytes = normalizeXhttpScalarUpperBound(
+        const scMaxEachPostBytes = normalizeXhttpStrictPositiveRangeValue(
             xhttpOpts['sc-max-each-post-bytes'],
         );
         if (scMaxEachPostBytes != null) {
@@ -526,9 +544,7 @@ function buildVlessExtra(proxy) {
     // structured Mihomo node so later edits are reflected on export, while
     // `_extra_unsupported` fills the holes needed for VLESS URI -> node ->
     // VLESS URI lossless round-trips. That also means supported-field format
-    // conflicts are resolved by the structured emitters here, e.g.
-    // sc-max-each-post-bytes still emits the compatibility upper bound while
-    // sc-min-posts-interval-ms keeps range.
+    // conflicts are resolved by the structured emitters here.
     const mergedExtra = mergeUnsupportedXhttpExtraObject(
         structuredExtra,
         proxy._extra_unsupported,

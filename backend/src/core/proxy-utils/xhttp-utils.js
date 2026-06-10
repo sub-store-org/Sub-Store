@@ -1,6 +1,6 @@
 function parseNormalizedXhttpRangeBounds(
     value,
-    { allowZeroUpperBound = true } = {},
+    { allowZeroLowerBound = true, allowZeroUpperBound = true } = {},
 ) {
     if (typeof value !== 'string' && typeof value !== 'number') {
         return undefined;
@@ -22,9 +22,14 @@ function parseNormalizedXhttpRangeBounds(
 
     const normalizedValue = `${value}`.trim();
     const rangeParts = normalizedValue.split('-');
+    const minimumAllowedLowerBound = allowZeroLowerBound ? 0 : 1;
+    const minimumAllowedUpperBound = allowZeroUpperBound ? 0 : 1;
     if (rangeParts.length === 1) {
         const normalizedInteger = parseUnsignedIntegerToken(rangeParts[0]);
-        const minimumAllowedValue = allowZeroUpperBound ? 0 : 1;
+        const minimumAllowedValue = Math.max(
+            minimumAllowedLowerBound,
+            minimumAllowedUpperBound,
+        );
         return normalizedInteger >= minimumAllowedValue
             ? {
                   lowerBound: normalizedInteger,
@@ -43,8 +48,9 @@ function parseNormalizedXhttpRangeBounds(
         return undefined;
     }
 
-    const minimumAllowedUpperBound = allowZeroUpperBound ? 0 : 1;
-    return upperBound >= minimumAllowedUpperBound && upperBound >= lowerBound
+    return lowerBound >= minimumAllowedLowerBound &&
+        upperBound >= minimumAllowedUpperBound &&
+        upperBound >= lowerBound
         ? {
               lowerBound,
               upperBound,
@@ -58,25 +64,35 @@ function parseNormalizedXhttpPositiveRangeBounds(value) {
     });
 }
 
-export function normalizeXhttpScalarUpperBound(value) {
-    // IMPORTANT: the legacy-client compatibility reason for collapsing ranges
-    // to an upper bound specifically applies to sc-max-each-post-bytes.
-    // Mihomo first shipped sc-max-each-post-bytes as an int-only field, then
-    // only later added true range support, so emitting `lower-upper` here can
-    // still break older clients that predate that change. Once the new
-    // official Mihomo stable release with ranged sc-max-each-post-bytes is
-    // broadly deployed, switch that field back to preserving full ranges and
-    // remove the upper-bound compatibility logic tied to it.
-    const normalizedBounds = parseNormalizedXhttpPositiveRangeBounds(value);
-    return normalizedBounds?.upperBound;
+function parseNormalizedXhttpStrictPositiveRangeBounds(value) {
+    return parseNormalizedXhttpRangeBounds(value, {
+        allowZeroLowerBound: false,
+        allowZeroUpperBound: false,
+    });
 }
 
 export function normalizeXhttpPositiveRange(value) {
-    // IMPORTANT: unlike sc-max-each-post-bytes, sc-min-posts-interval-ms does
-    // not need an old-client compatibility shim. Mihomo introduced
-    // sc-min-posts-interval-ms with range semantics from day one, so we should
-    // keep exporting its full normalized range form instead of collapsing it.
     const normalizedBounds = parseNormalizedXhttpPositiveRangeBounds(value);
+    if (!normalizedBounds) {
+        return undefined;
+    }
+
+    const { lowerBound, upperBound } = normalizedBounds;
+    return lowerBound === upperBound ? upperBound : `${lowerBound}-${upperBound}`;
+}
+
+export function normalizeXhttpStrictPositiveRangeString(value) {
+    const normalizedBounds = parseNormalizedXhttpStrictPositiveRangeBounds(value);
+    if (!normalizedBounds) {
+        return undefined;
+    }
+
+    const { lowerBound, upperBound } = normalizedBounds;
+    return lowerBound === upperBound ? `${upperBound}` : `${lowerBound}-${upperBound}`;
+}
+
+export function normalizeXhttpStrictPositiveRangeValue(value) {
+    const normalizedBounds = parseNormalizedXhttpStrictPositiveRangeBounds(value);
     if (!normalizedBounds) {
         return undefined;
     }

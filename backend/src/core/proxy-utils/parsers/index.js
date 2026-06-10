@@ -22,7 +22,8 @@ import {
     normalizeXhttpIntegerValue,
     normalizeXhttpNonNegativeRange,
     normalizeXhttpPositiveRange,
-    normalizeXhttpScalarUpperBound,
+    normalizeXhttpStrictPositiveRangeString,
+    normalizeXhttpStrictPositiveRangeValue,
 } from '../xhttp-utils';
 import { extractPathQueryParam, getPathQueryParam } from '../transport-path';
 import {
@@ -952,7 +953,7 @@ function URI_VLESS() {
 
             const parsedHeaders = {};
             for (const [key, value] of Object.entries(headers)) {
-                if (typeof value === 'string' && value !== '') {
+                if (typeof value === 'string') {
                     parsedHeaders[key] = value;
                 }
             }
@@ -1023,7 +1024,7 @@ function URI_VLESS() {
 
             const unsupportedHeaders = {};
             for (const [key, value] of Object.entries(headers)) {
-                if (typeof value === 'string' && value !== '') {
+                if (typeof value === 'string') {
                     continue;
                 }
 
@@ -1105,18 +1106,47 @@ function URI_VLESS() {
                         }
                         break;
                     case 'xPaddingBytes':
+                        if (
+                            normalizeXhttpStrictPositiveRangeString(value) ==
+                            null
+                        ) {
+                            setUnsupportedXhttpField(
+                                unsupportedExtra,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
                     case 'xPaddingKey':
                     case 'xPaddingHeader':
                     case 'xPaddingPlacement':
                     case 'xPaddingMethod':
                     case 'uplinkHTTPMethod':
+                    case 'sessionIDPlacement':
                     case 'sessionPlacement':
+                    case 'sessionIDKey':
                     case 'sessionKey':
                     case 'seqPlacement':
                     case 'seqKey':
                     case 'uplinkDataPlacement':
                     case 'uplinkDataKey':
-                        if (!isNotBlank(value)) {
+                        if (typeof value !== 'string') {
+                            setUnsupportedXhttpField(
+                                unsupportedExtra,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'sessionIDTable':
+                        // NOTE: Xray-core and mihomo both validate this field
+                        // together with sessionIDLength when the table is
+                        // non-empty: the table must stay ASCII, the length
+                        // range must stay > 0, and the combined ID space must
+                        // remain large enough. We only do local shape checks
+                        // here for now, so type-valid values are not
+                        // automatically upstream-valid yet.
+                        if (typeof value !== 'string') {
                             setUnsupportedXhttpField(
                                 unsupportedExtra,
                                 key,
@@ -1134,7 +1164,10 @@ function URI_VLESS() {
                         }
                         break;
                     case 'scMaxEachPostBytes':
-                        if (normalizeXhttpScalarUpperBound(value) == null) {
+                        if (
+                            normalizeXhttpStrictPositiveRangeString(value) ==
+                            null
+                        ) {
                             setUnsupportedXhttpField(
                                 unsupportedExtra,
                                 key,
@@ -1144,6 +1177,23 @@ function URI_VLESS() {
                         break;
                     case 'scMinPostsIntervalMs':
                         if (normalizeXhttpPositiveRange(value) == null) {
+                            setUnsupportedXhttpField(
+                                unsupportedExtra,
+                                key,
+                                value,
+                            );
+                        }
+                        break;
+                    case 'sessionIDLength':
+                        // NOTE: Xray-core and mihomo treat this as a coupled
+                        // session-table/session-length constraint rather than a
+                        // standalone positive range. Keeping only the local
+                        // range normalization here does not guarantee the pair
+                        // will pass upstream validation.
+                        if (
+                            normalizeXhttpStrictPositiveRangeString(value) ==
+                            null
+                        ) {
                             setUnsupportedXhttpField(
                                 unsupportedExtra,
                                 key,
@@ -1543,8 +1593,11 @@ function URI_VLESS() {
             if (extra.noGRPCHeader === true) {
                 target['no-grpc-header'] = true;
             }
-            if (isNotBlank(extra.xPaddingBytes)) {
-                target['x-padding-bytes'] = extra.xPaddingBytes;
+            const xPaddingBytes = normalizeXhttpStrictPositiveRangeString(
+                extra.xPaddingBytes,
+            );
+            if (xPaddingBytes != null) {
+                target['x-padding-bytes'] = xPaddingBytes;
             }
             if (extra.xPaddingObfsMode === true) {
                 target['x-padding-obfs-mode'] = true;
@@ -1564,12 +1617,27 @@ function URI_VLESS() {
             if (isNotBlank(extra.uplinkHTTPMethod)) {
                 target['uplink-http-method'] = extra.uplinkHTTPMethod;
             }
-            if (isNotBlank(extra.sessionPlacement)) {
+            if (isNotBlank(extra.sessionIDPlacement)) {
+                target['session-placement'] = extra.sessionIDPlacement;
+            } else if (isNotBlank(extra.sessionPlacement)) {
                 target['session-placement'] = extra.sessionPlacement;
             }
-            if (isNotBlank(extra.sessionKey)) {
+            if (isNotBlank(extra.sessionIDKey)) {
+                target['session-key'] = extra.sessionIDKey;
+            } else if (isNotBlank(extra.sessionKey)) {
                 target['session-key'] = extra.sessionKey;
             }
+            if (typeof extra.sessionIDTable === 'string') {
+                target['session-table'] = extra.sessionIDTable;
+            }
+
+            const sessionIDLength = normalizeXhttpStrictPositiveRangeString(
+                extra.sessionIDLength,
+            );
+            if (sessionIDLength != null) {
+                target['session-length'] = sessionIDLength;
+            }
+
             if (isNotBlank(extra.seqPlacement)) {
                 target['seq-placement'] = extra.seqPlacement;
             }
@@ -1590,7 +1658,7 @@ function URI_VLESS() {
                 target['uplink-chunk-size'] = uplinkChunkSize;
             }
 
-            const scMaxEachPostBytes = normalizeXhttpScalarUpperBound(
+            const scMaxEachPostBytes = normalizeXhttpStrictPositiveRangeValue(
                 extra.scMaxEachPostBytes,
             );
             if (scMaxEachPostBytes != null) {
