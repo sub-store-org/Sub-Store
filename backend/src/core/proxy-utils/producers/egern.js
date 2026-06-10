@@ -92,6 +92,11 @@ export default function Egern_Producer() {
                     normalizeSnellVersion(proxy.version) === null
                 ) {
                     return false;
+                } else if (proxy.type === 'snell' && hasShadowTls(proxy)) {
+                    $.error(
+                        `Platform Egern does not support Snell shadow-tls proxy ${proxy.name}. Proxy has been filtered.`,
+                    );
+                    return false;
                 } else if (
                     ['anytls'].includes(proxy.type) &&
                     proxy.network &&
@@ -685,6 +690,15 @@ function getTfo(proxy) {
 
 function getUdpRelay(proxy) {
     return proxy.udp ?? proxy.udp_relay;
+}
+
+function hasShadowTls(proxy) {
+    return (
+        proxy.plugin === 'shadow-tls' ||
+        isPresent(proxy, 'shadow-tls-password') ||
+        isPresent(proxy, 'shadow-tls-sni') ||
+        isPresent(proxy, 'shadow-tls-version')
+    );
 }
 
 function getNonEmptyValue(value) {

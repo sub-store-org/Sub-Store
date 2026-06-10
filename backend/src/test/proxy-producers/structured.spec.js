@@ -2117,6 +2117,68 @@ describe('Proxy structured producers', function () {
         }
     });
 
+    it('filters Egern Snell shadow-tls variants', function () {
+        const proxies = [
+            {
+                type: 'snell',
+                name: 'Egern Snell ShadowTLS Fields',
+                server: 'snell-shadowtls.example.com',
+                port: 44046,
+                psk: 'secret',
+                version: 5,
+                'shadow-tls-password': 'shadow-pass',
+                'shadow-tls-sni': 'mask.example.com',
+                'shadow-tls-version': 3,
+            },
+            {
+                type: 'snell',
+                name: 'Egern Snell ShadowTLS Plugin',
+                server: 'snell-plugin.example.com',
+                port: 44046,
+                psk: 'secret',
+                version: 4,
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    host: 'mask.example.com',
+                    password: 'shadow-pass',
+                    version: 3,
+                },
+            },
+            {
+                type: 'snell',
+                name: 'Egern Snell Plain',
+                server: 'snell.example.com',
+                port: 44046,
+                psk: 'secret',
+                version: 5,
+            },
+        ];
+
+        const { result: internal, errors } = captureErrors(() =>
+            produceInternal('Egern', proxies),
+        );
+        const { result: external, errors: externalErrors } = captureErrors(() =>
+            loadProducedYaml('Egern', proxies),
+        );
+
+        expect(errors).to.deep.equal([
+            'Platform Egern does not support Snell shadow-tls proxy Egern Snell ShadowTLS Fields. Proxy has been filtered.',
+            'Platform Egern does not support Snell shadow-tls proxy Egern Snell ShadowTLS Plugin. Proxy has been filtered.',
+        ]);
+        expect(externalErrors).to.deep.equal(errors);
+
+        for (const output of [internal, external.proxies]) {
+            expect(output).to.have.length(1);
+            expectSubset(output[0], {
+                snell: {
+                    name: 'Egern Snell Plain',
+                    server: 'snell.example.com',
+                    version: 5,
+                },
+            });
+        }
+    });
+
     it('emits Egern SOCKS5 over TLS and root REALITY options', function () {
         const proxies = [
             {
