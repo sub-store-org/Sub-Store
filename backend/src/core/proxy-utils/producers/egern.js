@@ -26,6 +26,7 @@ export default function Egern_Producer() {
                         'wireguard',
                         'anytls',
                         'ssh',
+                        'snell',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ((proxy.plugin === 'obfs' &&
@@ -63,16 +64,20 @@ export default function Egern_Producer() {
                                 '2022-blake3-aes-256-gcm',
                             ].includes(proxy.cipher))) ||
                     (proxy.type === 'vmess' &&
-                        !['h2', 'http', 'ws', 'tcp'].includes(proxy.network) &&
-                        proxy.network) ||
+                        ((!['h2', 'http', 'ws', 'tcp', 'grpc'].includes(
+                            proxy.network,
+                        ) &&
+                            proxy.network) ||
+                            !isEgernGrpcGun(proxy))) ||
                     (proxy.type === 'trojan' &&
                         !['http', 'ws', 'tcp'].includes(proxy.network) &&
                         proxy.network) ||
                     (proxy.type === 'vless' &&
-                        ((!['h2', 'http', 'ws', 'tcp'].includes(
+                        ((!['h2', 'http', 'ws', 'tcp', 'grpc'].includes(
                             proxy.network,
                         ) &&
                             proxy.network) ||
+                            !isEgernGrpcGun(proxy) ||
                             (typeof proxy.flow !== 'undefined' &&
                                 !['xtls-rprx-vision', ''].includes(
                                     proxy.flow,
@@ -83,11 +88,14 @@ export default function Egern_Producer() {
                 ) {
                     return false;
                 } else if (
+                    proxy.type === 'snell' &&
+                    normalizeSnellVersion(proxy.version) === null
+                ) {
+                    return false;
+                } else if (
                     ['anytls'].includes(proxy.type) &&
                     proxy.network &&
-                    (!['tcp'].includes(proxy.network) ||
-                        (['tcp'].includes(proxy.network) &&
-                            proxy['reality-opts']))
+                    !['tcp'].includes(proxy.network)
                 ) {
                     return false;
                 } else if (
@@ -126,12 +134,13 @@ export default function Egern_Producer() {
                                       headers: proxy.headers,
                                   }
                                 : {}),
-                            tfo: proxy.tfo || proxy['fast-open'],
+                            tfo: getTfo(proxy),
                             ...(proxy.tls
                                 ? {
                                       sni: proxy.sni,
                                       skip_tls_verify:
                                           proxy['skip-cert-verify'],
+                                      reality: getReality(proxy),
                                   }
                                 : {}),
                         };
@@ -148,21 +157,29 @@ export default function Egern_Producer() {
                                       headers: proxy.headers,
                                   }
                                 : {}),
-                            tfo: proxy.tfo || proxy['fast-open'],
+                            tfo: getTfo(proxy),
                             sni: proxy.sni,
                             skip_tls_verify: proxy['skip-cert-verify'],
+                            reality: getReality(proxy),
                         };
                     } else if (proxy.type === 'socks5') {
                         proxy = {
-                            type: 'socks5',
+                            type: proxy.tls ? 'socks5_tls' : 'socks5',
                             name: proxy.name,
                             server: proxy.server,
                             port: proxy.port,
                             username: proxy.username,
                             password: proxy.password,
-                            tfo: proxy.tfo || proxy['fast-open'],
-                            udp_relay:
-                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            tfo: getTfo(proxy),
+                            udp_relay: getUdpRelay(proxy),
+                            ...(proxy.tls
+                                ? {
+                                      sni: proxy.sni,
+                                      skip_tls_verify:
+                                          proxy['skip-cert-verify'],
+                                      reality: getReality(proxy),
+                                  }
+                                : {}),
                         };
                     } else if (proxy.type === 'ss') {
                         proxy = {
@@ -175,9 +192,8 @@ export default function Egern_Producer() {
                             server: proxy.server,
                             port: proxy.port,
                             password: proxy.password,
-                            tfo: proxy.tfo || proxy['fast-open'],
-                            udp_relay:
-                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            tfo: getTfo(proxy),
+                            udp_relay: getUdpRelay(proxy),
                         };
                         if (isPresent(original, 'plugin')) {
                             if (original.plugin === 'obfs') {
@@ -207,9 +223,8 @@ export default function Egern_Producer() {
                                       ),
                                   }
                                 : {}),
-                            tfo: proxy.tfo || proxy['fast-open'],
-                            udp_relay:
-                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            tfo: getTfo(proxy),
+                            udp_relay: getUdpRelay(proxy),
                             sni: proxy.sni,
                             skip_tls_verify: proxy['skip-cert-verify'],
                             port_hopping: proxy.ports,
@@ -251,11 +266,11 @@ export default function Egern_Producer() {
                             server: proxy.server,
                             port: proxy.port,
                             password: proxy.password,
-                            tfo: proxy.tfo || proxy['fast-open'],
-                            udp_relay:
-                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            tfo: getTfo(proxy),
+                            udp_relay: getUdpRelay(proxy),
                             sni: proxy.sni,
                             skip_tls_verify: proxy['skip-cert-verify'],
+                            reality: getReality(proxy),
                             websocket: proxy.websocket,
                         };
                     } else if (proxy.type === 'anytls') {
@@ -265,11 +280,11 @@ export default function Egern_Producer() {
                             server: proxy.server,
                             port: proxy.port,
                             password: proxy.password,
-                            tfo: proxy.tfo || proxy['fast-open'],
-                            udp_relay:
-                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            tfo: getTfo(proxy),
+                            udp_relay: getUdpRelay(proxy),
                             sni: proxy.sni,
                             skip_tls_verify: proxy['skip-cert-verify'],
+                            reality: getReality(proxy),
                         };
                     } else if (proxy.type === 'vmess') {
                         // Egern：传输层，支持 ws/wss/http1/http2/tls，不配置则为 tcp
@@ -319,6 +334,8 @@ export default function Egern_Producer() {
                                     skip_tls_verify: proxy['skip-cert-verify'],
                                 },
                             };
+                        } else if (proxy.network === 'grpc') {
+                            proxy.transport = getGrpcTransport(proxy);
                         } else if (
                             (proxy.network === 'tcp' || !proxy.network) &&
                             proxy.tls
@@ -332,10 +349,13 @@ export default function Egern_Producer() {
                                 },
                             };
                         }
-                        let legacy;
+                        let legacy = false;
                         if (isPresent(proxy, 'aead') && !proxy.aead) {
                             legacy = true;
-                        } else if (proxy.alterId !== 0) {
+                        } else if (
+                            isPresent(proxy, 'alterId') &&
+                            proxy.alterId !== 0
+                        ) {
                             legacy = true;
                         }
                         proxy = {
@@ -345,10 +365,9 @@ export default function Egern_Producer() {
                             port: proxy.port,
                             user_id: proxy.uuid,
                             security,
-                            tfo: proxy.tfo || proxy['fast-open'],
+                            tfo: getTfo(proxy),
                             legacy,
-                            udp_relay:
-                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            udp_relay: getUdpRelay(proxy),
                             transport: proxy.transport,
                         };
                     } else if (proxy.type === 'vless') {
@@ -401,25 +420,16 @@ export default function Egern_Producer() {
                                     skip_tls_verify: proxy['skip-cert-verify'],
                                 },
                             };
+                        } else if (proxy.network === 'grpc') {
+                            proxy.transport = getGrpcTransport(proxy);
                         } else if (proxy.network === 'tcp' || !proxy.network) {
-                            let reality;
-                            if (
-                                proxy['reality-opts']?.['short-id'] ||
-                                proxy['reality-opts']?.['public-key']
-                            ) {
-                                reality = {
-                                    short_id: proxy['reality-opts']['short-id'],
-                                    public_key:
-                                        proxy['reality-opts']['public-key'],
-                                };
-                            }
                             proxy.transport = {
                                 [proxy.tls ? 'tls' : 'tcp']: {
                                     sni: proxy.tls ? proxy.sni : undefined,
                                     skip_tls_verify: proxy.tls
                                         ? proxy['skip-cert-verify']
                                         : undefined,
-                                    reality,
+                                    reality: getReality(proxy),
                                 },
                             };
                             flow = proxy.flow;
@@ -432,9 +442,8 @@ export default function Egern_Producer() {
                             port: proxy.port,
                             user_id: proxy.uuid,
                             security: proxy.cipher,
-                            tfo: proxy.tfo || proxy['fast-open'],
-                            udp_relay:
-                                proxy.udp || proxy.udp_relay || proxy.udp_relay,
+                            tfo: getTfo(proxy),
+                            udp_relay: getUdpRelay(proxy),
                             transport: proxy.transport,
                             flow,
                         };
@@ -500,7 +509,31 @@ export default function Egern_Producer() {
                             private_key: proxy['private-key'],
                             // private_key_passphrase: proxy['private-key-passphrase'],
                             host_keys: proxy['host-key'],
-                            tfo: proxy.tfo || proxy['fast-open'],
+                            tfo: getTfo(proxy),
+                        };
+                    } else if (proxy.type === 'snell') {
+                        const snellVersion = normalizeSnellVersion(
+                            proxy.version,
+                        );
+                        proxy = {
+                            type: 'snell',
+                            name: proxy.name,
+                            server: proxy.server,
+                            port: proxy.port,
+                            psk: proxy.psk,
+                            version: snellVersion,
+                            ...(snellVersion == null || snellVersion >= 3
+                                ? {
+                                      udp_relay: getUdpRelay(proxy),
+                                  }
+                                : {}),
+                            reuse: proxy.reuse,
+                            obfs: proxy['obfs-opts']?.mode || proxy.obfs,
+                            obfs_host:
+                                proxy['obfs-opts']?.host ||
+                                proxy['obfs-host'] ||
+                                proxy.obfs_host,
+                            tfo: getTfo(proxy),
                         };
                     }
                     if (
@@ -561,6 +594,7 @@ export default function Egern_Producer() {
                             'hysteria2',
                             'anytls',
                             'ssh',
+                            'snell',
                         ].includes(original.type)
                     ) {
                         if (
@@ -595,11 +629,12 @@ export default function Egern_Producer() {
                     if (proxy.transport) {
                         for (const key in proxy.transport) {
                             if (
-                                Object.keys(proxy.transport[key]).length ===
+                                key !== 'grpc' &&
+                                (Object.keys(proxy.transport[key]).length ===
                                     0 ||
-                                Object.values(proxy.transport[key]).every(
-                                    (value) => value == null,
-                                )
+                                    Object.values(proxy.transport[key]).every(
+                                        (value) => value == null,
+                                    ))
                             ) {
                                 delete proxy.transport[key];
                             }
@@ -642,6 +677,62 @@ function hasHeaders(proxy) {
         typeof proxy.headers === 'object' &&
         Object.keys(proxy.headers).length > 0
     );
+}
+
+function getTfo(proxy) {
+    return proxy.tfo ?? proxy['fast-open'];
+}
+
+function getUdpRelay(proxy) {
+    return proxy.udp ?? proxy.udp_relay;
+}
+
+function getNonEmptyValue(value) {
+    if (value == null) return undefined;
+    if (typeof value === 'string' && value.length === 0) return undefined;
+    return value;
+}
+
+function getReality(proxy) {
+    const realityOpts = proxy?.['reality-opts'];
+    if (!realityOpts) return undefined;
+
+    const reality = {};
+    const publicKey = getNonEmptyValue(realityOpts['public-key']);
+    const shortId = getNonEmptyValue(realityOpts['short-id']);
+    if (publicKey != null) reality.public_key = publicKey;
+    if (shortId != null) reality.short_id = shortId;
+
+    return Object.keys(reality).length > 0 ? reality : undefined;
+}
+
+function getGrpcTransport(proxy) {
+    return {
+        grpc: {
+            service_name: proxy['grpc-opts']?.['grpc-service-name'],
+            sni: proxy.sni,
+            reality: getReality(proxy),
+            skip_tls_verify: proxy['skip-cert-verify'],
+        },
+    };
+}
+
+function isEgernGrpcGun(proxy) {
+    if (proxy.network !== 'grpc') return true;
+
+    const grpcType = proxy['grpc-opts']?.['_grpc-type'];
+    if (grpcType == null) return true;
+
+    return `${grpcType}`.trim().toLowerCase() === 'gun';
+}
+
+function normalizeSnellVersion(version) {
+    if (version == null) return undefined;
+
+    const normalized = `${version}`.trim();
+    if (!/^[1-5]$/.test(normalized)) return null;
+
+    return parseInt(normalized, 10);
 }
 
 function getFirstHeaderValue(headers, ...keys) {
@@ -699,6 +790,7 @@ function supportsRootFingerprintSha256(original, proxy) {
         ['anytls', 'https', 'hysteria2', 'trojan', 'tuic'].includes(
             original.type,
         ) ||
+        (original.type === 'socks5' && proxy.type === 'socks5_tls') ||
         (original.type === 'http' && proxy.type === 'https')
     );
 }
@@ -706,7 +798,7 @@ function supportsRootFingerprintSha256(original, proxy) {
 function addTransportFingerprintSha256(transport, fingerprintSha256) {
     if (!transport) return;
 
-    for (const key of ['http2', 'tls', 'wss']) {
+    for (const key of ['grpc', 'http2', 'tls', 'wss']) {
         if (transport[key]) {
             transport[key].fingerprint_sha256 = fingerprintSha256;
         }

@@ -2068,6 +2068,269 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('emits Egern Snell versions 1 through 5', function () {
+        const proxies = [1, 2, 3, 4, 5, 6, '4x'].map((version) => ({
+            type: 'snell',
+            name: `Egern Snell ${version}`,
+            server: 'snell.example.com',
+            port: 44046,
+            psk: 'secret',
+            version,
+            udp: true,
+            reuse: true,
+            tfo: true,
+            'block-quic': 'on',
+            'obfs-opts': {
+                mode: 'http',
+                host: 'obfs.example.com',
+            },
+        }));
+        const getProxy = (items, name) =>
+            items.find((item) => item.snell?.name === name)?.snell;
+        const getVersions = (items) => items.map((item) => item.snell.version);
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        expect(getVersions(internal)).to.deep.equal([1, 2, 3, 4, 5]);
+        expect(getVersions(external.proxies)).to.deep.equal([1, 2, 3, 4, 5]);
+        expect(getProxy(internal, 'Egern Snell 1')).to.not.have.property(
+            'udp_relay',
+        );
+        expect(getProxy(internal, 'Egern Snell 2')).to.not.have.property(
+            'udp_relay',
+        );
+        for (const output of [internal, external.proxies]) {
+            expectSubset(getProxy(output, 'Egern Snell 5'), {
+                name: 'Egern Snell 5',
+                server: 'snell.example.com',
+                port: 44046,
+                psk: 'secret',
+                version: 5,
+                udp_relay: true,
+                reuse: true,
+                obfs: 'http',
+                obfs_host: 'obfs.example.com',
+                tfo: true,
+                block_quic: true,
+            });
+        }
+    });
+
+    it('emits Egern SOCKS5 over TLS and root REALITY options', function () {
+        const proxies = [
+            {
+                type: 'socks5',
+                name: 'Egern SOCKS5 TLS Reality',
+                server: 'socks.example.com',
+                port: 1080,
+                username: 'user',
+                password: 'pass',
+                tls: true,
+                sni: 'socks-sni.example.com',
+                tfo: false,
+                udp: true,
+                'skip-cert-verify': false,
+                'tls-fingerprint': 'SHA256:SOCKS',
+                'reality-opts': {
+                    'public-key': 'socks-pub',
+                    'short-id': '01',
+                },
+            },
+            {
+                type: 'https',
+                name: 'Egern HTTPS Reality',
+                server: 'https.example.com',
+                port: 443,
+                sni: 'https-sni.example.com',
+                'skip-cert-verify': true,
+                'reality-opts': {
+                    'public-key': 'https-pub',
+                    'short-id': '02',
+                },
+            },
+            {
+                type: 'trojan',
+                name: 'Egern Trojan Reality',
+                server: 'trojan.example.com',
+                port: 443,
+                password: 'secret',
+                tfo: false,
+                udp: true,
+                'skip-cert-verify': false,
+                'reality-opts': {
+                    'public-key': 'trojan-pub',
+                    'short-id': '03',
+                },
+            },
+            {
+                type: 'anytls',
+                name: 'Egern AnyTLS Reality',
+                server: 'anytls.example.com',
+                port: 443,
+                password: 'secret',
+                network: 'tcp',
+                'reality-opts': {
+                    'public-key': 'anytls-pub',
+                    'short-id': '04',
+                },
+            },
+        ];
+        const getProxy = (items, type, name) =>
+            items.find((item) => item[type]?.name === name)?.[type];
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        for (const output of [internal, external.proxies]) {
+            expectSubset(
+                getProxy(output, 'socks5_tls', 'Egern SOCKS5 TLS Reality'),
+                {
+                    server: 'socks.example.com',
+                    port: 1080,
+                    username: 'user',
+                    password: 'pass',
+                    tfo: false,
+                    udp_relay: true,
+                    skip_tls_verify: false,
+                    fingerprint_sha256: 'SHA256:SOCKS',
+                    reality: {
+                        public_key: 'socks-pub',
+                        short_id: '01',
+                    },
+                },
+            );
+            expectSubset(getProxy(output, 'https', 'Egern HTTPS Reality'), {
+                skip_tls_verify: true,
+                reality: {
+                    public_key: 'https-pub',
+                    short_id: '02',
+                },
+            });
+            expectSubset(getProxy(output, 'trojan', 'Egern Trojan Reality'), {
+                tfo: false,
+                udp_relay: true,
+                skip_tls_verify: false,
+                reality: {
+                    public_key: 'trojan-pub',
+                    short_id: '03',
+                },
+            });
+            expectSubset(getProxy(output, 'anytls', 'Egern AnyTLS Reality'), {
+                reality: {
+                    public_key: 'anytls-pub',
+                    short_id: '04',
+                },
+            });
+        }
+    });
+
+    it('emits Egern VMess and VLESS gRPC Gun transports with REALITY', function () {
+        const proxies = [
+            {
+                type: 'vmess',
+                name: 'Egern VMess gRPC Reality',
+                server: 'vmess.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'aes-128-gcm',
+                alterId: 0,
+                tls: true,
+                sni: 'vmess-sni.example.com',
+                network: 'grpc',
+                tfo: false,
+                udp: true,
+                'skip-cert-verify': true,
+                'tls-fingerprint': 'SHA256:GRPC',
+                'grpc-opts': {
+                    'grpc-service-name': 'vmess-service',
+                    '_grpc-type': 'gun',
+                },
+                'reality-opts': {
+                    'public-key': 'vmess-pub',
+                    'short-id': '05',
+                },
+            },
+            {
+                type: 'vless',
+                name: 'Egern VLESS gRPC Reality',
+                server: 'vless.example.com',
+                port: 443,
+                uuid: UUID,
+                tls: true,
+                sni: 'vless-sni.example.com',
+                network: 'grpc',
+                'grpc-opts': {
+                    'grpc-service-name': 'vless-service',
+                },
+                'reality-opts': {
+                    'public-key': 'vless-pub',
+                    'short-id': '06',
+                },
+            },
+            {
+                type: 'vmess',
+                name: 'Egern VMess gRPC Multi',
+                server: 'vmess-multi.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                network: 'grpc',
+                'grpc-opts': {
+                    'grpc-service-name': 'multi-service',
+                    '_grpc-type': 'multi',
+                },
+            },
+        ];
+        const getProxy = (items, type, name) =>
+            items.find((item) => item[type]?.name === name)?.[type];
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        for (const output of [internal, external.proxies]) {
+            expect(output).to.have.length(2);
+            expectSubset(
+                getProxy(output, 'vmess', 'Egern VMess gRPC Reality'),
+                {
+                    user_id: UUID,
+                    security: 'aes-128-gcm',
+                    legacy: false,
+                    tfo: false,
+                    udp_relay: true,
+                    transport: {
+                        grpc: {
+                            service_name: 'vmess-service',
+                            sni: 'vmess-sni.example.com',
+                            skip_tls_verify: true,
+                            fingerprint_sha256: 'SHA256:GRPC',
+                            reality: {
+                                public_key: 'vmess-pub',
+                                short_id: '05',
+                            },
+                        },
+                    },
+                },
+            );
+            expectSubset(
+                getProxy(output, 'vless', 'Egern VLESS gRPC Reality'),
+                {
+                    user_id: UUID,
+                    transport: {
+                        grpc: {
+                            service_name: 'vless-service',
+                            sni: 'vless-sni.example.com',
+                            reality: {
+                                public_key: 'vless-pub',
+                                short_id: '06',
+                            },
+                        },
+                    },
+                },
+            );
+        }
+    });
+
     it('emits Egern fingerprint_sha256 for supported TLS proxy types and transports', function () {
         const fingerprint = 'SHA256:FINGERPRINT';
         const proxies = [
