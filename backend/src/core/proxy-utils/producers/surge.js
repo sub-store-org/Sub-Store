@@ -96,6 +96,18 @@ function warnMaxStreamsIfNeeded(proxy) {
     );
 }
 
+function hasSnellObfs(proxy) {
+    return (
+        isPresent(proxy, 'obfs-opts.mode') ||
+        isPresent(proxy, 'obfs-opts.host') ||
+        isPresent(proxy, 'obfs-opts.path')
+    );
+}
+
+function isUnsupportedSnellV6Obfs(proxy) {
+    return Number(proxy.version) === 6 && hasSnellObfs(proxy);
+}
+
 export default function Surge_Producer() {
     const produce = (proxy, type, opts = {}) => {
         if (
@@ -923,6 +935,13 @@ function formatHeaderMap(headers, separator) {
 }
 
 function snell(proxy) {
+    if (isUnsupportedSnellV6Obfs(proxy)) {
+        $.error(
+            `Platform ${targetPlatform} does not support Snell version ${proxy.version} with obfs`,
+        );
+        return '';
+    }
+
     const result = new Result(proxy);
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,version=${proxy.version}`, 'version');

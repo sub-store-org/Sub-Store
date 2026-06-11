@@ -807,6 +807,47 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces Surge Snell v6 and filters v6 obfs', function () {
+        const { result: output, errors } = captureErrors(() =>
+            ProxyUtils.produce(
+                [
+                    {
+                        type: 'snell',
+                        name: 'Surge Snell v6',
+                        server: 'snell.example.com',
+                        port: 443,
+                        psk: 'secret',
+                        version: 6,
+                        udp: true,
+                    },
+                    {
+                        type: 'snell',
+                        name: 'Surge Snell v6 Obfs',
+                        server: 'snell.example.com',
+                        port: 443,
+                        psk: 'secret',
+                        version: 6,
+                        udp: true,
+                        'obfs-opts': {
+                            mode: 'tls',
+                            host: 'obfs.example.com',
+                            path: '/snell',
+                        },
+                    },
+                ],
+                'Surge',
+                'external',
+            ),
+        );
+
+        expect(output).to.equal(
+            'Surge Snell v6=snell,snell.example.com,443,version=6,psk="secret",udp-relay=true',
+        );
+        expect(errors).to.deep.equal([
+            'Platform Surge does not support Snell version 6 with obfs',
+        ]);
+    });
+
     it('omits Surge TLS-only params for plain HTTP, SOCKS5, and VMess nodes', function () {
         const cases = [
             {
@@ -2791,16 +2832,10 @@ describe('Proxy text producers', function () {
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.server,
         ).to.equal('download.example.com');
-        expect(reparsed[0]['xhttp-opts']?.['session-table']).to.equal(
-            'Base62',
-        );
-        expect(reparsed[0]['xhttp-opts']?.['session-length']).to.equal(
-            '16-32',
-        );
+        expect(reparsed[0]['xhttp-opts']?.['session-table']).to.equal('Base62');
+        expect(reparsed[0]['xhttp-opts']?.['session-length']).to.equal('16-32');
         expect(
-            reparsed[0]['xhttp-opts']?.['download-settings']?.[
-                'session-table'
-            ],
+            reparsed[0]['xhttp-opts']?.['download-settings']?.['session-table'],
         ).to.equal('abcXYZ012');
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
@@ -4407,12 +4442,8 @@ describe('Proxy text producers', function () {
         expect(
             reparsed[0]['xhttp-opts']?.['sc-min-posts-interval-ms'],
         ).to.equal('0-300');
-        expect(reparsed[0]['xhttp-opts']?.['session-table']).to.equal(
-            'Base62',
-        );
-        expect(reparsed[0]['xhttp-opts']?.['session-length']).to.equal(
-            '16-32',
-        );
+        expect(reparsed[0]['xhttp-opts']?.['session-table']).to.equal('Base62');
+        expect(reparsed[0]['xhttp-opts']?.['session-length']).to.equal('16-32');
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
                 'sc-max-each-post-bytes'
@@ -4424,9 +4455,7 @@ describe('Proxy text producers', function () {
             ],
         ).to.equal('0-300');
         expect(
-            reparsed[0]['xhttp-opts']?.['download-settings']?.[
-                'session-table'
-            ],
+            reparsed[0]['xhttp-opts']?.['download-settings']?.['session-table'],
         ).to.equal('abcXYZ012');
         expect(
             reparsed[0]['xhttp-opts']?.['download-settings']?.[
