@@ -145,6 +145,7 @@ async function downloadSubscription(req, res) {
         proxy,
         noCache,
         _fakeNode,
+        fakeSub: _fakeSub,
     } = req.query;
     const prettyYaml = req.query.prettyYaml ?? req.query['pretty-yaml'];
 
@@ -187,6 +188,9 @@ async function downloadSubscription(req, res) {
             content = url;
             $.info(`URL 不是链接，视为本地订阅`);
         }
+    }
+    if (_fakeSub) {
+        $.info(`使用假订阅, 不再通过单条订阅名称 ${name} 查询`);
     }
     if (content) {
         $.info(`指定本地订阅: ${content}`);
@@ -232,13 +236,17 @@ async function downloadSubscription(req, res) {
     }
 
     const allSubs = $.read(SUBS_KEY);
-    const fakeSub = {
+    const fakeSub = _fakeNode ? {
         name: 'fakeNodeInfo',
         source: 'local',
         content:
             'invalid share = ss, 1.0.0.1, 80, encrypt-method=aes-128-gcm, password=password',
+    } : {
+        name: 'fakeSub',
+        source: 'remote',
+        url: '',
     };
-    const sub = _fakeNode ? fakeSub : findByName(allSubs, name);
+    const sub = (_fakeNode || _fakeSub) ? fakeSub : findByName(allSubs, name);
     if (sub) {
         try {
             const passThroughUA = sub.passThroughUA;
@@ -270,8 +278,10 @@ async function downloadSubscription(req, res) {
                 proxy,
                 noCache,
             };
-            if (_fakeNode) {
-                $.info(`返回假节点信息`);
+            if (_fakeNode || _fakeSub) {
+                if(_fakeNode) {
+                    $.info(`返回假节点信息`);
+                }
                 delete opt.name;
                 opt.subscription = fakeSub;
             }
