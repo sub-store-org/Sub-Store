@@ -8,7 +8,7 @@
 [Argument]
 cron=input, "55 23 * * *", tag=定时参数, desc=这里需要输入符合CRON表达式的参数
 sync_success_notify=switch, true, tag=同步成功通知, desc=同步配置全部成功时是否发送完成通知
-cors=input, "https://sub-store.vercel.app", tag=CORS允许来源, desc=允许浏览器跨域访问 Sub-Store 后端的 origin. 多个用 , 连接. 设为 * 可恢复旧行为
+cors=input, "https://sub-store.vercel.app,http://substore.stash,https://substore.stash", tag=CORS允许来源, desc=允许浏览器跨域访问 Sub-Store 后端的 origin. 多个用 , 连接. 设为 * 可恢复旧行为
 
 [Rule]
 DOMAIN,sub-store.vercel.app,PROXY

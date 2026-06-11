@@ -6,14 +6,15 @@ import { describe, it } from 'mocha';
 
 import { load } from '@/utils/yaml';
 
-const DEFAULT_ORIGIN = 'https://sub-store.vercel.app';
+const DEFAULT_ORIGINS =
+    'https://sub-store.vercel.app,http://substore.stash,https://substore.stash';
 
 describe('module CORS allowlist config', function () {
     it('adds the default CORS argument to Surge modules', function () {
         for (const filename of ['Surge.sgmodule', 'Surge-Beta.sgmodule']) {
             const content = readConfig(filename);
 
-            expect(content).to.include(`cors:"${DEFAULT_ORIGIN}"`);
+            expect(content).to.include(`cors:"${DEFAULT_ORIGINS}"`);
             expect(content).to.include('argument="cors={{{cors}}}"');
             expect(
                 content.match(/argument="cors=\{\{\{cors\}\}\}"/g),
@@ -27,7 +28,7 @@ describe('module CORS allowlist config', function () {
             .map((item) => item.http_request)
             .filter(Boolean);
 
-        expect(config.compat_arguments.cors).to.equal(DEFAULT_ORIGIN);
+        expect(config.compat_arguments.cors).to.equal(DEFAULT_ORIGINS);
         expect(config.compat_arguments_desc).to.include('1️⃣1️⃣ cors');
         expect(httpRequests).to.have.length(2);
         for (const script of httpRequests) {

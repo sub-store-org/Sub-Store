@@ -22,7 +22,7 @@ Node/服务器/Docker/Android 版可以通过环境变量 `SUB_STORE_CORS_ALLOWE
 SUB_STORE_CORS_ALLOWED_ORIGINS=https://sub-store.vercel.app,http://127.0.0.1:8888
 ```
 
-支持参数配置的 App 模块使用 `cors` 参数设置, 默认值为 `https://sub-store.vercel.app`。如果需要使用本地前端 `http://127.0.0.1:8888?api=http://127.0.0.1:3001/123` 测试代理 App 后端, 需要把模块里的 `cors` 改成 `https://sub-store.vercel.app,http://127.0.0.1:8888`。设为 `*` 可恢复旧的任意来源访问行为, 但任意网站都可能通过浏览器 CORS 读取本机 Sub-Store 后端响应, 不建议长期使用。
+支持参数配置的 App 模块使用 `cors` 参数设置, 默认值为 `https://sub-store.vercel.app,http://substore.stash,https://substore.stash`。如果需要使用本地前端 `http://127.0.0.1:8888?api=http://127.0.0.1:3001/123` 测试代理 App 后端, 需要把模块里的 `cors` 改成 `https://sub-store.vercel.app,http://substore.stash,https://substore.stash,http://127.0.0.1:8888`。设为 `*` 可恢复旧的任意来源访问行为, 但任意网站都可能通过浏览器 CORS 读取本机 Sub-Store 后端响应, 不建议长期使用。
 
 ### 1. Loon
 
