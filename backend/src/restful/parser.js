@@ -1,6 +1,7 @@
 import { success, failed } from '@/restful/response';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { RuleUtils } from '@/core/rule-utils';
+import download from '@/utils/download';
 
 export default function register($app) {
     $app.route('/api/proxy/parse').post(proxy_parser);
@@ -19,12 +20,18 @@ export default function register($app) {
  * client: string, 目标平台名称，见backend/src/core/proxy-utils/producers/index.js
  *
  */
-function proxy_parser(req, res) {
-    const { data, client, content, platform } = req.body;
+async function proxy_parser(req, res) {
     var result = {};
     try {
-        var proxies = ProxyUtils.parse(data ?? content);
-        var par_res = ProxyUtils.produce(proxies, client ?? platform);
+        const { data, client, content, platform, download: downloadOpts, type, produce: produceOpts } = req.body;
+        let raw;
+        if (downloadOpts) {
+            raw = await download(...downloadOpts);
+        } else {
+            raw = data ?? content
+        }
+        var proxies = ProxyUtils.parse(raw);
+        var par_res = ProxyUtils.produce(proxies, client ?? platform, type, produceOpts);
         result['par_res'] = par_res;
     } catch (err) {
         failed(res, err);
@@ -39,9 +46,9 @@ function proxy_parser(req, res) {
  * client: string, 目标平台名称，具体见backend/src/core/rule-utils/producers.js
  */
 function rule_parser(req, res) {
-    const { data, client, content, platform } = req.body;
     var result = {};
     try {
+        const { data, client, content, platform } = req.body;
         const rules = RuleUtils.parse(data ?? content);
         var par_res = RuleUtils.produce(rules, client ?? platform);
         result['par_res'] = par_res;
