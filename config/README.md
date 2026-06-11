@@ -28,7 +28,10 @@ SUB_STORE_CORS_ALLOWED_ORIGINS=https://sub-store.vercel.app,http://127.0.0.1:888
 
 安装使用 插件 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin) 即可。
 
-资源解析器中使用 [https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-parser.loon.min.js](https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-parser.loon.min.js)
+新版 Loon 3.5.0(969)及以上版本 使用资源解析器插件 [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon-parser.plugin`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon-parser.plugin)
+旧版 Loon 在资源解析器中使用 [https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-parser.loon.min.js](https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-parser.loon.min.js)
+
+详见 [Loon 资源解析器说明](https://github.com/sub-store-org/Sub-Store/wiki/Loon-%E8%B5%84%E6%BA%90%E8%A7%A3%E6%9E%90%E5%99%A8%E8%AF%B4%E6%98%8E)
 
 ### 2. Surge
 

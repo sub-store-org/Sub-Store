@@ -1,4 +1,17 @@
 /* eslint-disable no-undef */
+/**
+ * $resourceType: 解析器脚本自带全局变量，资源类型，枚举，详见下方
+ * $resource: 解析器脚本自带全局变量，资源内容，string
+ * $resourceUrl: 解析器脚本自带全局变量，资源url，string
+ *
+ * 资源类型
+ * 0:config
+ * 1:nodes
+ * 2:rules
+ * 3:rewrites
+ * 4:scripts
+ * 5:plugin
+ */
 import { ProxyUtils } from '@/core/proxy-utils';
 import { RuleUtils } from '@/core/rule-utils';
 import { version } from '../../package.json';
@@ -27,9 +40,13 @@ let resourceUrl = typeof $resourceUrl !== 'undefined' ? $resourceUrl : '';
 
     let arg;
     if (typeof $argument != 'undefined') {
-        arg = Object.fromEntries(
-            $argument.split('&').map((item) => item.split('=')),
-        );
+        if (typeof $argument === 'string') {
+            arg = Object.fromEntries(
+                $argument.split('&').map((item) => item.split('=')),
+            );
+        } else {
+            arg = $argument;
+        }
     } else {
         arg = {};
     }
