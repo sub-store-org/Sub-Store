@@ -177,3 +177,7 @@ This project is under the GPL V3 LICENSE.
 [![image](./support.nodeseek.com_page_promotion_id=8.png)](https://yxvm.com)
 
 [NodeSupport](https://github.com/NodeSeekDev/NodeSupport) sponsored this project.
+
+## 致谢
+
+感谢赞助商 [ForZTN](https://sponsorship.forztn.com/github/sub-store-org/Sub-Store) 对项目服务器的支持，感谢。
