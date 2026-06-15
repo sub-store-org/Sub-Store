@@ -5,7 +5,11 @@ import { findByName } from '@/utils/database';
 import { getFlowHeaders, normalizeFlowHeader } from '@/utils/flow';
 import $ from '@/core/app';
 import { failed } from '@/restful/response';
-import { InternalServerError, ResourceNotFoundError } from '@/restful/errors';
+import {
+    InternalServerError,
+    RequestInvalidError,
+    ResourceNotFoundError,
+} from '@/restful/errors';
 import { produceArtifact } from '@/restful/sync';
 // eslint-disable-next-line no-unused-vars
 import { isIPv4, isIPv6 } from '@/utils';
@@ -120,6 +124,7 @@ export default function register($app) {
 
 async function downloadSubscription(req, res) {
     let { name, nezhaIndex } = req.params;
+    const isShareRoute = req.path?.startsWith('/share/');
 
     const { useMihomoExternal, mihomoMerge, mihomoMergeName, mihomoExternal } =
         getMihomoExternalOptions(req.query);
@@ -181,6 +186,45 @@ async function downloadSubscription(req, res) {
         }
         $.info(`传入 $options: ${JSON.stringify(options)}`);
         Object.assign($options, options);
+    }
+    if (isShareRoute && _fakeSub) {
+        $.warn(`分享链接禁止使用 fakeSub: ${name}`);
+        failed(
+            res,
+            new RequestInvalidError(
+                'UNSUPPORTED_SHARE_FAKE_SUB',
+                'share/sub 不支持 fakeSub 参数',
+            ),
+            400,
+        );
+        return;
+    }
+    if (
+        isShareRoute &&
+        ((url != null && url !== '') || (content != null && content !== ''))
+    ) {
+        $.warn(`分享链接禁止使用 url/content: ${name}`);
+        failed(
+            res,
+            new RequestInvalidError(
+                'UNSUPPORTED_SHARE_SUB_SOURCE_OVERRIDE',
+                'share/sub 不支持 url 或 content 参数',
+            ),
+            400,
+        );
+        return;
+    }
+    if (isShareRoute && mergeSources) {
+        $.warn(`分享链接禁止使用 mergeSources: ${name}`);
+        failed(
+            res,
+            new RequestInvalidError(
+                'UNSUPPORTED_SHARE_SUB_MERGE_SOURCES',
+                'share/sub 不支持 mergeSources 参数',
+            ),
+            400,
+        );
+        return;
     }
     if (url) {
         $.info(`指定远程订阅 URL: ${maskAgeSecretInUrl(url)}`);

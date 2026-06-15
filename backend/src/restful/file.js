@@ -54,6 +54,7 @@ function createFile(req, res) {
 async function getFile(req, res, next) {
     let { name } = req.params;
     const reqUA = req.headers['user-agent'] || req.headers['User-Agent'];
+    const isShareRoute = req.path?.startsWith('/share/');
     $.info(`正在下载文件：${name}\n请求 User-Agent: ${reqUA}`);
     let {
         url,
@@ -66,6 +67,7 @@ async function getFile(req, res, next) {
         proxy,
         noCache,
         produceType,
+        fakeFile: _fakeFile,
     } = req.query;
     let $options = {
         _req: {
@@ -100,8 +102,78 @@ async function getFile(req, res, next) {
         $.info(`传入 $options: ${JSON.stringify(options)}`);
         Object.assign($options, options);
     }
+    if (isShareRoute && _fakeFile) {
+        $.warn(`分享链接禁止使用 fakeFile: ${name}`);
+        failed(
+            res,
+            new RequestInvalidError(
+                'UNSUPPORTED_SHARE_FAKE_FILE',
+                'share/file 不支持 fakeFile 参数',
+            ),
+            400,
+        );
+        return;
+    }
+    if (
+        _fakeFile &&
+        (content == null || content === '') &&
+        (url == null || url === '')
+    ) {
+        $.warn(`fakeFile 缺少 content/url: ${name}`);
+        failed(
+            res,
+            new RequestInvalidError(
+                'INVALID_FAKE_FILE_SOURCE',
+                'fakeFile 需要提供 content 或 url 参数',
+            ),
+            400,
+        );
+        return;
+    }
+    if (
+        isShareRoute &&
+        ((url != null && url !== '') || (content != null && content !== ''))
+    ) {
+        $.warn(`分享链接禁止使用 url/content: ${name}`);
+        failed(
+            res,
+            new RequestInvalidError(
+                'UNSUPPORTED_SHARE_FILE_SOURCE_OVERRIDE',
+                'share/file 不支持 url 或 content 参数',
+            ),
+            400,
+        );
+        return;
+    }
+    if (isShareRoute && subInfoUrl != null && subInfoUrl !== '') {
+        $.warn(`分享链接禁止使用 subInfoUrl: ${name}`);
+        failed(
+            res,
+            new RequestInvalidError(
+                'UNSUPPORTED_SHARE_FILE_SUB_INFO_URL',
+                'share/file 不支持 subInfoUrl 参数',
+            ),
+            400,
+        );
+        return;
+    }
+    if (isShareRoute && mergeSources) {
+        $.warn(`分享链接禁止使用 mergeSources: ${name}`);
+        failed(
+            res,
+            new RequestInvalidError(
+                'UNSUPPORTED_SHARE_FILE_MERGE_SOURCES',
+                'share/file 不支持 mergeSources 参数',
+            ),
+            400,
+        );
+        return;
+    }
     if (url) {
         $.info(`指定远程文件 URL: ${maskAgeSecretInUrl(url)}`);
+    }
+    if (_fakeFile) {
+        $.info(`使用假文件, 不再通过单个文件名称 ${name} 查询`);
     }
     if (proxy) {
         $.info(`指定远程订阅使用代理/策略 proxy: ${proxy}`);
@@ -132,7 +204,12 @@ async function getFile(req, res, next) {
     }
 
     const allFiles = $.read(FILES_KEY);
-    const file = findByName(allFiles, name);
+    const fakeFile = {
+        name: 'fakeFile',
+        source: 'remote',
+        url: '',
+    };
+    const file = _fakeFile ? fakeFile : findByName(allFiles, name);
     if (file) {
         try {
             const output = await produceArtifact({
@@ -148,6 +225,7 @@ async function getFile(req, res, next) {
                 noCache,
                 produceType,
                 all: true,
+                file: _fakeFile ? fakeFile : undefined,
             });
 
             try {

@@ -56,6 +56,10 @@ function createResponse(routePath) {
             this.sent = payload;
             return this;
         },
+        json(payload) {
+            this.sent = payload;
+            return this;
+        },
         set(key, value) {
             this.headers[key] = value;
             return this;
@@ -325,6 +329,98 @@ describe('download routes', function () {
 
         expect(res.statusCode).to.equal(201);
         expect(res.sent).to.equal('local-vless');
+    });
+
+    it('rejects fakeSub on share routes', async function () {
+        const res = await requestShareSubscription({
+            query: {
+                fakeSub: '1',
+                content: VLESS_WS,
+            },
+            shareToken: {
+                type: 'sub',
+                name: 'local-vless',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal('UNSUPPORTED_SHARE_FAKE_SUB');
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('allows _fakeNode on share routes for invalid-share fallback', async function () {
+        const res = await requestShareSubscription({
+            query: {
+                _fakeNode: '1',
+                target: 'JSON',
+            },
+            shareToken: {
+                type: 'sub',
+                name: 'local-vless',
+            },
+        });
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.sent).to.be.a('string');
+        expect(res.sent).to.include('fakeNodeInfo');
+    });
+
+    it('rejects url on share routes', async function () {
+        const res = await requestShareSubscription({
+            query: {
+                url: 'https://example.com/sub.txt',
+            },
+            shareToken: {
+                type: 'sub',
+                name: 'local-vless',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal(
+            'UNSUPPORTED_SHARE_SUB_SOURCE_OVERRIDE',
+        );
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects content on share routes', async function () {
+        const res = await requestShareSubscription({
+            query: {
+                content: VLESS_WS,
+            },
+            shareToken: {
+                type: 'sub',
+                name: 'local-vless',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal(
+            'UNSUPPORTED_SHARE_SUB_SOURCE_OVERRIDE',
+        );
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects mergeSources on share routes', async function () {
+        const res = await requestShareSubscription({
+            query: {
+                mergeSources: 'remoteFirst',
+            },
+            shareToken: {
+                type: 'sub',
+                name: 'local-vless',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal(
+            'UNSUPPORTED_SHARE_SUB_MERGE_SOURCES',
+        );
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
     });
 
     it('encrypts transformed subscription output with source age-public-key', async function () {

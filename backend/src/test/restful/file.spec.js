@@ -69,6 +69,10 @@ function createResponse(routePath) {
             this.sent = payload;
             return this;
         },
+        json(payload) {
+            this.sent = payload;
+            return this;
+        },
         set(key, value) {
             this.headers[key] = value;
             return this;
@@ -80,7 +84,7 @@ function createResponse(routePath) {
     };
 }
 
-async function requestFile(query = {}) {
+async function requestFile(query = {}, { name = 'local-file' } = {}) {
     const handler = getHandler('/api/file/:name');
     const res = createResponse('/api/file/:name');
 
@@ -89,10 +93,10 @@ async function requestFile(query = {}) {
             body: {},
             headers: {},
             method: 'GET',
-            params: { name: 'local-file' },
-            path: '/api/file/local-file',
+            params: { name },
+            path: `/api/file/${name}`,
             query,
-            url: '/api/file/local-file',
+            url: `/api/file/${name}`,
         },
         res,
     );
@@ -204,6 +208,131 @@ describe('file routes', function () {
 
         expect(res.headers['x-from-options']).to.equal('carried');
         expect(res.sent).to.equal('base-script-carried');
+    });
+
+    it('uses fakeFile without requiring a stored file', async function () {
+        state[FILES_KEY] = [];
+
+        const fakeFileRes = await requestFile(
+            {
+                fakeFile: '1',
+                content: 'from-fake-file',
+            },
+            { name: 'missing-file' },
+        );
+
+        expect(fakeFileRes.statusCode).to.equal(200);
+        expect(fakeFileRes.sent).to.equal('from-fake-file');
+    });
+
+    it('rejects fakeFile without content or url', async function () {
+        state[FILES_KEY] = [];
+
+        const res = await requestFile(
+            {
+                fakeFile: '1',
+            },
+            { name: 'missing-file' },
+        );
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal('INVALID_FAKE_FILE_SOURCE');
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects fakeFile on share routes', async function () {
+        const res = await requestShareFile({
+            query: {
+                fakeFile: '1',
+                content: 'from-fake-share',
+            },
+            shareToken: {
+                type: 'file',
+                name: 'local-file',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal('UNSUPPORTED_SHARE_FAKE_FILE');
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects url on share routes', async function () {
+        const res = await requestShareFile({
+            query: {
+                url: 'https://example.com/file.txt',
+            },
+            shareToken: {
+                type: 'file',
+                name: 'local-file',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal(
+            'UNSUPPORTED_SHARE_FILE_SOURCE_OVERRIDE',
+        );
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects content on share routes', async function () {
+        const res = await requestShareFile({
+            query: {
+                content: 'from-share-content',
+            },
+            shareToken: {
+                type: 'file',
+                name: 'local-file',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal(
+            'UNSUPPORTED_SHARE_FILE_SOURCE_OVERRIDE',
+        );
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects subInfoUrl on share routes', async function () {
+        const res = await requestShareFile({
+            query: {
+                subInfoUrl: 'https://example.com/flow',
+            },
+            shareToken: {
+                type: 'file',
+                name: 'local-file',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal(
+            'UNSUPPORTED_SHARE_FILE_SUB_INFO_URL',
+        );
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects mergeSources on share routes', async function () {
+        const res = await requestShareFile({
+            query: {
+                mergeSources: 'localFirst',
+            },
+            shareToken: {
+                type: 'file',
+                name: 'local-file',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal(
+            'UNSUPPORTED_SHARE_FILE_MERGE_SOURCES',
+        );
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
     });
 
     it('encrypts transformed file output with file age-public-key', async function () {

@@ -58,6 +58,7 @@ async function produceArtifact({
     produceType,
     produceOpts = {},
     subscription,
+    file: sourceFile,
     awaitCustomCache,
     $options,
     proxy,
@@ -579,7 +580,7 @@ async function produceArtifact({
         return RuleUtils.produce(rules, platform);
     } else if (type === 'file') {
         const allFiles = $.read(FILES_KEY);
-        const file = findByName(allFiles, name);
+        const file = sourceFile || findByName(allFiles, name);
         if (!file) throw new Error(`找不到文件 ${name}`);
         let raw = '';
         if (file.type !== 'mihomoProfile') {
