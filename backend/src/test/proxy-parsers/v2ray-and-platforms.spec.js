@@ -1984,9 +1984,7 @@ describe('VMess and VLESS parser coverage', function () {
             expect(proxy['xhttp-opts']).to.not.have.property(
                 'uplink-data-placement',
             );
-            expect(proxy['xhttp-opts']).to.not.have.property(
-                'uplink-data-key',
-            );
+            expect(proxy['xhttp-opts']).to.not.have.property('uplink-data-key');
             expect(
                 proxy['xhttp-opts']?.['download-settings'],
             ).to.not.have.property('no-grpc-header');
@@ -2165,9 +2163,7 @@ describe('VMess and VLESS parser coverage', function () {
                     },
                 },
             });
-            expect(proxy['xhttp-opts']).to.not.have.property(
-                'x-padding-bytes',
-            );
+            expect(proxy['xhttp-opts']).to.not.have.property('x-padding-bytes');
             expect(proxy['xhttp-opts']).to.not.have.property(
                 'uplink-chunk-size',
             );
@@ -2879,6 +2875,24 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses shadowsocks 2022 obfs http lines',
+                input: 'Loon SS2022=shadowsocks,loon-ss2022.example.com,8388,2022-blake3-aes-128-gcm,"server-key:user-key",obfs-name=http,obfs-host=obfs.example.com,obfs-uri=/',
+                expected: {
+                    type: 'ss',
+                    name: 'Loon SS2022',
+                    server: 'loon-ss2022.example.com',
+                    port: 8388,
+                    cipher: '2022-blake3-aes-128-gcm',
+                    password: 'server-key:user-key',
+                    plugin: 'obfs',
+                    'plugin-opts': {
+                        mode: 'http',
+                        host: 'obfs.example.com',
+                        path: '/',
+                    },
+                },
+            },
+            {
                 title: 'parses shadowsocksr lines',
                 input: 'Loon SSR=shadowsocksr,loon-ssr.example.com,8389,aes-256-cfb,"secret",protocol=auth_chain_b,protocol-param=device-id,obfs=tls1.2_ticket_fastauth,obfs-param=cdn.example.com',
                 expected: {
@@ -2917,6 +2931,26 @@ describe('Platform raw-format parser coverage', function () {
                         headers: {
                             Host: ['cdn.example.com'],
                         },
+                    },
+                },
+            },
+            {
+                title: 'parses vmess reality lines',
+                input: `Loon VMess Reality=vmess,loon-vmess-reality.example.com,443,auto,"${UUID}",transport=tcp,over-tls=true,sni=sni.example.com,skip-cert-verify=true,public-key=vmess-pubkey,short-id=01,alterId=0`,
+                expected: {
+                    type: 'vmess',
+                    name: 'Loon VMess Reality',
+                    server: 'loon-vmess-reality.example.com',
+                    port: 443,
+                    cipher: 'auto',
+                    uuid: UUID,
+                    alterId: 0,
+                    tls: true,
+                    sni: 'sni.example.com',
+                    'skip-cert-verify': true,
+                    'reality-opts': {
+                        'public-key': 'vmess-pubkey',
+                        'short-id': '01',
                     },
                 },
             },
@@ -2994,6 +3028,24 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses trojan reality lines',
+                input: 'Loon Trojan Reality=trojan,loon-trojan-reality.example.com,443,"secret",over-tls=true,sni=sni.example.com,skip-cert-verify=true,public-key=trojan-pubkey,short-id=02',
+                expected: {
+                    type: 'trojan',
+                    name: 'Loon Trojan Reality',
+                    server: 'loon-trojan-reality.example.com',
+                    port: 443,
+                    password: 'secret',
+                    tls: true,
+                    sni: 'sni.example.com',
+                    'skip-cert-verify': true,
+                    'reality-opts': {
+                        'public-key': 'trojan-pubkey',
+                        'short-id': '02',
+                    },
+                },
+            },
+            {
                 title: 'parses anytls lines',
                 input: 'Loon AnyTLS=anytls,loon-anytls.example.com,443,"secret",transport=ws,host=cdn.example.com,path=/anytls,over-tls=true,tls-name=sni.example.com,skip-cert-verify=true,idle-session-timeout=30,max-stream-count=16',
                 expected: {
@@ -3014,6 +3066,24 @@ describe('Platform raw-format parser coverage', function () {
                     },
                     'idle-session-timeout': 30,
                     'max-stream-count': 16,
+                },
+            },
+            {
+                title: 'parses anytls reality lines',
+                input: 'Loon AnyTLS Reality=anytls,loon-anytls-reality.example.com,443,"secret",over-tls=true,sni=sni.example.com,skip-cert-verify=true,public-key=anytls-pubkey,short-id=03',
+                expected: {
+                    type: 'anytls',
+                    name: 'Loon AnyTLS Reality',
+                    server: 'loon-anytls-reality.example.com',
+                    port: 443,
+                    password: 'secret',
+                    tls: true,
+                    sni: 'sni.example.com',
+                    'skip-cert-verify': true,
+                    'reality-opts': {
+                        'public-key': 'anytls-pubkey',
+                        'short-id': '03',
+                    },
                 },
             },
             {

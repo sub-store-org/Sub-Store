@@ -433,6 +433,102 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces Loon VMess, Trojan, and AnyTLS reality lines', function () {
+        const output = produceExternal('Loon', [
+            {
+                type: 'vmess',
+                name: 'Loon VMess Reality',
+                server: 'vmess.example.com',
+                port: 443,
+                cipher: 'auto',
+                uuid: UUID,
+                alterId: 0,
+                tls: true,
+                sni: 'sni.example.com',
+                'reality-opts': {
+                    'public-key': 'vmess-pubkey',
+                    'short-id': '01',
+                },
+                'skip-cert-verify': true,
+            },
+            {
+                type: 'trojan',
+                name: 'Loon Trojan Reality',
+                server: 'trojan.example.com',
+                port: 443,
+                password: 'secret',
+                sni: 'sni.example.com',
+                'reality-opts': {
+                    'public-key': 'trojan-pubkey',
+                    'short-id': '02',
+                },
+                'skip-cert-verify': true,
+            },
+            {
+                type: 'anytls',
+                name: 'Loon AnyTLS Reality',
+                server: 'anytls.example.com',
+                port: 443,
+                password: 'secret',
+                network: 'tcp',
+                sni: 'sni.example.com',
+                'reality-opts': {
+                    'public-key': 'anytls-pubkey',
+                    'short-id': '03',
+                },
+                'skip-cert-verify': true,
+            },
+        ]);
+
+        expect(output).to.equal(
+            [
+                `Loon VMess Reality=vmess,vmess.example.com,443,auto,"${UUID}",transport=tcp,over-tls=true,skip-cert-verify=true,sni=sni.example.com,public-key="vmess-pubkey",short-id=01,alterId=0`,
+                'Loon Trojan Reality=trojan,trojan.example.com,443,"secret",skip-cert-verify=true,sni=sni.example.com,public-key="trojan-pubkey",short-id=02',
+                'Loon AnyTLS Reality=anytls,anytls.example.com,443,"secret",skip-cert-verify=true,sni=sni.example.com,public-key="anytls-pubkey",short-id=03',
+            ].join('\n'),
+        );
+    });
+
+    it('produces Loon Shadowsocks 2022 simple obfs lines', function () {
+        const output = produceExternal('Loon', [
+            {
+                type: 'ss',
+                name: 'Loon SS2022 HTTP Obfs',
+                server: 'ss2022-http.example.com',
+                port: 8388,
+                cipher: '2022-blake3-aes-128-gcm',
+                password: 'server-key:user-key',
+                plugin: 'obfs',
+                'plugin-opts': {
+                    mode: 'http',
+                    host: 'obfs.example.com',
+                    path: '/',
+                },
+            },
+            {
+                type: 'ss',
+                name: 'Loon SS2022 TLS Obfs',
+                server: 'ss2022-tls.example.com',
+                port: 8389,
+                cipher: '2022-blake3-aes-256-gcm',
+                password: 'server-key:user-key',
+                plugin: 'obfs',
+                'plugin-opts': {
+                    mode: 'tls',
+                    host: 'tls.example.com',
+                    path: '/tls',
+                },
+            },
+        ]);
+
+        expect(output).to.equal(
+            [
+                'Loon SS2022 HTTP Obfs=shadowsocks,ss2022-http.example.com,8388,2022-blake3-aes-128-gcm,"server-key:user-key",obfs-name=http,obfs-host=obfs.example.com,obfs-uri=/',
+                'Loon SS2022 TLS Obfs=shadowsocks,ss2022-tls.example.com,8389,2022-blake3-aes-256-gcm,"server-key:user-key",obfs-name=tls,obfs-host=tls.example.com,obfs-uri=/tls',
+            ].join('\n'),
+        );
+    });
+
     it('produces Loon Shadowsocks Shadow TLS passwords without quotes', function () {
         const output = produceExternal('Loon', [
             {

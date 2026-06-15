@@ -44,13 +44,9 @@ export default function Loon_Producer() {
                 return hysteria2(proxy);
         }
         if (proxy.type === 'anytls') {
-            if (
-                proxy.network &&
-                (!['tcp'].includes(proxy.network) ||
-                    (['tcp'].includes(proxy.network) && proxy['reality-opts']))
-            ) {
+            if (proxy.network && !['tcp'].includes(proxy.network)) {
                 throw new Error(
-                    `Platform ${targetPlatform} does not support proxy type ${proxy.type} with network or REALITY`,
+                    `Platform ${targetPlatform} does not support proxy type ${proxy.type} with network ${proxy.network}`,
                 );
             }
 
@@ -71,6 +67,18 @@ function appendTlsProfile(result, proxy) {
 function appendAlpn(result, proxy) {
     const alpn = getLoonAlpn(proxy);
     if (alpn) result.append(`,alpn="${alpn}"`);
+}
+
+function appendReality(result, proxy) {
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,public-key="${proxy['reality-opts']['public-key']}"`,
+        'reality-opts.public-key',
+    );
+    result.appendIfPresent(
+        `,short-id=${proxy['reality-opts']['short-id']}`,
+        'reality-opts.short-id',
+    );
 }
 
 function getLoonAlpn(proxy) {
@@ -134,14 +142,6 @@ function shadowsocks(proxy) {
     // obfs
     if (isPresent(proxy, 'plugin')) {
         if (proxy.plugin === 'obfs') {
-            if (
-                proxy['plugin-opts']?.mode &&
-                proxy.cipher.startsWith('2022-')
-            ) {
-                throw new Error(
-                    `${proxy.cipher} ${proxy.plugin} is not supported`,
-                );
-            }
             result.append(`,obfs-name=${proxy['plugin-opts'].mode}`);
             result.appendIfPresent(
                 `,obfs-host=${proxy['plugin-opts'].host}`,
@@ -311,6 +311,7 @@ function shadowsocksr(proxy) {
 }
 
 function trojan(proxy) {
+    const isReality = !!proxy['reality-opts'];
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=trojan,${proxy.server},${proxy.port},"${proxy.password}"`,
@@ -343,16 +344,20 @@ function trojan(proxy) {
     appendTlsProfile(result, proxy);
     appendAlpn(result, proxy);
 
-    // sni
-    result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
-    result.appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-    result.appendIfPresent(
-        `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
-        'tls-pubkey-sha256',
-    );
+    if (isReality) {
+        appendReality(result, proxy);
+    } else {
+        // sni
+        result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
+        result.appendIfPresent(
+            `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
+            'tls-pubkey-sha256',
+        );
+    }
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
@@ -375,6 +380,7 @@ function trojan(proxy) {
 }
 
 function anytls(proxy) {
+    const isReality = !!proxy['reality-opts'];
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=anytls,${proxy.server},${proxy.port},"${proxy.password}"`,
@@ -400,16 +406,20 @@ function anytls(proxy) {
     appendTlsProfile(result, proxy);
     appendAlpn(result, proxy);
 
-    // sni
-    result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
-    result.appendIfPresent(
-        `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
-        'tls-fingerprint',
-    );
-    result.appendIfPresent(
-        `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
-        'tls-pubkey-sha256',
-    );
+    if (isReality) {
+        appendReality(result, proxy);
+    } else {
+        // sni
+        result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
+            'tls-fingerprint',
+        );
+        result.appendIfPresent(
+            `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
+            'tls-pubkey-sha256',
+        );
+    }
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
@@ -487,15 +497,7 @@ function vmess(proxy) {
     }
 
     if (isReality) {
-        result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
-        result.appendIfPresent(
-            `,public-key="${proxy['reality-opts']['public-key']}"`,
-            'reality-opts.public-key',
-        );
-        result.appendIfPresent(
-            `,short-id=${proxy['reality-opts']['short-id']}`,
-            'reality-opts.short-id',
-        );
+        appendReality(result, proxy);
     } else {
         // sni
         result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
@@ -604,15 +606,7 @@ function vless(proxy) {
         result.appendIfPresent(`,flow=${proxy.flow}`, 'flow');
     }
     if (isReality) {
-        result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
-        result.appendIfPresent(
-            `,public-key="${proxy['reality-opts']['public-key']}"`,
-            'reality-opts.public-key',
-        );
-        result.appendIfPresent(
-            `,short-id=${proxy['reality-opts']['short-id']}`,
-            'reality-opts.short-id',
-        );
+        appendReality(result, proxy);
     } else {
         // sni
         result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
