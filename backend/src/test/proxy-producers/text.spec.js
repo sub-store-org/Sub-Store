@@ -914,6 +914,17 @@ describe('Proxy text producers', function () {
                         port: 443,
                         psk: 'secret',
                         version: 6,
+                        mode: 'unsafe-raw',
+                        udp: true,
+                    },
+                    {
+                        type: 'snell',
+                        name: 'Surge Snell v5 Mode',
+                        server: 'snell.example.com',
+                        port: 443,
+                        psk: 'secret',
+                        version: 5,
+                        mode: 'unshaped',
                         udp: true,
                     },
                     {
@@ -937,7 +948,10 @@ describe('Proxy text producers', function () {
         );
 
         expect(output).to.equal(
-            'Surge Snell v6=snell,snell.example.com,443,version=6,psk="secret",udp-relay=true',
+            [
+                'Surge Snell v6=snell,snell.example.com,443,version=6,psk="secret",mode=unsafe-raw,udp-relay=true',
+                'Surge Snell v5 Mode=snell,snell.example.com,443,version=5,psk="secret",udp-relay=true',
+            ].join('\n'),
         );
         expect(errors).to.deep.equal([
             'Platform Surge does not support Snell version 6 with obfs',

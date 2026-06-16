@@ -3656,6 +3656,20 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses snell v6 mode lines',
+                input: 'Surge Snell v6 = snell,surge-snell.example.com,443,psk=secret,version=6,mode=unshaped,udp-relay=true',
+                expected: {
+                    type: 'snell',
+                    name: 'Surge Snell v6',
+                    server: 'surge-snell.example.com',
+                    port: 443,
+                    psk: 'secret',
+                    version: 6,
+                    mode: 'unshaped',
+                    udp: true,
+                },
+            },
+            {
                 title: 'parses tuic v5 lines',
                 input: `Surge TUIC = tuic-v5,surge-tuic.example.com,443,uuid=${UUID},password=secret,sni=sni.example.com,skip-cert-verify=true,alpn=h3,ecn=true,port-hopping=9000;9002-9004`,
                 expected: {

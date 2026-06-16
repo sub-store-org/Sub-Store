@@ -946,6 +946,9 @@ function snell(proxy) {
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,version=${proxy.version}`, 'version');
     result.appendIfPresent(`,psk="${proxy.psk}"`, 'psk');
+    if (Number(proxy.version) === 6) {
+        result.appendIfPresent(`,mode=${proxy.mode}`, 'mode');
+    }
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');
