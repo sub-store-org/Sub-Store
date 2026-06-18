@@ -27,6 +27,7 @@ import { success, failed } from './response';
 import $ from '@/core/app';
 import { formatDateTime } from '@/utils';
 import { maskAgeSecretInUrl, normalizeAgePublicKeyConfig } from '@/utils/age';
+import { normalizeEditorLanguageConfig } from '@/utils/editor-language';
 
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 
@@ -292,6 +293,7 @@ function updateSubscription(req, res) {
             ...sub,
         };
         normalizeAgePublicKeyConfig(newSub);
+        normalizeEditorLanguageConfig(newSub);
         $.info(`正在更新订阅： ${name}`);
         // allow users to update the subscription name
         if (name !== sub.name) {
@@ -366,7 +368,10 @@ function getAllSubscriptions(req, res) {
 function replaceSubscriptions(req, res) {
     try {
         const allSubs = req.body;
-        allSubs.forEach(normalizeAgePublicKeyConfig);
+        allSubs.forEach((sub) => {
+            normalizeAgePublicKeyConfig(sub);
+            normalizeEditorLanguageConfig(sub);
+        });
         $.write(allSubs, SUBS_KEY);
         success(res);
     } catch (error) {
@@ -379,6 +384,7 @@ function createSubscriptionItem(rawSub) {
         ...rawSub,
     };
     normalizeAgePublicKeyConfig(sub);
+    normalizeEditorLanguageConfig(sub);
     delete sub.subscriptions;
     $.info(`正在创建订阅： ${sub.name}`);
     if (/\//.test(sub.name)) {

@@ -24,6 +24,7 @@ import {
 } from '@/restful/age-output';
 import { findShareToken } from '@/restful/token';
 import { maskAgeSecretInUrl, normalizeAgePublicKeyConfig } from '@/utils/age';
+import { normalizeEditorLanguageConfig } from '@/utils/editor-language';
 
 export default function register($app) {
     if (!$.read(FILES_KEY)) $.write([], FILES_KEY);
@@ -381,6 +382,7 @@ function updateFile(req, res) {
             ...file,
         };
         normalizeAgePublicKeyConfig(newFile);
+        normalizeEditorLanguageConfig(newFile);
         $.info(`正在更新文件：${name}...`);
 
         if (name !== newFile.name) {
@@ -442,7 +444,10 @@ function getAllWholeFiles(req, res) {
 function replaceFile(req, res) {
     try {
         const allFiles = req.body;
-        allFiles.forEach(normalizeAgePublicKeyConfig);
+        allFiles.forEach((file) => {
+            normalizeAgePublicKeyConfig(file);
+            normalizeEditorLanguageConfig(file);
+        });
         $.write(allFiles, FILES_KEY);
         success(res);
     } catch (error) {
@@ -455,6 +460,7 @@ function createFileItem(rawFile) {
         ...rawFile,
     };
     normalizeAgePublicKeyConfig(file);
+    normalizeEditorLanguageConfig(file);
     file.name = `${file.name ?? Date.now()}`;
     $.info(`正在创建文件：${file.name}`);
     const allFiles = $.read(FILES_KEY);

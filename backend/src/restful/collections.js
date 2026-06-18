@@ -12,6 +12,7 @@ import $ from '@/core/app';
 import { RequestInvalidError, ResourceNotFoundError } from '@/restful/errors';
 import { formatDateTime } from '@/utils';
 import { normalizeAgePublicKeyConfig } from '@/utils/age';
+import { normalizeEditorLanguageConfig } from '@/utils/editor-language';
 
 export default function register($app) {
     if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
@@ -81,6 +82,7 @@ function updateCollection(req, res) {
             ...collection,
         };
         normalizeAgePublicKeyConfig(newCol);
+        normalizeEditorLanguageConfig(newCol);
         $.info(`正在更新组合订阅：${name}...`);
 
         if (name !== newCol.name) {
@@ -145,7 +147,10 @@ function getAllCollections(req, res) {
 function replaceCollection(req, res) {
     try {
         const allCols = req.body;
-        allCols.forEach(normalizeAgePublicKeyConfig);
+        allCols.forEach((collection) => {
+            normalizeAgePublicKeyConfig(collection);
+            normalizeEditorLanguageConfig(collection);
+        });
         $.write(allCols, COLLECTIONS_KEY);
         success(res);
     } catch (error) {
@@ -155,6 +160,7 @@ function replaceCollection(req, res) {
 
 function createCollectionItem(collection) {
     normalizeAgePublicKeyConfig(collection);
+    normalizeEditorLanguageConfig(collection);
     $.info(`正在创建组合订阅：${collection.name}`);
     if (/\//.test(collection.name)) {
         throw new RequestInvalidError(
