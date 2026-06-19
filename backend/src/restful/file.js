@@ -65,6 +65,7 @@ async function getFile(req, res, next) {
         content,
         mergeSources,
         ignoreFailedRemoteFile,
+        includeUnsupportedProxy,
         proxy,
         noCache,
         produceType,
@@ -203,6 +204,9 @@ async function getFile(req, res, next) {
     if (produceType) {
         $.info(`指定生产类型: ${produceType}`);
     }
+    if (includeUnsupportedProxy) {
+        $.info(`包含官方/商店版不支持的协议: ${includeUnsupportedProxy}`);
+    }
 
     const allFiles = $.read(FILES_KEY);
     const fakeFile = {
@@ -213,6 +217,14 @@ async function getFile(req, res, next) {
     const file = _fakeFile ? fakeFile : findByName(allFiles, name);
     if (file) {
         try {
+            const sourceFile = includeUnsupportedProxy
+                ? {
+                      ...file,
+                      includeUnsupportedProxy,
+                  }
+                : _fakeFile
+                  ? fakeFile
+                  : undefined;
             const output = await produceArtifact({
                 type: 'file',
                 name,
@@ -226,7 +238,7 @@ async function getFile(req, res, next) {
                 noCache,
                 produceType,
                 all: true,
-                file: _fakeFile ? fakeFile : undefined,
+                file: sourceFile,
             });
 
             try {

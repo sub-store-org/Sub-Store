@@ -426,6 +426,9 @@ function ScriptOperator(
                                               produceType: 'internal',
                                               produceOpts: {
                                                   'delete-underscore-fields': true,
+                                                  'include-unsupported-proxy':
+                                                      output?.$file
+                                                          ?.includeUnsupportedProxy,
                                               },
                                           }),
                                       }),
@@ -474,7 +477,9 @@ function ScriptOperator(
                                             platform: 'mihomo',
                                             produceType: 'internal',
                                             produceOpts: {
-                                                'delete-underscore-fields': true
+                                                'delete-underscore-fields': true,
+                                                'include-unsupported-proxy':
+                                                    $file.includeUnsupportedProxy,
                                             }
                                         }),
                                     })))
