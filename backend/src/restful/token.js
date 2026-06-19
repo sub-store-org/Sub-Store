@@ -168,7 +168,60 @@ function resolveDurationExpiration(options = {}, { required = false } = {}) {
 
     return {
         rawExpiresIn,
+        expiresIn,
         exp: Date.now() + expiresIn,
+    };
+}
+
+const DURATION_INPUT_UNIT_MS = {
+    day: 24 * 60 * 60 * 1000,
+    month: 30 * 24 * 60 * 60 * 1000,
+    season: 90 * 24 * 60 * 60 * 1000,
+    year: 365 * 24 * 60 * 60 * 1000,
+};
+
+function resolveDurationInput(options = {}, durationExpiration) {
+    const rawExpiresValue = options?.expiresValue;
+    const rawExpiresUnit = options?.expiresUnit;
+    const hasExpiresValue = rawExpiresValue != null && rawExpiresValue !== '';
+    const hasExpiresUnit = rawExpiresUnit != null && rawExpiresUnit !== '';
+    if (!hasExpiresValue && !hasExpiresUnit) {
+        return null;
+    }
+
+    const expiresValue = Number(rawExpiresValue);
+    if (!Number.isFinite(expiresValue) || expiresValue <= 0) {
+        throw new RequestInvalidError(
+            'INVALID_EXPIRES_VALUE',
+            `Invalid expiresValue option: ${rawExpiresValue}`,
+        );
+    }
+
+    const expiresUnit =
+        typeof rawExpiresUnit === 'string' ? rawExpiresUnit.trim() : '';
+    if (!['day', 'month', 'season', 'year'].includes(expiresUnit)) {
+        throw new RequestInvalidError(
+            'INVALID_EXPIRES_UNIT',
+            `Invalid expiresUnit option: ${rawExpiresUnit}`,
+        );
+    }
+
+    const normalizedExpiresValue = Number(expiresValue.toFixed(2));
+    const expectedExpiresIn =
+        normalizedExpiresValue * DURATION_INPUT_UNIT_MS[expiresUnit];
+    if (
+        durationExpiration &&
+        Math.abs(durationExpiration.expiresIn - expectedExpiresIn) > 1
+    ) {
+        throw new RequestInvalidError(
+            'INVALID_DURATION_INPUT',
+            `expiresValue/expiresUnit do not match expiresIn option: ${rawExpiresValue}${expiresUnit} != ${options?.expiresIn}`,
+        );
+    }
+
+    return {
+        expiresValue: String(normalizedExpiresValue),
+        expiresUnit,
     };
 }
 
@@ -275,6 +328,7 @@ function createTokenItem(payload, options = {}) {
         normalizeExpirationMode(options?.mode) ??
         inferLegacyExpirationMode(options);
     let durationExpiration = null;
+    let durationInput = null;
     let exp;
     let countExpiration = null;
     if (expirationMode === 'datetime') {
@@ -285,6 +339,9 @@ function createTokenItem(payload, options = {}) {
         durationExpiration = resolveDurationExpiration(options, {
             required: expirationMode === 'duration',
         });
+        if (durationExpiration) {
+            durationInput = resolveDurationInput(options, durationExpiration);
+        }
         exp = durationExpiration?.exp;
     }
 
@@ -314,6 +371,8 @@ function createTokenItem(payload, options = {}) {
     delete safePayload.mode;
     delete safePayload.exp;
     delete safePayload.expiresIn;
+    delete safePayload.expiresValue;
+    delete safePayload.expiresUnit;
     delete safePayload.count;
     delete safePayload.usedCount;
     normalizeAgePublicKeyConfig(safePayload);
@@ -332,6 +391,7 @@ function createTokenItem(payload, options = {}) {
             : durationExpiration
               ? {
                     expiresIn: durationExpiration.rawExpiresIn,
+                    ...(durationInput || {}),
                     exp,
                 }
               : {}),

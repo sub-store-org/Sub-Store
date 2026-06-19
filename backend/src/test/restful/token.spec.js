@@ -234,6 +234,100 @@ describe('token routes', function () {
         expect(token.exp).to.be.a('number');
     });
 
+    it('stores original duration input for frontend restoration', function () {
+        const token = createTokenItem(
+            {
+                type: 'sub',
+                name: 'shared-sub',
+                token: 'duration-input',
+            },
+            {
+                mode: 'duration',
+                expiresIn: '35d',
+                expiresValue: '35',
+                expiresUnit: 'day',
+            },
+        );
+
+        expect(token.mode).to.equal('duration');
+        expect(token.expiresIn).to.equal('35d');
+        expect(token.expiresValue).to.equal('35');
+        expect(token.expiresUnit).to.equal('day');
+        expect(state[TOKENS_KEY][0].expiresValue).to.equal('35');
+        expect(state[TOKENS_KEY][0].expiresUnit).to.equal('day');
+    });
+
+    it('accepts season duration input when it matches expiresIn', function () {
+        const token = createTokenItem(
+            {
+                type: 'sub',
+                name: 'shared-sub',
+                token: 'duration-season',
+            },
+            {
+                mode: 'duration',
+                expiresIn: '90d',
+                expiresValue: '1',
+                expiresUnit: 'season',
+            },
+        );
+
+        expect(token.mode).to.equal('duration');
+        expect(token.expiresIn).to.equal('90d');
+        expect(token.expiresValue).to.equal('1');
+        expect(token.expiresUnit).to.equal('season');
+        expect(state[TOKENS_KEY][0].expiresValue).to.equal('1');
+        expect(state[TOKENS_KEY][0].expiresUnit).to.equal('season');
+    });
+
+    it('rejects invalid duration input metadata', function () {
+        for (const options of [
+            {
+                mode: 'duration',
+                expiresIn: '35d',
+                expiresValue: '0',
+                expiresUnit: 'day',
+                code: 'INVALID_EXPIRES_VALUE',
+            },
+            {
+                mode: 'duration',
+                expiresIn: '35d',
+                expiresValue: '35',
+                expiresUnit: 'week',
+                code: 'INVALID_EXPIRES_UNIT',
+            },
+            {
+                mode: 'duration',
+                expiresIn: '1d',
+                expiresValue: '2',
+                expiresUnit: 'year',
+                code: 'INVALID_DURATION_INPUT',
+            },
+        ]) {
+            let capturedError;
+
+            try {
+                createTokenItem(
+                    {
+                        type: 'sub',
+                        name: 'shared-sub',
+                        token: `duration-input-${options.code}`,
+                    },
+                    options,
+                );
+            } catch (error) {
+                capturedError = error;
+            }
+
+            expect(capturedError).to.include({
+                type: 'RequestInvalidError',
+                code: options.code,
+            });
+        }
+
+        expect(state[TOKENS_KEY]).to.deep.equal([]);
+    });
+
     it('infers legacy exact datetime behavior when mode is omitted but exp exists', function () {
         const exp = Date.now() - 5 * 60 * 1000;
 
@@ -264,6 +358,8 @@ describe('token routes', function () {
                 mode: 'datetime',
                 exp: Date.now() + 60 * 1000,
                 expiresIn: '1d',
+                expiresValue: '35',
+                expiresUnit: 'day',
             },
             {},
         );
@@ -271,9 +367,13 @@ describe('token routes', function () {
         expect(token).to.not.have.property('mode');
         expect(token).to.not.have.property('exp');
         expect(token).to.not.have.property('expiresIn');
+        expect(token).to.not.have.property('expiresValue');
+        expect(token).to.not.have.property('expiresUnit');
         expect(state[TOKENS_KEY][0]).to.not.have.property('mode');
         expect(state[TOKENS_KEY][0]).to.not.have.property('exp');
         expect(state[TOKENS_KEY][0]).to.not.have.property('expiresIn');
+        expect(state[TOKENS_KEY][0]).to.not.have.property('expiresValue');
+        expect(state[TOKENS_KEY][0]).to.not.have.property('expiresUnit');
     });
 
     it('preserves age-public-key in share token payload', async function () {
