@@ -179,7 +179,7 @@ async function getFile(req, res, next) {
         $.info(`使用假文件, 不再通过单个文件名称 ${name} 查询`);
     }
     if (proxy) {
-        $.info(`指定远程订阅使用代理/策略 proxy: ${proxy}`);
+        $.info(`指定远程文件使用代理/策略 proxy: ${proxy}`);
     }
     if (ua) {
         $.info(`指定远程文件 User-Agent: ${ua}`);
