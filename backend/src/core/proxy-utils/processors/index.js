@@ -9,6 +9,7 @@ import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { produceArtifact } from '@/restful/sync';
+import { isMihomoConfigFile } from '@/utils/file-type';
 import { SETTINGS_KEY } from '@/constants';
 import YAML from '@/utils/yaml';
 
@@ -397,7 +398,7 @@ function ScriptOperator(
         name: 'Script Operator',
         func: async (proxies) => {
             let output = proxies;
-            if (output?.$file?.type === 'mihomoProfile') {
+            if (isMihomoConfigFile(output?.$file)) {
                 try {
                     let patch = YAML.safeLoad(script);
                     let config;
@@ -438,7 +439,7 @@ function ScriptOperator(
                     `async function operator(input = [], targetPlatform, context) {
                         if (input && (input.$files || input.$content)) {
                             let { $content, $files, $options, $file } = input
-                            if($file.type === 'mihomoProfile') {
+                            if (['mihomoConfig', 'mihomoProfile'].includes($file?.type)) {
                                 ${script}
                                 if(typeof main === 'function') {
                                     let config;
@@ -496,7 +497,7 @@ function AddProxiesFromSubscriptionOperator({
     position = 'replace',
 } = {}) {
     const apply = async (input) => {
-        if (input?.$file?.type !== 'mihomoProfile') return input;
+        if (!isMihomoConfigFile(input?.$file)) return input;
 
         const config = normalizeMihomoConfig(input.$content);
         const currentProxies = getMihomoProfileProxies(config);

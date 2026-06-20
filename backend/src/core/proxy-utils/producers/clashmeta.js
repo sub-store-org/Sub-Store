@@ -57,13 +57,13 @@ export default function ClashMeta_Producer() {
 
                 if (proxy.type === 'h2-connect') {
                     $.error(
-                        `Mihomo does not support HTTP/2 CONNECT proxy type. Proxy ${proxy.name} has been filtered.`,
+                        `mihomo does not support HTTP/2 CONNECT proxy type. Proxy ${proxy.name} has been filtered.`,
                     );
                     return false;
                 }
                 if (hasRootHeaders(proxy) && proxy.type === 'trusttunnel') {
                     $.error(
-                        `Mihomo does not support headers for TrustTunnel proxy ${proxy.name}. Proxy has been filtered.`,
+                        `mihomo does not support headers for TrustTunnel proxy ${proxy.name}. Proxy has been filtered.`,
                     );
                     return false;
                 }

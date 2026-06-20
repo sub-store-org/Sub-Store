@@ -32,7 +32,7 @@ export default function SurgeMac_Producer() {
                             throw e;
                         }
                         $.log(
-                            `${proxy.name} is not supported on ${targetPlatform}, try to use Mihomo(SurgeMac - External Proxy Program) instead`,
+                            `${proxy.name} is not supported on ${targetPlatform}, try to use mihomo(SurgeMac - External Proxy Program) instead`,
                         );
                         return output;
                     }
