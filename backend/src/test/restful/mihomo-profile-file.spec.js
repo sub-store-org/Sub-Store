@@ -299,4 +299,89 @@ describe('mihomo profile file routes', function () {
         expect(res.sent).to.include('mixed-port: 7892');
         expect(res.sent).to.include('name: Unsupported');
     });
+
+    it('adds subscription proxies to mihomoProfile files without moving an existing proxies key', async function () {
+        state[FILES_KEY] = [
+            {
+                name: 'add-proxies-file',
+                type: 'mihomoProfile',
+                sourceType: 'none',
+                process: [
+                    {
+                        type: 'Script Operator',
+                        args: {
+                            mode: 'script',
+                            content:
+                                'mixed-port: 7890\n' +
+                                'proxies:\n' +
+                                '  note: not-array\n' +
+                                'proxy-groups:\n' +
+                                '  - name: Auto\n' +
+                                '    type: select\n' +
+                                '    proxies: [Supported]',
+                        },
+                    },
+                    {
+                        type: 'Add Proxies From Subscription Operator',
+                        args: {
+                            sourceType: 'subscription',
+                            sourceName: 'demo-sub',
+                            includeUnsupportedProxy: false,
+                            position: 'back',
+                        },
+                    },
+                ],
+            },
+        ];
+
+        const res = await requestFile('add-proxies-file');
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.sent.indexOf('mixed-port:')).to.be.lessThan(
+            res.sent.indexOf('proxies:'),
+        );
+        expect(res.sent.indexOf('proxies:')).to.be.lessThan(
+            res.sent.indexOf('proxy-groups:'),
+        );
+        expect(res.sent).to.include('name: Supported');
+        expect(res.sent).to.not.include('name: Unsupported');
+    });
+
+    it('can insert subscription proxies before existing mihomoProfile proxies', async function () {
+        state[FILES_KEY] = [
+            {
+                name: 'insert-proxies-file',
+                type: 'mihomoProfile',
+                sourceType: 'none',
+                process: [
+                    {
+                        type: 'Script Operator',
+                        args: {
+                            mode: 'script',
+                            content:
+                                'proxies:\n' +
+                                '  - name: Existing\n' +
+                                '    type: direct',
+                        },
+                    },
+                    {
+                        type: 'Add Proxies From Subscription Operator',
+                        args: {
+                            sourceType: 'subscription',
+                            sourceName: 'demo-sub',
+                            includeUnsupportedProxy: false,
+                            position: 'front',
+                        },
+                    },
+                ],
+            },
+        ];
+
+        const res = await requestFile('insert-proxies-file');
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.sent.indexOf('name: Supported')).to.be.lessThan(
+            res.sent.indexOf('name: Existing'),
+        );
+    });
 });

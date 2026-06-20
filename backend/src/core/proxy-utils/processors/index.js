@@ -475,6 +475,66 @@ function ScriptOperator(
     };
 }
 
+const ADD_PROXIES_FROM_SUBSCRIPTION_OPERATOR =
+    'Add Proxies From Subscription Operator';
+
+function normalizeMihomoConfig(content) {
+    if (!content) return {};
+
+    const config = YAML.safeLoad(content);
+    return isPlainObject(config) ? config : {};
+}
+
+function getMihomoProfileProxies(config) {
+    return Array.isArray(config?.proxies) ? config.proxies : [];
+}
+
+function AddProxiesFromSubscriptionOperator({
+    sourceType = 'subscription',
+    sourceName,
+    includeUnsupportedProxy,
+    position = 'replace',
+} = {}) {
+    const apply = async (input) => {
+        if (input?.$file?.type !== 'mihomoProfile') return input;
+
+        const config = normalizeMihomoConfig(input.$content);
+        const currentProxies = getMihomoProfileProxies(config);
+        const proxies = await produceArtifact({
+            type: sourceType,
+            name: sourceName,
+            platform: 'mihomo',
+            produceType: 'internal',
+            produceOpts: {
+                'delete-underscore-fields': true,
+                'include-unsupported-proxy': includeUnsupportedProxy,
+            },
+        });
+
+        switch (position) {
+            case 'front':
+                config.proxies = [...proxies, ...currentProxies];
+                break;
+            case 'back':
+                config.proxies = [...currentProxies, ...proxies];
+                break;
+            case 'replace':
+            default:
+                config.proxies = proxies;
+                break;
+        }
+
+        input.$content = ProxyUtils.yaml.safeDump(config);
+        return input;
+    };
+
+    return {
+        name: ADD_PROXIES_FROM_SUBSCRIPTION_OPERATOR,
+        func: apply,
+        nodeFunc: apply,
+    };
+}
+
 function parseIP4P(IP4P) {
     let server;
     let port;
@@ -1136,6 +1196,8 @@ export default {
     'Regex Rename Operator': RegexRenameOperator,
     'Regex Delete Operator': RegexDeleteOperator,
     'Script Operator': ScriptOperator,
+    [ADD_PROXIES_FROM_SUBSCRIPTION_OPERATOR]:
+        AddProxiesFromSubscriptionOperator,
     [RESPONSE_TRANSFORMER]: ResponseTransformer,
     'Handle Duplicate Operator': HandleDuplicateOperator,
     'Resolve Domain Operator': ResolveDomainOperator,
