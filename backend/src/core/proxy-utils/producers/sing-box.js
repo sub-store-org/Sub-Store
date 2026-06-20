@@ -568,12 +568,14 @@ const shadowTLSOutboundParser = (proxy = {}, pluginOpts) => {
         tls: {
             enabled: true,
             server_name: pluginOpts.host,
-            utls: {
-                enabled: true,
-                fingerprint,
-            },
         },
     };
+    if (fingerprint) {
+        stPart.tls.utls = {
+            enabled: true,
+            fingerprint,
+        };
+    }
     if (stPart.server_port < 0 || stPart.server_port > 65535)
         throw '端口值非法';
     const alpn = normalizeALPN(pluginOpts.alpn);

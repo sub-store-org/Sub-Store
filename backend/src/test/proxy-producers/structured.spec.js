@@ -514,15 +514,13 @@ describe('Proxy structured producers', function () {
             tls: {
                 enabled: true,
                 server_name: 'mask.example.com',
-                utls: {
-                    enabled: true,
-                },
             },
             domain_resolver: {
                 server: 'dns-out',
                 strategy: 'ipv6_only',
             },
         });
+        expect(output.outbounds[1].tls).to.not.have.property('utls');
     });
 
     it('exports parsed Surge Snell shadow-tls lines to sing-box chained outbounds', function () {
@@ -648,6 +646,36 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('does not emit sing-box ShadowTLS uTLS without client fingerprint', function () {
+        const [proxy] = ProxyUtils.parse(`proxies:
+  - name: SS ShadowTLS No Fingerprint
+    type: ss
+    server: ss.example.com
+    port: 443
+    cipher: 2022-blake3-aes-128-gcm
+    password: password
+    udp-over-tcp: true
+    udp-over-tcp-version: 2
+    plugin: shadow-tls
+    plugin-opts:
+      host: gateway.icloud.com
+      password: shadow_tls_password
+      version: 3`);
+
+        const output = loadProducedJson('sing-box', proxy);
+        const shadowtls = output.outbounds.find(
+            (item) => item.tag === 'SS ShadowTLS No Fingerprint_shadowtls',
+        );
+
+        expectSubset(shadowtls, {
+            tls: {
+                enabled: true,
+                server_name: 'gateway.icloud.com',
+            },
+        });
+        expect(shadowtls.tls).to.not.have.property('utls');
+    });
+
     it('omits unsupported sing-box ShadowTLS uTLS fingerprints', function () {
         const [proxy] = ProxyUtils.parse(`proxies:
   - name: SS ShadowTLS Unsupported Fingerprint
@@ -672,12 +700,10 @@ describe('Proxy structured producers', function () {
         expectSubset(shadowtls, {
             tls: {
                 enabled: true,
-                utls: {
-                    enabled: true,
-                },
+                server_name: 'cloud.tencent.com',
             },
         });
-        expect(shadowtls.tls.utls).to.not.have.property('fingerprint');
+        expect(shadowtls.tls).to.not.have.property('utls');
     });
 
     it('keeps only Shadowsocks shadow-tls versions 1 through 3 for Mihomo', function () {
