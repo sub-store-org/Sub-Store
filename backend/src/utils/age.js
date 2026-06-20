@@ -42,6 +42,20 @@ function normalizeAgePublicKeyConfig(config) {
     return config;
 }
 
+async function normalizeAgeSecretKeyConfig(config) {
+    if (!config || typeof config !== 'object') {
+        return config;
+    }
+
+    const key = normalizeKey(config[AGE_SECRET_KEY]);
+    if (key) {
+        config[AGE_SECRET_KEY] = await validateIdentity(key);
+    } else {
+        delete config[AGE_SECRET_KEY];
+    }
+    return config;
+}
+
 function isSupportedX25519Recipient(key) {
     return (
         key.startsWith('age1') &&
@@ -396,6 +410,7 @@ export {
     maskAgeSecret,
     maskAgeSecretInUrl,
     normalizeAgePublicKeyConfig,
+    normalizeAgeSecretKeyConfig,
     validateIdentity,
     validateRecipient,
 };

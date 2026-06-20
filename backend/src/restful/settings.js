@@ -1,6 +1,6 @@
 import { SETTINGS_KEY, ARTIFACT_REPOSITORY_KEY } from '@/constants';
 import { success, failed } from './response';
-import { InternalServerError } from '@/restful/errors';
+import { InternalServerError, RequestInvalidError } from '@/restful/errors';
 import $ from '@/core/app';
 import Gist, { getGithubGistBaseURL } from '@/utils/gist';
 import { clearLogSettingsCache } from '@/utils/debug-logs';
@@ -8,6 +8,10 @@ import {
     BACKEND_REQUEST_CONCURRENCY_SETTING,
     BACKEND_REQUEST_CONCURRENCY_WAIT_TIME_SETTING,
 } from '@/utils/request-concurrency';
+import {
+    AGE_SECRET_KEY,
+    normalizeAgeSecretKeyConfig,
+} from '@/utils/age';
 
 const ARTIFACT_STORE_SETTING_KEYS = [
     'gistToken',
@@ -15,6 +19,34 @@ const ARTIFACT_STORE_SETTING_KEYS = [
     'githubApiUrl',
     'defaultProxy',
 ];
+
+function isPlainObject(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasOwn(object, key) {
+    return Object.prototype.hasOwnProperty.call(object || {}, key);
+}
+
+function shouldValidateGistAgeSecretKey(settings, body = {}) {
+    return (
+        body.gistUpload === 'age' ||
+        (settings?.gistUpload === 'age' &&
+            hasOwn(body, AGE_SECRET_KEY))
+    );
+}
+
+async function normalizeAndValidateGistAgeSecretKey(settings) {
+    await normalizeAgeSecretKeyConfig(settings);
+
+    const ageSecretKey = settings[AGE_SECRET_KEY];
+    if (!ageSecretKey) {
+        throw new RequestInvalidError(
+            'INVALID_GIST_AGE_KEYS',
+            'age 加密模式需要配置 age-secret-key',
+        );
+    }
+}
 
 export function shouldRefreshArtifactStoreForSettingsPatch(body = {}) {
     return ARTIFACT_STORE_SETTING_KEYS.some((key) =>
@@ -69,6 +101,14 @@ async function updateSettings(req, res) {
             ...settings,
             ...req.body,
         };
+        if (isPlainObject(req.body?.appearanceSetting)) {
+            newSettings.appearanceSetting = {
+                ...(isPlainObject(settings?.appearanceSetting)
+                    ? settings.appearanceSetting
+                    : {}),
+                ...req.body.appearanceSetting,
+            };
+        }
         [
             'defaultTimeout',
             'githubApiTimeout',
@@ -126,6 +166,9 @@ async function updateSettings(req, res) {
                 ];
             }
         }
+        if (shouldValidateGistAgeSecretKey(newSettings, req.body)) {
+            await normalizeAndValidateGistAgeSecretKey(newSettings);
+        }
         $.write(newSettings, SETTINGS_KEY);
         clearLogSettingsCache();
         if (shouldRefreshArtifactStoreForSettingsPatch(req.body)) {
@@ -137,11 +180,13 @@ async function updateSettings(req, res) {
         $.error(`Failed to update settings: ${e.message ?? e}`);
         failed(
             res,
-            new InternalServerError(
-                `FAILED_TO_UPDATE_SETTINGS`,
-                `Failed to update settings`,
-                `Reason: ${e.message ?? e}`,
-            ),
+            e instanceof RequestInvalidError
+                ? e
+                : new InternalServerError(
+                      `FAILED_TO_UPDATE_SETTINGS`,
+                      `Failed to update settings`,
+                      `Reason: ${e.message ?? e}`,
+                  ),
         );
     }
 }

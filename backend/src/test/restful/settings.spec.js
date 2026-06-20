@@ -7,6 +7,7 @@ import registerSettingsRoutes, {
     getGithubAvatarApiUrl,
     shouldRefreshArtifactStoreForSettingsPatch,
 } from '@/restful/settings';
+import { AGE_SECRET_KEY, generateKeyPair } from '@/utils/age';
 
 function createRouteApp() {
     const handlers = new Map();
@@ -112,6 +113,161 @@ describe('settings routes', function () {
                     githubProxy: 'https://proxy.example.com/',
                 }),
             ).to.equal('https://litegist.example.com/api/users/xream');
+        });
+    });
+
+    describe('age key settings', function () {
+        const originalRead = $.read.bind($);
+        const originalWrite = $.write.bind($);
+
+        afterEach(function () {
+            $.read = originalRead;
+            $.write = originalWrite;
+        });
+
+        async function patchSettings(initialSettings, body) {
+            const state = {
+                [SETTINGS_KEY]: initialSettings,
+            };
+            $.read = (key) => state[key];
+            $.write = (data, key) => {
+                state[key] = data;
+                return true;
+            };
+
+            const app = createRouteApp();
+            registerSettingsRoutes(app);
+            const patchHandler = app.handlers.get('PATCH /api/settings');
+            const res = createResponse('/api/settings');
+
+            await patchHandler({ body }, res);
+
+            return {
+                res,
+                settings: state[SETTINGS_KEY],
+            };
+        }
+
+        it('does not validate existing age-secret-key on unrelated patches', async function () {
+            const { res, settings } = await patchSettings(
+                {
+                    gistUpload: 'age',
+                    [AGE_SECRET_KEY]: '恢复后请重新设置 age 解密私钥',
+                    logsMaxCount: 1,
+                },
+                { logsMaxCount: 2 },
+            );
+
+            expect(res.body.status).to.equal('success');
+            expect(settings.logsMaxCount).to.equal(2);
+            expect(settings[AGE_SECRET_KEY]).to.equal(
+                '恢复后请重新设置 age 解密私钥',
+            );
+        });
+
+        it('does not validate submitted age secret key outside age mode', async function () {
+            const { res, settings } = await patchSettings(
+                {},
+                {
+                    gistUpload: 'base64',
+                    [AGE_SECRET_KEY]: 'invalid-secret-key',
+                },
+            );
+
+            expect(res.body.status).to.equal('success');
+            expect(settings[AGE_SECRET_KEY]).to.equal('invalid-secret-key');
+        });
+
+        it('accepts valid age secret key in age mode', async function () {
+            const pair = await generateKeyPair();
+            const { res, settings } = await patchSettings(
+                {},
+                {
+                    gistUpload: 'age',
+                    [AGE_SECRET_KEY]: ` ${pair[AGE_SECRET_KEY]} `,
+                },
+            );
+
+            expect(res.body.status).to.equal('success');
+            expect(settings[AGE_SECRET_KEY]).to.equal(pair[AGE_SECRET_KEY]);
+        });
+
+        it('requires age secret key in age mode', async function () {
+            const { res } = await patchSettings({}, { gistUpload: 'age' });
+
+            expect(res.body.status).to.equal('failed');
+            expect(res.body.error.message).to.contain(
+                'age 加密模式需要配置 age-secret-key',
+            );
+        });
+
+        it('rejects invalid submitted age secret key in age mode', async function () {
+            const { res } = await patchSettings(
+                {},
+                {
+                    gistUpload: 'age',
+                    [AGE_SECRET_KEY]: 'invalid-secret-key',
+                },
+            );
+
+            expect(res.body.status).to.equal('failed');
+            expect(res.body.error.message).to.contain(
+                'age-secret-key 仅支持',
+            );
+        });
+    });
+
+    describe('appearance settings', function () {
+        const originalRead = $.read.bind($);
+        const originalWrite = $.write.bind($);
+
+        afterEach(function () {
+            $.read = originalRead;
+            $.write = originalWrite;
+        });
+
+        async function patchSettings(initialSettings, body) {
+            const state = {
+                [SETTINGS_KEY]: initialSettings,
+            };
+            $.read = (key) => state[key];
+            $.write = (data, key) => {
+                state[key] = data;
+                return true;
+            };
+
+            const app = createRouteApp();
+            registerSettingsRoutes(app);
+            const patchHandler = app.handlers.get('PATCH /api/settings');
+            const res = createResponse('/api/settings');
+
+            await patchHandler({ body }, res);
+
+            expect(res.body.status).to.equal('success');
+            return state[SETTINGS_KEY];
+        }
+
+        it('merges appearanceSetting patches without dropping unrelated fields', async function () {
+            const settings = await patchSettings(
+                {
+                    appearanceSetting: {
+                        isSimpleMode: false,
+                        editorGroupingMode: 'always',
+                        editorCommonDisplayMode: 'collapsed',
+                    },
+                },
+                {
+                    appearanceSetting: {
+                        isSimpleMode: true,
+                    },
+                },
+            );
+
+            expect(settings.appearanceSetting).to.deep.equal({
+                isSimpleMode: true,
+                editorGroupingMode: 'always',
+                editorCommonDisplayMode: 'collapsed',
+            });
         });
     });
 
