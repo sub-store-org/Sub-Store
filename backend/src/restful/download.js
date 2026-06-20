@@ -262,17 +262,17 @@ async function downloadSubscription(req, res) {
         $.info(`指定输出易读 YAML: ${prettyYaml}`);
     }
     if (mihomoMerge) {
-        $.info(`指定合并 Mihomo External: ${mihomoMerge}`);
+        $.info(`指定合并 mihomo External: ${mihomoMerge}`);
     }
     if (mihomoMergeName) {
-        $.info(`指定合并 Mihomo External 名称: ${mihomoMergeName}`);
+        $.info(`指定合并 mihomo External 名称: ${mihomoMergeName}`);
     }
 
     if (useMihomoExternal) {
-        $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
+        $.info(`手动指定了 target 为 SurgeMac, 将使用 mihomo External`);
     }
     if (mihomoExternal) {
-        $.info(`手动指定了 Mihomo External 链接参数: ${mihomoExternal}`);
+        $.info(`手动指定了 mihomo External 链接参数: ${mihomoExternal}`);
     }
 
     if (noCache) {
@@ -610,17 +610,17 @@ async function downloadCollection(req, res) {
         $.info(`指定输出易读 YAML: ${prettyYaml}`);
     }
     if (mihomoMerge) {
-        $.info(`指定合并 Mihomo External: ${mihomoMerge}`);
+        $.info(`指定合并 mihomo External: ${mihomoMerge}`);
     }
     if (mihomoMergeName) {
-        $.info(`指定合并 Mihomo External 名称: ${mihomoMergeName}`);
+        $.info(`指定合并 mihomo External 名称: ${mihomoMergeName}`);
     }
 
     if (useMihomoExternal) {
-        $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
+        $.info(`手动指定了 target 为 SurgeMac, 将使用 mihomo External`);
     }
     if (mihomoExternal) {
-        $.info(`手动指定了 Mihomo External 链接参数: ${mihomoExternal}`);
+        $.info(`手动指定了 mihomo External 链接参数: ${mihomoExternal}`);
     }
     if (noCache) {
         $.info(`指定不使用缓存: ${noCache}`);

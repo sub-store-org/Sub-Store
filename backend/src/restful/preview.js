@@ -11,9 +11,13 @@ import {
     resolveIgnoreFailedRemoteSubMode,
     shouldFallbackIgnoreFailedRemoteSub,
 } from '@/restful/ignore-failed-remote-sub';
-import { prepareMihomoProfileContent } from '@/restful/sync';
+import {
+    prepareMihomoProfileContent,
+    resolveFileRawContent,
+} from '@/restful/sync';
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 import { maskAgeSecretInUrl } from '@/utils/age';
+import { isMihomoConfigFile, normalizeFileConfig } from '@/utils/file-type';
 
 function formatAgeSafeUrls(errors) {
     return Object.keys(errors).map(maskAgeSecretInUrl).join(', ');
@@ -27,68 +31,16 @@ export default function register($app) {
 
 async function previewFile(req, res) {
     try {
-        const file = req.body;
+        const file = normalizeFileConfig(req.body);
         let content = '';
-        if (file.type === 'mihomoProfile') {
-            content = await prepareMihomoProfileContent(file);
+        if (isMihomoConfigFile(file)) {
+            content = await prepareMihomoProfileContent(file, {
+                notifyTitle: '🌍 Sub-Store 预览文件失败',
+            });
         } else {
-            if (
-                file.source === 'local' &&
-                !['localFirst', 'remoteFirst'].includes(file.mergeSources)
-            ) {
-                content = file.content;
-            } else {
-                const errors = {};
-                content = await Promise.all(
-                    file.url
-                        .split(/[\r\n]+/)
-                        .map((i) => i.trim())
-                        .filter((i) => i.length)
-                        .map(async (url) => {
-                            try {
-                                return await download(
-                                    url,
-                                    file.ua,
-                                    undefined,
-                                    file.proxy,
-                                );
-                            } catch (err) {
-                                errors[url] = err;
-                                $.error(
-                                    `文件 ${file.name} 的远程文件 ${maskAgeSecretInUrl(
-                                        url,
-                                    )} 发生错误: ${err}`,
-                                );
-                                return '';
-                            }
-                        }),
-                );
-
-                if (Object.keys(errors).length > 0) {
-                    if (!file.ignoreFailedRemoteFile) {
-                        throw new Error(
-                            `文件 ${
-                                file.name
-                            } 的远程文件 ${formatAgeSafeUrls(
-                                errors,
-                            )} 发生错误, 请查看日志`,
-                        );
-                    } else if (file.ignoreFailedRemoteFile === 'enabled') {
-                        $.notify(
-                            `🌍 Sub-Store 预览文件失败`,
-                            `❌ ${file.name}`,
-                            `远程文件 ${formatAgeSafeUrls(
-                                errors,
-                            )} 发生错误, 请查看日志`,
-                        );
-                    }
-                }
-                if (file.mergeSources === 'localFirst') {
-                    content.unshift(file.content);
-                } else if (file.mergeSources === 'remoteFirst') {
-                    content.push(file.content);
-                }
-            }
+            content = await resolveFileRawContent(file, {
+                notifyTitle: '🌍 Sub-Store 预览文件失败',
+            });
         }
         // parse proxies
         const files = (Array.isArray(content) ? content : [content]).flat();

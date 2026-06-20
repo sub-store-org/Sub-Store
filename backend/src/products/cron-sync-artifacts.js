@@ -194,7 +194,7 @@ async function doSync(arg = {}, { canUpload = true } = {}) {
 
                         if (useMihomoExternal) {
                             $.info(
-                                `手动指定了 target 为 SurgeMac, 将使用 Mihomo External`,
+                                `手动指定了 target 为 SurgeMac, 将使用 mihomo External`,
                             );
                         }
                         const output = await produceSyncArtifactOutput(

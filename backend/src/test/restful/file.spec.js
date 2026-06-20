@@ -210,6 +210,54 @@ describe('file routes', function () {
         expect(res.sent).to.equal('base-script-carried');
     });
 
+    it('passes runtime file overrides to response transformers', async function () {
+        state[FILES_KEY][0] = {
+            name: 'local-file',
+            type: 'mihomoConfig',
+            sourceType: 'subscription',
+            sourceName: 'stored-sub',
+            process: [
+                {
+                    type: 'Response Transformer',
+                    args: {
+                        mode: 'script',
+                        content:
+                            '$res.body = JSON.stringify({\n' +
+                            '  contentHasRuntimeNode: context.source.$file.content.includes("Runtime Supported"),\n' +
+                            '  download: context.source.$file.download,\n' +
+                            '  mode: context.source.$file.mode,\n' +
+                            '  proxy: context.source.$file.proxy,\n' +
+                            '  sourceType: context.source.$file.sourceType,\n' +
+                            '  type: context.source.$file.type,\n' +
+                            '})',
+                    },
+                },
+            ],
+        };
+
+        const res = await requestFile({
+            content:
+                'mixed-port: 7890\n' +
+                'proxies:\n' +
+                '  - {name: Runtime Supported, type: ss, server: ss.example.com, port: 8388, cipher: aes-128-gcm, password: secret}',
+            download: '1',
+            mode: 'proxy',
+            proxy: 'runtime-proxy',
+            sourceType: 'local',
+            type: 'mihomoConfig',
+        });
+        const body = JSON.parse(res.sent);
+
+        expect(body).to.deep.equal({
+            contentHasRuntimeNode: true,
+            download: '1',
+            mode: 'proxy',
+            proxy: 'runtime-proxy',
+            sourceType: 'local',
+            type: 'mihomoConfig',
+        });
+    });
+
     it('uses fakeFile without requiring a stored file', async function () {
         state[FILES_KEY] = [];
 
@@ -345,6 +393,28 @@ describe('file routes', function () {
         expect(res.sent.status).to.equal('failed');
         expect(res.sent.error.code).to.equal(
             'UNSUPPORTED_SHARE_FILE_MERGE_SOURCES',
+        );
+        expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects runtime file source overrides on share routes', async function () {
+        const res = await requestShareFile({
+            query: {
+                type: 'mihomoConfig',
+                sourceType: 'subscription',
+                sourceName: 'demo-sub',
+                mode: 'proxy',
+            },
+            shareToken: {
+                type: 'file',
+                name: 'local-file',
+            },
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.status).to.equal('failed');
+        expect(res.sent.error.code).to.equal(
+            'UNSUPPORTED_SHARE_FILE_RUNTIME_OVERRIDE',
         );
         expect(res.sent.error.type).to.equal('RequestInvalidError');
     });

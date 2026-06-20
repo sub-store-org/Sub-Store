@@ -3,7 +3,7 @@ import { afterEach, describe, it } from 'mocha';
 import { Base64 } from 'js-base64';
 
 import $ from '@/core/app';
-import { GIST_BACKUP_FILE_NAME, SETTINGS_KEY } from '@/constants';
+import { GIST_BACKUP_FILE_NAME } from '@/constants';
 import { gistBackupAction } from '@/restful/miscs';
 import Gist from '@/utils/gist';
 import {
@@ -23,6 +23,7 @@ describe('Gist backup age encryption', function () {
     const originalUpload = Gist.prototype.upload;
     const originalDownload = Gist.prototype.download;
     const originalCache = $.cache;
+    const originalPersistCache = $.persistCache.bind($);
 
     afterEach(function () {
         $.read = originalRead;
@@ -32,26 +33,24 @@ describe('Gist backup age encryption', function () {
         Gist.prototype.upload = originalUpload;
         Gist.prototype.download = originalDownload;
         $.cache = originalCache;
+        $.persistCache = originalPersistCache;
     });
 
     function installState(initialContent) {
         $.cache = JSON.parse(JSON.stringify(initialContent));
         $.read = (key) => {
-            if (key === SETTINGS_KEY) return $.cache.settings;
             if (key === '#sub-store') return JSON.stringify($.cache);
-            return originalRead(key);
+            return $.cache[key];
         };
         $.write = (data, key) => {
-            if (key === SETTINGS_KEY) {
-                $.cache.settings = data;
-                return true;
-            }
             if (key === '#sub-store') {
                 $.cache = JSON.parse(data);
                 return true;
             }
-            return originalWrite(data, key);
+            $.cache[key] = data;
+            return true;
         };
+        $.persistCache = () => {};
         $.info = () => {};
         $.error = () => {};
     }

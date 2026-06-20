@@ -31,6 +31,7 @@ import {
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 import { applyAgeOutputEncryption } from '@/restful/age-output';
 import { maskAgeSecretInUrl } from '@/utils/age';
+import { isMihomoConfigFile, normalizeFileConfig } from '@/utils/file-type';
 
 export default function register($app) {
     // Initialization
@@ -41,15 +42,212 @@ export default function register($app) {
     $app.get('/api/sync/artifact/:name', syncArtifact);
 }
 
+const MERGE_SOURCE_MODES = ['localFirst', 'remoteFirst'];
+const MIHOMO_PROFILE_FILE_SOURCE_TYPES = ['local', 'remote'];
+const MIHOMO_CONFIG_SOURCE_TYPES = [
+    'collection',
+    'local',
+    'none',
+    'remote',
+    'subscription',
+];
+
 function formatAgeSafeUrls(errors) {
     return Object.keys(errors).map(maskAgeSecretInUrl).join(', ');
 }
 
-async function prepareMihomoProfileContent(file) {
+function isMergeSourceMode(mode) {
+    return MERGE_SOURCE_MODES.includes(mode);
+}
+
+function normalizeFileSourceType(file) {
+    if (isMihomoConfigFile(file)) {
+        return normalizeMihomoConfigSourceType(file);
+    }
+    return file?.source;
+}
+
+function normalizeMihomoConfigSourceType(file) {
+    return MIHOMO_CONFIG_SOURCE_TYPES.includes(file?.sourceType)
+        ? file.sourceType
+        : 'collection';
+}
+
+function normalizeRawFiles(raw) {
+    return (Array.isArray(raw) ? raw : [raw]).flat();
+}
+
+function joinRawFileContent(raw) {
+    return normalizeRawFiles(raw)
+        .filter((i) => i != null && i !== '')
+        .join('\n');
+}
+
+function resolveFileIgnoreFailedRemoteFile(file, ignoreFailedRemoteFile) {
+    if (ignoreFailedRemoteFile != null && ignoreFailedRemoteFile !== '') {
+        return ignoreFailedRemoteFile;
+    }
+    return file.ignoreFailedRemoteFile;
+}
+
+async function downloadFileSources({
+    file,
+    sourceUrl,
+    ua,
+    proxy,
+    noCache,
+    ignoreFailedRemoteFile,
+    notifyTitle = '🌍 Sub-Store 处理文件失败',
+}) {
+    const errors = {};
+    const urls = `${sourceUrl || ''}`
+        .split(/[\r\n]+/)
+        .map((i) => i.trim())
+        .filter((i) => i.length);
+    if (urls.length === 0) {
+        throw new Error(`文件 ${file.name} 未配置远程文件 URL`);
+    }
+
+    const raw = await Promise.all(
+        urls.map(async (url) => {
+            try {
+                return await download(
+                    url,
+                    ua || file.ua,
+                    undefined,
+                    file.proxy || proxy,
+                    undefined,
+                    undefined,
+                    noCache,
+                );
+            } catch (err) {
+                errors[url] = err;
+                $.error(
+                    `文件 ${file.name} 的远程文件 ${maskAgeSecretInUrl(
+                        url,
+                    )} 发生错误: ${err}`,
+                );
+                return '';
+            }
+        }),
+    );
+
+    const fileIgnoreFailedRemoteFile = resolveFileIgnoreFailedRemoteFile(
+        file,
+        ignoreFailedRemoteFile,
+    );
+
+    if (Object.keys(errors).length > 0) {
+        if (!fileIgnoreFailedRemoteFile) {
+            throw new Error(
+                `文件 ${file.name} 的远程文件 ${formatAgeSafeUrls(
+                    errors,
+                )} 发生错误, 请查看日志`,
+            );
+        } else if (fileIgnoreFailedRemoteFile === 'enabled') {
+            $.notify(
+                notifyTitle,
+                `❌ ${file.name}`,
+                `远程文件 ${formatAgeSafeUrls(errors)} 发生错误, 请查看日志`,
+            );
+        }
+    }
+
+    return raw;
+}
+
+async function resolveFileRawContent(
+    file,
+    {
+        url,
+        ua,
+        content,
+        mergeSources,
+        ignoreFailedRemoteFile,
+        proxy,
+        noCache,
+        notifyTitle,
+    } = {},
+) {
+    if (content && !isMergeSourceMode(mergeSources)) {
+        return content;
+    }
+
+    if (url) {
+        const raw = await downloadFileSources({
+            file,
+            sourceUrl: url,
+            ua,
+            proxy,
+            noCache,
+            ignoreFailedRemoteFile,
+            notifyTitle,
+        });
+        if (mergeSources === 'localFirst') {
+            raw.unshift(content);
+        } else if (mergeSources === 'remoteFirst') {
+            raw.push(content);
+        }
+        return raw;
+    }
+
+    if (
+        normalizeFileSourceType(file) === 'local' &&
+        !isMergeSourceMode(file.mergeSources)
+    ) {
+        return file.content;
+    }
+
+    const raw = await downloadFileSources({
+        file,
+        sourceUrl: file.url,
+        ua,
+        proxy,
+        noCache,
+        ignoreFailedRemoteFile,
+        notifyTitle,
+    });
+
+    if (file.mergeSources === 'localFirst') {
+        raw.unshift(file.content);
+    } else if (file.mergeSources === 'remoteFirst') {
+        raw.push(file.content);
+    }
+
+    return raw;
+}
+
+async function prepareMihomoProfileContent(file, sourceOptions = {}) {
     const config = {};
-    if (file?.sourceType !== 'none') {
+    const sourceType = normalizeMihomoConfigSourceType(file);
+    if (sourceType === 'none') {
+        return ProxyUtils.yaml.safeDump(config);
+    }
+
+    if (MIHOMO_PROFILE_FILE_SOURCE_TYPES.includes(sourceType)) {
+        const raw = await resolveFileRawContent(file, sourceOptions);
+        if (file?.mode !== 'proxy') {
+            return joinRawFileContent(raw);
+        }
+
+        const proxies = normalizeRawFiles(raw)
+            .map((i) => ProxyUtils.parse(i))
+            .flat();
+        if (proxies.length === 0) {
+            throw new Error(`文件 ${file.name} 中不含有效节点`);
+        }
+        config.proxies = ProxyUtils.produce(
+            proxies,
+            'mihomo',
+            'internal',
+            {
+                'delete-underscore-fields': true,
+                'include-unsupported-proxy': file?.includeUnsupportedProxy,
+            },
+        );
+    } else {
         config.proxies = await produceArtifact({
-            type: file?.sourceType || 'collection',
+            type: sourceType,
             name: file?.sourceName,
             platform: 'mihomo',
             produceType: 'internal',
@@ -597,145 +795,37 @@ async function produceArtifact({
         return RuleUtils.produce(rules, platform);
     } else if (type === 'file') {
         const allFiles = $.read(FILES_KEY);
-        const file = sourceFile || findByName(allFiles, name);
+        const file = normalizeFileConfig(
+            sourceFile || findByName(allFiles, name),
+        );
         if (!file) throw new Error(`找不到文件 ${name}`);
         let raw = '';
-        if (file.type === 'mihomoProfile') {
-            raw = await prepareMihomoProfileContent(file);
+        if (isMihomoConfigFile(file)) {
+            raw = await prepareMihomoProfileContent(file, {
+                url,
+                ua,
+                content,
+                mergeSources,
+                ignoreFailedRemoteFile,
+                proxy,
+                noCache,
+            });
         } else {
-            if (
-                content &&
-                !['localFirst', 'remoteFirst'].includes(mergeSources)
-            ) {
-                raw = content;
-            } else if (url) {
-                const errors = {};
-                raw = await Promise.all(
-                    url
-                        .split(/[\r\n]+/)
-                        .map((i) => i.trim())
-                        .filter((i) => i.length)
-                        .map(async (url) => {
-                            try {
-                                return await download(
-                                    url,
-                                    ua || file.ua,
-                                    undefined,
-                                    file.proxy || proxy,
-                                    undefined,
-                                    undefined,
-                                    noCache,
-                                );
-                            } catch (err) {
-                                errors[url] = err;
-                                $.error(
-                                    `文件 ${file.name} 的远程文件 ${maskAgeSecretInUrl(
-                                        url,
-                                    )} 发生错误: ${err}`,
-                                );
-                                return '';
-                            }
-                        }),
-                );
-                let fileIgnoreFailedRemoteFile = file.ignoreFailedRemoteFile;
-                if (
-                    ignoreFailedRemoteFile != null &&
-                    ignoreFailedRemoteFile !== ''
-                ) {
-                    fileIgnoreFailedRemoteFile = ignoreFailedRemoteFile;
-                }
-                if (
-                    !fileIgnoreFailedRemoteFile &&
-                    Object.keys(errors).length > 0
-                ) {
-                    throw new Error(
-                        `文件 ${
-                            file.name
-                        } 的远程文件 ${formatAgeSafeUrls(
-                            errors,
-                        )} 发生错误, 请查看日志`,
-                    );
-                }
-                if (mergeSources === 'localFirst') {
-                    raw.unshift(content);
-                } else if (mergeSources === 'remoteFirst') {
-                    raw.push(content);
-                }
-            } else if (
-                file.source === 'local' &&
-                !['localFirst', 'remoteFirst'].includes(file.mergeSources)
-            ) {
-                raw = file.content;
-            } else {
-                const errors = {};
-                raw = await Promise.all(
-                    file.url
-                        .split(/[\r\n]+/)
-                        .map((i) => i.trim())
-                        .filter((i) => i.length)
-                        .map(async (url) => {
-                            try {
-                                return await download(
-                                    url,
-                                    ua || file.ua,
-                                    undefined,
-                                    file.proxy || proxy,
-                                    undefined,
-                                    undefined,
-                                    noCache,
-                                );
-                            } catch (err) {
-                                errors[url] = err;
-                                $.error(
-                                    `文件 ${file.name} 的远程文件 ${maskAgeSecretInUrl(
-                                        url,
-                                    )} 发生错误: ${err}`,
-                                );
-                                return '';
-                            }
-                        }),
-                );
-                let fileIgnoreFailedRemoteFile = file.ignoreFailedRemoteFile;
-                if (
-                    ignoreFailedRemoteFile != null &&
-                    ignoreFailedRemoteFile !== ''
-                ) {
-                    fileIgnoreFailedRemoteFile = ignoreFailedRemoteFile;
-                }
-
-                if (Object.keys(errors).length > 0) {
-                    if (!fileIgnoreFailedRemoteFile) {
-                        throw new Error(
-                            `文件 ${
-                                file.name
-                            } 的远程文件 ${formatAgeSafeUrls(
-                                errors,
-                            )} 发生错误, 请查看日志`,
-                        );
-                    } else if (fileIgnoreFailedRemoteFile === 'enabled') {
-                        $.notify(
-                            `🌍 Sub-Store 处理文件失败`,
-                            `❌ ${file.name}`,
-                            `远程文件 ${formatAgeSafeUrls(
-                                errors,
-                            )} 发生错误, 请查看日志`,
-                        );
-                    }
-                }
-                if (file.mergeSources === 'localFirst') {
-                    raw.unshift(file.content);
-                } else if (file.mergeSources === 'remoteFirst') {
-                    raw.push(file.content);
-                }
-            }
+            raw = await resolveFileRawContent(file, {
+                url,
+                ua,
+                content,
+                mergeSources,
+                ignoreFailedRemoteFile,
+                proxy,
+                noCache,
+            });
         }
         if (produceType === 'raw') {
-            return JSON.stringify((Array.isArray(raw) ? raw : [raw]).flat());
+            return JSON.stringify(normalizeRawFiles(raw));
         }
-        const files = (Array.isArray(raw) ? raw : [raw]).flat();
-        let filesContent = files
-            .filter((i) => i != null && i !== '')
-            .join('\n');
+        const files = normalizeRawFiles(raw);
+        let filesContent = joinRawFileContent(files);
 
         // apply processors
         const processed =
@@ -1024,7 +1114,7 @@ async function syncArtifacts(options = {}) {
 
                         if (useMihomoExternal) {
                             $.info(
-                                `手动指定了 target 为 SurgeMac, 将使用 Mihomo External`,
+                                `手动指定了 target 为 SurgeMac, 将使用 mihomo External`,
                             );
                         }
 
@@ -1150,7 +1240,7 @@ async function syncArtifactItem(name) {
     const useMihomoExternal = artifact.platform === 'SurgeMac';
 
     if (useMihomoExternal) {
-        $.info(`手动指定了 target 为 SurgeMac, 将使用 Mihomo External`);
+        $.info(`手动指定了 target 为 SurgeMac, 将使用 mihomo External`);
     }
     const output = await produceSyncArtifactOutput(artifact);
 
@@ -1242,6 +1332,7 @@ export {
     prepareMihomoProfileContent,
     produceArtifact,
     produceSyncArtifactOutput,
+    resolveFileRawContent,
     shouldUploadArtifact,
     syncArtifactItem,
     syncArtifacts,
