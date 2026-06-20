@@ -5,6 +5,7 @@ import { FILES_KEY, SUBS_KEY } from '@/constants';
 
 let $;
 let registerFileRoutes;
+let registerPreviewRoutes;
 let originalError;
 let originalInfo;
 let originalNotify;
@@ -101,10 +102,33 @@ async function requestFile(name, query = {}) {
     return res;
 }
 
+async function previewFile(file) {
+    const app = createRouteApp();
+    registerPreviewRoutes(app);
+    const handler = app.handlers.get('POST /api/preview/file');
+    const res = createResponse('/api/preview/file');
+
+    await handler(
+        {
+            body: file,
+            headers: {},
+            method: 'POST',
+            path: '/api/preview/file',
+            query: {},
+            socket: {},
+            url: '/api/preview/file',
+        },
+        res,
+    );
+
+    return res;
+}
+
 describe('mihomo profile file routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
         ({ default: registerFileRoutes } = require('@/restful/file'));
+        ({ default: registerPreviewRoutes } = require('@/restful/preview'));
 
         originalRead = $.read.bind($);
         originalWrite = $.write.bind($);
@@ -150,6 +174,44 @@ describe('mihomo profile file routes', function () {
         $.warn = () => {};
         $.error = () => {};
         $.notify = () => {};
+    });
+
+    it('builds mihomoProfile proxies before file processors run', async function () {
+        state[FILES_KEY] = [
+            {
+                name: 'base-file',
+                type: 'mihomoProfile',
+                sourceType: 'subscription',
+                sourceName: 'demo-sub',
+                includeUnsupportedProxy: false,
+                process: [],
+            },
+        ];
+
+        const res = await requestFile('base-file');
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.sent).to.include('proxies:');
+        expect(res.sent).to.include('name: Supported');
+        expect(res.sent).to.not.include('name: Unsupported');
+    });
+
+    it('previews mihomoProfile proxies before file processors run', async function () {
+        const res = await previewFile({
+            name: 'preview-file',
+            type: 'mihomoProfile',
+            sourceType: 'subscription',
+            sourceName: 'demo-sub',
+            includeUnsupportedProxy: false,
+            process: [],
+        });
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.sent.status).to.equal('success');
+        expect(res.sent.data.original).to.include('proxies:');
+        expect(res.sent.data.original).to.include('name: Supported');
+        expect(res.sent.data.original).to.not.include('name: Unsupported');
+        expect(res.sent.data.processed).to.include('name: Supported');
     });
 
     it('keeps unsupported proxies for YAML mihomoProfile overrides when enabled', async function () {

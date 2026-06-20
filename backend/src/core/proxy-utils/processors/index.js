@@ -412,28 +412,7 @@ function ScriptOperator(
                     if (typeof patch !== 'object')
                         throw new Error('patch is not an object');
                     output.$content = ProxyUtils.yaml.safeDump(
-                        deepMerge(
-                            config ||
-                                (output?.$file?.sourceType === 'none'
-                                    ? {}
-                                    : {
-                                          proxies: await produceArtifact({
-                                              type:
-                                                  output?.$file?.sourceType ||
-                                                  'collection',
-                                              name: output?.$file?.sourceName,
-                                              platform: 'mihomo',
-                                              produceType: 'internal',
-                                              produceOpts: {
-                                                  'delete-underscore-fields': true,
-                                                  'include-unsupported-proxy':
-                                                      output?.$file
-                                                          ?.includeUnsupportedProxy,
-                                              },
-                                          }),
-                                      }),
-                            patch,
-                        ),
+                        deepMerge(config || {}, patch),
                     );
                     return output;
                 } catch (e) {
@@ -470,19 +449,7 @@ function ScriptOperator(
                                             console.log(e.message ?? e);
                                         }
                                     }
-                                    $content = ProxyUtils.yaml.safeDump(await main(config || ($file.sourceType === 'none' ? {} : {
-                                        proxies: await produceArtifact({
-                                            type: $file.sourceType || 'collection',
-                                            name: $file.sourceName,
-                                            platform: 'mihomo',
-                                            produceType: 'internal',
-                                            produceOpts: {
-                                                'delete-underscore-fields': true,
-                                                'include-unsupported-proxy':
-                                                    $file.includeUnsupportedProxy,
-                                            }
-                                        }),
-                                    })))
+                                    $content = ProxyUtils.yaml.safeDump(await main(config || {}))
                                 }
                             } else {
                                 ${script}

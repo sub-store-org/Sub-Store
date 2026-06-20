@@ -11,6 +11,7 @@ import {
     resolveIgnoreFailedRemoteSubMode,
     shouldFallbackIgnoreFailedRemoteSub,
 } from '@/restful/ignore-failed-remote-sub';
+import { prepareMihomoProfileContent } from '@/restful/sync';
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 import { maskAgeSecretInUrl } from '@/utils/age';
 
@@ -28,7 +29,9 @@ async function previewFile(req, res) {
     try {
         const file = req.body;
         let content = '';
-        if (file.type !== 'mihomoProfile') {
+        if (file.type === 'mihomoProfile') {
+            content = await prepareMihomoProfileContent(file);
+        } else {
             if (
                 file.source === 'local' &&
                 !['localFirst', 'remoteFirst'].includes(file.mergeSources)

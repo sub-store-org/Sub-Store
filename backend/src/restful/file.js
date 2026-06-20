@@ -69,6 +69,7 @@ async function getFile(req, res, next) {
         proxy,
         noCache,
         produceType,
+        download,
         fakeFile: _fakeFile,
     } = req.query;
     let $options = {
@@ -204,6 +205,9 @@ async function getFile(req, res, next) {
     if (produceType) {
         $.info(`指定生产类型: ${produceType}`);
     }
+    if (download) {
+        $.info('启用下载(文件名为显示名称)');
+    }
     if (includeUnsupportedProxy) {
         $.info(`包含官方/商店版不支持的协议: ${includeUnsupportedProxy}`);
     }
@@ -277,7 +281,7 @@ async function getFile(req, res, next) {
                     )}`,
                 );
             }
-            if (file.download) {
+            if (file.download || download) {
                 res.set(
                     'Content-Disposition',
                     `attachment; filename*=UTF-8''${encodeURIComponent(

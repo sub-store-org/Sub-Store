@@ -45,6 +45,23 @@ function formatAgeSafeUrls(errors) {
     return Object.keys(errors).map(maskAgeSecretInUrl).join(', ');
 }
 
+async function prepareMihomoProfileContent(file) {
+    const config = {};
+    if (file?.sourceType !== 'none') {
+        config.proxies = await produceArtifact({
+            type: file?.sourceType || 'collection',
+            name: file?.sourceName,
+            platform: 'mihomo',
+            produceType: 'internal',
+            produceOpts: {
+                'delete-underscore-fields': true,
+                'include-unsupported-proxy': file?.includeUnsupportedProxy,
+            },
+        });
+    }
+    return ProxyUtils.yaml.safeDump(config);
+}
+
 async function produceArtifact({
     type,
     name,
@@ -583,7 +600,9 @@ async function produceArtifact({
         const file = sourceFile || findByName(allFiles, name);
         if (!file) throw new Error(`找不到文件 ${name}`);
         let raw = '';
-        if (file.type !== 'mihomoProfile') {
+        if (file.type === 'mihomoProfile') {
+            raw = await prepareMihomoProfileContent(file);
+        } else {
             if (
                 content &&
                 !['localFirst', 'remoteFirst'].includes(mergeSources)
@@ -1220,6 +1239,7 @@ async function syncArtifact(req, res) {
 
 export {
     markArtifactProducedWithoutUpload,
+    prepareMihomoProfileContent,
     produceArtifact,
     produceSyncArtifactOutput,
     shouldUploadArtifact,

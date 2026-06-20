@@ -225,6 +225,20 @@ describe('file routes', function () {
         expect(fakeFileRes.sent).to.equal('from-fake-file');
     });
 
+    it('forces attachment download with the display name from query', async function () {
+        state[FILES_KEY][0].displayName = '显示名称.yaml';
+
+        const res = await requestFile({ download: '1' });
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.headers['Content-Disposition']).to.equal(
+            `attachment; filename*=UTF-8''${encodeURIComponent(
+                '显示名称.yaml',
+            )}`,
+        );
+        expect(res.sent).to.equal('base');
+    });
+
     it('rejects fakeFile without content or url', async function () {
         state[FILES_KEY] = [];
 
