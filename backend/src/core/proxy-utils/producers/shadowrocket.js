@@ -38,7 +38,6 @@ export default function Shadowrocket_Producer() {
                         'tailscale',
                         'sudoku',
                         'naive',
-                        'masque',
                         'openvpn',
                         'gost-relay',
                     ].includes(proxy.type)
