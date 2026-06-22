@@ -42,12 +42,20 @@ function getMihomoExternalOptions(query) {
     const mihomoMergeName = useMihomoExternal
         ? query.mihomoMergeName
         : undefined;
+    let mihomoLocalPort;
+    if (useMihomoExternal && query.mihomoLocalPort != null) {
+        const parsed = parseInt(query.mihomoLocalPort, 10);
+        if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) {
+            mihomoLocalPort = parsed;
+        }
+    }
 
     return {
         useMihomoExternal,
         mihomoExternal,
         mihomoMerge,
         mihomoMergeName,
+        mihomoLocalPort,
     };
 }
 
@@ -126,8 +134,13 @@ async function downloadSubscription(req, res) {
     let { name, nezhaIndex } = req.params;
     const isShareRoute = req.path?.startsWith('/share/');
 
-    const { useMihomoExternal, mihomoMerge, mihomoMergeName, mihomoExternal } =
-        getMihomoExternalOptions(req.query);
+    const {
+        useMihomoExternal,
+        mihomoMerge,
+        mihomoMergeName,
+        mihomoExternal,
+        mihomoLocalPort,
+    } = getMihomoExternalOptions(req.query);
 
     const platform =
         req.query.platform ||
@@ -316,6 +329,7 @@ async function downloadSubscription(req, res) {
                     merge: mihomoMerge,
                     mergeName: mihomoMergeName,
                     mihomoExternal,
+                    localPort: mihomoLocalPort,
                     prettyYaml,
                 },
                 $options,
@@ -533,8 +547,13 @@ async function downloadSubscription(req, res) {
 async function downloadCollection(req, res) {
     let { name, nezhaIndex } = req.params;
 
-    const { useMihomoExternal, mihomoMerge, mihomoMergeName, mihomoExternal } =
-        getMihomoExternalOptions(req.query);
+    const {
+        useMihomoExternal,
+        mihomoMerge,
+        mihomoMergeName,
+        mihomoExternal,
+        mihomoLocalPort,
+    } = getMihomoExternalOptions(req.query);
 
     const platform =
         req.query.platform ||
@@ -640,6 +659,7 @@ async function downloadCollection(req, res) {
                     merge: mihomoMerge,
                     mergeName: mihomoMergeName,
                     mihomoExternal,
+                    localPort: mihomoLocalPort,
                     prettyYaml,
                 },
                 $options,
