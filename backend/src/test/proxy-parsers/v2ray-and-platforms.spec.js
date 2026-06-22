@@ -3715,6 +3715,20 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses hysteria2 gecko obfs lines',
+                input: 'Surge Hysteria2 Gecko = hysteria2,surge-hy2.example.com,443,password=secret,gecko-password="mask",sni=peer.example.com',
+                expected: {
+                    type: 'hysteria2',
+                    name: 'Surge Hysteria2 Gecko',
+                    server: 'surge-hy2.example.com',
+                    port: 443,
+                    password: 'secret',
+                    obfs: 'gecko',
+                    'obfs-password': 'mask',
+                    sni: 'peer.example.com',
+                },
+            },
+            {
                 title: 'parses external definitions with exec, args, local-port and addresses',
                 input: 'Surge External = external, exec="/usr/bin/ssh", local-port="1080", args="-D", args="localhost:1080", addresses="[2001:db8::1]", addresses="1.1.1.1"',
                 expected: {

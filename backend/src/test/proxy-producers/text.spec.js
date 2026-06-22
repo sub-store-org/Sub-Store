@@ -903,6 +903,22 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces Surge Hysteria2 gecko obfs lines', function () {
+        const output = produceExternal('Surge', {
+            type: 'hysteria2',
+            name: 'Surge Hysteria2 Gecko',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            obfs: 'gecko',
+            'obfs-password': 'mask',
+        });
+
+        expect(output).to.equal(
+            'Surge Hysteria2 Gecko=hysteria2,hy2.example.com,443,password="secret",gecko-password="mask"',
+        );
+    });
+
     it('produces Surge Snell v6 and filters v6 obfs', function () {
         const { result: output, errors } = captureErrors(() =>
             ProxyUtils.produce(

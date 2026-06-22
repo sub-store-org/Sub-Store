@@ -1297,8 +1297,13 @@ function wireguard_surge(proxy) {
 }
 
 function hysteria2(proxy) {
-    if (proxy['obfs-password'] && proxy.obfs != 'salamander') {
-        throw unsupported(`only salamander obfs is supported`);
+    const obfsPasswordField = {
+        salamander: 'salamander-password',
+        gecko: 'gecko-password',
+    }[proxy.obfs];
+
+    if (proxy['obfs-password'] && !obfsPasswordField) {
+        throw unsupported(`only salamander and gecko obfs are supported`);
     }
 
     const result = new Result(proxy);
@@ -1316,8 +1321,8 @@ function hysteria2(proxy) {
         result.append(`,port-hopping-interval=${proxy['hop-interval']}`);
     }
 
-    if (proxy['obfs-password'] && proxy.obfs == 'salamander') {
-        result.append(`,salamander-password="${proxy['obfs-password']}"`);
+    if (proxy['obfs-password'] && obfsPasswordField) {
+        result.append(`,${obfsPasswordField}="${proxy['obfs-password']}"`);
     }
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];

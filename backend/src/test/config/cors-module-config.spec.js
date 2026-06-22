@@ -29,7 +29,7 @@ describe('module CORS allowlist config', function () {
             .filter(Boolean);
 
         expect(config.compat_arguments.cors).to.equal(DEFAULT_ORIGINS);
-        expect(config.compat_arguments_desc).to.include('1️⃣1️⃣ cors');
+        expect(config.compat_arguments_desc).to.include('1️⃣ cors');
         expect(httpRequests).to.have.length(2);
         for (const script of httpRequests) {
             expect(script.arguments).to.deep.equal({
