@@ -10,11 +10,13 @@ http:
       name: sub-store-1
       type: request
       require-body: true
+      max-size: -1
       timeout: 900
     - match: ^https?:\/\/sub\.store
       name: sub-store-0
       type: request
       require-body: true
+      max-size: -1
       timeout: 900
 
 cron:

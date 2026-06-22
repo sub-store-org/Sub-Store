@@ -18,4 +18,4 @@ noCache = switch,false,tag=禁用缓存,desc=禁用缓存
 age-secret-key = input,"",tag=age 解密私钥,desc=age 解密私钥 可查看 https://t.me/zhetengsha/5876
 
 [Script]
-generic script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-parser.loon.min.js,tag=Sub-Store Parser,timeout=120,argument=[{ua},{resourceUrlOnly},{noCache},{timeout},{age-secret-key}]
+generic script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-parser.loon.min.js,tag=Sub-Store Parser,timeout=900,argument=[{ua},{resourceUrlOnly},{noCache},{timeout},{age-secret-key}]
