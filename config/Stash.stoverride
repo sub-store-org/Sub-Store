@@ -10,18 +10,18 @@ http:
       name: sub-store-1
       type: request
       require-body: true
-      timeout: 120
+      timeout: 900
     - match: ^https?:\/\/sub\.store
       name: sub-store-0
       type: request
       require-body: true
-      timeout: 120
+      timeout: 900
 
 cron:
   script:
     - name: cron-sync-artifacts
       cron: "55 23 * * *"
-      timeout: 120
+      timeout: 900
 
 script-providers:
   sub-store-0:
