@@ -155,6 +155,20 @@ function QuickSettingOperator(args) {
                 if (proxy.type === 'vmess') {
                     proxy.aead = get(args['vmess aead'], proxy.aead);
                 }
+                if (['snell', 'anytls', 'trusttunnel'].includes(proxy.type)) {
+                    proxy.reuse = get(args.reuse, proxy.reuse);
+                }
+                if (['tuic', 'hysteria2'].includes(proxy.type)) {
+                    proxy.ecn = get(args.ecn, proxy.ecn);
+                }
+                proxy['block-quic'] = getBlockQuic(
+                    args['block-quic'],
+                    proxy['block-quic'],
+                );
+                proxy['ip-version'] = getValue(
+                    args['ip-version'],
+                    proxy['ip-version'],
+                );
                 return proxy;
             });
         },
@@ -168,6 +182,29 @@ function QuickSettingOperator(args) {
                 return false;
             default:
                 return defaultValue;
+        }
+    }
+
+    function getBlockQuic(value, defaultValue) {
+        switch (value) {
+            case 'auto':
+            case 'on':
+            case 'off':
+                return value;
+            default:
+                return defaultValue;
+        }
+    }
+
+    function getValue(value, defaultValue) {
+        switch (value) {
+            case undefined:
+            case null:
+            case '':
+            case 'DEFAULT':
+                return defaultValue;
+            default:
+                return value;
         }
     }
 }
