@@ -48,6 +48,23 @@ function hasNonBlankValue(value) {
     return value != null && `${value}`.trim().length > 0;
 }
 
+function formatSurgeAlpn(alpn) {
+    const values = Array.isArray(alpn)
+        ? alpn
+        : stripSurgeQuotes(`${alpn || ''}`).split(',');
+
+    return values
+        .filter((item) => item != null)
+        .map((item) => String(stripSurgeQuotes(item)).trim())
+        .filter((item) => item !== '')
+        .join(',');
+}
+
+function appendAlpn(result, proxy) {
+    const alpn = formatSurgeAlpn(proxy.alpn);
+    if (alpn) result.append(`,alpn="${alpn}"`);
+}
+
 function appendTlsProxyParams(result, proxy, enabled = true) {
     if (!enabled) {
         return;
@@ -58,6 +75,7 @@ function appendTlsProxyParams(result, proxy, enabled = true) {
         'tls-fingerprint',
     );
     result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
+    appendAlpn(result, proxy);
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -1038,11 +1056,6 @@ function tuic(proxy) {
     result.appendIfPresent(`,uuid=${proxy.uuid}`, 'uuid');
     result.appendIfPresent(`,password="${proxy.password}"`, 'password');
     result.appendIfPresent(`,token=${proxy.token}`, 'token');
-
-    result.appendIfPresent(
-        `,alpn=${Array.isArray(proxy.alpn) ? proxy.alpn[0] : proxy.alpn}`,
-        'alpn',
-    );
 
     if (hasNonBlankValue(proxy.ports)) {
         result.append(

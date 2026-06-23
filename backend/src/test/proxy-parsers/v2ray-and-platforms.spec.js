@@ -3741,5 +3741,24 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
         ]);
+
+        it('parses quoted alpn lists for Surge TLS protocol lines', function () {
+            const alpn = ['http/1.1', 'h2', 'h3'];
+            const cases = [
+                `Surge VMess ALPN = vmess,vmess-alpn.example.com,443,username=${UUID},tls=true,vmess-aead=true,alpn="http/1.1,h2,h3"`,
+                `Surge Trojan ALPN = trojan,trojan-alpn.example.com,443,password=secret,alpn='http/1.1,h2,h3'`,
+                `Surge HTTPS ALPN = https,https-alpn.example.com,443,alpn="http/1.1,h2,h3"`,
+                `Surge H2 ALPN = h2-connect,h2-alpn.example.com,443,alpn='http/1.1,h2,h3'`,
+                `Surge SOCKS5 ALPN = socks5-tls,socks-alpn.example.com,1080,alpn="http/1.1,h2,h3"`,
+                `Surge AnyTLS ALPN = anytls,anytls-alpn.example.com,443,password=secret,alpn='http/1.1,h2,h3'`,
+                `Surge TrustTunnel ALPN = trust-tunnel,trust-alpn.example.com,443,alpn="http/1.1,h2,h3"`,
+                `Surge TUIC ALPN = tuic-v5,tuic-alpn.example.com,443,uuid=${UUID},password=secret,alpn='http/1.1,h2,h3'`,
+                `Surge Hysteria2 ALPN = hysteria2,hy2-alpn.example.com,443,password=secret,alpn="http/1.1,h2,h3"`,
+            ];
+
+            for (const input of cases) {
+                expectSubset(parseOne(input), { alpn });
+            }
+        });
     });
 });

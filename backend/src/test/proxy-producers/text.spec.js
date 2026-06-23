@@ -831,6 +831,118 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('emits quoted Surge alpn for TLS protocol outputs', function () {
+        const alpn = ['http/1.1', 'h2', 'h3'];
+        const output = produceExternal('Surge', [
+            {
+                type: 'vmess',
+                name: 'Surge VMess ALPN',
+                server: 'vmess-alpn.example.com',
+                port: 443,
+                cipher: 'auto',
+                uuid: UUID,
+                alterId: 0,
+                tls: true,
+                alpn,
+            },
+            {
+                type: 'trojan',
+                name: 'Surge Trojan ALPN',
+                server: 'trojan-alpn.example.com',
+                port: 443,
+                password: 'secret',
+                alpn,
+            },
+            {
+                type: 'http',
+                name: 'Surge HTTPS ALPN',
+                server: 'https-alpn.example.com',
+                port: 443,
+                tls: true,
+                alpn,
+            },
+            {
+                type: 'h2-connect',
+                name: 'Surge H2 ALPN',
+                server: 'h2-alpn.example.com',
+                port: 443,
+                alpn,
+            },
+            {
+                type: 'socks5',
+                name: 'Surge SOCKS5 ALPN',
+                server: 'socks-alpn.example.com',
+                port: 1080,
+                tls: true,
+                alpn,
+            },
+            {
+                type: 'anytls',
+                name: 'Surge AnyTLS ALPN',
+                server: 'anytls-alpn.example.com',
+                port: 443,
+                password: 'secret',
+                alpn,
+            },
+            {
+                type: 'trusttunnel',
+                name: 'Surge TrustTunnel ALPN',
+                server: 'trust-alpn.example.com',
+                port: 443,
+                alpn,
+            },
+            {
+                type: 'tuic',
+                name: 'Surge TUIC ALPN',
+                server: 'tuic-alpn.example.com',
+                port: 443,
+                uuid: UUID,
+                password: 'secret',
+                alpn,
+            },
+            {
+                type: 'hysteria2',
+                name: 'Surge Hysteria2 ALPN',
+                server: 'hy2-alpn.example.com',
+                port: 443,
+                password: 'secret',
+                alpn,
+            },
+        ]);
+
+        expect(output.match(/alpn="http\/1\.1,h2,h3"/g)).to.have.length(9);
+    });
+
+    it('omits Surge alpn for non-TLS outputs', function () {
+        const output = produceExternal('Surge', [
+            {
+                type: 'vmess',
+                name: 'Surge VMess Plain ALPN',
+                server: 'vmess-plain-alpn.example.com',
+                port: 80,
+                uuid: UUID,
+                alterId: 0,
+                alpn: ['http/1.1', 'h2'],
+            },
+            {
+                type: 'http',
+                name: 'Surge HTTP Plain ALPN',
+                server: 'http-plain-alpn.example.com',
+                port: 80,
+                alpn: ['http/1.1', 'h2'],
+            },
+            {
+                type: 'socks5',
+                name: 'Surge SOCKS5 Plain ALPN',
+                server: 'socks-plain-alpn.example.com',
+                port: 1080,
+                alpn: ['http/1.1', 'h2'],
+            },
+        ]);
+
+        expect(output).to.not.include('alpn=');
+    });
+
     it('produces Surge TUIC v5 lines with port hopping', function () {
         const output = produceExternal('Surge', {
             type: 'tuic',
@@ -847,7 +959,7 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            `Surge TUIC=tuic-v5,tuic.example.com,443,uuid=${UUID},password="secret",alpn=h3,port-hopping="9000;9002-9004",sni="sni.example.com",skip-cert-verify=true,ecn=true`,
+            `Surge TUIC=tuic-v5,tuic.example.com,443,uuid=${UUID},password="secret",port-hopping="9000;9002-9004",sni="sni.example.com",alpn="h3",skip-cert-verify=true,ecn=true`,
         );
     });
 
@@ -880,7 +992,7 @@ describe('Proxy text producers', function () {
         ]);
 
         expect(output).to.equal(
-            `Surge TUIC Plain=tuic-v5,tuic.example.com,443,uuid=${UUID},password="secret",alpn=h3,sni="sni.example.com",skip-cert-verify=true\nSurge Hysteria2 Plain=hysteria2,hy2.example.com,443,password="secret",sni="peer.example.com",skip-cert-verify=true`,
+            `Surge TUIC Plain=tuic-v5,tuic.example.com,443,uuid=${UUID},password="secret",sni="sni.example.com",alpn="h3",skip-cert-verify=true\nSurge Hysteria2 Plain=hysteria2,hy2.example.com,443,password="secret",sni="peer.example.com",skip-cert-verify=true`,
         );
     });
 
