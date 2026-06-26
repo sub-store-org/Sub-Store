@@ -42,10 +42,10 @@ function createRouteApp() {
     return app;
 }
 
-function getHandler(pattern) {
+function getHandler(pattern, method = 'GET') {
     const app = createRouteApp();
     registerFileRoutes(app);
-    return app.handlers.get(`GET ${pattern}`);
+    return app.handlers.get(`${method.toUpperCase()} ${pattern}`);
 }
 
 function createResponse(routePath) {
@@ -96,6 +96,26 @@ async function requestFile(query = {}, { name = 'local-file' } = {}) {
             params: { name },
             path: `/api/file/${name}`,
             query,
+            url: `/api/file/${name}`,
+        },
+        res,
+    );
+
+    return res;
+}
+
+async function updateFile(data, { name = 'local-file' } = {}) {
+    const handler = getHandler('/api/file/:name', 'PATCH');
+    const res = createResponse('/api/file/:name');
+
+    await handler(
+        {
+            body: data,
+            headers: {},
+            method: 'PATCH',
+            params: { name },
+            path: `/api/file/${name}`,
+            query: {},
             url: `/api/file/${name}`,
         },
         res,
@@ -182,6 +202,33 @@ describe('file routes', function () {
         $.warn = () => {};
         $.error = () => {};
         $.notify = () => {};
+    });
+
+    it('preserves Add Proxies From Subscription Operator settings when updating a file', async function () {
+        const process = [
+            {
+                id: 'add-proxies-action',
+                type: 'Add Proxies From Subscription Operator',
+                args: {
+                    sourceType: 'collection',
+                    sourceName: 'collection-a',
+                    includeUnsupportedProxy: true,
+                    position: 'front',
+                },
+                customName: 'add collection nodes',
+                disabled: true,
+            },
+        ];
+
+        const res = await updateFile({
+            type: 'mihomoConfig',
+            sourceType: 'none',
+            process,
+        });
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.sent.data.process).to.deep.equal(process);
+        expect(state[FILES_KEY][0].process).to.deep.equal(process);
     });
 
     it('passes Script Operator $options changes to response transformers', async function () {
