@@ -5,6 +5,7 @@ import YAML from '@/utils/yaml';
 import download, { downloadFile } from '@/utils/download';
 import {
     decryptArmorIfPresent,
+    derivePublicKey,
     encryptArmor,
 } from '@/utils/age';
 import {
@@ -41,10 +42,11 @@ import JSON5 from 'json5';
 import { hex_md5 } from '@/vendor/md5';
 import SurgeMac_Producer from './producers/surgemac';
 
-const ageUtils = Object.freeze({
+const ageUtils = {
     encrypt: encryptArmor,
     decrypt: decryptArmorIfPresent,
-});
+    derivePublicKey,
+};
 
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {

@@ -191,10 +191,12 @@ describe('Process context control', function () {
         expect(output.body).to.equal('AC');
     });
 
-    it('exposes age encrypt/decrypt helpers in script operators', async function () {
+    it('exposes age helpers in script operators', async function () {
         this.timeout(10000);
 
         const pair = await generateKeyPair();
+        expect(Object.isFrozen(ProxyUtils.age)).to.equal(false);
+
         const operators = [
             {
                 type: 'Script Operator',
@@ -205,9 +207,14 @@ describe('Process context control', function () {
                         secretKey: pair['age-secret-key'],
                     },
                     content: `async function operator(proxies) {
+                        const publicKey = await ProxyUtils.age.derivePublicKey(
+                            $arguments.secretKey,
+                        );
+                        const isExpectedPublicKey =
+                            publicKey === $arguments.publicKey;
                         const encrypted = await ProxyUtils.age.encrypt(
                             'hello age',
-                            $arguments.publicKey,
+                            publicKey,
                         );
                         const decrypted = await ProxyUtils.age.decrypt(
                             encrypted,
@@ -215,7 +222,7 @@ describe('Process context control', function () {
                         );
                         return proxies.map((proxy) => ({
                             ...proxy,
-                            name: proxy.name + '-' + decrypted,
+                            name: [proxy.name, decrypted, isExpectedPublicKey].join('-'),
                         }));
                     }`,
                 },
@@ -225,7 +232,7 @@ describe('Process context control', function () {
         const output = await ProxyUtils.process([{ name: 'A' }], operators);
 
         expect(output.map((proxy) => proxy.name)).to.deep.equal([
-            'A-hello age',
+            'A-hello age-true',
         ]);
     });
 });

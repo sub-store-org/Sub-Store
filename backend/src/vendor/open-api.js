@@ -651,7 +651,9 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
         ).then((resp) => events.onResponse(resp));
     }
 
-    const http = {};
+    const http = {
+        request: (options) => send(options.method || 'GET', options),
+    };
     methods.forEach(
         (method) =>
             (http[method.toLowerCase()] = (options) => send(method, options)),
