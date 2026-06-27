@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 import { isIPv4, isIPv6 } from '@/utils';
 
 const DNS_DEFAULT_PORT = 53;
+const DNS_TLS_DEFAULT_PORT = 853;
 const DNS_TCP_LENGTH_BYTES = 2;
 
 function buildDnsQuery({ domain, type = 'A', edns }) {
@@ -47,8 +48,12 @@ function normalizeDnsHost(host) {
     return host?.replace(/^\[(.*)\]$/, '$1');
 }
 
-function parseDnsPort(port) {
-    if (!port) return DNS_DEFAULT_PORT;
+function isIP(host) {
+    return isIPv4(host) || isIPv6(host);
+}
+
+function parseDnsPort(port, defaultPort = DNS_DEFAULT_PORT) {
+    if (!port) return defaultPort;
     const parsed = Number(port);
     if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
         throw new Error('自定义 DNS 端口号应为 1-65535 的整数');
@@ -80,7 +85,10 @@ function parseDnsServerUrl(raw, protocol) {
         return {
             protocol: protocol || 'udp',
             host,
-            port: parseDnsPort(parsed.port),
+            port: parseDnsPort(
+                parsed.port,
+                protocol === 'tls' ? DNS_TLS_DEFAULT_PORT : DNS_DEFAULT_PORT,
+            ),
         };
     } catch (e) {
         if (e?.message?.includes('自定义 DNS')) throw e;
@@ -100,14 +108,24 @@ export function parseDnsResolver(url) {
 
     const protocol = raw.match(/^([a-z][a-z\d+.-]*):\/\//i)?.[1];
     const normalizedProtocol = protocol?.toLowerCase();
-    if (normalizedProtocol && !['udp', 'tcp'].includes(normalizedProtocol)) {
+    if (
+        normalizedProtocol &&
+        !['udp', 'tcp', 'tls'].includes(normalizedProtocol)
+    ) {
         throw new Error(`自定义 DNS 不支持 ${protocol} 协议`);
     }
 
     return parseDnsServerUrl(raw, normalizedProtocol);
 }
 
-export async function doh({ url, domain, type = 'A', timeout, edns }) {
+export async function doh({
+    url,
+    domain,
+    type = 'A',
+    timeout,
+    edns,
+    skipCertVerify,
+}) {
     const buf = buildDnsQuery({
         domain,
         type,
@@ -130,6 +148,7 @@ export async function doh({ url, domain, type = 'A', timeout, edns }) {
         'binary-mode': true,
         encoding: null, // 使用 null 编码以确保响应是原始二进制数据
         timeout,
+        insecure: skipCertVerify === true,
     });
 
     return dnsPacket.decode(Buffer.from($.env.isQX ? res.bodyBytes : res.body));
@@ -185,8 +204,19 @@ async function queryDnsOverUdp({ server, domain, type = 'A', timeout, edns }) {
     });
 }
 
-async function queryDnsOverTcp({ server, domain, type = 'A', timeout, edns }) {
-    const net = eval("require('net')");
+async function queryDnsOverTcp({
+    server,
+    domain,
+    type = 'A',
+    timeout,
+    edns,
+    skipCertVerify,
+}) {
+    const transport =
+        server.protocol === 'tls'
+            ? eval("require('tls')")
+            : eval("require('net')");
+    const transportName = server.protocol === 'tls' ? 'TLS' : 'TCP';
     const payload = buildDnsQuery({
         domain,
         type,
@@ -200,10 +230,19 @@ async function queryDnsOverTcp({ server, domain, type = 'A', timeout, edns }) {
         let settled = false;
         let response = Buffer.alloc(0);
         let responseLength;
-        const socket = net.createConnection({
-            host: server.host,
-            port: server.port,
-        });
+        const socket =
+            server.protocol === 'tls'
+                ? transport.connect({
+                      host: server.host,
+                      port: server.port,
+                      servername: isIP(server.host) ? undefined : server.host,
+                      rejectUnauthorized:
+                          skipCertVerify === true ? false : undefined,
+                  })
+                : transport.createConnection({
+                      host: server.host,
+                      port: server.port,
+                  });
 
         function cleanup() {
             socket.removeAllListeners();
@@ -222,14 +261,21 @@ async function queryDnsOverTcp({ server, domain, type = 'A', timeout, edns }) {
         }
 
         socket.setTimeout(normalizeDnsTimeout(timeout), () => {
-            finish(new Error('DNS TCP query timeout'));
+            finish(new Error(`DNS ${transportName} query timeout`));
         });
-        socket.on('connect', () => {
-            socket.write(request);
-        });
+        socket.on(
+            server.protocol === 'tls' ? 'secureConnect' : 'connect',
+            () => {
+                socket.write(request);
+            },
+        );
         socket.on('error', (error) => finish(error));
         socket.on('end', () => {
-            finish(new Error('DNS TCP connection ended before response'));
+            finish(
+                new Error(
+                    `DNS ${transportName} connection ended before response`,
+                ),
+            );
         });
         socket.on('data', (chunk) => {
             try {
@@ -263,6 +309,7 @@ export async function resolveDns({
     type = 'A',
     timeout,
     edns,
+    skipCertVerify,
 }) {
     const raw = `${url || ''}`.trim();
     const protocol = raw.match(/^([a-z][a-z\d+.-]*):\/\//i)?.[1];
@@ -270,9 +317,9 @@ export async function resolveDns({
         raw &&
         !$.env.isNode &&
         !/^https?:\/\//i.test(raw) &&
-        (!protocol || ['udp', 'tcp'].includes(protocol.toLowerCase()))
+        (!protocol || ['udp', 'tcp', 'tls'].includes(protocol.toLowerCase()))
     ) {
-        throw new Error('TCP/UDP DNS 仅支持 Node.js 环境');
+        throw new Error('DoT 和 TCP/UDP DNS 仅支持 Node.js 环境');
     }
 
     const resolver = parseDnsResolver(url);
@@ -283,20 +330,22 @@ export async function resolveDns({
             type,
             timeout,
             edns,
+            skipCertVerify,
         });
     }
 
     if (!$.env.isNode) {
-        throw new Error('TCP/UDP DNS 仅支持 Node.js 环境');
+        throw new Error('DoT 和 TCP/UDP DNS 仅支持 Node.js 环境');
     }
 
-    if (resolver.protocol === 'tcp') {
+    if (['tcp', 'tls'].includes(resolver.protocol)) {
         return queryDnsOverTcp({
             server: resolver,
             domain,
             type,
             timeout,
             edns,
+            skipCertVerify,
         });
     }
 

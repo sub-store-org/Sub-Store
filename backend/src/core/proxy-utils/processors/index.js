@@ -638,10 +638,20 @@ async function resolveDomainsWithConcurrency(
     await Promise.all(workers);
 }
 
-function getDomainResolverCacheId(provider, domain, type, url) {
+function getDomainResolverCacheId(
+    provider,
+    domain,
+    type,
+    url,
+    tlsSkipCertVerify,
+) {
     switch (provider) {
         case 'Custom':
-            return hex_md5(`CUSTOM:${url}:${domain}:${type}`);
+            return hex_md5(
+                `CUSTOM:${
+                    tlsSkipCertVerify ? 'INSECURE:' : ''
+                }${url}:${domain}:${type}`,
+            );
         case 'Google':
             return hex_md5(`GOOGLE:${domain}:${type}`);
         case 'IP-API':
@@ -655,15 +665,45 @@ function getDomainResolverCacheId(provider, domain, type, url) {
     }
 }
 
-function getCachedDomainResolverResult(provider, domain, type, cache, url) {
+function getCachedDomainResolverResult(
+    provider,
+    domain,
+    type,
+    cache,
+    url,
+    tlsSkipCertVerify,
+) {
     if (cache === 'disabled') return null;
-    const id = getDomainResolverCacheId(provider, domain, type, url);
+    const id = getDomainResolverCacheId(
+        provider,
+        domain,
+        type,
+        url,
+        tlsSkipCertVerify,
+    );
     return id ? resourceCache.get(id) : null;
 }
 
+function formatResolverUrlLog(provider, resolverUrl) {
+    if (provider !== 'Custom' || !resolverUrl) return '';
+    return ` via ${resolverUrl}`;
+}
+
 const DOMAIN_RESOLVERS = {
-    Custom: async function (domain, type, noCache, timeout, edns, url) {
-        const id = hex_md5(`CUSTOM:${url}:${domain}:${type}`);
+    Custom: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+    ) {
+        const id = hex_md5(
+            `CUSTOM:${
+                tlsSkipCertVerify ? 'INSECURE:' : ''
+            }${url}:${domain}:${type}`,
+        );
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const answerType = type === 'IPv6' ? 'AAAA' : 'A';
@@ -673,6 +713,7 @@ const DOMAIN_RESOLVERS = {
             type: answerType,
             timeout,
             edns,
+            skipCertVerify: tlsSkipCertVerify,
         });
 
         const { answers } = res;
@@ -828,6 +869,7 @@ function ResolveDomainOperator({
     filter,
     cache,
     url,
+    tlsSkipCertVerify,
     timeout,
     edns: _edns,
     concurrency: _concurrency,
@@ -846,14 +888,17 @@ function ResolveDomainOperator({
     let edns = _edns || '223.6.6.6';
     if (!isIP(edns)) throw new Error(`域名解析 EDNS 应为 IP`);
     const concurrency = normalizeResolveDomainConcurrency(_concurrency);
+    const customDnsTlsSkipCertVerify =
+        provider === 'Custom' &&
+        (tlsSkipCertVerify === true || tlsSkipCertVerify === 'enabled');
     if (concurrency > RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD) {
         $.warn(
             `域名解析并发数 ${concurrency} 超过建议值 ${RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD}, 可能导致代理 App TCP 连接数激增`,
         );
     }
     $.info(
-        `Domain Resolver: [${_type}] ${provider} ${edns || ''} ${
-            url || ''
+        `Domain Resolver: [${_type}] ${provider} ${edns || ''} ${url || ''}${
+            customDnsTlsSkipCertVerify ? ' tlsSkipCertVerify=enabled' : ''
         } concurrency=${concurrency}`,
     );
     return {
@@ -866,34 +911,47 @@ function ResolveDomainOperator({
             });
             const results = {};
             const domains = [
-                ...new Set(
+                ...new Map(
                     proxies
                         .filter((p) => !isIP(p.server) && !p['_no-resolve'])
-                        .map((c) => c.server),
-                ),
+                        .map((p) => {
+                            const id = getDomainResolverCacheId(
+                                provider,
+                                p.server,
+                                type,
+                                url,
+                                customDnsTlsSkipCertVerify,
+                            );
+                            return [id, { id, domain: p.server }];
+                        }),
+                ).values(),
             ];
             const domainsToResolve = [];
-            domains.forEach((domain) => {
+            domains.forEach(({ id, domain }) => {
                 const cached = getCachedDomainResolverResult(
                     provider,
                     domain,
                     type,
                     cache,
                     url,
+                    customDnsTlsSkipCertVerify,
                 );
                 if (cached) {
-                    results[domain] = cached;
+                    results[id] = cached;
                     $.info(
-                        `Using cached resolved domain: ${domain} ➟ ${cached}`,
+                        `Using cached resolved domain: ${domain}${formatResolverUrlLog(
+                            provider,
+                            url,
+                        )} ➟ ${cached}`,
                     );
                 } else {
-                    domainsToResolve.push(domain);
+                    domainsToResolve.push({ id, domain });
                 }
             });
             await resolveDomainsWithConcurrency(
                 domainsToResolve,
                 concurrency,
-                async (domain) => {
+                async ({ id, domain }) => {
                     try {
                         const ip = await resolver(
                             domain,
@@ -902,29 +960,41 @@ function ResolveDomainOperator({
                             requestTimeout,
                             edns,
                             url,
+                            customDnsTlsSkipCertVerify,
                         );
-                        results[domain] = ip;
+                        results[id] = ip;
                         $.info(
-                            `Successfully resolved domain: ${domain} ➟ ${ip}`,
+                            `Successfully resolved domain: ${domain}${formatResolverUrlLog(
+                                provider,
+                                url,
+                            )} ➟ ${ip}`,
                         );
                     } catch (err) {
                         $.error(
-                            `Failed to resolve domain: ${domain} with resolver [${provider}]: ${err}`,
+                            `Failed to resolve domain: ${domain}${formatResolverUrlLog(
+                                provider,
+                                url,
+                            )} with resolver [${provider}]: ${err}`,
                         );
                     }
                 },
             );
             proxies.forEach((p) => {
                 if (!p['_no-resolve']) {
-                    if (results[p.server]) {
-                        p._resolved_ips = results[p.server];
-                        let ip = Array.isArray(results[p.server])
-                            ? results[p.server][
-                                  Math.floor(
-                                      Math.random() * results[p.server].length,
-                                  )
+                    const id = getDomainResolverCacheId(
+                        provider,
+                        p.server,
+                        type,
+                        url,
+                        customDnsTlsSkipCertVerify,
+                    );
+                    if (id && results[id]) {
+                        p._resolved_ips = results[id];
+                        let ip = Array.isArray(results[id])
+                            ? results[id][
+                                  Math.floor(Math.random() * results[id].length)
                               ]
-                            : results[p.server];
+                            : results[id];
                         if (type === 'IPv6' && isIPv6(ip)) {
                             try {
                                 ip = new ipAddress.Address6(ip).correctForm();

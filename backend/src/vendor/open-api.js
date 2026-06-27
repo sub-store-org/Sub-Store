@@ -486,6 +486,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                         request,
                         interceptors,
                     } = undici;
+                    const allowH2 = opts.allowH2 !== false;
                     const agentOpts = {
                         connect: {
                             rejectUnauthorized:
@@ -494,14 +495,17 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                                 opts.rejectUnauthorized === false
                                     ? false
                                     : true,
+                            allowH2,
                         },
                         bodyTimeout: opts.timeout,
                         headersTimeout: opts.timeout,
                         maxHeaderSize,
+                        allowH2,
                     };
                     const tlsOptions = {
                         rejectUnauthorized:
                             agentOpts.connect.rejectUnauthorized,
+                        allowH2,
                     };
                     opts.tls = {
                         ...(opts.tls || {}),

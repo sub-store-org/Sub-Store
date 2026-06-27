@@ -12,6 +12,8 @@ import { hex_md5 } from '@/vendor/md5';
 const ResolveDomainOperator = PROCESSORS['Resolve Domain Operator'];
 const dgram = eval("require('dgram')");
 const net = eval("require('net')");
+const tls = eval("require('tls')");
+const { EventEmitter } = eval("require('events')");
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -40,8 +42,7 @@ function getEdnsClientSubnet(query) {
     return query.additionals
         ?.find((item) => item.type === 'OPT')
         ?.options?.find(
-            (option) =>
-                option.code === 'CLIENT_SUBNET' || option.code === 8,
+            (option) => option.code === 'CLIENT_SUBNET' || option.code === 8,
         )?.ip;
 }
 
@@ -101,18 +102,27 @@ function startTcpDnsServer(onQuery) {
 
 describe('Resolve Domain Operator', function () {
     let originalGoogleResolver;
+    let originalCustomResolver;
     let originalRead;
+    let originalHttpGet;
+    let originalIsNode;
     let cacheKeys;
 
     beforeEach(function () {
         originalGoogleResolver = ResolveDomainOperator.resolver.Google;
+        originalCustomResolver = ResolveDomainOperator.resolver.Custom;
         originalRead = $.read.bind($);
+        originalHttpGet = $.http.get;
+        originalIsNode = $.env.isNode;
         cacheKeys = [];
     });
 
     afterEach(function () {
         ResolveDomainOperator.resolver.Google = originalGoogleResolver;
+        ResolveDomainOperator.resolver.Custom = originalCustomResolver;
         $.read = originalRead;
+        $.http.get = originalHttpGet;
+        $.env.isNode = originalIsNode;
         cacheKeys.forEach((key) => {
             delete resourceCache.resourceCache[key];
         });
@@ -320,7 +330,11 @@ describe('Resolve Domain Operator', function () {
                 concurrency: 21,
             });
             const output = await ApplyProcessor(processor, [
-                { name: 'High Concurrency', server: 'high.example.com', port: 443 },
+                {
+                    name: 'High Concurrency',
+                    server: 'high.example.com',
+                    port: 443,
+                },
             ]);
 
             expect(output[0].server).to.equal('192.0.2.40');
@@ -365,6 +379,58 @@ describe('Resolve Domain Operator', function () {
             host: '1.1.1.1',
             port: 5353,
         });
+        expect(parseDnsResolver('tls://223.5.5.5')).to.deep.equal({
+            protocol: 'tls',
+            host: '223.5.5.5',
+            port: 853,
+        });
+        expect(parseDnsResolver('tls://223.5.5.5:8853')).to.deep.equal({
+            protocol: 'tls',
+            host: '223.5.5.5',
+            port: 8853,
+        });
+    });
+
+    it('passes skip certificate verification to non-Node Custom DoH requests', async function () {
+        const url = 'https://doh.example/dns-query';
+        const requests = [];
+        cacheKeys.push(
+            hex_md5(`CUSTOM:INSECURE:${url}:doh-insecure.example.com:IPv4`),
+        );
+
+        $.env.isNode = false;
+        $.http.get = async (options) => {
+            requests.push(options);
+            const dns = new URL(options.url).searchParams.get('dns');
+            const query = dnsPacket.decode(
+                Buffer.from(
+                    `${dns}`.replace(/-/g, '+').replace(/_/g, '/'),
+                    'base64',
+                ),
+            );
+            return {
+                body: createDnsResponse(query, '192.0.2.58'),
+            };
+        };
+
+        const processor = ResolveDomainOperator({
+            provider: 'Custom',
+            type: 'IPv4',
+            url,
+            cache: 'disabled',
+            tlsSkipCertVerify: 'enabled',
+        });
+        const output = await ApplyProcessor(processor, [
+            {
+                name: 'DoH Insecure Custom',
+                server: 'doh-insecure.example.com',
+                port: 443,
+            },
+        ]);
+
+        expect(output[0].server).to.equal('192.0.2.58');
+        expect(requests).to.have.length(1);
+        expect(requests[0].insecure).to.equal(true);
     });
 
     it('resolves Custom UDP DNS and sends EDNS', async function () {
@@ -424,6 +490,98 @@ describe('Resolve Domain Operator', function () {
             expect(getEdnsClientSubnet(queries[0])).to.equal('198.51.101.0');
         } finally {
             await server.close();
+        }
+    });
+
+    it('resolves Custom TLS DNS through Node TLS transport and can skip certificate verification', async function () {
+        const originalConnect = tls.connect;
+        const connections = [];
+        const queries = [];
+        const url = 'tls://223.5.5.5';
+        cacheKeys.push(
+            hex_md5(`CUSTOM:${url}:tls.example.com:IPv4`),
+            hex_md5(`CUSTOM:INSECURE:${url}:tls-insecure.example.com:IPv4`),
+        );
+
+        tls.connect = (options) => {
+            const socket = new EventEmitter();
+            connections.push(options);
+            socket.setTimeout = () => socket;
+            socket.destroy = () => {};
+            socket.write = (request) => {
+                const requestLength = request.readUInt16BE(0);
+                const query = dnsPacket.decode(
+                    request.slice(2, 2 + requestLength),
+                );
+                queries.push(query);
+                const response = createDnsResponse(query, '192.0.2.57');
+                const responseLength = Buffer.alloc(2);
+                responseLength.writeUInt16BE(response.length, 0);
+                process.nextTick(() => {
+                    socket.emit(
+                        'data',
+                        Buffer.concat([responseLength, response]),
+                    );
+                });
+                return true;
+            };
+            process.nextTick(() => socket.emit('secureConnect'));
+            return socket;
+        };
+
+        try {
+            const processor = ResolveDomainOperator({
+                provider: 'Custom',
+                type: 'IPv4',
+                url,
+                edns: '198.51.102.3',
+                cache: 'disabled',
+            });
+            const output = await ApplyProcessor(processor, [
+                { name: 'TLS Custom', server: 'tls.example.com', port: 443 },
+            ]);
+            const insecureProcessor = ResolveDomainOperator({
+                provider: 'Custom',
+                type: 'IPv4',
+                url,
+                edns: '198.51.102.3',
+                cache: 'disabled',
+                tlsSkipCertVerify: 'enabled',
+            });
+            const insecureOutput = await ApplyProcessor(insecureProcessor, [
+                {
+                    name: 'TLS Insecure Custom',
+                    server: 'tls-insecure.example.com',
+                    port: 443,
+                },
+            ]);
+
+            expect(output[0].server).to.equal('192.0.2.57');
+            expect(insecureOutput[0].server).to.equal('192.0.2.57');
+            expect(connections).to.have.length(2);
+            expect(connections[0]).to.include({
+                host: '223.5.5.5',
+                port: 853,
+            });
+            expect(connections[0].servername).to.equal(undefined);
+            expect(connections[0].rejectUnauthorized).to.equal(undefined);
+            expect(connections[1]).to.include({
+                host: '223.5.5.5',
+                port: 853,
+                rejectUnauthorized: false,
+            });
+            expect(queries).to.have.length(2);
+            expect(queries[0].questions[0]).to.include({
+                type: 'A',
+                name: 'tls.example.com',
+            });
+            expect(queries[1].questions[0]).to.include({
+                type: 'A',
+                name: 'tls-insecure.example.com',
+            });
+            expect(getEdnsClientSubnet(queries[0])).to.equal('198.51.102.0');
+        } finally {
+            tls.connect = originalConnect;
         }
     });
 });

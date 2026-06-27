@@ -73,8 +73,11 @@ export default function Surfboard_Producer() {
     return { produce };
 }
 function hysteria2(proxy) {
-    if (proxy.obfs || proxy['obfs-password']) {
-        throw new Error(`Surfboard Hysteria2 does not support obfs`);
+    if (
+        (proxy.obfs && proxy.obfs !== 'salamander') ||
+        (proxy['obfs-password'] && proxy.obfs !== 'salamander')
+    ) {
+        throw new Error(`Surfboard Hysteria2 only supports salamander obfs`);
     }
 
     const result = new Result(proxy);
@@ -90,6 +93,10 @@ function hysteria2(proxy) {
 
     if (hasNonBlankValue(proxy['hop-interval'])) {
         result.append(`,port-hopping-interval=${proxy['hop-interval']}`);
+    }
+
+    if (proxy['obfs-password']) {
+        result.append(`,salamander-password="${proxy['obfs-password']}"`);
     }
 
     // tls verification

@@ -1556,16 +1556,32 @@ describe('Proxy text producers', function () {
         );
     });
 
-    it('omits Surfboard Hysteria2 lines when obfs is present', function () {
+    it('produces Surfboard Hysteria2 salamander obfs lines', function () {
+        const output = produceExternal('Surfboard', {
+            type: 'hysteria2',
+            name: 'Surfboard Hysteria2 Salamander',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            obfs: 'salamander',
+            'obfs-password': 'mask',
+        });
+
+        expect(output).to.equal(
+            'Surfboard Hysteria2 Salamander=hysteria2,hy2.example.com,443,password="secret",salamander-password="mask"',
+        );
+    });
+
+    it('omits Surfboard Hysteria2 lines when unsupported obfs is present', function () {
         const output = ProxyUtils.produce(
             [
                 {
                     type: 'hysteria2',
-                    name: 'Surfboard Hysteria2 Obfs',
+                    name: 'Surfboard Hysteria2 Gecko',
                     server: 'hy2.example.com',
                     port: 443,
                     password: 'secret',
-                    obfs: 'salamander',
+                    obfs: 'gecko',
                     'obfs-password': 'mask',
                 },
             ],
