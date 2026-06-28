@@ -601,6 +601,7 @@ function parseIP4P(IP4P) {
 }
 
 const DEFAULT_RESOLVE_DOMAIN_CONCURRENCY = 10;
+const DEFAULT_RESOLVE_DOMAIN_CUSTOM_DNS_CONCURRENCY = 2;
 const RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD = 20;
 
 function normalizeResolveDomainConcurrency(concurrency) {
@@ -620,6 +621,85 @@ function normalizeResolveDomainConcurrency(concurrency) {
     return parsed;
 }
 
+function normalizeResolveDomainCustomDnsConcurrency(concurrency) {
+    if (
+        typeof concurrency === 'undefined' ||
+        concurrency === null ||
+        (typeof concurrency === 'string' && concurrency.trim() === '')
+    ) {
+        return DEFAULT_RESOLVE_DOMAIN_CUSTOM_DNS_CONCURRENCY;
+    }
+
+    const parsed = Number(concurrency);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error('多 DNS 并发数应为大于 0 的整数');
+    }
+
+    return parsed;
+}
+
+function normalizeResolveDomainTimeout(timeout, defaultTimeout) {
+    const hasExplicitTimeout = !(
+        typeof timeout === 'undefined' ||
+        timeout === null ||
+        (typeof timeout === 'string' && timeout.trim() === '')
+    );
+
+    if (hasExplicitTimeout) {
+        const parsed = Number(timeout);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+            throw new Error('DNS 超时应为大于 0 的整数');
+        }
+        return parsed;
+    }
+
+    if (
+        typeof defaultTimeout === 'undefined' ||
+        defaultTimeout === null ||
+        (typeof defaultTimeout === 'string' &&
+            defaultTimeout.trim() === '')
+    ) {
+        return 8000;
+    }
+
+    const parsedDefaultTimeout = Number(defaultTimeout);
+    if (!isFinite(parsedDefaultTimeout) || parsedDefaultTimeout <= 0) {
+        return 8000;
+    }
+
+    return parsedDefaultTimeout;
+}
+
+function normalizeResolveDomainCacheTtl(cacheTtl) {
+    if (
+        typeof cacheTtl === 'undefined' ||
+        cacheTtl === null ||
+        (typeof cacheTtl === 'string' && cacheTtl.trim() === '')
+    ) {
+        return undefined;
+    }
+
+    const parsed = Number(cacheTtl);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error('域名解析缓存时长应为大于 0 的整数');
+    }
+
+    return parsed * 1000;
+}
+
+function parseCustomDnsUrls(url) {
+    const urls = `${url || ''}`
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter((item) => item);
+    if (urls.length === 0) throw new Error('自定义 DNS 不能为空');
+    return urls;
+}
+
+function normalizeCustomDnsUrlList(url) {
+    return parseCustomDnsUrls(url).join('\n');
+}
+
 async function resolveDomainsWithConcurrency(
     domains,
     concurrency,
@@ -636,6 +716,55 @@ async function resolveDomainsWithConcurrency(
     });
 
     await Promise.all(workers);
+}
+
+async function resolveWithCustomDnsConcurrency(urls, concurrency, resolveUrl) {
+    return new Promise((resolve, reject) => {
+        let nextIndex = 0;
+        let activeCount = 0;
+        let finishedCount = 0;
+        let settled = false;
+        const errors = [];
+        const workerCount = Math.min(concurrency, urls.length);
+
+        function maybeReject() {
+            if (!settled && finishedCount === urls.length) {
+                reject(
+                    new Error(
+                        errors.length > 0 ? errors.join('; ') : 'No answers',
+                    ),
+                );
+            }
+        }
+
+        function startNext() {
+            if (settled) return;
+            while (activeCount < workerCount && nextIndex < urls.length) {
+                const resolverUrl = urls[nextIndex];
+                nextIndex += 1;
+                activeCount += 1;
+                Promise.resolve()
+                    .then(() => resolveUrl(resolverUrl))
+                    .then((result) => {
+                        activeCount -= 1;
+                        finishedCount += 1;
+                        if (settled) return;
+                        settled = true;
+                        resolve({ result, resolverUrl });
+                    })
+                    .catch((err) => {
+                        activeCount -= 1;
+                        finishedCount += 1;
+                        errors.push(`${resolverUrl}: ${err}`);
+                        startNext();
+                        maybeReject();
+                    });
+            }
+            maybeReject();
+        }
+
+        startNext();
+    });
 }
 
 function getDomainResolverCacheId(
@@ -681,12 +810,64 @@ function getCachedDomainResolverResult(
         url,
         tlsSkipCertVerify,
     );
-    return id ? resourceCache.get(id) : null;
+    const cached = id ? resourceCache.get(id) : null;
+    return provider === 'Custom'
+        ? unpackCustomDnsCachedResult(cached)
+        : cached;
 }
 
 function formatResolverUrlLog(provider, resolverUrl) {
     if (provider !== 'Custom' || !resolverUrl) return '';
-    return ` via ${resolverUrl}`;
+    const urls = `${resolverUrl}`
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter((item) => item);
+    if (urls.length <= 1) return ` via ${resolverUrl}`;
+    return ` via ${urls.length} custom DNS`;
+}
+
+function formatResolverUrlInfo(provider, resolverUrl) {
+    if (provider !== 'Custom' || !resolverUrl) return resolverUrl || '';
+    const urls = `${resolverUrl}`
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter((item) => item);
+    if (urls.length <= 1) return resolverUrl;
+    return `${urls.length} custom DNS`;
+}
+
+function annotateCustomDnsResult(result, resolverUrl) {
+    if (result && typeof result === 'object') {
+        Object.defineProperty(result, '_resolverUrl', {
+            value: resolverUrl,
+            enumerable: false,
+            configurable: true,
+        });
+    }
+    return result;
+}
+
+function packCustomDnsCachedResult(result, resolverUrl) {
+    return {
+        result,
+        resolverUrl,
+    };
+}
+
+function unpackCustomDnsCachedResult(cached) {
+    if (
+        cached &&
+        typeof cached === 'object' &&
+        !Array.isArray(cached) &&
+        Array.isArray(cached.result)
+    ) {
+        return annotateCustomDnsResult(cached.result, cached.resolverUrl);
+    }
+    return cached;
+}
+
+function getCustomDnsResultResolverUrl(result) {
+    return result && typeof result === 'object' ? result._resolverUrl : null;
 }
 
 const DOMAIN_RESOLVERS = {
@@ -698,39 +879,70 @@ const DOMAIN_RESOLVERS = {
         edns,
         url,
         tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
     ) {
+        const urls = parseCustomDnsUrls(url);
+        const normalizedUrl = urls.join('\n');
+        const customDnsConcurrency =
+            normalizeResolveDomainCustomDnsConcurrency(dnsConcurrency);
         const id = hex_md5(
             `CUSTOM:${
                 tlsSkipCertVerify ? 'INSECURE:' : ''
-            }${url}:${domain}:${type}`,
+            }${normalizedUrl}:${domain}:${type}`,
         );
-        const cached = resourceCache.get(id);
+        const cached = unpackCustomDnsCachedResult(resourceCache.get(id));
         if (!noCache && cached) return cached;
         const answerType = type === 'IPv6' ? 'AAAA' : 'A';
-        const res = await resolveDns({
-            url,
-            domain,
-            type: answerType,
-            timeout,
-            edns,
-            skipCertVerify: tlsSkipCertVerify,
-        });
+        const resolveUrl = async (resolverUrl) => {
+            const res = await resolveDns({
+                url: resolverUrl,
+                domain,
+                type: answerType,
+                timeout,
+                edns,
+                skipCertVerify: tlsSkipCertVerify,
+            });
 
-        const { answers } = res;
-        if (!Array.isArray(answers) || answers.length === 0) {
-            throw new Error('No answers');
-        }
-        const result = answers
-            .filter((i) => i?.type === answerType)
-            .map((i) => i?.data)
-            .filter((i) => i);
-        if (result.length === 0) {
-            throw new Error('No answers');
-        }
-        resourceCache.set(id, result);
-        return result;
+            const { answers } = res;
+            if (!Array.isArray(answers) || answers.length === 0) {
+                throw new Error('No answers');
+            }
+            const result = answers
+                .filter((i) => i?.type === answerType)
+                .map((i) => i?.data)
+                .filter((i) => i);
+            if (result.length === 0) {
+                throw new Error('No answers');
+            }
+            return result;
+        };
+        const { result, resolverUrl } =
+            urls.length === 1
+                ? { result: await resolveUrl(urls[0]), resolverUrl: urls[0] }
+                : await resolveWithCustomDnsConcurrency(
+                      urls,
+                      customDnsConcurrency,
+                      resolveUrl,
+                  );
+        resourceCache.set(
+            id,
+            packCustomDnsCachedResult(result, resolverUrl),
+            cacheTtl,
+        );
+        return annotateCustomDnsResult(result, resolverUrl);
     },
-    Google: async function (domain, type, noCache, timeout, edns) {
+    Google: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         const id = hex_md5(`GOOGLE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -754,10 +966,20 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
-    'IP-API': async function (domain, type, noCache, timeout) {
+    'IP-API': async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         if (['IPv6'].includes(type)) {
             throw new Error(`域名解析服务提供方 IP-API 不支持 ${type}`);
         }
@@ -781,10 +1003,20 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
-    Cloudflare: async function (domain, type, noCache, timeout, edns) {
+    Cloudflare: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         const id = hex_md5(`CLOUDFLARE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -808,10 +1040,20 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
-    Ali: async function (domain, type, noCache, timeout, edns) {
+    Ali: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         const id = hex_md5(`ALI:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -834,10 +1076,20 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
-    Tencent: async function (domain, type, noCache, timeout, edns) {
+    Tencent: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         const id = hex_md5(`TENCENT:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -858,7 +1110,7 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
 };
@@ -871,14 +1123,20 @@ function ResolveDomainOperator({
     url,
     tlsSkipCertVerify,
     timeout,
+    cacheTtl,
     edns: _edns,
     concurrency: _concurrency,
+    dnsConcurrency: _dnsConcurrency,
 }) {
     if (['IPv6', 'IP4P'].includes(_type) && ['IP-API'].includes(provider)) {
         throw new Error(`域名解析服务提供方 ${provider} 不支持 ${_type}`);
     }
     const { defaultTimeout } = $.read(SETTINGS_KEY) || {};
-    const requestTimeout = timeout || defaultTimeout || 8000;
+    const requestTimeout = normalizeResolveDomainTimeout(
+        timeout,
+        defaultTimeout,
+    );
+    const domainResolverCacheTtl = normalizeResolveDomainCacheTtl(cacheTtl);
     let type = ['IPv6', 'IP4P'].includes(_type) ? 'IPv6' : 'IPv4';
 
     const resolver = DOMAIN_RESOLVERS[provider];
@@ -888,18 +1146,34 @@ function ResolveDomainOperator({
     let edns = _edns || '223.6.6.6';
     if (!isIP(edns)) throw new Error(`域名解析 EDNS 应为 IP`);
     const concurrency = normalizeResolveDomainConcurrency(_concurrency);
+    const customDnsUrl =
+        provider === 'Custom' ? normalizeCustomDnsUrlList(url) : url;
+    const customDnsCount =
+        provider === 'Custom' ? parseCustomDnsUrls(customDnsUrl).length : 1;
+    const customDnsConcurrency =
+        provider === 'Custom'
+            ? normalizeResolveDomainCustomDnsConcurrency(_dnsConcurrency)
+            : 1;
+    const totalConcurrency =
+        concurrency * Math.min(customDnsConcurrency, customDnsCount);
     const customDnsTlsSkipCertVerify =
         provider === 'Custom' &&
         (tlsSkipCertVerify === true || tlsSkipCertVerify === 'enabled');
-    if (concurrency > RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD) {
+    if (totalConcurrency > RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD) {
         $.warn(
-            `域名解析并发数 ${concurrency} 超过建议值 ${RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD}, 可能导致代理 App TCP 连接数激增`,
+            `域名解析总并发数上限 ${totalConcurrency} 超过建议值 ${RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD}, 可能导致代理 App TCP 连接数激增`,
         );
     }
     $.info(
-        `Domain Resolver: [${_type}] ${provider} ${edns || ''} ${url || ''}${
+        `Domain Resolver: [${_type}] ${provider} ${edns || ''} ${
+            formatResolverUrlInfo(provider, customDnsUrl)
+        }${
             customDnsTlsSkipCertVerify ? ' tlsSkipCertVerify=enabled' : ''
-        } concurrency=${concurrency}`,
+        } concurrency=${concurrency}${
+            provider === 'Custom'
+                ? ` dnsConcurrency=${customDnsConcurrency}`
+                : ''
+        }`,
     );
     return {
         name: 'Resolve Domain Operator',
@@ -919,7 +1193,7 @@ function ResolveDomainOperator({
                                 provider,
                                 p.server,
                                 type,
-                                url,
+                                customDnsUrl,
                                 customDnsTlsSkipCertVerify,
                             );
                             return [id, { id, domain: p.server }];
@@ -933,15 +1207,20 @@ function ResolveDomainOperator({
                     domain,
                     type,
                     cache,
-                    url,
+                    customDnsUrl,
                     customDnsTlsSkipCertVerify,
                 );
                 if (cached) {
                     results[id] = cached;
+                    const resolverUrl =
+                        provider === 'Custom'
+                            ? getCustomDnsResultResolverUrl(cached) ||
+                              customDnsUrl
+                            : customDnsUrl;
                     $.info(
                         `Using cached resolved domain: ${domain}${formatResolverUrlLog(
                             provider,
-                            url,
+                            resolverUrl,
                         )} ➟ ${cached}`,
                     );
                 } else {
@@ -959,21 +1238,28 @@ function ResolveDomainOperator({
                             cache === 'disabled',
                             requestTimeout,
                             edns,
-                            url,
+                            customDnsUrl,
                             customDnsTlsSkipCertVerify,
+                            customDnsConcurrency,
+                            domainResolverCacheTtl,
                         );
                         results[id] = ip;
+                        const resolverUrl =
+                            provider === 'Custom'
+                                ? getCustomDnsResultResolverUrl(ip) ||
+                                  customDnsUrl
+                                : customDnsUrl;
                         $.info(
                             `Successfully resolved domain: ${domain}${formatResolverUrlLog(
                                 provider,
-                                url,
+                                resolverUrl,
                             )} ➟ ${ip}`,
                         );
                     } catch (err) {
                         $.error(
                             `Failed to resolve domain: ${domain}${formatResolverUrlLog(
                                 provider,
-                                url,
+                                customDnsUrl,
                             )} with resolver [${provider}]: ${err}`,
                         );
                     }
@@ -985,7 +1271,7 @@ function ResolveDomainOperator({
                         provider,
                         p.server,
                         type,
-                        url,
+                        customDnsUrl,
                         customDnsTlsSkipCertVerify,
                     );
                     if (id && results[id]) {

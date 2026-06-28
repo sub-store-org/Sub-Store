@@ -26,15 +26,18 @@ function createDnsResponse(query, data = '192.0.2.55') {
         id: query.id,
         flags: dnsPacket.RECURSION_DESIRED,
         questions: query.questions,
-        answers: [
-            {
-                type: question.type,
-                class: 'IN',
-                name: question.name,
-                ttl: 60,
-                data,
-            },
-        ],
+        answers:
+            data == null
+                ? []
+                : [
+                      {
+                          type: question.type,
+                          class: 'IN',
+                          name: question.name,
+                          ttl: 60,
+                          data,
+                      },
+                  ],
     });
 }
 
@@ -46,14 +49,20 @@ function getEdnsClientSubnet(query) {
         )?.ip;
 }
 
-function startUdpDnsServer(onQuery) {
+function startUdpDnsServer(onQuery, { data = '192.0.2.55', delay = 0 } = {}) {
     return new Promise((resolve, reject) => {
         const server = dgram.createSocket('udp4');
         server.once('error', reject);
         server.on('message', (message, rinfo) => {
             const query = dnsPacket.decode(message);
             onQuery(query);
-            server.send(createDnsResponse(query), rinfo.port, rinfo.address);
+            setTimeout(() => {
+                server.send(
+                    createDnsResponse(query, data),
+                    rinfo.port,
+                    rinfo.address,
+                );
+            }, delay);
         });
         server.bind(0, '127.0.0.1', () => {
             server.removeListener('error', reject);
@@ -307,6 +316,177 @@ describe('Resolve Domain Operator', function () {
         expect(maxActiveRequests).to.equal(2);
     });
 
+    it('uses the global default timeout when DNS timeout is omitted', async function () {
+        const timeouts = [];
+        $.read = (key) => {
+            if (key === SETTINGS_KEY) return { defaultTimeout: 1234 };
+            return originalRead(key);
+        };
+        ResolveDomainOperator.resolver.Google = async (
+            domain,
+            type,
+            noCache,
+            timeout,
+        ) => {
+            timeouts.push(timeout);
+            return ['192.0.2.41'];
+        };
+
+        const processor = ResolveDomainOperator({
+            provider: 'Google',
+            type: 'IPv4',
+        });
+        const output = await ApplyProcessor(processor, [
+            { name: 'Global Timeout', server: 'global-timeout.example.com' },
+        ]);
+
+        expect(timeouts).to.deep.equal([1234]);
+        expect(output[0].server).to.equal('192.0.2.41');
+    });
+
+    it('falls back to 8000 when the global default timeout is invalid', async function () {
+        const timeouts = [];
+        $.read = (key) => {
+            if (key === SETTINGS_KEY) return { defaultTimeout: 0 };
+            return originalRead(key);
+        };
+        ResolveDomainOperator.resolver.Google = async (
+            domain,
+            type,
+            noCache,
+            timeout,
+        ) => {
+            timeouts.push(timeout);
+            return ['192.0.2.45'];
+        };
+
+        const processor = ResolveDomainOperator({
+            provider: 'Google',
+            type: 'IPv4',
+        });
+        const output = await ApplyProcessor(processor, [
+            {
+                name: 'Fallback Timeout',
+                server: 'fallback-timeout.example.com',
+            },
+        ]);
+
+        expect(timeouts).to.deep.equal([8000]);
+        expect(output[0].server).to.equal('192.0.2.45');
+    });
+
+    it('prefers explicit DNS timeout over the global default timeout', async function () {
+        const timeouts = [];
+        $.read = (key) => {
+            if (key === SETTINGS_KEY) return { defaultTimeout: 1234 };
+            return originalRead(key);
+        };
+        ResolveDomainOperator.resolver.Google = async (
+            domain,
+            type,
+            noCache,
+            timeout,
+        ) => {
+            timeouts.push(timeout);
+            return ['192.0.2.42'];
+        };
+
+        const processor = ResolveDomainOperator({
+            provider: 'Google',
+            type: 'IPv4',
+            timeout: '2345',
+        });
+        const output = await ApplyProcessor(processor, [
+            { name: 'Explicit Timeout', server: 'explicit-timeout.example.com' },
+        ]);
+
+        expect(timeouts).to.deep.equal([2345]);
+        expect(output[0].server).to.equal('192.0.2.42');
+    });
+
+    it('uses the global resource cache ttl when DNS cache ttl is omitted', async function () {
+        const domain = 'global-cache-ttl.example.com';
+        const cacheKey = hex_md5(`IP-API:${domain}`);
+        cacheKeys.push(cacheKey);
+        $.read = (key) => {
+            if (key === SETTINGS_KEY) return { resourceCacheTtl: 7 };
+            return originalRead(key);
+        };
+        $.http.get = async () => ({
+            body: JSON.stringify({ status: 'success', query: '192.0.2.43' }),
+        });
+
+        const before = Date.now();
+        const processor = ResolveDomainOperator({
+            provider: 'IP-API',
+            type: 'IPv4',
+        });
+        const output = await ApplyProcessor(processor, [
+            { name: 'Global Cache TTL', server: domain },
+        ]);
+        const after = Date.now();
+
+        expect(output[0].server).to.equal('192.0.2.43');
+        expect(resourceCache.resourceCache[cacheKey].time).to.be.at.least(
+            before + 7000,
+        );
+        expect(resourceCache.resourceCache[cacheKey].time).to.be.at.most(
+            after + 7000,
+        );
+    });
+
+    it('prefers explicit DNS cache ttl over the global resource cache ttl', async function () {
+        const domain = 'explicit-cache-ttl.example.com';
+        const cacheKey = hex_md5(`IP-API:${domain}`);
+        cacheKeys.push(cacheKey);
+        $.read = (key) => {
+            if (key === SETTINGS_KEY) return { resourceCacheTtl: 60 };
+            return originalRead(key);
+        };
+        $.http.get = async () => ({
+            body: JSON.stringify({ status: 'success', query: '192.0.2.44' }),
+        });
+
+        const before = Date.now();
+        const processor = ResolveDomainOperator({
+            provider: 'IP-API',
+            type: 'IPv4',
+            cacheTtl: '5',
+        });
+        const output = await ApplyProcessor(processor, [
+            { name: 'Explicit Cache TTL', server: domain },
+        ]);
+        const after = Date.now();
+
+        expect(output[0].server).to.equal('192.0.2.44');
+        expect(resourceCache.resourceCache[cacheKey].time).to.be.at.least(
+            before + 5000,
+        );
+        expect(resourceCache.resourceCache[cacheKey].time).to.be.at.most(
+            after + 5000,
+        );
+    });
+
+    it('rejects invalid DNS timeout values', function () {
+        expect(() =>
+            ResolveDomainOperator({
+                provider: 'Google',
+                type: 'IPv4',
+                timeout: 0,
+            }),
+        ).to.throw('DNS 超时应为大于 0 的整数');
+    });
+
+    it('rejects invalid DNS cache ttl values', function () {
+        expect(() =>
+            ResolveDomainOperator({
+                provider: 'Google',
+                type: 'IPv4',
+                cacheTtl: 0,
+            }),
+        ).to.throw('域名解析缓存时长应为大于 0 的整数');
+    });
+
     it('rejects invalid concurrency values', function () {
         expect(() =>
             ResolveDomainOperator({
@@ -347,6 +527,17 @@ describe('Resolve Domain Operator', function () {
         } finally {
             $.warn = originalWarn;
         }
+    });
+
+    it('rejects invalid Custom DNS concurrency values', function () {
+        expect(() =>
+            ResolveDomainOperator({
+                provider: 'Custom',
+                type: 'IPv4',
+                url: 'https://1.1.1.1/dns-query',
+                dnsConcurrency: 0,
+            }),
+        ).to.throw('多 DNS 并发数应为大于 0 的整数');
     });
 
     it('parses Custom DNS resolver formats', function () {
@@ -431,6 +622,124 @@ describe('Resolve Domain Operator', function () {
         expect(output[0].server).to.equal('192.0.2.58');
         expect(requests).to.have.length(1);
         expect(requests[0].insecure).to.equal(true);
+    });
+
+    it('uses the first Custom DNS resolver that returns valid answers', async function () {
+        const originalInfo = $.info;
+        const logs = [];
+        const slowQueries = [];
+        const fastQueries = [];
+        const slowServer = await startUdpDnsServer(
+            (query) => slowQueries.push(query),
+            { data: '192.0.2.59', delay: 20 },
+        );
+        const fastServer = await startUdpDnsServer(
+            (query) => fastQueries.push(query),
+            { data: '192.0.2.60', delay: 1 },
+        );
+        const url = `${slowServer.host}:${slowServer.port}\n${fastServer.host}:${fastServer.port}`;
+        cacheKeys.push(
+            hex_md5(`CUSTOM:${url}:multi-valid.example.com:IPv4`),
+        );
+
+        try {
+            $.info = (message) => logs.push(message);
+            const processor = ResolveDomainOperator({
+                provider: 'Custom',
+                type: 'IPv4',
+                url,
+                dnsConcurrency: 2,
+            });
+            const output = await ApplyProcessor(processor, [
+                {
+                    name: 'Multi Custom',
+                    server: 'multi-valid.example.com',
+                    port: 443,
+                },
+            ]);
+
+            expect(output[0].server).to.equal('192.0.2.60');
+            expect(slowQueries).to.have.length(1);
+            expect(fastQueries).to.have.length(1);
+            expect(
+                logs.some(
+                    (message) =>
+                        message.includes('Successfully resolved domain') &&
+                        message.includes(
+                            `${fastServer.host}:${fastServer.port}`,
+                        ),
+                ),
+            ).to.equal(true);
+            logs.length = 0;
+            const cachedOutput = await ApplyProcessor(processor, [
+                {
+                    name: 'Multi Custom Cached',
+                    server: 'multi-valid.example.com',
+                    port: 443,
+                },
+            ]);
+
+            expect(cachedOutput[0].server).to.equal('192.0.2.60');
+            expect(
+                logs.some(
+                    (message) =>
+                        message.includes('Using cached resolved domain') &&
+                        message.includes(
+                            `${fastServer.host}:${fastServer.port}`,
+                        ),
+                ),
+            ).to.equal(true);
+            await sleep(25);
+        } finally {
+            $.info = originalInfo;
+            await slowServer.close();
+            await fastServer.close();
+        }
+    });
+
+    it('keeps the default Custom DNS concurrency at 2', async function () {
+        const queries = [];
+        let activeQueries = 0;
+        let maxActiveQueries = 0;
+        const onQuery = (query) => {
+            queries.push(query);
+            activeQueries += 1;
+            maxActiveQueries = Math.max(maxActiveQueries, activeQueries);
+            setTimeout(() => {
+                activeQueries -= 1;
+            }, 15);
+        };
+        const servers = await Promise.all(
+            Array.from({ length: 3 }, () =>
+                startUdpDnsServer(onQuery, { data: null, delay: 15 }),
+            ),
+        );
+        const url = servers
+            .map((server) => `${server.host}:${server.port}`)
+            .join('\n');
+
+        try {
+            const processor = ResolveDomainOperator({
+                provider: 'Custom',
+                type: 'IPv4',
+                url,
+                cache: 'disabled',
+            });
+            const output = await ApplyProcessor(processor, [
+                {
+                    name: 'Default Multi Custom',
+                    server: 'default-multi.example.com',
+                    port: 443,
+                },
+            ]);
+
+            expect(maxActiveQueries).to.equal(2);
+            expect(queries).to.have.length(3);
+            expect(output[0].server).to.equal('default-multi.example.com');
+            expect(output[0].resolved).to.equal(false);
+        } finally {
+            await Promise.all(servers.map((server) => server.close()));
+        }
     });
 
     it('resolves Custom UDP DNS and sends EDNS', async function () {
