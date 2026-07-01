@@ -1027,20 +1027,6 @@ function lastParse(proxy) {
     if (!proxy['tls-fingerprint'] && caStr) {
         proxy['tls-fingerprint'] = rs.generateFingerprint(caStr);
     }
-    if (
-        ['ss'].includes(proxy.type) &&
-        isPresent(proxy, 'shadow-tls-password')
-    ) {
-        proxy.plugin = 'shadow-tls';
-        proxy['plugin-opts'] = {
-            host: proxy['shadow-tls-sni'],
-            password: proxy['shadow-tls-password'],
-            version: proxy['shadow-tls-version'],
-        };
-        delete proxy['shadow-tls-sni'];
-        delete proxy['shadow-tls-password'];
-        delete proxy['shadow-tls-version'];
-    }
     if (['tuic'].includes(proxy.type)) {
         proxy.alpn = Array.isArray(proxy.alpn)
             ? proxy.alpn

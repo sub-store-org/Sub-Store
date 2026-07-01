@@ -18,6 +18,7 @@ const grammars = String.raw`
 {
     const proxy = {};
     const obfs = {};
+    const shadowTLS = {};
     const $ = {};
 
     function handleWebsocket() {
@@ -31,8 +32,16 @@ const grammars = String.raw`
         }
     }
     function handleShadowTLS() {
-        if (proxy['shadow-tls-password'] && !proxy['shadow-tls-version']) {
-            proxy['shadow-tls-version'] = 2;
+        if (shadowTLS.password && !shadowTLS.version) {
+            shadowTLS.version = 2;
+        }
+        if (shadowTLS.password) {
+            proxy.plugin = "shadow-tls";
+            proxy["plugin-opts"] = {
+                host: shadowTLS.host,
+                password: shadowTLS.password,
+                version: shadowTLS.version,
+            };
         }
     }
     function stripQuotes(value) {
@@ -594,9 +603,9 @@ private_key = comma "private-key" equals match:[^,]+ { proxy["keystore-private-k
 server_fingerprint = comma "server-fingerprint" equals match:[^,]+ { proxy["server-fingerprint"] = match.join("").replace(/^"(.*)"$/, '$1'); }
 block_quic = comma "block-quic" equals match:[^,]+ { proxy["block-quic"] = match.join(""); }
 udp_port = comma "udp-port" equals match:$[0-9]+ { proxy["udp-port"] = parseInt(match.trim()); }
-shadow_tls_version = comma "shadow-tls-version" equals match:$[0-9]+ { proxy["shadow-tls-version"] = parseInt(match.trim()); }
-shadow_tls_sni = comma "shadow-tls-sni" equals match:[^,]+ { proxy["shadow-tls-sni"] = match.join(""); }
-shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { proxy["shadow-tls-password"] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
+shadow_tls_version = comma "shadow-tls-version" equals match:$[0-9]+ { shadowTLS.version = parseInt(match.trim()); }
+shadow_tls_sni = comma "shadow-tls-sni" equals match:[^,]+ { shadowTLS.host = match.join(""); }
+shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { shadowTLS.password = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 token = comma "token" equals match:[^,]+ { proxy.token = match.join(""); }
 alpn = comma "alpn" equals match:quoted_value {
     const values = parseAlpn(match);

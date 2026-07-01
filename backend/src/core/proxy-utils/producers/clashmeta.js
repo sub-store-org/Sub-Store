@@ -247,21 +247,6 @@ export default function ClashMeta_Producer() {
                             ds['reality-opts'] = { 'public-key': '' };
                         }
                     }
-                } else if (proxy.type === 'ss') {
-                    if (
-                        isPresent(proxy, 'shadow-tls-password') &&
-                        !isPresent(proxy, 'plugin')
-                    ) {
-                        proxy.plugin = 'shadow-tls';
-                        proxy['plugin-opts'] = {
-                            host: proxy['shadow-tls-sni'],
-                            password: proxy['shadow-tls-password'],
-                            version: proxy['shadow-tls-version'],
-                        };
-                        delete proxy['shadow-tls-password'];
-                        delete proxy['shadow-tls-sni'];
-                        delete proxy['shadow-tls-version'];
-                    }
                 }
 
                 if (isPresent(proxy, 'plugin-opts.mux')) {
@@ -428,22 +413,11 @@ function isSupportedMihomoVersion(version, supportedVersions) {
 }
 
 function hasMihomoShadowTls(proxy) {
-    return (
-        proxy?.plugin === 'shadow-tls' ||
-        isPresent(proxy, 'shadow-tls-password') ||
-        isPresent(proxy, 'shadow-tls-sni') ||
-        isPresent(proxy, 'shadow-tls-version')
-    );
+    return proxy?.plugin === 'shadow-tls';
 }
 
 function getMihomoShadowTlsVersion(proxy) {
-    if (isPresent(proxy, 'shadow-tls-version')) {
-        return proxy['shadow-tls-version'];
-    }
-
-    if (proxy?.plugin === 'shadow-tls') {
-        return proxy?.['plugin-opts']?.version;
-    }
-
-    return undefined;
+    return proxy?.plugin === 'shadow-tls'
+        ? proxy?.['plugin-opts']?.version
+        : undefined;
 }

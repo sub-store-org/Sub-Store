@@ -19,6 +19,7 @@ const grammars = String.raw`
     const proxy = {};
     const obfs = {};
     const transport = {};
+    const shadowTLS = {};
     const $ = {};
 
     function handleTransport() {
@@ -31,6 +32,17 @@ const grammars = String.raw`
             proxy.network = "http";
             $set(proxy, "http-opts.path", transport.path);
             $set(proxy, "http-opts.headers.Host", transport.host);
+        }
+    }
+
+    function handleShadowTLS() {
+        if (shadowTLS.password) {
+            proxy.plugin = "shadow-tls";
+            proxy["plugin-opts"] = {
+                host: shadowTLS.host,
+                password: shadowTLS.password,
+                version: shadowTLS.version,
+            };
         }
     }
 
@@ -60,6 +72,7 @@ shadowsocksr = tag equals "shadowsocksr"i address method password (ssr_protocol/
     proxy.type = "ssr";
     // handle ssr obfs
     proxy.obfs = obfs.type;
+    handleShadowTLS();
 }
 shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs_hostv)? (obfs_ss/obfs_host/obfs_uri/fast_open/udp_relay/udp_port/shadow_tls_version/shadow_tls_sni/shadow_tls_password/ip_mode/block_quic/udp_over_tcp/others)* {
     proxy.type = "ss";
@@ -70,6 +83,7 @@ shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs
         $set(proxy, "plugin-opts.host", obfs.host);
         $set(proxy, "plugin-opts.path", obfs.path);
     }
+    handleShadowTLS();
 }
 vmess = tag equals "vmess"i address vmess_method uuid (transport/transport_host/transport_path/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/vmess_alterId/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
     proxy.type = "vmess";
@@ -194,9 +208,9 @@ ssr_protocol_param = comma "protocol-param" equals param:$[^=,]+ { proxy["protoc
 vmess_alterId = comma "alterId" equals alterId:$[0-9]+ { proxy.alterId = parseInt(alterId); } 
 
 udp_port = comma "udp-port" equals match:$[0-9]+ { proxy["udp-port"] = parseInt(match.trim()); }
-shadow_tls_version = comma "shadow-tls-version" equals match:$[0-9]+ { proxy["shadow-tls-version"] = parseInt(match.trim()); }
-shadow_tls_sni = comma "shadow-tls-sni" equals match:[^,]+ { proxy["shadow-tls-sni"] = match.join(""); }
-shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { proxy["shadow-tls-password"] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
+shadow_tls_version = comma "shadow-tls-version" equals match:$[0-9]+ { shadowTLS.version = parseInt(match.trim()); }
+shadow_tls_sni = comma "shadow-tls-sni" equals match:[^,]+ { shadowTLS.host = match.join(""); }
+shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { shadowTLS.password = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
 tls_name = comma sni:("tls-name") equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1'); }

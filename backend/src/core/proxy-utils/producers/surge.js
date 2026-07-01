@@ -65,6 +65,27 @@ function appendAlpn(result, proxy) {
     if (alpn) result.append(`,alpn="${alpn}"`);
 }
 
+function appendShadowTLS(result, proxy, includeUdpPort = false) {
+    if (proxy.plugin !== 'shadow-tls' || !proxy['plugin-opts']) return;
+
+    const password = proxy['plugin-opts'].password;
+    const host = proxy['plugin-opts'].host;
+    const version = proxy['plugin-opts'].version;
+    if (!password) return;
+
+    result.append(`,shadow-tls-password="${password}"`);
+    if (host) result.append(`,shadow-tls-sni=${host}`);
+    if (version) {
+        if (version < 2) {
+            throw unsupported(`shadow-tls version ${version} is not supported`);
+        }
+        result.append(`,shadow-tls-version=${version}`);
+    }
+    if (includeUdpPort) {
+        result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
+    }
+}
+
 function appendTlsProxyParams(result, proxy, enabled = true) {
     if (!enabled) {
         return;
@@ -285,44 +306,7 @@ function shadowsocks(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-        // udp-port
-        result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
-    } else if (['shadow-tls'].includes(proxy.plugin) && proxy['plugin-opts']) {
-        const password = proxy['plugin-opts'].password;
-        const host = proxy['plugin-opts'].host;
-        const version = proxy['plugin-opts'].version;
-        if (password) {
-            result.append(`,shadow-tls-password="${password}"`);
-            if (host) {
-                result.append(`,shadow-tls-sni=${host}`);
-            }
-            if (version) {
-                if (version < 2) {
-                    throw unsupported(
-                        `shadow-tls version ${version} is not supported`,
-                    );
-                }
-                result.append(`,shadow-tls-version=${version}`);
-            }
-            // udp-port
-            result.appendIfPresent(
-                `,udp-port=${proxy['udp-port']}`,
-                'udp-port',
-            );
-        }
-    }
+    appendShadowTLS(result, proxy, true);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -383,19 +367,7 @@ function trojan(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -571,18 +543,7 @@ function h2Connect(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
     result.appendIfPresent(
@@ -651,19 +612,7 @@ function vmess(proxy, includeUnsupportedProxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -784,19 +733,7 @@ function http(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -904,19 +841,7 @@ function socks5(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -1015,19 +940,7 @@ function snell(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -1104,19 +1017,7 @@ function tuic(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -1182,19 +1083,7 @@ function wireguard(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -1283,19 +1172,7 @@ function wireguard_surge(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
@@ -1375,19 +1252,7 @@ function hysteria2(proxy) {
     );
     result.appendIfPresent(`,interface=${proxy['interface']}`, 'interface');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password="${proxy['shadow-tls-password']}"`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-    }
+    appendShadowTLS(result, proxy);
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');

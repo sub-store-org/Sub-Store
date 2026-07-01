@@ -554,16 +554,7 @@ export default function Egern_Producer() {
                             'ssh',
                         ].includes(original.type)
                     ) {
-                        if (isPresent(original, 'shadow-tls-password')) {
-                            if (original['shadow-tls-version'] != 3)
-                                throw new Error(
-                                    `shadow-tls version ${original['shadow-tls-version']} is not supported`,
-                                );
-                            proxy.shadow_tls = {
-                                password: original['shadow-tls-password'],
-                                sni: original['shadow-tls-sni'],
-                            };
-                        } else if (
+                        if (
                             ['shadow-tls'].includes(original.plugin) &&
                             original['plugin-opts']
                         ) {
@@ -693,12 +684,7 @@ function getUdpRelay(proxy) {
 }
 
 function hasShadowTls(proxy) {
-    return (
-        proxy.plugin === 'shadow-tls' ||
-        isPresent(proxy, 'shadow-tls-password') ||
-        isPresent(proxy, 'shadow-tls-sni') ||
-        isPresent(proxy, 'shadow-tls-version')
-    );
+    return proxy.plugin === 'shadow-tls';
 }
 
 function getNonEmptyValue(value) {

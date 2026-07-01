@@ -69,6 +69,25 @@ function appendAlpn(result, proxy) {
     if (alpn) result.append(`,alpn="${alpn}"`);
 }
 
+function appendShadowTLS(result, proxy) {
+    if (proxy.plugin !== 'shadow-tls' || !proxy['plugin-opts']) return;
+
+    const password = proxy['plugin-opts'].password;
+    const host = proxy['plugin-opts'].host;
+    const version = proxy['plugin-opts'].version;
+    if (!password) return;
+
+    result.append(`,shadow-tls-password=${password}`);
+    if (host) result.append(`,shadow-tls-sni=${host}`);
+    if (version) {
+        if (version < 2) {
+            throw new Error(`shadow-tls version ${version} is not supported`);
+        }
+        result.append(`,shadow-tls-version=${version}`);
+    }
+    result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
+}
+
 function appendReality(result, proxy) {
     result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
     result.appendIfPresent(
@@ -156,44 +175,7 @@ function shadowsocks(proxy) {
         }
     }
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-        // udp-port
-        result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
-    } else if (['shadow-tls'].includes(proxy.plugin) && proxy['plugin-opts']) {
-        const password = proxy['plugin-opts'].password;
-        const host = proxy['plugin-opts'].host;
-        const version = proxy['plugin-opts'].version;
-        if (password) {
-            result.append(`,shadow-tls-password=${password}`);
-            if (host) {
-                result.append(`,shadow-tls-sni=${host}`);
-            }
-            if (version) {
-                if (version < 2) {
-                    throw new Error(
-                        `shadow-tls version ${version} is not supported`,
-                    );
-                }
-                result.append(`,shadow-tls-version=${version}`);
-            }
-            // udp-port
-            result.appendIfPresent(
-                `,udp-port=${proxy['udp-port']}`,
-                'udp-port',
-            );
-        }
-    }
+    appendShadowTLS(result, proxy);
 
     // udp over tcp
     if (proxy['udp-over-tcp']) {
@@ -250,44 +232,7 @@ function shadowsocksr(proxy) {
     result.appendIfPresent(`,obfs=${proxy.obfs}`, 'obfs');
     result.appendIfPresent(`,obfs-param=${proxy['obfs-param']}`, 'obfs-param');
 
-    // shadow-tls
-    if (isPresent(proxy, 'shadow-tls-password')) {
-        result.append(`,shadow-tls-password=${proxy['shadow-tls-password']}`);
-
-        result.appendIfPresent(
-            `,shadow-tls-version=${proxy['shadow-tls-version']}`,
-            'shadow-tls-version',
-        );
-        result.appendIfPresent(
-            `,shadow-tls-sni=${proxy['shadow-tls-sni']}`,
-            'shadow-tls-sni',
-        );
-        // udp-port
-        result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
-    } else if (['shadow-tls'].includes(proxy.plugin) && proxy['plugin-opts']) {
-        const password = proxy['plugin-opts'].password;
-        const host = proxy['plugin-opts'].host;
-        const version = proxy['plugin-opts'].version;
-        if (password) {
-            result.append(`,shadow-tls-password=${password}`);
-            if (host) {
-                result.append(`,shadow-tls-sni=${host}`);
-            }
-            if (version) {
-                if (version < 2) {
-                    throw new Error(
-                        `shadow-tls version ${version} is not supported`,
-                    );
-                }
-                result.append(`,shadow-tls-version=${version}`);
-            }
-            // udp-port
-            result.appendIfPresent(
-                `,udp-port=${proxy['udp-port']}`,
-                'udp-port',
-            );
-        }
-    }
+    appendShadowTLS(result, proxy);
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');

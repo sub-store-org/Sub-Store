@@ -533,14 +533,17 @@ describe('Proxy text producers', function () {
         const output = produceExternal('Loon', [
             {
                 type: 'ss',
-                name: 'Loon SS ShadowTLS Fields',
+                name: 'Loon SS ShadowTLS Plugin A',
                 server: 'ss.example.com',
                 port: 8388,
                 cipher: 'chacha20-ietf-poly1305',
                 password: 'ss-pass',
-                'shadow-tls-password': 'dzUjK3l+mXO/xxx=',
-                'shadow-tls-sni': 'p11.douyinpic.com',
-                'shadow-tls-version': 3,
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    password: 'dzUjK3l+mXO/xxx=',
+                    host: 'p11.douyinpic.com',
+                    version: 3,
+                },
                 udp: true,
             },
             {
@@ -561,7 +564,7 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             [
-                'Loon SS ShadowTLS Fields=shadowsocks,ss.example.com,8388,chacha20-ietf-poly1305,"ss-pass",shadow-tls-password=dzUjK3l+mXO/xxx=,shadow-tls-version=3,shadow-tls-sni=p11.douyinpic.com,udp=true',
+                'Loon SS ShadowTLS Plugin A=shadowsocks,ss.example.com,8388,chacha20-ietf-poly1305,"ss-pass",shadow-tls-password=dzUjK3l+mXO/xxx=,shadow-tls-sni=p11.douyinpic.com,shadow-tls-version=3,udp=true',
                 'Loon SS ShadowTLS Plugin=shadowsocks,ss-plugin.example.com,8388,chacha20-ietf-poly1305,"ss-pass",shadow-tls-password=plugin-shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3',
             ].join('\n'),
         );

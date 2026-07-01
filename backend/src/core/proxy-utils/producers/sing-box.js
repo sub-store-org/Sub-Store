@@ -529,17 +529,6 @@ const getShadowTLSPluginOpts = (proxy = {}) => {
     if (proxy.plugin === 'shadow-tls' && proxy['plugin-opts']) {
         return proxy['plugin-opts'];
     }
-    if (
-        proxy['shadow-tls-password'] != null ||
-        proxy['shadow-tls-sni'] != null ||
-        proxy['shadow-tls-version'] != null
-    ) {
-        return {
-            host: proxy['shadow-tls-sni'],
-            password: proxy['shadow-tls-password'],
-            version: proxy['shadow-tls-version'],
-        };
-    }
     return undefined;
 };
 
