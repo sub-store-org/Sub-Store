@@ -33,6 +33,11 @@ export default function Shadowrocket_Producer() {
                     ![1, 2, 3, 4, 5].includes(proxy.version)
                 ) {
                     return false;
+                } else if (hasShadowrocketSnellShadowTlsObfsConflict(proxy)) {
+                    $.error(
+                        `Platform Shadowrocket does not support Snell shadow-tls with obfs for proxy ${proxy.name}. Proxy has been filtered.`,
+                    );
+                    return false;
                 } else if (
                     [
                         'tailscale',
@@ -134,8 +139,24 @@ export default function Shadowrocket_Producer() {
                     proxy['pre-shared-key'] = proxy['preshared-key'];
                     proxy.ip = getWireGuardAddressWithCIDR(proxy, 'ipv4');
                     proxy.ipv6 = getWireGuardAddressWithCIDR(proxy, 'ipv6');
-                } else if (proxy.type === 'snell' && proxy.version < 3) {
-                    delete proxy.udp;
+                } else if (proxy.type === 'snell') {
+                    if (proxy.version < 3) {
+                        delete proxy.udp;
+                    }
+                    if (proxy.plugin === 'shadow-tls' && proxy['plugin-opts']) {
+                        proxy['obfs-opts'] = {
+                            mode: 'shadow-tls',
+                            host: proxy['plugin-opts'].host,
+                            password: proxy['plugin-opts'].password,
+                            version: proxy['plugin-opts'].version,
+                        };
+                        if (proxy['plugin-opts'].alpn) {
+                            proxy['obfs-opts'].alpn =
+                                proxy['plugin-opts'].alpn;
+                        }
+                        delete proxy.plugin;
+                        delete proxy['plugin-opts'];
+                    }
                 } else if (proxy.type === 'vless') {
                     if (isPresent(proxy, 'sni')) {
                         proxy.servername = proxy.sni;
@@ -277,4 +298,14 @@ export default function Shadowrocket_Producer() {
         return produceProxyListOutput(list, type, opts);
     };
     return { type, produce };
+}
+
+function hasShadowrocketSnellShadowTlsObfsConflict(proxy) {
+    return (
+        proxy?.type === 'snell' &&
+        proxy?.plugin === 'shadow-tls' &&
+        (isPresent(proxy, 'obfs-opts.mode') ||
+            isPresent(proxy, 'obfs-opts.host') ||
+            isPresent(proxy, 'obfs-opts.path'))
+    );
 }

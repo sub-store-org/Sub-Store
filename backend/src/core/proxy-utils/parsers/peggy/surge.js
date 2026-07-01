@@ -36,12 +36,19 @@ const grammars = String.raw`
             shadowTLS.version = 2;
         }
         if (shadowTLS.password) {
+            if (shadowTLS.version < 2) {
+                throw new Error("shadow-tls version " + shadowTLS.version + " is not supported");
+            }
             proxy.plugin = "shadow-tls";
             proxy["plugin-opts"] = {
                 host: shadowTLS.host,
                 password: shadowTLS.password,
                 version: shadowTLS.version,
             };
+            if (proxy.alpn) {
+                $set(proxy, "plugin-opts.alpn", proxy.alpn);
+                delete proxy.alpn;
+            }
         }
     }
     function stripQuotes(value) {
@@ -366,7 +373,7 @@ start = (anytls/shadowsocks/vmess/trojan/h2_connect/https/http/snell/socks5/sock
     return proxy;
 }
 
-shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/udp_port/others)* {
+shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/alpn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/udp_port/others)* {
     proxy.type = "ss";
     // handle obfs
     if (obfs.type == "http" || obfs.type === "tls") {
@@ -412,7 +419,7 @@ ssh = tag equals "ssh" address (username password)? (usernamek passwordk)? (serv
     proxy.type = "ssh";
     handleShadowTLS();
 }
-snell = tag equals "snell" address (snell_version/snell_mode/snell_psk/obfs/obfs_host/obfs_uri/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/reuse/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+snell = tag equals "snell" address (snell_version/snell_mode/snell_psk/obfs/obfs_host/obfs_uri/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/reuse/alpn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "snell";
     // handle obfs
     if (obfs.type == "http" || obfs.type === "tls") {

@@ -37,12 +37,19 @@ const grammars = String.raw`
 
     function handleShadowTLS() {
         if (shadowTLS.password) {
+            if (shadowTLS.version < 2) {
+                throw new Error("shadow-tls version " + shadowTLS.version + " is not supported");
+            }
             proxy.plugin = "shadow-tls";
             proxy["plugin-opts"] = {
                 host: shadowTLS.host,
                 password: shadowTLS.password,
                 version: shadowTLS.version,
             };
+            if (proxy.alpn) {
+                $set(proxy, "plugin-opts.alpn", proxy.alpn);
+                delete proxy.alpn;
+            }
         }
     }
 
@@ -68,13 +75,13 @@ start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2
     return proxy;
 }
 
-shadowsocksr = tag equals "shadowsocksr"i address method password (ssr_protocol/ssr_protocol_param/obfs_ssr/obfs_ssr_param/obfs_host/obfs_uri/fast_open/udp_relay/udp_port/shadow_tls_version/shadow_tls_sni/shadow_tls_password/ip_mode/block_quic/others)*{
+shadowsocksr = tag equals "shadowsocksr"i address method password (ssr_protocol/ssr_protocol_param/obfs_ssr/obfs_ssr_param/obfs_host/obfs_uri/fast_open/udp_relay/udp_port/tls_profile/alpn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/ip_mode/block_quic/others)*{
     proxy.type = "ssr";
     // handle ssr obfs
     proxy.obfs = obfs.type;
     handleShadowTLS();
 }
-shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs_hostv)? (obfs_ss/obfs_host/obfs_uri/fast_open/udp_relay/udp_port/shadow_tls_version/shadow_tls_sni/shadow_tls_password/ip_mode/block_quic/udp_over_tcp/others)* {
+shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs_hostv)? (obfs_ss/obfs_host/obfs_uri/fast_open/udp_relay/udp_port/tls_profile/alpn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/ip_mode/block_quic/udp_over_tcp/others)* {
     proxy.type = "ss";
     // handle ss obfs
     if (obfs.type == "http" || obfs.type === "tls") {

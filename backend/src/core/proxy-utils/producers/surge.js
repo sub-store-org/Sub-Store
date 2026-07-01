@@ -65,6 +65,10 @@ function appendAlpn(result, proxy) {
     if (alpn) result.append(`,alpn="${alpn}"`);
 }
 
+function getShadowTLSAlpn(proxy) {
+    return formatSurgeAlpn(proxy?.['plugin-opts']?.alpn ?? proxy?.alpn);
+}
+
 function appendShadowTLS(result, proxy, includeUdpPort = false) {
     if (proxy.plugin !== 'shadow-tls' || !proxy['plugin-opts']) return;
 
@@ -81,6 +85,8 @@ function appendShadowTLS(result, proxy, includeUdpPort = false) {
         }
         result.append(`,shadow-tls-version=${version}`);
     }
+    const alpn = getShadowTLSAlpn(proxy);
+    if (alpn) result.append(`,alpn="${alpn}"`);
     if (includeUdpPort) {
         result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
     }
@@ -96,7 +102,9 @@ function appendTlsProxyParams(result, proxy, enabled = true) {
         'tls-fingerprint',
     );
     result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
-    appendAlpn(result, proxy);
+    if (proxy.plugin !== 'shadow-tls') {
+        appendAlpn(result, proxy);
+    }
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',

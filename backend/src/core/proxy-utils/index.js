@@ -768,6 +768,26 @@ function lastParse(proxy) {
             .replace(/^\[/, '')
             .replace(/\]$/, '');
     }
+    if (
+        proxy.type === 'snell' &&
+        proxy['obfs-opts']?.mode === 'shadow-tls' &&
+        !proxy.plugin
+    ) {
+        proxy.plugin = 'shadow-tls';
+        proxy['plugin-opts'] = {
+            host: proxy['obfs-opts'].host,
+            password: proxy['obfs-opts'].password,
+            version: proxy['obfs-opts'].version,
+            alpn: proxy['obfs-opts'].alpn,
+        };
+        delete proxy['obfs-opts'];
+    }
+    if (proxy.plugin === 'shadow-tls' && proxy['plugin-opts']) {
+        if (proxy.alpn && !proxy['plugin-opts'].alpn) {
+            proxy['plugin-opts'].alpn = proxy.alpn;
+        }
+        delete proxy.alpn;
+    }
     if (proxy.network === 'ws') {
         if (!proxy['ws-opts'] && (proxy['ws-path'] || proxy['ws-headers'])) {
             proxy['ws-opts'] = {};

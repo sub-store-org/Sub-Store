@@ -69,6 +69,15 @@ function appendAlpn(result, proxy) {
     if (alpn) result.append(`,alpn="${alpn}"`);
 }
 
+function getLoonShadowTLSAlpn(proxy) {
+    const values = proxy?.['plugin-opts']?.alpn ?? proxy?.alpn;
+    const normalized = Array.isArray(values) ? values : `${values || ''}`.split(',');
+    return normalized
+        .map((item) => `${item}`.trim())
+        .filter((item) => item !== '')
+        .join(',');
+}
+
 function appendShadowTLS(result, proxy) {
     if (proxy.plugin !== 'shadow-tls' || !proxy['plugin-opts']) return;
 
@@ -85,6 +94,9 @@ function appendShadowTLS(result, proxy) {
         }
         result.append(`,shadow-tls-version=${version}`);
     }
+    appendTlsProfile(result, proxy);
+    const alpn = getLoonShadowTLSAlpn(proxy);
+    if (alpn) result.append(`,alpn="${alpn}"`);
     result.appendIfPresent(`,udp-port=${proxy['udp-port']}`, 'udp-port');
 }
 

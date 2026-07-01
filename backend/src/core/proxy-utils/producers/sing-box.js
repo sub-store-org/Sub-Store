@@ -529,6 +529,17 @@ const getShadowTLSPluginOpts = (proxy = {}) => {
     if (proxy.plugin === 'shadow-tls' && proxy['plugin-opts']) {
         return proxy['plugin-opts'];
     }
+    if (
+        proxy.type === 'snell' &&
+        proxy['obfs-opts']?.mode === 'shadow-tls'
+    ) {
+        return {
+            host: proxy['obfs-opts'].host,
+            password: proxy['obfs-opts'].password,
+            version: proxy['obfs-opts'].version,
+            alpn: proxy['obfs-opts'].alpn,
+        };
+    }
     return undefined;
 };
 
@@ -567,7 +578,7 @@ const shadowTLSOutboundParser = (proxy = {}, pluginOpts) => {
     }
     if (stPart.server_port < 0 || stPart.server_port > 65535)
         throw '端口值非法';
-    const alpn = normalizeALPN(pluginOpts.alpn);
+    const alpn = normalizeALPN(pluginOpts.alpn) ?? normalizeALPN(proxy.alpn);
     if (alpn) stPart.tls.alpn = alpn;
     if (proxy['fast-open'] === true) stPart.udp_fragment = true;
     tfoParser(proxy, stPart);
@@ -723,9 +734,15 @@ const snellParser = (proxy = {}) => {
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (version != null) parsedProxy.version = version;
-    if (proxy['obfs-opts']?.mode)
+    if (
+        proxy['obfs-opts']?.mode &&
+        proxy['obfs-opts'].mode !== 'shadow-tls'
+    )
         parsedProxy.obfs_mode = proxy['obfs-opts'].mode;
-    if (proxy['obfs-opts']?.host)
+    if (
+        proxy['obfs-opts']?.host &&
+        proxy['obfs-opts']?.mode !== 'shadow-tls'
+    )
         parsedProxy.obfs_host = proxy['obfs-opts'].host;
     if (proxy.reuse && (version == null || version >= 4))
         parsedProxy.reuse = true;

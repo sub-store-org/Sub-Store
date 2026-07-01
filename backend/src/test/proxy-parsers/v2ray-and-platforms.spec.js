@@ -2893,6 +2893,41 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses shadowsocks shadow-tls alpn into plugin opts',
+                input: 'Loon ShadowTLS ALPN=shadowsocks,loon-st.example.com,8388,aes-128-gcm,"secret",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3,alpn="h2,http/1.1"',
+                expected: {
+                    type: 'ss',
+                    name: 'Loon ShadowTLS ALPN',
+                    server: 'loon-st.example.com',
+                    port: 8388,
+                    cipher: 'aes-128-gcm',
+                    password: 'secret',
+                    plugin: 'shadow-tls',
+                    'plugin-opts': {
+                        host: 'mask.example.com',
+                        password: 'shadow-pass',
+                        version: 3,
+                        alpn: ['h2', 'http/1.1'],
+                    },
+                },
+            },
+            {
+                title: 'parses shadowsocks shadow-tls tls-profile into internal loon fields',
+                input: 'Loon ShadowTLS TLS Profile=shadowsocks,loon-st.example.com,8388,aes-128-gcm,"secret",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3,tls-profile=ios26',
+                expected: {
+                    type: 'ss',
+                    name: 'Loon ShadowTLS TLS Profile',
+                    plugin: 'shadow-tls',
+                    'plugin-opts': {
+                        host: 'mask.example.com',
+                        password: 'shadow-pass',
+                        version: 3,
+                    },
+                    _loon_tls_profile: 'ios26',
+                    'client-fingerprint': 'ios',
+                },
+            },
+            {
                 title: 'parses shadowsocksr lines',
                 input: 'Loon SSR=shadowsocksr,loon-ssr.example.com,8389,aes-256-cfb,"secret",protocol=auth_chain_b,protocol-param=device-id,obfs=tls1.2_ticket_fastauth,obfs-param=cdn.example.com',
                 expected: {
@@ -3274,6 +3309,14 @@ describe('Platform raw-format parser coverage', function () {
             expect(
                 parseAll(
                     'Loon Hysteria2 Hop Range=hysteria2,loon-hy2.example.com,443,"secret",hop-interval=15-30',
+                ),
+            ).to.have.length(0);
+        });
+
+        it('rejects Loon shadow-tls version 1 lines', function () {
+            expect(
+                parseAll(
+                    'Loon ShadowTLS Invalid=shadowsocks,loon-invalid.example.com,8388,aes-128-gcm,"secret",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=1,alpn="h2"',
                 ),
             ).to.have.length(0);
         });
@@ -3670,6 +3713,25 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses snell shadow-tls alpn into plugin opts',
+                input: 'Surge Snell ShadowTLS ALPN = snell,surge-snell-alpn.example.com,443,psk=secret,version=5,alpn="h2,http/1.1",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3',
+                expected: {
+                    type: 'snell',
+                    name: 'Surge Snell ShadowTLS ALPN',
+                    server: 'surge-snell-alpn.example.com',
+                    port: 443,
+                    psk: 'secret',
+                    version: 5,
+                    plugin: 'shadow-tls',
+                    'plugin-opts': {
+                        host: 'mask.example.com',
+                        password: 'shadow-pass',
+                        version: 3,
+                        alpn: ['h2', 'http/1.1'],
+                    },
+                },
+            },
+            {
                 title: 'parses tuic v5 lines',
                 input: `Surge TUIC = tuic-v5,surge-tuic.example.com,443,uuid=${UUID},password=secret,sni=sni.example.com,skip-cert-verify=true,alpn=h3,ecn=true,port-hopping=9000;9002-9004`,
                 expected: {
@@ -3759,6 +3821,45 @@ describe('Platform raw-format parser coverage', function () {
             for (const input of cases) {
                 expectSubset(parseOne(input), { alpn });
             }
+        });
+
+        it('rejects Surge shadow-tls version 1 lines', function () {
+            expect(
+                parseAll(
+                    'Surge ShadowTLS Invalid = snell,surge-invalid.example.com,443,psk=secret,version=5,shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=1,alpn="h2"',
+                ),
+            ).to.have.length(0);
+        });
+
+        it('normalizes Mihomo Snell shadow-tls obfs form into plugin opts', function () {
+            const [proxy] = parseAll(`proxies:
+  - name: Mihomo Snell ShadowTLS
+    type: snell
+    server: mihomo-snell.example.com
+    port: 443
+    psk: secret
+    version: 4
+    obfs-opts:
+      mode: shadow-tls
+      host: mask.example.com
+      password: shadow-pass
+      version: 2
+      alpn:
+        - h2
+        - http/1.1`);
+
+            expectSubset(proxy, {
+                type: 'snell',
+                name: 'Mihomo Snell ShadowTLS',
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    host: 'mask.example.com',
+                    password: 'shadow-pass',
+                    version: 2,
+                    alpn: ['h2', 'http/1.1'],
+                },
+            });
+            expect(proxy).to.not.have.property('obfs-opts');
         });
     });
 });

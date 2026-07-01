@@ -76,12 +76,17 @@ export default function ClashMeta_Producer() {
                     return false;
                 } else if (
                     hasMihomoShadowTls(proxy) &&
-                    (proxy.type !== 'ss' ||
+                    (!['ss', 'snell'].includes(proxy.type) ||
                         !isSupportedMihomoVersion(
                             getMihomoShadowTlsVersion(proxy),
                             [1, 2, 3],
                         ))
                 ) {
+                    return false;
+                } else if (hasMihomoSnellShadowTlsObfsConflict(proxy)) {
+                    $.error(
+                        `Platform Mihomo does not support Snell shadow-tls with obfs for proxy ${proxy.name}. Proxy has been filtered.`,
+                    );
                     return false;
                 } else if (['juicity', 'naive'].includes(proxy.type)) {
                     return false;
@@ -255,6 +260,23 @@ export default function ClashMeta_Producer() {
                     );
                 }
 
+                if (proxy.type === 'snell') {
+                    const shadowTLSOpts = getMihomoShadowTlsOpts(proxy);
+                    if (shadowTLSOpts) {
+                        proxy['obfs-opts'] = {
+                            mode: 'shadow-tls',
+                            host: shadowTLSOpts.host,
+                            password: shadowTLSOpts.password,
+                            version: shadowTLSOpts.version,
+                        };
+                        if (shadowTLSOpts.alpn) {
+                            proxy['obfs-opts'].alpn = shadowTLSOpts.alpn;
+                        }
+                        delete proxy.plugin;
+                        delete proxy['plugin-opts'];
+                    }
+                }
+
                 if (
                     ['vmess', 'vless'].includes(proxy.type) &&
                     proxy.network === 'http'
@@ -413,11 +435,29 @@ function isSupportedMihomoVersion(version, supportedVersions) {
 }
 
 function hasMihomoShadowTls(proxy) {
-    return proxy?.plugin === 'shadow-tls';
+    return Boolean(getMihomoShadowTlsOpts(proxy));
+}
+
+function hasMihomoSnellShadowTlsObfsConflict(proxy) {
+    return (
+        proxy?.type === 'snell' &&
+        proxy?.plugin === 'shadow-tls' &&
+        (isPresent(proxy, 'obfs-opts.mode') ||
+            isPresent(proxy, 'obfs-opts.host') ||
+            isPresent(proxy, 'obfs-opts.path'))
+    );
 }
 
 function getMihomoShadowTlsVersion(proxy) {
-    return proxy?.plugin === 'shadow-tls'
-        ? proxy?.['plugin-opts']?.version
-        : undefined;
+    return getMihomoShadowTlsOpts(proxy)?.version;
+}
+
+function getMihomoShadowTlsOpts(proxy) {
+    if (proxy?.plugin === 'shadow-tls' && proxy?.['plugin-opts']) {
+        return proxy['plugin-opts'];
+    }
+    if (proxy?.type === 'snell' && proxy?.['obfs-opts']?.mode === 'shadow-tls') {
+        return proxy['obfs-opts'];
+    }
+    return undefined;
 }

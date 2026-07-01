@@ -570,6 +570,51 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('prefers plugin-scoped Loon shadow-tls alpn over top-level alpn', function () {
+        const output = produceExternal('Loon', {
+            type: 'ss',
+            name: 'Loon ShadowTLS ALPN',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'chacha20-ietf-poly1305',
+            password: 'ss-pass',
+            plugin: 'shadow-tls',
+            alpn: ['ignored.example'],
+            'plugin-opts': {
+                password: 'shadow-pass',
+                host: 'mask.example.com',
+                version: 3,
+                alpn: ['http/1.1', 'h2'],
+            },
+        });
+
+        expect(output).to.equal(
+            'Loon ShadowTLS ALPN=shadowsocks,ss.example.com,8388,chacha20-ietf-poly1305,"ss-pass",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3,alpn="http/1.1,h2"',
+        );
+    });
+
+    it('emits Loon tls-profile for shadow-tls outputs', function () {
+        const output = produceExternal('Loon', {
+            type: 'ss',
+            name: 'Loon ShadowTLS TLS Profile',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'chacha20-ietf-poly1305',
+            password: 'ss-pass',
+            plugin: 'shadow-tls',
+            _loon_tls_profile: 'ios26',
+            'plugin-opts': {
+                password: 'shadow-pass',
+                host: 'mask.example.com',
+                version: 3,
+            },
+        });
+
+        expect(output).to.equal(
+            'Loon ShadowTLS TLS Profile=shadowsocks,ss.example.com,8388,chacha20-ietf-poly1305,"ss-pass",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3,tls-profile=ios26',
+        );
+    });
+
     it('emits Loon tls-profile and alpn for TLS protocol outputs', function () {
         const alpn = ['http/1.1', 'h2', 'h3'];
         const output = produceExternal('Loon', [
@@ -1087,6 +1132,29 @@ describe('Proxy text producers', function () {
         expect(errors).to.deep.equal([
             'Platform Surge does not support Snell version 6 with obfs',
         ]);
+    });
+
+    it('prefers plugin-scoped Surge shadow-tls alpn over top-level alpn', function () {
+        const output = produceExternal('Surge', {
+            type: 'snell',
+            name: 'Surge Snell ShadowTLS ALPN',
+            server: 'snell.example.com',
+            port: 443,
+            psk: 'secret',
+            version: 5,
+            plugin: 'shadow-tls',
+            alpn: ['ignored.example'],
+            'plugin-opts': {
+                password: 'shadow-pass',
+                host: 'mask.example.com',
+                version: 3,
+                alpn: ['http/1.1', 'h2'],
+            },
+        });
+
+        expect(output).to.equal(
+            'Surge Snell ShadowTLS ALPN=snell,snell.example.com,443,version=5,psk="secret",shadow-tls-password="shadow-pass",shadow-tls-sni=mask.example.com,shadow-tls-version=3,alpn="http/1.1,h2"',
+        );
     });
 
     it('omits Surge TLS-only params for plain HTTP, SOCKS5, and VMess nodes', function () {
