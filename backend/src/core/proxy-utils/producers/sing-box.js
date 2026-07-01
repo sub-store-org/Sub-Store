@@ -1280,10 +1280,41 @@ export default function singbox_Producer() {
     const type = 'ALL';
     const produce = (proxies, type, opts = {}) => {
         const list = [];
+        const originalSnellShadowTLS = new Map(
+            proxies
+                .filter(
+                    (proxy) =>
+                        proxy?.type === 'snell' &&
+                        proxy?.plugin === 'shadow-tls' &&
+                        proxy?.['plugin-opts'],
+                )
+                .map((proxy) => [
+                    proxy,
+                    {
+                        plugin: proxy.plugin,
+                        'plugin-opts': proxy['plugin-opts']
+                            ? JSON.parse(JSON.stringify(proxy['plugin-opts']))
+                            : undefined,
+                        'obfs-opts': proxy['obfs-opts']
+                            ? JSON.parse(JSON.stringify(proxy['obfs-opts']))
+                            : undefined,
+                    },
+                ]),
+        );
         ClashMeta_Producer()
             .produce(proxies, 'internal', { 'include-unsupported-proxy': true })
             .map((proxy) => {
                 try {
+                    const originalShadowTLS = originalSnellShadowTLS.get(proxy);
+                    if (originalShadowTLS) {
+                        proxy.plugin = originalShadowTLS.plugin;
+                        proxy['plugin-opts'] = originalShadowTLS['plugin-opts'];
+                        if (originalShadowTLS['obfs-opts']) {
+                            proxy['obfs-opts'] = originalShadowTLS['obfs-opts'];
+                        } else {
+                            delete proxy['obfs-opts'];
+                        }
+                    }
                     if (['xhttp'].includes(proxy.network))
                         throw new Error(
                             `Platform sing-box does not support network: ${proxy.network}`,

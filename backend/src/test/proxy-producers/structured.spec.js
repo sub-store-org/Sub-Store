@@ -487,6 +487,10 @@ describe('Proxy structured producers', function () {
                     password: 'shadow-pass',
                     version: 3,
                 },
+                'obfs-opts': {
+                    mode: 'http',
+                    host: 'obfs.example.com',
+                },
             },
             { 'include-unsupported-proxy': true },
         );
@@ -499,6 +503,8 @@ describe('Proxy structured producers', function () {
             version: 4,
             reuse: true,
             network: 'tcp',
+            obfs_mode: 'http',
+            obfs_host: 'obfs.example.com',
             detour: 'sing-box Snell ShadowTLS_shadowtls',
         });
         expect(output.outbounds[0]).to.not.have.property('server');

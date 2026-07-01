@@ -54,6 +54,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 29. sing-box 支持使用 `ssh-server` 给 tailscale 设置 `ssh_server`, 直接设为 `true` 或 `{ "enabled": true, "disable-pty": true, "disable-sftp": true, "disable-forwarding": true }`
   // 30. Loon 支持使用 `_loon_tls_profile` 设置 `tls-profile` 字段('default', 'chrome', 'ios18', 'ios26'), 否则则使用 client-fingerprint 自动转换部分对应的值
   // 31. `shadow-tls-password`/`shadow-tls-sni`/`shadow-tls-version` 这套旧字段已废弃. 请使用 `plugin: 'shadow-tls'` 和 `plugin-opts: { password, host, version }`
+  // 32. mihomo 中 Snell shadow-tls 字段与 ss shadow-tls 字段不同, 使用的是 obfs-opts 而不是 plugin+plugin-opts, 不能与 obfs http/tls 共存. Sub-Store 内部有字段转换, 建议直接使用单行 Surge 格式 `1=snell,a.com,443,version=4,psk="1",obfs=http,obfs-host=a.com,shadow-tls-password="1",shadow-tls-sni=a.com,shadow-tls-version=3,alpn="http/1.1,h2,h3",reuse=true` . 若想使用 JSON/JSON5/YAML 单行格式输入, 可使用 `{ "name": "1", "server": "a.com", "port": 443, "psk": "1", "version": 4, "reuse": true, "type": "snell", "obfs-opts": { "mode": "http", "host": "a.com" }, "plugin": "shadow-tls", "plugin-opts": { "host": "a.com", "password": "1", "version": 3, "alpn": [ "http/1.1", "h2", "h3" ] } }`
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
