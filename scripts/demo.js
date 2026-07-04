@@ -28,7 +28,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     例如: $server['keystore-client-cert'] = 'client-cert-name' 输出 Surge TLS 代理时会生成 client-cert="client-cert-name"
   // 13. `test-url` 为测延迟链接, `test-timeout` 为测延迟超时
   // 14. `ports` 为端口跳跃, `hop-interval` 变换端口号的时间间隔
-  // 15. `ip-version` 设置节点使用 IP 版本，兼容各家的值. 会进行内部转换. sing-box 以外: 若无法匹配则使用原始值. sing-box: 需有匹配且节点上设置 `_dns_server` 字段, 将自动设置 `domain_resolver.server`. 同时, `sing-box` 支持使用完整的 `_domain_resolver` 结构设置 `domain_resolver` 字段
+  // 15. `ip-version` 设置节点使用 IP 版本，兼容各家的值. 会进行内部转换. sing-box 以外: 若无法匹配则使用原始值. sing-box: 需有匹配且节点上设置 `_dns_server` 字段, 将自动设置 `domain_resolver.server`. 同时, `sing-box` 支持使用 `_domain_resolver` 设置 `domain_resolver`: 字符串会作为 `server`, 对象会合并到 `domain_resolver`
   // 16. `sing-box` 支持使用 `_network` 来设置 `network`, 例如 `tcp`, `udp`
   //    仅对 sing-box 源码里有 `network` 字段的协议生效: `ss`, `ssr`, `socks5`, `vmess`, `vless`, `trojan`, `hysteria`, `hysteria2`, `tuic`.
   //    注意: mihomo 风格的 `udp: true` 表示节点支持 UDP, 不会转换成 sing-box 的 `network: "udp"`; sing-box 默认就是 TCP+UDP. `udp: false` 会转换成 `network: "tcp"`. `_network` 是显式覆盖, 优先级高于 `udp`.
