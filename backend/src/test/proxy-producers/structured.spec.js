@@ -334,14 +334,15 @@ describe('Proxy structured producers', function () {
         );
     });
 
-    it('keeps Snell in sing-box only when include-unsupported-proxy is enabled', function () {
+    it('keeps supported Snell in sing-box by default', function () {
         const proxy = {
             type: 'snell',
             name: 'sing-box Snell',
             server: 'snell.example.com',
             port: 44046,
             psk: 'secret',
-            version: 4,
+            version: 5,
+            _userkey: 'user-secret',
             udp: false,
             tfo: true,
             'fast-open': true,
@@ -359,21 +360,12 @@ describe('Proxy structured producers', function () {
             },
         };
 
-        const { result, errors } = captureErrors(() =>
+        const { result: internal, errors } = captureErrors(() =>
             produceInternal('sing-box', proxy),
         );
-        const internal = produceInternal('sing-box', proxy, {
-            'include-unsupported-proxy': true,
-        });
-        const external = loadProducedJson('sing-box', proxy, {
-            'include-unsupported-proxy': true,
-        });
+        const external = loadProducedJson('sing-box', proxy);
 
-        expect(result).to.deep.equal([]);
-        expect(errors).to.have.length(1);
-        expect(errors[0]).to.include(
-            'Platform sing-box does not support proxy type: snell',
-        );
+        expect(errors).to.deep.equal([]);
         expect(internal).to.have.length(1);
         expectSubset(internal[0], {
             tag: 'sing-box Snell',
@@ -382,6 +374,7 @@ describe('Proxy structured producers', function () {
             server_port: 44046,
             psk: 'secret',
             version: 4,
+            userkey: 'user-secret',
             reuse: true,
             network: 'tcp',
             obfs_mode: 'tls',
@@ -399,7 +392,41 @@ describe('Proxy structured producers', function () {
         expectSubset(external.outbounds[0], internal[0]);
     });
 
-    it('keeps sing-box Snell versions documented by reF1nd and rejects newer versions', function () {
+    it('keeps sing-box supported Snell versions by default and maps v5 to v4', function () {
+        const proxies = [1, 4, 5, 6, '4x'].map((version) => ({
+            type: 'snell',
+            name: `sing-box Snell ${version}`,
+            server: 'snell.example.com',
+            port: 44046,
+            psk: 'secret',
+            version,
+            mode: 'unshaped',
+            udp: true,
+            reuse: true,
+            'obfs-opts': {
+                mode: 'http',
+                host: 'obfs.example.com',
+            },
+        }));
+
+        const { result, errors } = captureErrors(() =>
+            produceInternal('sing-box', proxies),
+        );
+
+        expect(result.map((proxy) => proxy.version)).to.deep.equal([4, 4, 6]);
+        expect(result[1].tag).to.equal('sing-box Snell 5');
+        expect(result[2].mode).to.equal('unshaped');
+        expect(result[2]).to.not.have.property('obfs_mode');
+        expect(errors).to.have.length(2);
+        expect(errors[0]).to.include(
+            'Platform sing-box does not support snell version 1',
+        );
+        expect(errors[1]).to.include(
+            'Platform sing-box does not support snell version 4x',
+        );
+    });
+
+    it('keeps legacy Snell versions when include-unsupported-proxy is enabled', function () {
         const proxies = [1, 2, 3, 4, 5, 6, '4x'].map((version) => ({
             type: 'snell',
             name: `sing-box Snell ${version}`,
@@ -407,6 +434,7 @@ describe('Proxy structured producers', function () {
             port: 44046,
             psk: 'secret',
             version,
+            _userkey: `user-${version}`,
             udp: true,
             reuse: true,
         }));
@@ -418,7 +446,7 @@ describe('Proxy structured producers', function () {
         );
 
         expect(result.map((proxy) => proxy.version)).to.deep.equal([
-            1, 2, 3, 4, 5,
+            1, 2, 3, 4, 5, 6,
         ]);
         expect(
             result.find((proxy) => proxy.version === 1),
@@ -429,11 +457,11 @@ describe('Proxy structured producers', function () {
         expect(result.find((proxy) => proxy.version === 4).reuse).to.equal(
             true,
         );
-        expect(errors).to.have.length(2);
-        expect(errors[0]).to.include(
-            'Platform sing-box does not support snell version 6',
+        expect(result.find((proxy) => proxy.version === 5).userkey).to.equal(
+            'user-5',
         );
-        expect(errors[1]).to.include(
+        expect(errors).to.have.length(1);
+        expect(errors[0]).to.include(
             'Platform sing-box does not support snell version 4x',
         );
     });

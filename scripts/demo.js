@@ -30,7 +30,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 14. `ports` 为端口跳跃, `hop-interval` 变换端口号的时间间隔
   // 15. `ip-version` 设置节点使用 IP 版本，兼容各家的值. 会进行内部转换. sing-box 以外: 若无法匹配则使用原始值. sing-box: 需有匹配且节点上设置 `_dns_server` 字段, 将自动设置 `domain_resolver.server`. 同时, `sing-box` 支持使用 `_domain_resolver` 设置 `domain_resolver`: 字符串会作为 `server`, 对象会合并到 `domain_resolver`
   // 16. `sing-box` 支持使用 `_network` 来设置 `network`, 例如 `tcp`, `udp`
-  //    仅对 sing-box 源码里有 `network` 字段的协议生效: `ss`, `ssr`, `socks5`, `vmess`, `vless`, `trojan`, `hysteria`, `hysteria2`, `tuic`.
+  //    仅对 sing-box 源码里有 `network` 字段的协议生效: `ss`, `ssr`, `socks5`, `vmess`, `vless`, `trojan`, `hysteria`, `hysteria2`, `tuic`, `snell`.
   //    注意: mihomo 风格的 `udp: true` 表示节点支持 UDP, 不会转换成 sing-box 的 `network: "udp"`; sing-box 默认就是 TCP+UDP. `udp: false` 会转换成 `network: "tcp"`. `_network` 是显式覆盖, 优先级高于 `udp`.
   // 17. `block-quic` 支持 `auto`, `on`, `off`. 不同的平台不一定都支持, 会自动转换
   // 18. `sing-box` 支持 `_fragment`, `_fragment_fallback_delay`, `_record_fragment` 设置 `tls` 的 `fragment`, `fragment_fallback_delay`, `record_fragment`
@@ -55,6 +55,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 30. Loon 支持使用 `_loon_tls_profile` 设置 `tls-profile` 字段('default', 'chrome', 'ios18', 'ios26'), 否则则使用 client-fingerprint 自动转换部分对应的值
   // 31. `shadow-tls-password`/`shadow-tls-sni`/`shadow-tls-version` 这套旧字段已废弃. 请使用 `plugin: 'shadow-tls'` 和 `plugin-opts: { password, host, version }`
   // 32. mihomo 中 Snell shadow-tls 字段与 ss shadow-tls 字段不同, 使用的是 obfs-opts 而不是 plugin+plugin-opts, 不能与 obfs http/tls 共存. Sub-Store 内部有字段转换, 建议直接使用单行 Surge 格式 `1=snell,a.com,443,version=4,psk="1",obfs=http,obfs-host=a.com,shadow-tls-password="1",shadow-tls-sni=a.com,shadow-tls-version=3,alpn="http/1.1,h2",reuse=true` . 若想使用 JSON/JSON5/YAML 单行格式输入, 可使用 `{ "name": "1", "server": "a.com", "port": 443, "psk": "1", "version": 4, "reuse": true, "type": "snell", "obfs-opts": { "mode": "http", "host": "a.com" }, "plugin": "shadow-tls", "plugin-opts": { "host": "a.com", "password": "1", "version": 3, "alpn": [ "http/1.1", "h2" ] } }`
+  // 33. sing-box Snell 出站默认允许 version 4/5/6, 其中 version 5 会按 sing-box 行为输出成 version 4. 开启“含不支持的协议”时保留 version 1/2/3/4/5/6. 节点上的 `_userkey` 会输出为 sing-box 的 `userkey`
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
