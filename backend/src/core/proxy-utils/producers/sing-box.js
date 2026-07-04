@@ -36,12 +36,12 @@ const domainResolverParser = (proxy, parsedProxy) => {
 
     if (typeof proxy._domain_resolver === 'string') {
         parsedProxy.domain_resolver = {
-            ...parsedProxy.domain_resolver,
+            ...(parsedProxy.domain_resolver ?? {}),
             server: proxy._domain_resolver,
         };
     } else {
         parsedProxy.domain_resolver = {
-            ...parsedProxy.domain_resolver,
+            ...(parsedProxy.domain_resolver ?? {}),
             ...proxy._domain_resolver,
         };
     }
