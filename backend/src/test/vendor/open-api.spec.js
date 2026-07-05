@@ -21,6 +21,7 @@ describe('open-api HTTP adapter', function () {
     let originalProxyAgent;
     let originalRequest;
     let agentOptions;
+    let requestOptions;
 
     beforeEach(function () {
         originalEnv = Object.fromEntries(
@@ -34,6 +35,7 @@ describe('open-api HTTP adapter', function () {
         originalProxyAgent = undici.ProxyAgent;
         originalRequest = undici.request;
         agentOptions = [];
+        requestOptions = undefined;
 
         class CapturingAgent {
             constructor(options) {
@@ -47,14 +49,17 @@ describe('open-api HTTP adapter', function () {
 
         undici.EnvHttpProxyAgent = CapturingAgent;
         undici.ProxyAgent = CapturingAgent;
-        undici.request = async () => ({
-            statusCode: 200,
-            headers: {},
-            body: {
-                text: async () => '',
-                arrayBuffer: async () => new ArrayBuffer(0),
-            },
-        });
+        undici.request = async (_url, options) => {
+            requestOptions = options;
+            return {
+                statusCode: 200,
+                headers: {},
+                body: {
+                    text: async () => '',
+                    arrayBuffer: async () => new ArrayBuffer(0),
+                },
+            };
+        };
     });
 
     afterEach(function () {
@@ -89,5 +94,43 @@ describe('open-api HTTP adapter', function () {
         expect(agentOptions[0].allowH2).to.equal(false);
         expect(agentOptions[0].connect.allowH2).to.equal(false);
         expect(agentOptions[0].requestTls.allowH2).to.equal(false);
+    });
+
+    it('adds a curl-like Accept header by default in Node.js', async function () {
+        await HTTP({
+            headers: {
+                'User-Agent': 'Surge',
+            },
+        }).get('https://example.com/subscription');
+
+        expect(requestOptions.headers).to.include({
+            'User-Agent': 'Surge',
+            Accept: '*/*',
+        });
+    });
+
+    it('keeps an explicit Accept header in Node.js', async function () {
+        await HTTP({
+            headers: {
+                accept: 'application/json',
+            },
+        }).get('https://example.com/subscription');
+
+        expect(requestOptions.headers).to.deep.equal({
+            accept: 'application/json',
+        });
+    });
+
+    it('omits Accept when callers set it to null in Node.js', async function () {
+        await HTTP({
+            headers: {
+                'User-Agent': 'Surge',
+                Accept: null,
+            },
+        }).get('https://example.com/subscription');
+
+        expect(requestOptions.headers).to.deep.equal({
+            'User-Agent': 'Surge',
+        });
     });
 });

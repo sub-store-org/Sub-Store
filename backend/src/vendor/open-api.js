@@ -42,6 +42,24 @@ function parseSocks5Uri(uri) {
         password: password != null ? decodeURIComponent(password) : undefined,
     };
 }
+
+function normalizeNodeRequestHeaders(headers) {
+    const normalized = { ...(headers || {}) };
+    let hasAccept = false;
+
+    for (const key of Object.keys(normalized)) {
+        if (key.toLowerCase() !== 'accept') continue;
+        hasAccept = true;
+        if (normalized[key] == null) delete normalized[key];
+    }
+
+    if (!hasAccept) {
+        normalized.Accept = '*/*';
+    }
+
+    return normalized;
+}
+
 export class OpenAPI {
     constructor(name = 'untitled', debug = false) {
         this.name = name;
@@ -523,6 +541,9 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                                 ).toString('base64')}`,
                             };
                         }
+                        opts.headers = normalizeNodeRequestHeaders(
+                            opts.headers,
+                        );
                         let dispatcher;
                         if (!opts.proxy) {
                             const allProxy =
