@@ -160,6 +160,8 @@ async function compareSub(req, res) {
             sub.process || [],
             target,
             { [sub.name]: sub },
+            undefined,
+            content,
         );
 
         // produce
@@ -312,6 +314,8 @@ async function compareCollection(req, res) {
                         sub.process || [],
                         'JSON',
                         { [sub.name]: sub, _collection: collection },
+                        undefined,
+                        raw,
                     );
                     results[name] = currentProxies;
                 } catch (err) {

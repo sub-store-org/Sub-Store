@@ -428,6 +428,7 @@ function ScriptOperator(
     source,
     $options,
     context,
+    raw,
 ) {
     context.source = source;
     context.env = env;
@@ -464,7 +465,7 @@ function ScriptOperator(
                     $arguments,
                     $options,
                 );
-                output = operator(proxies, targetPlatform, context);
+                output = operator(proxies, targetPlatform, context, raw);
             })();
             return output;
         },
@@ -473,7 +474,7 @@ function ScriptOperator(
             await (async function () {
                 const operator = createDynamicFunction(
                     'operator',
-                    `async function operator(input = [], targetPlatform, context) {
+                    `async function operator(input = [], targetPlatform, context, raw) {
                         if (input && (input.$files || input.$content)) {
                             let { $content, $files, $options, $file } = input
                             if (['mihomoConfig', 'mihomoProfile'].includes($file?.type)) {
@@ -506,7 +507,7 @@ function ScriptOperator(
                     $arguments,
                     $options,
                 );
-                output = operator(proxies, targetPlatform, context);
+                output = operator(proxies, targetPlatform, context, raw);
             })();
             return output;
         },
@@ -1486,6 +1487,7 @@ function ScriptFilter(
     source,
     $options,
     context,
+    raw,
 ) {
     context.source = source;
     context.env = env;
@@ -1500,7 +1502,7 @@ function ScriptFilter(
                     $arguments,
                     $options,
                 );
-                output = filter(proxies, targetPlatform, context);
+                output = filter(proxies, targetPlatform, context, raw);
             })();
             return output;
         },
@@ -1509,7 +1511,7 @@ function ScriptFilter(
             await (async function () {
                 const filter = createDynamicFunction(
                     'filter',
-                    `async function filter(input = [], targetPlatform, context) {
+                    `async function filter(input = [], targetPlatform, context, raw) {
                         let proxies = input
                         let list = []
                         const fn = async ($server) => {
@@ -1523,7 +1525,7 @@ function ScriptFilter(
                     $arguments,
                     $options,
                 );
-                output = filter(proxies, targetPlatform, context);
+                output = filter(proxies, targetPlatform, context, raw);
             })();
             return output;
         },

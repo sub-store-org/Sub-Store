@@ -438,6 +438,7 @@ async function produceArtifact({
                 platform,
                 { [sub.name]: sub },
                 $options,
+                raw,
             );
             if (proxies.length === 0) {
                 throw new Error(`订阅 ${name} 中不含有效节点`);
@@ -627,6 +628,8 @@ async function produceArtifact({
                                 _collection: collection,
                                 $options,
                             },
+                            undefined,
+                            raw,
                         );
                         results[name] = currentProxies;
                         processed++;

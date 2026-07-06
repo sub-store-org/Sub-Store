@@ -1,4 +1,4 @@
-function operator(proxies = [], targetPlatform, context) {
+function operator(proxies = [], targetPlatform, context, raw) {
   // 支持快捷操作 不一定要写一个 function
   // 可参考 https://t.me/zhetengsha/970
   // https://t.me/zhetengsha/1009
@@ -455,6 +455,50 @@ function operator(proxies = [], targetPlatform, context) {
   //   "backend": "Node",
   //   "version": "2.14.198"
   // }
+
+  // raw 为传入的原始订阅内容(即解析成节点前, 从本地或远程获取到的整体文件内容)
+  // 仅在订阅/子订阅层的 脚本操作 和 脚本筛选 中提供, 组合订阅自身的脚本 及 文件处理 不提供(为 undefined)
+  // 数据形态: 单个本地源为字符串; 多个源(远程多链接, 或 mergeSources 为 localFirst/remoteFirst 合并模式)为字符串数组, 每项对应一个源
+  // 用途: 节点被解析后, 一些整体配置会丢失(解析只保留单个节点字段). 通过 raw 可从原始文件里读取这些信息
+  //      例如: 有些机场下发的 Clash/mihomo 配置里带有内部 DNS(dns.nameserver-policy), 这些不在单个节点里
+  // ⚠️ 注意: 快捷脚本(下面使用 $server 那种)里也可直接引用 raw 变量
+
+  // 示例: 从原始 Clash/mihomo 配置里取出 dns.nameserver-policy, 用其中的「域名通配」键判断节点 server 是否命中
+  // nameserver-policy 结构示例(值可能是字符串或数组):
+  //   '+.arpa': '10.0.0.1'          // 域名通配, 使用
+  //   'rule-set:cn': [ ... ]        // 带 `:`(rule-set:/geosite: 等), 本地无法判断域名集合, 跳过
+
+  // 1) 解析 raw, 取出 nameserver-policy (raw 可能是数组, 统一成数组处理)
+  // const rawList = Array.isArray(raw) ? raw : [raw]
+  // const policy = {}
+  // rawList.forEach((text) => {
+  //   if (typeof text !== 'string') return
+  //   let config
+  //   try { config = ProxyUtils.yaml.parse(text) } catch (e) { return }
+  //   Object.assign(policy, config?.dns?.['nameserver-policy'] || {})
+  // })
+
+  // 2) 只保留域名通配的键(键里没有 `:`, 即排除 rule-set:/geosite:/geoip: 等)
+  // const domainRules = Object.entries(policy).filter(([key]) => !key.includes(':'))
+
+  // 3) 后缀匹配: mihomo 域名通配 `+.arpa` 表示 arpa 本身及其任意层级子域(如 abc.example.arpa)
+  //    `.arpa` 仅子域; `*.arpa` 仅一级子域; 无前缀则完全匹配
+  // function domainMatch(domain, pattern) {
+  //   if (pattern.startsWith('+.')) {
+  //     const base = pattern.slice(2)
+  //     return domain === base || domain.endsWith('.' + base)
+  //   }
+  //   if (pattern.startsWith('*.')) {
+  //     const rest = domain.slice(0, -(pattern.length - 1))
+  //     return domain.endsWith(pattern.slice(1)) && rest.length > 0 && !rest.includes('.')
+  //   }
+  //   if (pattern.startsWith('.')) return domain.endsWith(pattern)
+  //   return domain === pattern
+  // }
+
+  // 4) 找到节点 server 命中的规则, 取出对应 DNS. 拿到 dns 之后如何使用请自行处理
+  // const hit = domainRules.find(([pattern]) => domainMatch($server.server, pattern))
+  // const dns = hit ? hit[1] : undefined
 
   // 脚本中使用日志 可以参考这个格式 能在前端日志查看里区分识别
   // console.log(`[SCOPE] LOG: 信息`)
