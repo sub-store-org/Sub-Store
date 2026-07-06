@@ -10,6 +10,7 @@ import {
     notifyIgnoreFailedRemoteSubFallback,
     resolveIgnoreFailedRemoteSubMode,
     shouldFallbackIgnoreFailedRemoteSub,
+    shouldNotifyIgnoreFailedRemoteSub,
 } from '@/restful/ignore-failed-remote-sub';
 import {
     prepareMihomoProfileContent,
@@ -82,14 +83,16 @@ async function compareSub(req, res) {
     try {
         const target = req.query.target || 'JSON';
         let content;
+        let sourceRaw;
         if (
             sub.source === 'local' &&
             !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
         ) {
             content = sub.content;
+            sourceRaw = sub.content;
         } else {
             const errors = {};
-            content = await Promise.all(
+            const downloaded = await Promise.all(
                 sub.url
                     .split(/[\r\n]+/)
                     .map((i) => i.trim())
@@ -105,6 +108,7 @@ async function compareSub(req, res) {
                                 undefined,
                                 undefined,
                                 true,
+                                { returnRaw: true },
                             );
                         } catch (err) {
                             errors[url] = err;
@@ -117,6 +121,8 @@ async function compareSub(req, res) {
                         }
                     }),
             );
+            content = downloaded.map((i) => i.result ?? i);
+            sourceRaw = downloaded.map((i) => i.raw ?? i);
 
             if (Object.keys(errors).length > 0) {
                 const message = `订阅 ${
@@ -138,8 +144,10 @@ async function compareSub(req, res) {
             }
             if (sub.mergeSources === 'localFirst') {
                 content.unshift(sub.content);
+                sourceRaw.unshift(sub.content);
             } else if (sub.mergeSources === 'remoteFirst') {
                 content.push(sub.content);
+                sourceRaw.push(sub.content);
             }
         }
         // parse proxies
@@ -160,6 +168,8 @@ async function compareSub(req, res) {
             sub.process || [],
             target,
             { [sub.name]: sub },
+            undefined,
+            sourceRaw,
         );
 
         // produce
@@ -222,6 +232,7 @@ async function compareCollection(req, res) {
         }
         const results = {};
         const errors = {};
+        const rawResults = {};
         await Promise.all(
             subnames.map(async (name) => {
                 const sub = findByName(allSubs, name);
@@ -230,6 +241,7 @@ async function compareCollection(req, res) {
                 );
                 try {
                     let raw;
+                    let sourceRaw;
                     if (
                         sub.source === 'local' &&
                         !['localFirst', 'remoteFirst'].includes(
@@ -237,9 +249,10 @@ async function compareCollection(req, res) {
                         )
                     ) {
                         raw = sub.content;
+                        sourceRaw = sub.content;
                     } else {
                         const errors = {};
-                        raw = await Promise.all(
+                        const downloaded = await Promise.all(
                             sub.url
                                 .split(/[\r\n]+/)
                                 .map((i) => i.trim())
@@ -255,6 +268,7 @@ async function compareCollection(req, res) {
                                             undefined,
                                             undefined,
                                             true,
+                                            { returnRaw: true },
                                         );
                                     } catch (err) {
                                         errors[url] = err;
@@ -269,6 +283,8 @@ async function compareCollection(req, res) {
                                     }
                                 }),
                         );
+                        raw = downloaded.map((i) => i.result ?? i);
+                        sourceRaw = downloaded.map((i) => i.raw ?? i);
 
                         if (Object.keys(errors).length > 0) {
                             const message = `订阅 ${
@@ -290,8 +306,10 @@ async function compareCollection(req, res) {
                         }
                         if (sub.mergeSources === 'localFirst') {
                             raw.unshift(sub.content);
+                            sourceRaw.unshift(sub.content);
                         } else if (sub.mergeSources === 'remoteFirst') {
                             raw.push(sub.content);
+                            sourceRaw.push(sub.content);
                         }
                     }
                     // parse proxies
@@ -307,13 +325,19 @@ async function compareCollection(req, res) {
                     });
 
                     // apply processors
+                    const currentRaw = Array.isArray(sourceRaw)
+                        ? sourceRaw
+                        : [sourceRaw];
                     currentProxies = await ProxyUtils.process(
                         currentProxies,
                         sub.process || [],
                         'JSON',
                         { [sub.name]: sub, _collection: collection },
+                        undefined,
+                        currentRaw,
                     );
                     results[name] = currentProxies;
+                    rawResults[name] = currentRaw;
                 } catch (err) {
                     if (shouldFallbackIgnoreFailedRemoteSub(subMode)) {
                         notifyIgnoreFailedRemoteSubFallback({
@@ -333,10 +357,12 @@ async function compareCollection(req, res) {
                             }`,
                         );
                         results[name] = [];
+                        rawResults[name] = [];
                         return;
                     }
 
                     errors[name] = err;
+                    rawResults[name] = undefined;
 
                     $.error(
                         `❌ 处理组合订阅 ${collection.name} 中的子订阅: ${sub.name} 时出现错误：${err}！`,
@@ -349,17 +375,31 @@ async function compareCollection(req, res) {
             const message = `组合订阅 ${collection.name} 的子订阅 ${Object.keys(
                 errors,
             ).join(', ')} 发生错误, 请查看日志`;
-            handleIgnoreFailedRemoteSubError({
-                mode: collectionMode,
-                message,
-                notify: () => {
-                    $.notify(
-                        `🌍 Sub-Store 预览组合订阅失败`,
-                        `❌ ${collection.name}`,
-                        message,
-                    );
-                },
-            });
+            const notify = () => {
+                $.notify(
+                    `🌍 Sub-Store 预览组合订阅失败`,
+                    `❌ ${collection.name}`,
+                    message,
+                );
+            };
+            const hasProcessedSubscriptions = Object.keys(results).length > 0;
+            if (
+                hasProcessedSubscriptions &&
+                shouldFallbackIgnoreFailedRemoteSub(collectionMode)
+            ) {
+                Object.keys(errors).forEach((name) => {
+                    rawResults[name] = [];
+                });
+                if (shouldNotifyIgnoreFailedRemoteSub(collectionMode)) {
+                    notify();
+                }
+            } else {
+                handleIgnoreFailedRemoteSubError({
+                    mode: collectionMode,
+                    message,
+                    notify,
+                });
+            }
         }
         // merge proxies with the original order
         const original = Array.prototype.concat.apply(
@@ -378,6 +418,8 @@ async function compareCollection(req, res) {
             collection.process || [],
             'JSON',
             { _collection: collection },
+            undefined,
+            rawResults,
         );
 
         success(res, { original, processed });

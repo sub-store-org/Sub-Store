@@ -27,6 +27,7 @@ import {
     notifyIgnoreFailedRemoteSubFallback,
     resolveIgnoreFailedRemoteSubMode,
     shouldFallbackIgnoreFailedRemoteSub,
+    shouldNotifyIgnoreFailedRemoteSub,
 } from '@/restful/ignore-failed-remote-sub';
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 import { applyAgeOutputEncryption } from '@/restful/age-output';
@@ -300,14 +301,16 @@ async function produceArtifact({
 
         try {
             let raw;
+            let sourceRaw;
             if (
                 content &&
                 !['localFirst', 'remoteFirst'].includes(mergeSources)
             ) {
                 raw = content;
+                sourceRaw = content;
             } else if (url) {
                 const errors = {};
-                raw = await Promise.all(
+                const downloaded = await Promise.all(
                     url
                         .split(/[\r\n]+/)
                         .map((i) => i.trim())
@@ -323,6 +326,7 @@ async function produceArtifact({
                                     awaitCustomCache,
                                     noCache || sub.noCache,
                                     true,
+                                    { returnRaw: true },
                                 );
                             } catch (err) {
                                 errors[url] = err;
@@ -335,6 +339,8 @@ async function produceArtifact({
                             }
                         }),
                 );
+                raw = downloaded.map((i) => i.result ?? i);
+                sourceRaw = downloaded.map((i) => i.raw ?? i);
 
                 if (Object.keys(errors).length > 0) {
                     const message = `订阅 ${
@@ -356,17 +362,20 @@ async function produceArtifact({
                 }
                 if (mergeSources === 'localFirst') {
                     raw.unshift(content);
+                    sourceRaw.unshift(content);
                 } else if (mergeSources === 'remoteFirst') {
                     raw.push(content);
+                    sourceRaw.push(content);
                 }
             } else if (
                 sub.source === 'local' &&
                 !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
             ) {
                 raw = sub.content;
+                sourceRaw = sub.content;
             } else {
                 const errors = {};
-                raw = await Promise.all(
+                const downloaded = await Promise.all(
                     sub.url
                         .split(/[\r\n]+/)
                         .map((i) => i.trim())
@@ -382,6 +391,7 @@ async function produceArtifact({
                                     awaitCustomCache,
                                     noCache || sub.noCache,
                                     true,
+                                    { returnRaw: true },
                                 );
                             } catch (err) {
                                 errors[url] = err;
@@ -394,6 +404,8 @@ async function produceArtifact({
                             }
                         }),
                 );
+                raw = downloaded.map((i) => i.result ?? i);
+                sourceRaw = downloaded.map((i) => i.raw ?? i);
 
                 if (Object.keys(errors).length > 0) {
                     const message = `订阅 ${
@@ -415,8 +427,10 @@ async function produceArtifact({
                 }
                 if (sub.mergeSources === 'localFirst') {
                     raw.unshift(sub.content);
+                    sourceRaw.unshift(sub.content);
                 } else if (sub.mergeSources === 'remoteFirst') {
                     raw.push(sub.content);
+                    sourceRaw.push(sub.content);
                 }
             }
             if (produceType === 'raw') {
@@ -438,6 +452,7 @@ async function produceArtifact({
                 platform,
                 { [sub.name]: sub },
                 $options,
+                sourceRaw,
             );
             if (proxies.length === 0) {
                 throw new Error(`订阅 ${name} 中不含有效节点`);
@@ -519,6 +534,7 @@ async function produceArtifact({
         try {
             const results = {};
             const errors = {};
+            const rawResults = {};
             let processed = 0;
 
             await Promise.all(
@@ -538,6 +554,7 @@ async function produceArtifact({
                     try {
                         $.info(`正在处理子订阅：${sub.name}...`);
                         let raw;
+                        let sourceRaw;
                         if (
                             sub.source === 'local' &&
                             !['localFirst', 'remoteFirst'].includes(
@@ -545,9 +562,10 @@ async function produceArtifact({
                             )
                         ) {
                             raw = sub.content;
+                            sourceRaw = sub.content;
                         } else {
                             const errors = {};
-                            raw = await Promise.all(
+                            const downloaded = await Promise.all(
                                 sub.url
                                     .split(/[\r\n]+/)
                                     .map((i) => i.trim())
@@ -565,6 +583,7 @@ async function produceArtifact({
                                                 undefined,
                                                 noCache || sub.noCache,
                                                 true,
+                                                { returnRaw: true },
                                             );
                                         } catch (err) {
                                             errors[url] = err;
@@ -579,6 +598,8 @@ async function produceArtifact({
                                         }
                                     }),
                             );
+                            raw = downloaded.map((i) => i.result ?? i);
+                            sourceRaw = downloaded.map((i) => i.raw ?? i);
 
                             if (Object.keys(errors).length > 0) {
                                 const message = `订阅 ${
@@ -600,8 +621,10 @@ async function produceArtifact({
                             }
                             if (sub.mergeSources === 'localFirst') {
                                 raw.unshift(sub.content);
+                                sourceRaw.unshift(sub.content);
                             } else if (sub.mergeSources === 'remoteFirst') {
                                 raw.push(sub.content);
+                                sourceRaw.push(sub.content);
                             }
                         }
                         // parse proxies
@@ -618,6 +641,9 @@ async function produceArtifact({
                         });
 
                         // apply processors
+                        const currentRaw = Array.isArray(sourceRaw)
+                            ? sourceRaw
+                            : [sourceRaw];
                         currentProxies = await ProxyUtils.process(
                             currentProxies,
                             sub.process || [],
@@ -627,8 +653,11 @@ async function produceArtifact({
                                 _collection: collection,
                                 $options,
                             },
+                            undefined,
+                            currentRaw,
                         );
                         results[name] = currentProxies;
+                        rawResults[name] = currentRaw;
                         processed++;
                         $.info(
                             `✅ 子订阅：${sub.name}加载成功，进度--${
@@ -656,10 +685,12 @@ async function produceArtifact({
                                 }`,
                             );
                             results[name] = [];
+                            rawResults[name] = [];
                             return;
                         }
 
                         errors[name] = err;
+                        rawResults[name] = undefined;
                         $.error(
                             `❌ 处理组合订阅中的子订阅: ${
                                 sub.name
@@ -675,17 +706,38 @@ async function produceArtifact({
                 const message = `组合订阅 ${collection.name} 的子订阅 ${Object.keys(
                     errors,
                 ).join(', ')} 发生错误, 请查看日志`;
-                handleIgnoreFailedRemoteSubError({
-                    mode: collectionIgnoreFailedRemoteSub,
-                    message,
-                    notify: () => {
-                        $.notify(
-                            `🌍 Sub-Store 处理组合订阅失败`,
-                            `❌ ${collection.name}`,
-                            message,
-                        );
-                    },
-                });
+                const notify = () => {
+                    $.notify(
+                        `🌍 Sub-Store 处理组合订阅失败`,
+                        `❌ ${collection.name}`,
+                        message,
+                    );
+                };
+                const hasProcessedSubscriptions =
+                    Object.keys(results).length > 0;
+                if (
+                    hasProcessedSubscriptions &&
+                    shouldFallbackIgnoreFailedRemoteSub(
+                        collectionIgnoreFailedRemoteSub,
+                    )
+                ) {
+                    Object.keys(errors).forEach((name) => {
+                        rawResults[name] = [];
+                    });
+                    if (
+                        shouldNotifyIgnoreFailedRemoteSub(
+                            collectionIgnoreFailedRemoteSub,
+                        )
+                    ) {
+                        notify();
+                    }
+                } else {
+                    handleIgnoreFailedRemoteSubError({
+                        mode: collectionIgnoreFailedRemoteSub,
+                        message,
+                        notify,
+                    });
+                }
             }
 
             // merge proxies with the original order
@@ -706,6 +758,7 @@ async function produceArtifact({
                 platform,
                 { _collection: collection },
                 $options,
+                rawResults,
             );
             if (proxies.length === 0) {
                 throw new Error(`组合订阅 ${name} 中不含有效节点`);

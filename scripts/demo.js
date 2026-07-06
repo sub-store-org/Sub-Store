@@ -360,6 +360,15 @@ function operator(proxies = [], targetPlatform, context) {
   // 脚本操作只控制后续非修改响应操作
   // 修改响应中设置 context.process 只控制后续修改响应操作
 
+  // context.raw 为原始订阅内容, 用于在脚本里读取处理前的输入
+  // 1. 单条订阅里的脚本: context.raw 一定是数组, 例如 ['原始订阅内容']
+  //    如果单条订阅配置了多个远程 URL, 或合并了本地内容, 会按实际来源顺序放进同一个数组
+  // 2. 组合订阅里的单条订阅脚本: context.raw 仍然是当前单条订阅自己的 raw 数组
+  // 3. 组合订阅自己的脚本: context.raw 是对象, key 为单条订阅 name, value 为该单条订阅的 raw 数组
+  //    例如 { 'sub-a': ['sub-a raw'], 'sub-b': ['sub-b raw 1', 'sub-b raw 2'] }
+  //    如果某个子订阅处理失败并启用失败静默/失败通知, 会保留该 key, value 为 undefined
+  //    如果启用静默兜底/通知兜底, 会保留该 key, value 为 []
+
   // 其中 source 为 订阅和组合订阅的数据, 有三种情况, 按需判断 (若只需要取订阅/组合订阅名称 直接用 `_subName` `_subDisplayName` `_collectionName` `_collectionDisplayName` 即可)
 
   // 若存在 `source._collection` 且 `source._collection.subscriptions` 中的 key 在 `source` 上也存在, 说明输出结果为组合订阅, 但是脚本设置在单条订阅上

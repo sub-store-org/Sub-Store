@@ -207,6 +207,35 @@ describe('download github proxy regex', function () {
         expect(maxActiveRequests).to.equal(1);
     });
 
+    it('returns unpreprocessed raw content when requested', async function () {
+        responseBody = [
+            'proxies:',
+            '  - name: A',
+            '    type: ss',
+            '    server: example.com',
+            '    port: 443',
+            '    cipher: aes-128-gcm',
+            '    password: pass',
+            '',
+        ].join('\n');
+
+        const body = await download(
+            'https://example.com/clash.yaml',
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            true,
+            { returnRaw: true },
+        );
+
+        expect(body.raw).to.equal(responseBody);
+        expect(body.result).to.not.equal(responseBody);
+        expect(body.result).to.contain('proxies:\n');
+    });
+
     it('decrypts age-armored downloads without caching plaintext for unkeyed requests', async function () {
         const pair = await ageUtils.generateKeyPair();
         responseBody = await ageUtils.encryptArmor(

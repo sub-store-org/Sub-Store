@@ -235,4 +235,61 @@ describe('Process context control', function () {
             'A-hello age-true',
         ]);
     });
+
+    it('exposes raw source as an array on context in Script Operator', async function () {
+        const raw = 'raw-source';
+        const operators = [
+            {
+                type: 'Script Operator',
+                args: {
+                    mode: 'script',
+                    content: `function operator(proxies, targetPlatform, context) {
+                        return proxies.map((proxy) => ({
+                            ...proxy,
+                            name: proxy.name + '-' + (Array.isArray(context.raw) ? context.raw.join(',') : 'none'),
+                        }));
+                    }`,
+                },
+            },
+        ];
+
+        const output = await ProxyUtils.process(
+            [{ name: 'A' }],
+            operators,
+            'JSON',
+            undefined,
+            undefined,
+            raw,
+        );
+
+        expect(output.map((proxy) => proxy.name)).to.deep.equal([
+            'A-raw-source',
+        ]);
+    });
+
+    it('exposes raw source on context in Script Filter', async function () {
+        const raw = ['only-source'];
+        const operators = [
+            {
+                type: 'Script Filter',
+                args: {
+                    mode: 'script',
+                    content: `function filter(proxies, targetPlatform, context) {
+                        return proxies.map(() => Array.isArray(context.raw) && context.raw.length === 1);
+                    }`,
+                },
+            },
+        ];
+
+        const output = await ProxyUtils.process(
+            [{ name: 'A' }, { name: 'B' }],
+            operators,
+            'JSON',
+            undefined,
+            undefined,
+            raw,
+        );
+
+        expect(output.map((proxy) => proxy.name)).to.deep.equal(['A', 'B']);
+    });
 });

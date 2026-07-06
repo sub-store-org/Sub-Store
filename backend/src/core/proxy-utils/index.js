@@ -141,8 +141,15 @@ async function processFn(
     targetPlatform,
     source,
     $options,
+    raw,
 ) {
     let context = {};
+    if (raw !== undefined) {
+        context.raw =
+            Array.isArray(raw) || (raw !== null && typeof raw === 'object')
+                ? raw
+                : [raw];
+    }
     for (const item of operators) {
         if (isResponseTransformerType(item.type)) {
             $.log(

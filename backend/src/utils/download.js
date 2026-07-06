@@ -72,6 +72,7 @@ async function finalizeDownloadedBody(body, { ageSecretKey, preprocess, url }) {
     let result = ageSecretKey
         ? await decryptArmorIfPresent(body, ageSecretKey)
         : body;
+    const raw = result;
 
     if (preprocess) {
         try {
@@ -89,6 +90,7 @@ async function finalizeDownloadedBody(body, { ageSecretKey, preprocess, url }) {
             if (!Array.isArray(proxies) || proxies.length === 0) {
                 return {
                     result,
+                    raw,
                     shouldCache: false,
                     cacheReason: `URL ${url} 不包含有效节点, 不缓存`,
                 };
@@ -96,6 +98,7 @@ async function finalizeDownloadedBody(body, { ageSecretKey, preprocess, url }) {
         } catch (e) {
             return {
                 result,
+                raw,
                 shouldCache: false,
                 cacheReason: `URL ${url} 尝试解析节点失败 ${
                     e.message ?? e
@@ -106,8 +109,19 @@ async function finalizeDownloadedBody(body, { ageSecretKey, preprocess, url }) {
 
     return {
         result,
+        raw,
         shouldCache: true,
     };
+}
+
+function formatDownloadResult(finalized, returnRaw) {
+    return returnRaw
+        ? { result: finalized.result, raw: finalized.raw }
+        : finalized.result;
+}
+
+function formatPlainDownloadResult(result, returnRaw) {
+    return returnRaw ? { result, raw: result } : result;
 }
 
 export default async function download(
@@ -145,6 +159,8 @@ export default async function download(
         options && typeof options === 'object'
             ? options?.[AGE_SECRET_KEY] || options?.ageSecretKey
             : undefined;
+    const returnRaw =
+        options && typeof options === 'object' && options.returnRaw;
     const ageSecretKey = explicitAgeSecretKey || $arguments?.[AGE_SECRET_KEY];
     const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
     const {
@@ -205,13 +221,14 @@ export default async function download(
             $.info(
                 `乐观缓存: URL ${safeUrl}\n存在有效的常规缓存\n使用常规缓存以避免重复请求`,
             );
-            return (
+            return formatDownloadResult(
                 await finalizeDownloadedBody(cached, {
                     ageSecretKey,
                     preprocess,
                     url: safeUrl,
-                })
-            ).result;
+                }),
+                returnRaw,
+            );
         }
         if (customCached) {
             if (awaitCustomCache) {
@@ -257,13 +274,14 @@ export default async function download(
                     );
                 });
             }
-            return (
+            return formatDownloadResult(
                 await finalizeDownloadedBody(customCached, {
                     ageSecretKey,
                     preprocess,
                     url: safeUrl,
-                })
-            ).result;
+                }),
+                returnRaw,
+            );
         }
     }
 
@@ -286,12 +304,15 @@ export default async function download(
             }
 
             if (type === 'module') {
-                return item.content;
+                return formatPlainDownloadResult(item.content, returnRaw);
             } else {
-                return await produceArtifact({
-                    type: 'file',
-                    name,
-                });
+                return formatPlainDownloadResult(
+                    await produceArtifact({
+                        type: 'file',
+                        name,
+                    }),
+                    returnRaw,
+                );
             }
         } catch (err) {
             $.error(
@@ -304,7 +325,10 @@ export default async function download(
     } else if (url?.startsWith('/')) {
         try {
             const fs = eval(`require("fs")`);
-            return fs.readFileSync(url.split('#')[0], 'utf8');
+            return formatPlainDownloadResult(
+                fs.readFileSync(url.split('#')[0], 'utf8'),
+                returnRaw,
+            );
         } catch (err) {
             $.error(
                 `Error when reading local file: ${
@@ -316,13 +340,14 @@ export default async function download(
     }
 
     if (!isNode && tasks.has(id)) {
-        return (
+        return formatDownloadResult(
             await finalizeDownloadedBody(await tasks.get(id), {
                 ageSecretKey,
                 preprocess,
                 url: safeUrl,
-            })
-        ).result;
+            }),
+            returnRaw,
+        );
     }
 
     const http = HTTP({
@@ -348,13 +373,11 @@ export default async function download(
             }`,
         );
         rawResult = cached;
-        result = (
-            await finalizeDownloadedBody(cached, {
-                ageSecretKey,
-                preprocess,
-                url: safeUrl,
-            })
-        ).result;
+        result = await finalizeDownloadedBody(cached, {
+            ageSecretKey,
+            preprocess,
+            url: safeUrl,
+        });
         if (customCacheKey) {
             $.info(`URL ${safeUrl}\n写入自定义缓存 ${$arguments?.cacheKey}`);
             $.write(cached, customCacheKey);
@@ -404,7 +427,7 @@ export default async function download(
             }
             if (body.replace(/\s/g, '').length === 0)
                 throw new Error(new Error('远程资源内容为空'));
-            const finalized = await finalizeDownloadedBody(body, {
+            result = await finalizeDownloadedBody(body, {
                 ageSecretKey,
                 preprocess,
                 url: safeUrl,
@@ -421,8 +444,8 @@ export default async function download(
                     shouldCache = false;
                 }
             }
-            if (!finalized.shouldCache) {
-                $.error(finalized.cacheReason);
+            if (!result.shouldCache) {
+                $.error(result.cacheReason);
                 shouldCache = false;
             }
             if (shouldCache) {
@@ -442,7 +465,6 @@ export default async function download(
             }
 
             rawResult = body;
-            result = finalized.result;
         } catch (e) {
             if (customCacheKey) {
                 const cached = $.read(customCacheKey);
@@ -452,13 +474,14 @@ export default async function download(
                             e.message ?? e
                         }\n使用自定义缓存 ${$arguments?.cacheKey}`,
                     );
-                    return (
+                    return formatDownloadResult(
                         await finalizeDownloadedBody(cached, {
                             ageSecretKey,
                             preprocess,
                             url: safeUrl,
-                        })
-                    ).result;
+                        }),
+                        returnRaw,
+                    );
                 }
             }
             throw new Error(`无法下载 URL ${safeUrl}: ${e.message ?? e}`);
@@ -485,7 +508,7 @@ export default async function download(
     if (!isNode) {
         tasks.set(id, rawResult);
     }
-    return result;
+    return formatDownloadResult(result, returnRaw);
 }
 
 export async function downloadFile(url, file) {

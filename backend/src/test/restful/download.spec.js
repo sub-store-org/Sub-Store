@@ -291,6 +291,196 @@ describe('download routes', function () {
         );
     });
 
+    it('passes collection raw by subscription name to collection processors', async function () {
+        state[COLLECTIONS_KEY][0].process = [
+            {
+                type: 'Script Operator',
+                args: {
+                    mode: 'script',
+                    content: `function operator(proxies, targetPlatform, context) {
+                        return proxies.map((proxy) => ({
+                            ...proxy,
+                            name: [
+                                proxy.name,
+                                Array.isArray(context.raw),
+                                Object.keys(context.raw).join(','),
+                                Array.isArray(context.raw['local-vless']),
+                                context.raw['local-vless'].length,
+                            ].join('|'),
+                        }));
+                    }`,
+                },
+            },
+        ];
+
+        const output = await downloadCollection({ target: 'JSON' });
+        const proxies = JSON.parse(output);
+
+        expect(proxies[0].name).to.equal('VLESS WS|false|local-vless|true|1');
+    });
+
+    it('keeps failed fallback subscriptions in collection raw', async function () {
+        state[SUBS_KEY].push({
+            name: 'broken-vless',
+            source: 'local',
+            content: VLESS_WS,
+            ignoreFailedRemoteSub: 'fallbackQuiet',
+            process: [
+                {
+                    type: 'Script Operator',
+                    args: {
+                        mode: 'script',
+                        content: `throw new Error('boom')`,
+                    },
+                },
+            ],
+        });
+        state[COLLECTIONS_KEY][0].subscriptions = [
+            'local-vless',
+            'broken-vless',
+        ];
+        state[COLLECTIONS_KEY][0].process = [
+            {
+                type: 'Script Operator',
+                args: {
+                    mode: 'script',
+                    content: `function operator(proxies, targetPlatform, context) {
+                        return proxies.map((proxy) => ({
+                            ...proxy,
+                            name: [
+                                proxy.name,
+                                Object.keys(context.raw).sort().join(','),
+                                Object.prototype.hasOwnProperty.call(context.raw, 'broken-vless'),
+                                Array.isArray(context.raw['broken-vless']),
+                                context.raw['broken-vless'].length,
+                            ].join('|'),
+                        }));
+                    }`,
+                },
+            },
+        ];
+
+        const output = await downloadCollection({ target: 'JSON' });
+        const proxies = JSON.parse(output);
+
+        expect(proxies[0].name).to.equal(
+            'VLESS WS|broken-vless,local-vless|true|true|0',
+        );
+    });
+
+    it('uses undefined raw for non-fallback ignored collection failures', async function () {
+        state[SUBS_KEY].push({
+            name: 'broken-vless',
+            source: 'local',
+            content: VLESS_WS,
+            process: [
+                {
+                    type: 'Script Operator',
+                    args: {
+                        mode: 'script',
+                        content: `throw new Error('boom')`,
+                    },
+                },
+            ],
+        });
+        state[COLLECTIONS_KEY][0].ignoreFailedRemoteSub = 'enabled';
+        state[COLLECTIONS_KEY][0].subscriptions = [
+            'broken-vless',
+            'local-vless',
+        ];
+        state[COLLECTIONS_KEY][0].process = [
+            {
+                type: 'Script Operator',
+                args: {
+                    mode: 'script',
+                    content: `function operator(proxies, targetPlatform, context) {
+                        return proxies.map((proxy) => ({
+                            ...proxy,
+                            name: [
+                                proxy.name,
+                                Object.keys(context.raw).sort().join(','),
+                                Object.prototype.hasOwnProperty.call(context.raw, 'broken-vless'),
+                                context.raw['broken-vless'] === undefined,
+                            ].join('|'),
+                        }));
+                    }`,
+                },
+            },
+        ];
+
+        const output = await downloadCollection({ target: 'JSON' });
+        const proxies = JSON.parse(output);
+
+        expect(proxies.map((proxy) => proxy.name)).to.deep.equal([
+            'VLESS WS|broken-vless,local-vless|true|true',
+        ]);
+    });
+
+    it('runs collection processors when fallback partial failure leaves empty successful results', async function () {
+        state[SUBS_KEY][0].process = [
+            {
+                type: 'Script Filter',
+                args: {
+                    mode: 'script',
+                    content: `function filter() {
+                        return [false];
+                    }`,
+                },
+            },
+        ];
+        state[SUBS_KEY].push({
+            name: 'broken-vless',
+            source: 'local',
+            content: VLESS_WS,
+            process: [
+                {
+                    type: 'Script Operator',
+                    args: {
+                        mode: 'script',
+                        content: `throw new Error('boom')`,
+                    },
+                },
+            ],
+        });
+        state[COLLECTIONS_KEY][0].ignoreFailedRemoteSub = 'fallbackQuiet';
+        state[COLLECTIONS_KEY][0].subscriptions = [
+            'broken-vless',
+            'local-vless',
+        ];
+        state[COLLECTIONS_KEY][0].process = [
+            {
+                type: 'Script Operator',
+                args: {
+                    mode: 'script',
+                    content: `function operator(proxies, targetPlatform, context) {
+                        return [
+                            {
+                                type: 'direct',
+                                name: [
+                                    'collection-ran',
+                                    proxies.length,
+                                    Object.keys(context.raw).sort().join(','),
+                                    Object.prototype.hasOwnProperty.call(context.raw, 'broken-vless'),
+                                    Array.isArray(context.raw['broken-vless']),
+                                    context.raw['broken-vless'].length,
+                                    Array.isArray(context.raw['local-vless']),
+                                    context.raw['local-vless'].length,
+                                ].join('|'),
+                            },
+                        ];
+                    }`,
+                },
+            },
+        ];
+
+        const output = await downloadCollection({ target: 'JSON' });
+        const proxies = JSON.parse(output);
+
+        expect(proxies.map((proxy) => proxy.name)).to.deep.equal([
+            'collection-ran|0|broken-vless,local-vless|true|true|0|true|1',
+        ]);
+    });
+
     it('applies shortcut response transformers before sending subscription output', async function () {
         state[SUBS_KEY][0].process = [
             {
