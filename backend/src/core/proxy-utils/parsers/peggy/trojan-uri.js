@@ -1,15 +1,27 @@
 // trojan-parser.js
 
+import {
+  extractPathQueryParam,
+  getPathQueryParam,
+  parseSafeIntegerValue,
+} from '../../transport-path';
+import { isIPv6 } from '@/utils';
+
+const unsafePathSegments = new Set(["__proto__", "constructor", "prototype"]);
+
 let parser;
 
 function $set(obj, path, value) {
   if (Object(obj) !== obj) return obj;
   if (!Array.isArray(path)) path = path.toString().match(/[^.[\]]+/g) || [];
+  if (path.some((segment) => unsafePathSegments.has(segment))) {
+    throw new Error("Unsafe property path");
+  }
 
   path
     .slice(0, -1)
     .reduce((a, c, i) => (
-      Object(a[c]) === a[c]
+      Object.prototype.hasOwnProperty.call(a, c) && Object(a[c]) === a[c]
         ? a[c]
         : (a[c] = Math.abs(path[i + 1]) >> 0 === +path[i + 1] ? [] : {})
     ), obj)[path[path.length - 1]] = value;
@@ -22,14 +34,8 @@ function toBool(str) {
   return /(TRUE)|1/i.test(str);
 }
 
-function parseEarlyDataSize(value) {
-  if (value == null || !/^\d+$/.test(String(value))) return null;
-  const n = parseInt(value, 10);
-  return Number.isSafeInteger(n) ? n : null;
-}
-
 function isNumericEarlyData(value) {
-  return parseEarlyDataSize(value) != null;
+  return parseSafeIntegerValue(value) != null;
 }
 
 function decode(value) {
@@ -45,7 +51,7 @@ function parseTrojan(url) {
   const proxy = {};
 
   const match = url.match(
-    /^trojan:\/\/([^@]+)@([^:/?#]+):(\d+)(?:\/)?(?:\?([^#]*))?(?:#(.*))?$/
+    /^trojan:\/\/([^@]+)@(\[[^\]]+\]|[^/?#]+):(\d+)(?:\/)?(?:\?([^#]*))?(?:#(.*))?$/
   );
 
   if (!match) {
@@ -61,11 +67,19 @@ function parseTrojan(url) {
     name
   ] = match;
 
+  const normalizedServer = server.replace(/^\[|\]$/g, "");
+  if ((server.startsWith("[") || server.includes(":")) && !isIPv6(normalizedServer)) {
+    throw new Error(`Invalid server: ${server}`);
+  }
+
 
   proxy.type = "trojan";
   proxy.password = decode(password);
   proxy.server = server;
   proxy.port = Number(port);
+  if (!Number.isSafeInteger(proxy.port) || proxy.port < 1 || proxy.port > 65535) {
+    throw new Error(`Invalid port: ${port}`);
+  }
 
   proxy.name = name
     ? decode(name)
@@ -76,8 +90,11 @@ function parseTrojan(url) {
 
   if (query) {
     for (const item of query.split("&")) {
-      const [k, v = ""] = item.split("=");
-      params[k] = decode(v);
+      const separatorIndex = item.indexOf("=");
+      const key = separatorIndex === -1 ? item : item.slice(0, separatorIndex);
+      params[key] = separatorIndex === -1
+        ? true
+        : decode(item.slice(separatorIndex + 1));
     }
   }
 
@@ -144,18 +161,12 @@ function parseTrojan(url) {
 
         if (proxy.network === "ws") {
 
-          const ed = new URL(
-            "http://a" + path
-          ).searchParams.get("ed");
+          const ed = getPathQueryParam(path, "ed");
 
 
           if (isNumericEarlyData(ed)) {
 
-            path =
-              path.replace(
-                /[?&]ed=\d+/,
-                ""
-              );
+            path = extractPathQueryParam(path, "ed").path;
 
 
             if (httpupgrade)
@@ -227,7 +238,7 @@ function parseTrojan(url) {
         $set(
           proxy,
           "ws-opts.max-early-data",
-          parseEarlyDataSize(pathEarlyData)
+          parseSafeIntegerValue(pathEarlyData)
         );
 
 
@@ -252,6 +263,12 @@ function parseTrojan(url) {
 
       if (params.spx)
         opts["_spider-x"] = params.spx;
+
+      if (params.mode)
+        proxy._mode = params.mode;
+
+      if (params.extra)
+        proxy._extra = params.extra;
 
 
       if (Object.keys(opts).length) {

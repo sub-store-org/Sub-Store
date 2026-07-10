@@ -620,7 +620,7 @@ describe('Proxy URI parser coverage', function () {
 
         it('parses Trojan URIs with websocket transport', function () {
             const proxy = parseOne(
-                'trojan://trojan-pass@trojan-ws.example.com?type=ws&host=ws.example.com&path=%2Fws%3Fa%3D1%26ed%3D1024%26b%3D2#Trojan%20WS',
+                'trojan://trojan-pass@trojan-ws.example.com?type=ws&host=ws.example.com&path=%2Fws%3Fed%3D1024%26a%3D1%26b%3D2#Trojan%20WS',
             );
 
             expectSubset(proxy, {
@@ -639,6 +639,35 @@ describe('Proxy URI parser coverage', function () {
                     'early-data-header-name': 'Sec-WebSocket-Protocol',
                 },
             });
+        });
+
+        it('parses Trojan IPv6 URIs with valueless flags', function () {
+            const proxy = parseOne(
+                'trojan://trojan-pass@[2001:db8::1]:443?udp&tfo&ws&wspath=%2Fws#Trojan%20IPv6',
+            );
+
+            expectSubset(proxy, {
+                type: 'trojan',
+                name: 'Trojan IPv6',
+                server: '2001:db8::1',
+                port: 443,
+                network: 'ws',
+                udp: true,
+                tfo: true,
+                'ws-opts': {
+                    path: '/ws',
+                },
+            });
+
+            expectSubset(
+                parseOne(
+                    'trojan://trojan-pass@2001:db8::1:443#Trojan%20Bare%20IPv6',
+                ),
+                {
+                    server: '2001:db8::1',
+                    port: 443,
+                },
+            );
         });
 
         it('does not double-decode Trojan path query values before extracting early data', function () {
@@ -689,7 +718,7 @@ describe('Proxy URI parser coverage', function () {
 
         it('parses Trojan URIs with grpc reality metadata', function () {
             const proxy = parseOne(
-                'trojan://trojan-pass@trojan-grpc.example.com?type=grpc&serviceName=grpc-service&authority=grpc.example.com&mode=multi&security=reality&pbk=pubkey&sid=08&spx=%2Fspider&udp=1&tfo=1#Trojan%20Reality',
+                'trojan://trojan-pass@trojan-grpc.example.com?type=grpc&serviceName=grpc-service&authority=grpc.example.com&mode=multi&security=reality&pbk=pubkey==&sid=08&spx=%2Fspider&extra=%7B%22x%22%3A1%7D&udp=1&tfo=1#Trojan%20Reality',
             );
 
             expectSubset(proxy, {
@@ -707,12 +736,55 @@ describe('Proxy URI parser coverage', function () {
                     '_grpc-authority': 'grpc.example.com',
                 },
                 'reality-opts': {
-                    'public-key': 'pubkey',
+                    'public-key': 'pubkey==',
                     'short-id': '08',
                     '_spider-x': '/spider',
                 },
                 _mode: 'multi',
+                _extra: '{"x":1}',
             });
+        });
+
+        it('rejects Trojan URIs with out-of-range ports', function () {
+            for (const port of [0, 65536]) {
+                expect(
+                    parseAll(
+                        `trojan://trojan-pass@trojan.example.com:${port}#Invalid%20Port`,
+                    ),
+                ).to.deep.equal([]);
+            }
+        });
+
+        it('rejects colon-containing Trojan hosts that are not IPv6', function () {
+            expect(
+                parseAll(
+                    'trojan://trojan-pass@host:123:443#Invalid%20Host',
+                ),
+            ).to.deep.equal([]);
+        });
+
+        it('rejects Trojan transport paths that target object prototypes', function () {
+            const pollutedKey = 'ws-opts';
+
+            for (const type of ['__proto__.ws', 'constructor.prototype.ws']) {
+                delete Object.prototype[pollutedKey];
+
+                try {
+                    expect(
+                        parseAll(
+                            `trojan://trojan-pass@trojan.example.com:443?type=${type}&path=%2Fx#Prototype%20Pollution`,
+                        ),
+                    ).to.deep.equal([]);
+                    expect(
+                        Object.prototype.hasOwnProperty.call(
+                            Object.prototype,
+                            pollutedKey,
+                        ),
+                    ).to.equal(false);
+                } finally {
+                    delete Object.prototype[pollutedKey];
+                }
+            }
         });
     });
 });
