@@ -84,6 +84,13 @@ describe('Proxy preprocessors', function () {
 
             expect(processor.test(raw)).to.equal(false);
         });
+
+        it('ignores invalid base64 containing an encoded proxy prefix', function () {
+            const processor = getPreprocessor('Base64 Pre-processor');
+            const raw = `🔥${Base64.encode('vmess://test')}`;
+
+            expect(processor.test(raw)).to.equal(false);
+        });
     });
 
     describe('Fallback Base64 preprocessor', function () {
@@ -96,6 +103,13 @@ describe('Proxy preprocessors', function () {
             expect(processor.test(invalid)).to.equal(true);
             expect(processor.parse(encoded)).to.equal(decoded);
             expect(processor.parse(invalid)).to.equal(invalid);
+        });
+
+        it('ignores invalid base64 that decodes to a proxy prefix', function () {
+            const processor = getPreprocessor('Fallback Base64 Pre-processor');
+            const raw = `🔥${Base64.encode('vmess://test')}`;
+
+            expect(processor.test(raw)).to.equal(false);
         });
     });
 

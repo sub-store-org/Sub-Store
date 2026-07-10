@@ -67,6 +67,7 @@ function Base64Encoded() {
 
     const test = function (raw) {
         return (
+            Base64.isValid(raw) &&
             !/^\w+:\/\/\w+/im.test(raw) &&
             keys.some((k) => raw.indexOf(k) !== -1)
         );
@@ -89,7 +90,7 @@ function fallbackBase64Encoded() {
     const name = 'Fallback Base64 Pre-processor';
 
     const test = function (raw) {
-        return true;
+        return Base64.isValid(raw);
     };
     const parse = function (raw) {
         const decoded = Base64.decode(raw);
