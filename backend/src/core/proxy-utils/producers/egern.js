@@ -92,11 +92,6 @@ export default function Egern_Producer() {
                     normalizeSnellVersion(proxy.version) === null
                 ) {
                     return false;
-                } else if (proxy.type === 'snell' && hasShadowTls(proxy)) {
-                    $.error(
-                        `Platform Egern does not support Snell shadow-tls proxy ${proxy.name}. Proxy has been filtered.`,
-                    );
-                    return false;
                 } else if (
                     ['anytls'].includes(proxy.type) &&
                     proxy.network &&
@@ -552,6 +547,7 @@ export default function Egern_Producer() {
                             'vmess',
                             'anytls',
                             'ssh',
+                            'snell',
                         ].includes(original.type)
                     ) {
                         if (
@@ -681,10 +677,6 @@ function getTfo(proxy) {
 
 function getUdpRelay(proxy) {
     return proxy.udp ?? proxy.udp_relay;
-}
-
-function hasShadowTls(proxy) {
-    return proxy.plugin === 'shadow-tls';
 }
 
 function getNonEmptyValue(value) {

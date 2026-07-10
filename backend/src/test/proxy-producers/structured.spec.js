@@ -2382,29 +2382,15 @@ describe('Proxy structured producers', function () {
         }
     });
 
-    it('filters Egern Snell shadow-tls variants', function () {
+    it('emits Egern Snell shadow-tls variants', function () {
         const proxies = [
             {
                 type: 'snell',
-                name: 'Egern Snell ShadowTLS Plugin A',
+                name: 'Egern Snell ShadowTLS',
                 server: 'snell-shadowtls.example.com',
                 port: 44046,
                 psk: 'secret',
                 version: 5,
-                plugin: 'shadow-tls',
-                'plugin-opts': {
-                    host: 'mask.example.com',
-                    password: 'shadow-pass',
-                    version: 3,
-                },
-            },
-            {
-                type: 'snell',
-                name: 'Egern Snell ShadowTLS Plugin',
-                server: 'snell-plugin.example.com',
-                port: 44046,
-                psk: 'secret',
-                version: 4,
                 plugin: 'shadow-tls',
                 'plugin-opts': {
                     host: 'mask.example.com',
@@ -2422,22 +2408,23 @@ describe('Proxy structured producers', function () {
             },
         ];
 
-        const { result: internal, errors } = captureErrors(() =>
-            produceInternal('Egern', proxies),
-        );
-        const { result: external, errors: externalErrors } = captureErrors(() =>
-            loadProducedYaml('Egern', proxies),
-        );
-
-        expect(errors).to.deep.equal([
-            'Platform Egern does not support Snell shadow-tls proxy Egern Snell ShadowTLS Plugin A. Proxy has been filtered.',
-            'Platform Egern does not support Snell shadow-tls proxy Egern Snell ShadowTLS Plugin. Proxy has been filtered.',
-        ]);
-        expect(externalErrors).to.deep.equal(errors);
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
 
         for (const output of [internal, external.proxies]) {
-            expect(output).to.have.length(1);
+            expect(output).to.have.length(2);
             expectSubset(output[0], {
+                snell: {
+                    name: 'Egern Snell ShadowTLS',
+                    server: 'snell-shadowtls.example.com',
+                    version: 5,
+                    shadow_tls: {
+                        password: 'shadow-pass',
+                        sni: 'mask.example.com',
+                    },
+                },
+            });
+            expectSubset(output[1], {
                 snell: {
                     name: 'Egern Snell Plain',
                     server: 'snell.example.com',
