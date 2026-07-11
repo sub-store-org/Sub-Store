@@ -1399,7 +1399,7 @@ export default function singbox_Producer() {
                                 );
                             }
                             break;
-                        case 'snell':
+                        case 'snell': {
                             list.push(
                                 snellParser(
                                     proxy,
@@ -1417,6 +1417,7 @@ export default function singbox_Producer() {
                                 );
                             }
                             break;
+                        }
                         case 'vmess':
                             if (
                                 !proxy.network ||
