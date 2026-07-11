@@ -111,7 +111,10 @@ function Clash() {
     const test = function (raw) {
         if (!/proxies/.test(raw)) return false;
         const content = safeLoad(raw);
-        return content.proxies && Array.isArray(content.proxies);
+        return (
+            Array.isArray(content.proxies) ||
+            Array.isArray(content['proxy-groups'])
+        );
     };
     const parse = function (raw, includeProxies) {
         // Clash YAML format
@@ -121,7 +124,7 @@ function Clash() {
         const { proxies } = safeLoad(afterReplace);
         return (
             (includeProxies ? 'proxies:\n' : '') +
-            proxies
+            (Array.isArray(proxies) ? proxies : [])
                 .map((p) => {
                     return `${includeProxies ? '  - ' : ''}${JSON.stringify(
                         p,

@@ -114,6 +114,39 @@ describe('Proxy preprocessors', function () {
     });
 
     describe('Clash preprocessor', function () {
+        it('accepts an empty proxies field', function () {
+            const processor = getPreprocessor('Clash Pre-processor');
+            const raw = `proxies:
+
+proxy-groups:
+  - name: Select
+    type: select
+    proxies:
+      - DIRECT
+`;
+
+            expect(processor.test(raw)).to.equal(true);
+            expect(processor.parse(raw)).to.equal('');
+            expect(processor.parse(raw, true)).to.equal('proxies:\n');
+        });
+
+        it('accepts a proxy groups array when proxies is invalid', function () {
+            const processor = getPreprocessor('Clash Pre-processor');
+            const raw = `proxies: invalid
+proxy-groups:
+  - test
+`;
+
+            expect(processor.test(raw)).to.equal(true);
+            expect(processor.parse(raw)).to.equal('');
+            expect(
+                processor.test('proxies: invalid\nproxy-groups: {}'),
+            ).to.equal(false);
+            expect(processor.test('proxies: invalid\nrules: []')).to.equal(
+                false,
+            );
+        });
+
         it('converts clash yaml proxies into json lines', function () {
             const processor = getPreprocessor('Clash Pre-processor');
             const raw = `proxies:
