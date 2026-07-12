@@ -111,6 +111,14 @@ function parseTrojan(url) {
   proxy["tls-fingerprint"] =
     params.pcs;
 
+  proxy._vcn = params.vcn
+    ?.split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+
+  proxy["name-cert-verify"] =
+    proxy._vcn?.[0];
+
 
   if (params.alpn) {
     proxy.alpn = params.alpn.split(",");

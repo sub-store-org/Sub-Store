@@ -2506,6 +2506,27 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces URI VLESS links with vcn from name-cert-verify', function () {
+        const output = produceExternal('URI', {
+            type: 'vless',
+            name: 'URI WS VCN',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            'name-cert-verify': 'edited.example.com',
+            _vcn: ['cert.example.com', 'backup.example.com'],
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws',
+            },
+        });
+
+        expect(output).to.equal(
+            `vless://${UUID}@vless.example.com:443?security=tls&type=ws&path=%2Fws&vcn=cert.example.com%2Cbackup.example.com#URI%20WS%20VCN`,
+        );
+    });
+
     it('produces URI VLESS links with ech from mihomo ech opts config', function () {
         const output = produceExternal('URI', {
             type: 'vless',
@@ -5061,6 +5082,24 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             'trojan://secret@trojan.example.com:443?sni=sni.example.com&type=ws&path=%2Fws&host=cdn.example.com&pcs=fingerprint#URI%20Trojan%20PCS',
+        );
+    });
+
+    it('produces URI Trojan links with vcn from the sidecar', function () {
+        const output = produceExternal('URI', {
+            type: 'trojan',
+            name: 'URI Trojan VCN',
+            server: 'trojan.example.com',
+            port: 443,
+            password: 'secret',
+            tls: true,
+            sni: 'sni.example.com',
+            'name-cert-verify': 'edited.example.com',
+            _vcn: ['cert.example.com', 'backup.example.com'],
+        });
+
+        expect(output).to.equal(
+            'trojan://secret@trojan.example.com:443?sni=sni.example.com&vcn=cert.example.com%2Cbackup.example.com#URI%20Trojan%20VCN',
         );
     });
 

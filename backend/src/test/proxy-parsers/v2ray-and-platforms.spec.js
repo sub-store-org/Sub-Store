@@ -577,6 +577,20 @@ describe('VMess and VLESS parser coverage', function () {
             });
         });
 
+        it('parses the first VLESS vcn as mihomo name-cert-verify', function () {
+            const proxy = parseOne(
+                `vless://${UUID}@vless-ws.example.com:443?type=ws&security=tls&vcn=${encodeURIComponent(
+                    'first.example.com, second.example.com',
+                )}#VLESS%20WS%20VCN`,
+            );
+
+            expect(proxy['name-cert-verify']).to.equal('first.example.com');
+            expect(proxy._vcn).to.deep.equal([
+                'first.example.com',
+                'second.example.com',
+            ]);
+        });
+
         it('parses VLESS share ECH config into mihomo ech opts', function () {
             const proxy = parseOne(
                 `vless://${UUID}@vless-ws.example.com:443?type=ws&security=tls&host=cdn.example.com&path=%2Fws&ech=${encodeURIComponent(

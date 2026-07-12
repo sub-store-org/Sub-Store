@@ -716,6 +716,18 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
+        it('parses Trojan vcn values into mihomo and sidecar fields', function () {
+            const proxy = parseOne(
+                'trojan://trojan-pass@trojan.example.com:443?vcn=first.example.com%2Csecond.example.com#Trojan%20VCN',
+            );
+
+            expect(proxy['name-cert-verify']).to.equal('first.example.com');
+            expect(proxy._vcn).to.deep.equal([
+                'first.example.com',
+                'second.example.com',
+            ]);
+        });
+
         it('parses Trojan URIs with grpc reality metadata', function () {
             const proxy = parseOne(
                 'trojan://trojan-pass@trojan-grpc.example.com?type=grpc&serviceName=grpc-service&authority=grpc.example.com&mode=multi&security=reality&pbk=pubkey==&sid=08&spx=%2Fspider&extra=%7B%22x%22%3A1%7D&udp=1&tfo=1#Trojan%20Reality',
@@ -757,9 +769,7 @@ describe('Proxy URI parser coverage', function () {
 
         it('rejects colon-containing Trojan hosts that are not IPv6', function () {
             expect(
-                parseAll(
-                    'trojan://trojan-pass@host:123:443#Invalid%20Host',
-                ),
+                parseAll('trojan://trojan-pass@host:123:443#Invalid%20Host'),
             ).to.deep.equal([]);
         });
 

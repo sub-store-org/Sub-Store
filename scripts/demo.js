@@ -56,6 +56,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 31. `shadow-tls-password`/`shadow-tls-sni`/`shadow-tls-version` 这套旧字段已废弃. 请使用 `plugin: 'shadow-tls'` 和 `plugin-opts: { password, host, version }`
   // 32. mihomo 中 Snell shadow-tls 字段与 ss shadow-tls 字段不同, 使用的是 obfs-opts 而不是 plugin+plugin-opts, 不能与 obfs http/tls 共存. Sub-Store 内部有字段转换, 建议直接使用单行 Surge 格式 `1=snell,a.com,443,version=4,psk="1",obfs=http,obfs-host=a.com,shadow-tls-password="1",shadow-tls-sni=a.com,shadow-tls-version=3,alpn="http/1.1,h2",reuse=true` . 若想使用 JSON/JSON5/YAML 单行格式输入, 可使用 `{ "name": "1", "server": "a.com", "port": 443, "psk": "1", "version": 4, "reuse": true, "type": "snell", "obfs-opts": { "mode": "http", "host": "a.com" }, "plugin": "shadow-tls", "plugin-opts": { "host": "a.com", "password": "1", "version": 3, "alpn": [ "http/1.1", "h2" ] } }`
   // 33. sing-box Snell 出站默认允许 version 4/5/6, 其中 version 5 会按 sing-box 行为输出成 version 4. 开启“含不支持的协议”时保留 version 1/2/3/4/5/6. 节点上的 `_userkey` 会输出为 sing-box 的 `userkey`
+  // 34. VLESS/Trojan URI 的 `vcn` 对应 mihomo 的 `name-cert-verify`. Xray-core 支持用逗号分隔多个 name, mihomo 只支持一个, 因此输入时取第一个有效值, 同时用 `_vcn` 数组保留全部有效值; 输出 URI 时优先用 `_vcn` 还原为 `vcn`, 没有 `_vcn` 时才使用 `name-cert-verify`. 若想设置为其他值, 可使用脚本操作设置, 例如 `$server["name-cert-verify"] = $server._vcn?.[1] || $server._vcn?.[0]`
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
