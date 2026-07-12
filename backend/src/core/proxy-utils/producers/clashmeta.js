@@ -356,6 +356,8 @@ export default function ClashMeta_Producer() {
                         'anytls',
                         'trusttunnel',
                         'naive',
+                        'masque',
+                        'shadowquic',
                     ].includes(proxy.type)
                 ) {
                     delete proxy.tls;
@@ -456,7 +458,10 @@ function getMihomoShadowTlsOpts(proxy) {
     if (proxy?.plugin === 'shadow-tls' && proxy?.['plugin-opts']) {
         return proxy['plugin-opts'];
     }
-    if (proxy?.type === 'snell' && proxy?.['obfs-opts']?.mode === 'shadow-tls') {
+    if (
+        proxy?.type === 'snell' &&
+        proxy?.['obfs-opts']?.mode === 'shadow-tls'
+    ) {
         return proxy['obfs-opts'];
     }
     return undefined;

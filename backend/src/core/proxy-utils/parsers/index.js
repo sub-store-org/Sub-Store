@@ -2524,6 +2524,7 @@ function Clash_All() {
         }
         if (
             ![
+                'shadowquic',
                 'gost-relay',
                 'openvpn',
                 'tailscale',

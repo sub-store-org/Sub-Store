@@ -425,7 +425,11 @@ function produce(proxies, targetPlatform, type, opts = {}) {
             !supportsRootProxyHeaders(proxy, targetPlatform)
         ) {
             $.error(
-                `Target platform ${targetPlatform} does not support headers for ${getRootHeaderProxyLabel(proxy)} proxy ${proxy.name || `${proxy.server}:${proxy.port}`}. Proxy has been filtered.`,
+                `Target platform ${targetPlatform} does not support headers for ${getRootHeaderProxyLabel(
+                    proxy,
+                )} proxy ${
+                    proxy.name || `${proxy.server}:${proxy.port}`
+                }. Proxy has been filtered.`,
             );
             return false;
         }
@@ -623,9 +627,7 @@ function supportsRootProxyHeaders(proxy, targetPlatform) {
     }
 
     if (
-        ['clashmeta', 'clash.meta', 'meta', 'mihomo'].includes(
-            normalizedTarget,
-        )
+        ['clashmeta', 'clash.meta', 'meta', 'mihomo'].includes(normalizedTarget)
     ) {
         return proxy.type === 'http';
     }
@@ -861,6 +863,8 @@ function lastParse(proxy) {
             'trusttunnel',
             'h2-connect',
             'naive',
+            'masque',
+            'shadowquic',
         ].includes(proxy.type)
     ) {
         proxy.tls = true;

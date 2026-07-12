@@ -45,6 +45,7 @@ export default function Shadowrocket_Producer() {
                         'naive',
                         'openvpn',
                         'gost-relay',
+                        'shadowquic',
                     ].includes(proxy.type)
                 ) {
                     return false;
@@ -151,8 +152,7 @@ export default function Shadowrocket_Producer() {
                             version: proxy['plugin-opts'].version,
                         };
                         if (proxy['plugin-opts'].alpn) {
-                            proxy['obfs-opts'].alpn =
-                                proxy['plugin-opts'].alpn;
+                            proxy['obfs-opts'].alpn = proxy['plugin-opts'].alpn;
                         }
                         delete proxy.plugin;
                         delete proxy['plugin-opts'];
@@ -207,9 +207,9 @@ export default function Shadowrocket_Producer() {
                         proxy['h2-opts']?.headers?.host ??
                         proxy['h2-opts']?.headers?.Host;
                     if (
-                        (isPresent(proxy, 'h2-opts.host') ||
-                            isPresent(proxy, 'h2-opts.headers.host') ||
-                            isPresent(proxy, 'h2-opts.headers.Host'))
+                        isPresent(proxy, 'h2-opts.host') ||
+                        isPresent(proxy, 'h2-opts.headers.host') ||
+                        isPresent(proxy, 'h2-opts.headers.Host')
                     ) {
                         proxy['h2-opts'].host = Array.isArray(host)
                             ? host
