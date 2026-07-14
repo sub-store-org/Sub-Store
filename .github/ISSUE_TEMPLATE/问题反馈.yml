@@ -7,7 +7,7 @@ body:
       value: |
         **先读我**
 
-        [排查方法](https://t.me/zhetengsha/218)
+        [排查方法](https://telegram.me/zhetengsha/218)
   - type: checkboxes
     id: read-troubleshooting
     attributes:

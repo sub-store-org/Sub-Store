@@ -4,7 +4,7 @@
 
 Sub-Store Releases: [`https://github.com/sub-store-org/Sub-Store/releases`](https://github.com/sub-store-org/Sub-Store/releases)
 
-Telegram 频道: [`https://t.me/cool_scripts` ](https://t.me/cool_scripts)
+Telegram 频道: [`https://telegram.me/cool_scripts` ](https://telegram.me/cool_scripts)
 
 ## 服务器/云平台/Docker/Android 版
 
@@ -39,7 +39,7 @@ SUB_STORE_CORS_ALLOWED_ORIGINS=https://sub-store.vercel.app,http://127.0.0.1:888
 
 Surge Mac 版如何支持 SSR, 如何去除 HTTP 传输层以支持 类似 VMess HTTP 节点等 请查看 [链接参数说明](https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E)
 
-定时处理订阅 功能, 避免 App 内拉取超时, 请查看 [定时处理订阅](https://t.me/zhetengsha/1449)
+定时处理订阅 功能, 避免 App 内拉取超时, 请查看 [定时处理订阅](https://telegram.me/zhetengsha/1449)
 
 0. 最新 Surge iOS TestFlight 版本 可使用 Beta 版(支持最新 Surge iOS TestFlight 版本的特性): [`https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Beta.sgmodule`](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-Beta.sgmodule)
 

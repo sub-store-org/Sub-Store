@@ -14,7 +14,7 @@ resourceUrlOnly = switch,true,tag=仅使用远程资源 忽略 Loon 自身解析
 ua = input,"",tag=拉取订阅的 User-Agent,desc=拉取订阅的 User-Agent
 timeout = input,8000,tag=拉取订阅时使用的超时时间,desc=拉取订阅时使用的超时时间
 noCache = switch,false,tag=禁用缓存,desc=禁用缓存
-age-secret-key = input,"",tag=age 解密私钥,desc=age 解密私钥 可查看 https://t.me/zhetengsha/5876
+age-secret-key = input,"",tag=age 解密私钥,desc=age 解密私钥 可查看 https://telegram.me/zhetengsha/5876
 
 [Script]
 generic script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-parser.loon.min.js,tag=Sub-Store Parser,timeout=900,argument=[{ua},{resourceUrlOnly},{noCache},{timeout},{age-secret-key}]
