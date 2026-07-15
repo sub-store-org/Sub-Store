@@ -11,6 +11,7 @@ import {
     ResourceNotFoundError,
 } from '@/restful/errors';
 import { produceArtifact } from '@/restful/sync';
+import { getCachedProviderRequestUrl } from '@/utils/provider';
 // eslint-disable-next-line no-unused-vars
 import { isIPv4, isIPv6 } from '@/utils';
 import { getISO } from '@/utils/geo';
@@ -345,6 +346,9 @@ async function downloadSubscription(req, res) {
             }
             let output = await produceArtifact(opt);
             let flowInfo;
+            if (sub.source === 'api') {
+                url = getCachedProviderRequestUrl(sub);
+            }
             if (
                 sub.source !== 'local' ||
                 ['localFirst', 'remoteFirst'].includes(sub.mergeSources)
@@ -681,7 +685,11 @@ async function downloadCollection(req, res) {
                     ) {
                         try {
                             let url =
-                                `${sub.url}`
+                                `${
+                                    sub.source === 'api'
+                                        ? getCachedProviderRequestUrl(sub)
+                                        : sub.url
+                                }`
                                     .split(/[\r\n]+/)
                                     .map((i) => i.trim())
                                     .filter((i) => i.length)?.[0] || '';

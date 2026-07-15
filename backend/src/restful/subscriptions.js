@@ -24,6 +24,8 @@ import {
 } from '@/utils/flow';
 import { archiveSubscription } from '@/utils/archive';
 import { success, failed } from './response';
+import download from '@/utils/download';
+import { fetchProviderSubscription } from '@/utils/provider';
 import $ from '@/core/app';
 import { formatDateTime } from '@/utils';
 import { maskAgeSecretInUrl, normalizeAgePublicKeyConfig } from '@/utils/age';
@@ -122,6 +124,12 @@ async function getFlowInfo(req, res) {
         return;
     }
     try {
+        if (sub.source === 'api') {
+            const providerResult = await fetchProviderSubscription(sub, {
+                download,
+            });
+            url = providerResult.requestUrl;
+        }
         url =
             `${url || sub.url}`
                 .split(/[\r\n]+/)

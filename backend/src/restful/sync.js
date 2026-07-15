@@ -14,6 +14,7 @@ import {
     shouldSyncArtifactInGlobalCron,
 } from '@/utils/artifact-cron';
 import { findByName, updateByName } from '@/utils/database';
+import { fetchProviderSubscription } from '@/utils/provider';
 import download from '@/utils/download';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { RuleUtils } from '@/core/rule-utils';
@@ -367,6 +368,15 @@ async function produceArtifact({
                     raw.push(content);
                     sourceRaw.push(content);
                 }
+            } else if (sub.source === 'api') {
+                const downloaded = await fetchProviderSubscription(sub, {
+                    download,
+                    awaitCustomCache,
+                    noCache,
+                    proxy: proxy || sub.proxy,
+                });
+                raw = [downloaded.result];
+                sourceRaw = [downloaded.raw];
             } else if (
                 sub.source === 'local' &&
                 !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
@@ -555,7 +565,21 @@ async function produceArtifact({
                         $.info(`正在处理子订阅：${sub.name}...`);
                         let raw;
                         let sourceRaw;
-                        if (
+                        if (sub.source === 'api') {
+                            const downloaded = await fetchProviderSubscription(
+                                sub,
+                                {
+                                    download,
+                                    noCache,
+                                    proxy:
+                                        proxy ||
+                                        sub.proxy ||
+                                        collection.proxy,
+                                },
+                            );
+                            raw = [downloaded.result];
+                            sourceRaw = [downloaded.raw];
+                        } else if (
                             sub.source === 'local' &&
                             !['localFirst', 'remoteFirst'].includes(
                                 sub.mergeSources,

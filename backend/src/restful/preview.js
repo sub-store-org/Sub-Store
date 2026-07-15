@@ -3,6 +3,7 @@ import { ProxyUtils } from '@/core/proxy-utils';
 import { findByName } from '@/utils/database';
 import { success, failed } from './response';
 import download from '@/utils/download';
+import { fetchProviderSubscription } from '@/utils/provider';
 import { SUBS_KEY } from '@/constants';
 import $ from '@/core/app';
 import {
@@ -84,7 +85,13 @@ async function compareSub(req, res) {
         const target = req.query.target || 'JSON';
         let content;
         let sourceRaw;
-        if (
+        if (sub.source === 'api') {
+            const downloaded = await fetchProviderSubscription(sub, {
+                download,
+            });
+            content = [downloaded.result];
+            sourceRaw = [downloaded.raw];
+        } else if (
             sub.source === 'local' &&
             !['localFirst', 'remoteFirst'].includes(sub.mergeSources)
         ) {
@@ -242,7 +249,14 @@ async function compareCollection(req, res) {
                 try {
                     let raw;
                     let sourceRaw;
-                    if (
+                    if (sub.source === 'api') {
+                        const downloaded = await fetchProviderSubscription(sub, {
+                            download,
+                            proxy: sub.proxy || collection.proxy,
+                        });
+                        raw = [downloaded.result];
+                        sourceRaw = [downloaded.raw];
+                    } else if (
                         sub.source === 'local' &&
                         !['localFirst', 'remoteFirst'].includes(
                             sub.mergeSources,
