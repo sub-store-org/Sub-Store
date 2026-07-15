@@ -875,7 +875,7 @@ describe('Proxy text producers', function () {
         const output = produceExternal('Loon', proxy);
 
         expect(output).to.equal(
-            'URI Hysteria2=Hysteria2,hy2.example.com,443,"secret",server-ports="1000,2000-3000,5000",hop-interval=30,tls-name=hy2.example.com,skip-cert-verify=false,fast-open=false',
+            'URI Hysteria2=Hysteria2,hy2.example.com,443,"secret",server-ports="1000,2000-3000,5000",hop-interval=30,tls-name=hy2.example.com,skip-cert-verify=false,fast-open=false,udp=true',
         );
     });
 
@@ -1385,8 +1385,8 @@ describe('Proxy text producers', function () {
         const output = ProxyUtils.produce(proxies, 'Surge', 'external');
 
         expect(output.split('\n')).to.deep.equal([
-            `Surge H2 Round Trip=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com"`,
-            `Surge Trust Round Trip=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"`,
+            `Surge H2 Round Trip=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com",udp-relay=true`,
+            `Surge Trust Round Trip=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com",udp-relay=true`,
         ]);
     });
 

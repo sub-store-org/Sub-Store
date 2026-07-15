@@ -718,6 +718,9 @@ function formatTransportPath(path) {
 }
 
 function lastParse(proxy) {
+    proxy.udp = ![false, 0, '0', 'false', 'off'].includes(
+        typeof proxy.udp === 'string' ? proxy.udp.toLowerCase() : proxy.udp,
+    );
     if (typeof proxy.cipher === 'string') {
         proxy.cipher = proxy.cipher.toLowerCase();
     }

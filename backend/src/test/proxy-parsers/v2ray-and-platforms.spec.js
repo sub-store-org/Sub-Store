@@ -19,7 +19,7 @@ describe('VMess and VLESS parser coverage', function () {
                 port: 443,
                 cipher: 'auto',
                 uuid: UUID,
-                udp: 'true',
+                udp: true,
                 tfo: 'true',
                 'skip-cert-verify': false,
             });

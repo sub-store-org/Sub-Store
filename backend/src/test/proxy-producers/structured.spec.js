@@ -107,6 +107,21 @@ describe('Proxy structured producers', function () {
         expect(output.proxies[0]).to.not.have.property('_loon_tls_profile');
     });
 
+    it('defaults omitted UDP to true while preserving explicit disablement', function () {
+        const [enabled, disabled] = ProxyUtils.parse(
+            'Surge AnyTLS=anytls,anytls.example.com,443,password=secret\nanytls=anytls.example.com:443,password=secret,udp-relay=false,tag=QX AnyTLS No UDP',
+        );
+
+        expect(enabled.udp).to.equal(true);
+        const output = loadProducedYaml('Mihomo', [enabled, disabled]).proxies;
+        expect(
+            output.find((proxy) => proxy.name === enabled.name).udp,
+        ).to.equal(true);
+        expect(
+            output.find((proxy) => proxy.name === disabled.name).udp,
+        ).to.equal(false);
+    });
+
     it('normalizes VMess security values for documented target platforms', function () {
         const invalidSecurityProxy = {
             type: 'vmess',
