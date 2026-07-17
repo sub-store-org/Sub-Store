@@ -19,7 +19,7 @@ body:
     id: runtime
     attributes:
       label: 运行环境
-      description: 请选择主要出现问题的运行环境。
+      description: 请选择主要出现问题的运行环境。⚠️ 非官方支持的版本, 请在对应版本的作者那里反馈. 比如 Cloudflare Workers 版, 请勿在此反馈
       multiple: false
       options:
         - Node.js
