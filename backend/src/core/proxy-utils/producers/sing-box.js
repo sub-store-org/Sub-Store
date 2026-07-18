@@ -1132,6 +1132,9 @@ const anytlsParser = (proxy = {}) => {
             `${proxy['min-idle-session']}`,
             10,
         );
+    if (proxy['disable-reuse'] != null) {
+        parsedProxy.disable_reuse = !!proxy['disable-reuse'];
+    }
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
     ipVersionParser(proxy, parsedProxy);

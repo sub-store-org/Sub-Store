@@ -252,6 +252,13 @@ export default function ClashMeta_Producer() {
                             ds['reality-opts'] = { 'public-key': '' };
                         }
                     }
+                } else if (
+                    ['anytls'].includes(proxy.type) &&
+                    proxy.reuse != null &&
+                    !proxy.reuse
+                ) {
+                    proxy['disable-reuse'] = true;
+                    delete proxy.reuse;
                 }
 
                 if (isPresent(proxy, 'plugin-opts.mux')) {

@@ -1039,6 +1039,9 @@ function lastParse(proxy) {
             proxy[`${proxy.network}-opts`].path = ['/'];
         }
     }
+    if (['anytls'].includes(proxy.type) && proxy['disable-reuse']) {
+        proxy.reuse = false;
+    }
     if (['', 'off'].includes(proxy.sni)) {
         proxy['disable-sni'] = true;
     }

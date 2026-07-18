@@ -170,6 +170,13 @@ export default function Shadowrocket_Producer() {
                             // delete proxy.sni;
                         }
                     }
+                } else if (
+                    ['anytls'].includes(proxy.type) &&
+                    proxy.reuse != null &&
+                    !proxy.reuse
+                ) {
+                    proxy['disable-reuse'] = true;
+                    delete proxy.reuse;
                 }
 
                 if (
