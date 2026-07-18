@@ -12,6 +12,7 @@ import {
 import { gistBackupAction } from '@/restful/miscs';
 import { SETTINGS_KEY } from '@/constants';
 import { startArtifactCronJobs } from '@/utils/artifact-cron';
+import { createFrontendStaticMiddleware } from '@/utils/frontend-static';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
@@ -46,6 +47,10 @@ export default function serve() {
         const be_prefix = eval('process.env.SUB_STORE_BACKEND_PREFIX');
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
         const fe_path = eval('process.env.SUB_STORE_FRONTEND_PATH');
+        const mergedFrontend =
+            be_merge && fe_path
+                ? createFrontendStaticMiddleware(fe_path, '/index.html')
+                : null;
         if (be_prefix || be_merge) {
             if (!fe_be_path.startsWith('/')) {
                 throw new Error(
@@ -101,25 +106,8 @@ export default function serve() {
                 const isBackendRoute = /^\/(api|download|share)(\/|$)/.test(
                     req.path,
                 );
-                if (be_merge && fe_path && !isBackendRoute) {
-                    const express_ = eval(`require("express")`);
-                    const mime_ = eval(`require("mime-types")`);
-                    const path_ = eval(`require("path")`);
-                    const fs_ = eval(`require("fs")`);
-                    // 检查请求的文件是否真实存在，不存在则返回 index.html（SPA 路由）
-                    const filePath = path_.join(fe_path, req.path);
-                    if (!fs_.existsSync(filePath)) {
-                        req.url = '/index.html';
-                    }
-                    const staticFileMiddleware = express_.static(fe_path, {
-                        setHeaders: (res, path) => {
-                            const type = mime_.contentType(path_.extname(path));
-                            if (type) {
-                                res.set('Content-Type', type);
-                            }
-                        },
-                    });
-                    staticFileMiddleware(req, res, next);
+                if (mergedFrontend && !isBackendRoute) {
+                    mergedFrontend(req, res, next);
                     return;
                 }
                 res.status(404).end();
@@ -368,7 +356,8 @@ export default function serve() {
 
             const app = express_();
 
-            const staticFileMiddleware = express_.static(fe_path);
+            const staticFileMiddleware =
+                createFrontendStaticMiddleware(fe_path);
 
             let be_api = '/api/';
             let be_download = '/download/';
