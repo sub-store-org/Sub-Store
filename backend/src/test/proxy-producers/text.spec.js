@@ -1635,6 +1635,47 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces Surfboard TUIC v5 lines', function () {
+        const output = produceExternal('Surfboard', {
+            type: 'tuic',
+            name: 'ProxyTuic',
+            server: '1.2.3.4',
+            port: 443,
+            uuid: UUID,
+            password: 'pwd',
+            alpn: ['h3'],
+            ports: '1234,5000-6000',
+            'hop-interval': 30,
+            'skip-cert-verify': true,
+            sni: 'example.com',
+            'tls-fingerprint':
+                'fac26f65c034829da42d740d23c4a7202475a3834f0ebaecae5f934adbbfd640',
+            udp: true,
+        });
+
+        expect(output).to.equal(
+            `ProxyTuic=tuic-v5,1.2.3.4,443,uuid=${UUID},password="pwd",alpn="h3",port-hopping="1234;5000-6000",port-hopping-interval=30,server-cert-fingerprint-sha256=fac26f65c034829da42d740d23c4a7202475a3834f0ebaecae5f934adbbfd640,sni="example.com",skip-cert-verify=true,udp-relay=true`,
+        );
+    });
+
+    it('does not produce legacy TUIC as Surfboard TUIC v5', function () {
+        const output = ProxyUtils.produce(
+            [
+                {
+                    type: 'tuic',
+                    name: 'Legacy TUIC',
+                    server: 'tuic.example.com',
+                    port: 443,
+                    token: 'secret',
+                },
+            ],
+            'Surfboard',
+            'external',
+        );
+
+        expect(output).to.equal('');
+    });
+
     it('does not emit empty Surfboard Hysteria2 port hopping fields', function () {
         const output = produceExternal('Surfboard', {
             type: 'hysteria2',

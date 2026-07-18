@@ -46,6 +46,8 @@ export default function Surfboard_Producer() {
                 return http(proxy);
             case 'snell':
                 return snell(proxy);
+            case 'tuic':
+                return tuic(proxy);
             case 'socks5':
                 return socks5(proxy);
             case 'hysteria2':
@@ -71,6 +73,35 @@ export default function Surfboard_Producer() {
         );
     };
     return { produce };
+}
+function tuic(proxy) {
+    if (proxy.token?.length) {
+        throw new Error(
+            `Platform ${targetPlatform} does not support proxy type ${proxy.type} v4`,
+        );
+    }
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=tuic-v5,${proxy.server},${proxy.port}`);
+    result.appendIfPresent(`,uuid=${proxy.uuid}`, 'uuid');
+    result.appendIfPresent(`,password="${proxy.password}"`, 'password');
+    if (hasNonBlankValue(proxy.alpn)) {
+        result.append(
+            `,alpn="${
+                Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn
+            }"`,
+        );
+    }
+    if (hasNonBlankValue(proxy.ports)) {
+        result.append(
+            `,port-hopping="${String(proxy.ports).replace(/,/g, ';')}"`,
+        );
+    }
+    if (hasNonBlankValue(proxy['hop-interval'])) {
+        result.append(`,port-hopping-interval=${proxy['hop-interval']}`);
+    }
+    appendTlsProxyParams(result, proxy);
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    return result.toString();
 }
 function hysteria2(proxy) {
     if (

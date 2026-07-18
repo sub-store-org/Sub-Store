@@ -973,7 +973,7 @@ function snell(proxy) {
 
 function tuic(proxy) {
     const result = new Result(proxy);
-    // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/adapter/outbound/tuic.go#L197
+    // https://github.com/MetaCubeX/mihomo/blob/e26714a181ac0e2fa803453c0a8e9a9ce94e31cb/adapter/outbound/tuic.go#L271
     let type = proxy.type;
     if (!proxy.token || proxy.token.length === 0) {
         type = 'tuic-v5';
