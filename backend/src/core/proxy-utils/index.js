@@ -33,7 +33,6 @@ import { produceArtifact } from '@/restful/sync';
 import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
 import Gist from '@/utils/gist';
 import {
-    isPresent,
     isShadowsocksOverTls,
     normalizeWireGuardInterface,
 } from './producers/utils';
@@ -395,15 +394,6 @@ function produce(proxies, targetPlatform, type, opts = {}) {
     }
 
     const normalizedTarget = String(targetPlatform).toLowerCase();
-    const supportedShadowsocksOverTlsTargets = new Set([
-        'qx',
-        'quantumultx',
-        'shadowrocket',
-    ]);
-
-    const sni_off_supported = /Surge|SurgeMac|Shadowrocket/i.test(
-        targetPlatform,
-    );
 
     // filter unsupported proxies
     proxies = proxies.filter((proxy) => {
@@ -437,7 +427,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         if (
             !includeUnsupportedProxy &&
             isShadowsocksOverTls(proxy) &&
-            !supportedShadowsocksOverTlsTargets.has(normalizedTarget)
+            !['qx', 'quantumultx', 'shadowrocket'].includes(normalizedTarget)
         ) {
             return false;
         }
@@ -518,13 +508,20 @@ function produce(proxies, targetPlatform, type, opts = {}) {
             proxy.name = `${proxy.type} ${proxy.server}:${proxy.port}`;
         }
         if (proxy['disable-sni']) {
-            if (sni_off_supported) {
+            if (
+                ['surge', 'surgemac', 'shadowrocket'].includes(normalizedTarget)
+            ) {
                 proxy.sni = 'off';
-            } else if (!['tuic'].includes(proxy.type)) {
+            } else if (
+                !['tuic'].includes(proxy.type) &&
+                !['sing-box', 'singbox'].includes(normalizedTarget)
+            ) {
+                // 目前 Sub-Store 里 sing-box 是靠 mihomo 转一次的. 会用到 disable-sni 转成 disable_sni. 是支持的
+                // 其他客户端行为可能不一致. mihomo 可设置为 ip, 此时会不发 sni
                 $.error(
-                    `Target platform ${targetPlatform} does not support sni off, proxy ${proxy.name} sni will be set to empty string instead.`,
+                    `Target platform ${targetPlatform} does not support sni off. As a workaround for mihomo, proxy ${proxy.name} sni will be set to IP instead`,
                 );
-                proxy.sni = '';
+                proxy.sni = isIP(proxy.server) ? proxy.server : '127.0.0.1';
                 // proxy['skip-cert-verify'] = true;
                 // delete proxy['tls-fingerprint'];
             }
@@ -533,7 +530,11 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         // 处理 端口跳跃
         if (proxy.ports) {
             proxy.ports = String(proxy.ports);
-            if (!['ClashMeta'].includes(targetPlatform)) {
+            if (
+                !['meta', 'clashmeta', 'clash.meta', 'mihomo'].includes(
+                    normalizedTarget,
+                )
+            ) {
                 proxy.ports = proxy.ports.replace(/\//g, ',');
             }
             if (!proxy.port) {
