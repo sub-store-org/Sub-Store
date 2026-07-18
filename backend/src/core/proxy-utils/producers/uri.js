@@ -1295,6 +1295,14 @@ export default function URI_Producer() {
                 if (proxy.tfo) {
                     hysteria2params.push(`fastopen=1`);
                 }
+                const hysteria2Ech = buildXrayEchConfigListFromMihomo(
+                    proxy['ech-opts'],
+                );
+                if (hysteria2Ech) {
+                    hysteria2params.push(
+                        `ech=${encodeURIComponent(hysteria2Ech)}`,
+                    );
+                }
                 result = `hysteria2://${encodeURIComponent(proxy.password)}@${
                     proxy.server
                 }:${proxy.port}?${hysteria2params.join(

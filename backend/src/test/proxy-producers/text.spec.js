@@ -2581,6 +2581,24 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('produces URI Hysteria2 links with ech from mihomo ech opts config', function () {
+        const output = produceExternal('URI', {
+            type: 'hysteria2',
+            name: 'URI Hysteria2 ECH',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'secret',
+            'ech-opts': {
+                enable: true,
+                config: 'ECHCONFIG',
+            },
+        });
+
+        expect(output).to.equal(
+            'hysteria2://secret@hy2.example.com:443?ech=ECHCONFIG#URI%20Hysteria2%20ECH',
+        );
+    });
+
     it('matches mihomo ECH enable decoding when producing URI VLESS links', function () {
         const baseProxy = {
             type: 'vless',

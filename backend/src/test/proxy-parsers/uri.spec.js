@@ -531,6 +531,17 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
+        it('parses Hysteria2 URI ech fields', function () {
+            const proxy = parseOne(
+                'hy2://hy2-secret@hy2.example.com:443?ech=ECHCONFIG#Hy2%20ECH',
+            );
+
+            expect(proxy['ech-opts']).to.deep.equal({
+                enable: true,
+                config: 'ECHCONFIG',
+            });
+        });
+
         it('rejects Hysteria2 salamander obfs without obfs-password', function () {
             const proxies = parseAll(
                 'hy2://hy2-secret@hy2.example.com:443?obfs=salamander#Hy2%20Missing%20Password',

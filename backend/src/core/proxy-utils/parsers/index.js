@@ -2249,6 +2249,12 @@ function URI_Hysteria2() {
         if (params.downmbps) {
             proxy.down = params.downmbps;
         }
+        const echOpts = buildMihomoEchOptsFromXrayFields({
+            echConfigList: params.ech,
+        });
+        if (echOpts) {
+            proxy['ech-opts'] = echOpts;
+        }
 
         return proxy;
     };
