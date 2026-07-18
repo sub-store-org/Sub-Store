@@ -102,6 +102,12 @@ function appendTlsProxyParams(result, proxy, enabled = true) {
         'tls-fingerprint',
     );
     result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
+    result.appendIfPresent(
+        `,server-cert-verify-name=${quoteSurgeValue(
+            proxy['name-cert-verify'],
+        )}`,
+        'name-cert-verify',
+    );
     if (proxy.plugin !== 'shadow-tls') {
         appendAlpn(result, proxy);
     }

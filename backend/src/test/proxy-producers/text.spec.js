@@ -879,8 +879,9 @@ describe('Proxy text producers', function () {
         );
     });
 
-    it('emits quoted Surge alpn for TLS protocol outputs', function () {
+    it('emits Surge alpn and server-cert-verify-name for TLS protocol outputs', function () {
         const alpn = ['http/1.1', 'h2', 'h3'];
+        const nameCertVerify = 'verify.example.com';
         const output = produceExternal('Surge', [
             {
                 type: 'vmess',
@@ -892,6 +893,7 @@ describe('Proxy text producers', function () {
                 alterId: 0,
                 tls: true,
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
             {
                 type: 'trojan',
@@ -900,6 +902,7 @@ describe('Proxy text producers', function () {
                 port: 443,
                 password: 'secret',
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
             {
                 type: 'http',
@@ -907,7 +910,9 @@ describe('Proxy text producers', function () {
                 server: 'https-alpn.example.com',
                 port: 443,
                 tls: true,
+                sni: 'sni.example.com',
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
             {
                 type: 'h2-connect',
@@ -915,6 +920,7 @@ describe('Proxy text producers', function () {
                 server: 'h2-alpn.example.com',
                 port: 443,
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
             {
                 type: 'socks5',
@@ -923,6 +929,7 @@ describe('Proxy text producers', function () {
                 port: 1080,
                 tls: true,
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
             {
                 type: 'anytls',
@@ -931,6 +938,7 @@ describe('Proxy text producers', function () {
                 port: 443,
                 password: 'secret',
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
             {
                 type: 'trusttunnel',
@@ -938,6 +946,7 @@ describe('Proxy text producers', function () {
                 server: 'trust-alpn.example.com',
                 port: 443,
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
             {
                 type: 'tuic',
@@ -947,6 +956,7 @@ describe('Proxy text producers', function () {
                 uuid: UUID,
                 password: 'secret',
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
             {
                 type: 'hysteria2',
@@ -955,13 +965,25 @@ describe('Proxy text producers', function () {
                 port: 443,
                 password: 'secret',
                 alpn,
+                'name-cert-verify': nameCertVerify,
             },
         ]);
 
         expect(output.match(/alpn="http\/1\.1,h2,h3"/g)).to.have.length(9);
+        expect(
+            output.match(/server-cert-verify-name="verify\.example\.com"/g),
+        ).to.have.length(9);
+
+        const roundTripped = ProxyUtils.parse(output).find(
+            ({ name }) => name === 'Surge HTTPS ALPN',
+        );
+        expect(roundTripped).to.include({
+            sni: 'sni.example.com',
+            'name-cert-verify': nameCertVerify,
+        });
     });
 
-    it('omits Surge alpn for non-TLS outputs', function () {
+    it('omits Surge alpn and server-cert-verify-name for non-TLS outputs', function () {
         const output = produceExternal('Surge', [
             {
                 type: 'vmess',
@@ -971,6 +993,7 @@ describe('Proxy text producers', function () {
                 uuid: UUID,
                 alterId: 0,
                 alpn: ['http/1.1', 'h2'],
+                'name-cert-verify': 'verify.example.com',
             },
             {
                 type: 'http',
@@ -978,6 +1001,7 @@ describe('Proxy text producers', function () {
                 server: 'http-plain-alpn.example.com',
                 port: 80,
                 alpn: ['http/1.1', 'h2'],
+                'name-cert-verify': 'verify.example.com',
             },
             {
                 type: 'socks5',
@@ -985,10 +1009,12 @@ describe('Proxy text producers', function () {
                 server: 'socks-plain-alpn.example.com',
                 port: 1080,
                 alpn: ['http/1.1', 'h2'],
+                'name-cert-verify': 'verify.example.com',
             },
         ]);
 
         expect(output).to.not.include('alpn=');
+        expect(output).to.not.include('server-cert-verify-name=');
     });
 
     it('produces Surge TUIC v5 lines with port hopping', function () {
