@@ -576,6 +576,7 @@ const shadowTLSOutboundParser = (proxy = {}, pluginOpts) => {
             server_name: pluginOpts.host,
         },
     };
+    if (proxy['skip-cert-verify']) stPart.tls.insecure = true;
     if (fingerprint) {
         stPart.tls.utls = {
             enabled: true,
@@ -1338,6 +1339,7 @@ export default function singbox_Producer() {
                         throw new Error(
                             `Platform sing-box does not support network: ${proxy.network}`,
                         );
+                    const listStart = list.length;
                     switch (proxy.type) {
                         case 'ssh':
                             list.push(sshParser(proxy));
@@ -1500,6 +1502,17 @@ export default function singbox_Producer() {
                             throw new Error(
                                 `Platform sing-box does not support proxy type: ${proxy.type}`,
                             );
+                    }
+                    if (
+                        opts['include-unsupported-proxy'] &&
+                        proxy['name-cert-verify']
+                    ) {
+                        for (let i = listStart; i < list.length; i++) {
+                            const outbound = list[i];
+                            if (outbound.tls)
+                                outbound.tls.certificate_server_name =
+                                    proxy['name-cert-verify'];
+                        }
                     }
                 } catch (e) {
                     // console.log(e);

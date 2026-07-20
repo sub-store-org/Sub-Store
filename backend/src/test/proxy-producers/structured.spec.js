@@ -758,7 +758,7 @@ describe('Proxy structured producers', function () {
         });
     });
 
-    it('exports Shadowsocks shadow-tls plugin ALPN to sing-box shadowtls tls options', function () {
+    it('exports Shadowsocks shadow-tls plugin TLS options to sing-box', function () {
         const [proxy] = ProxyUtils.parse(`proxies:
   - name: SS ShadowTLS ALPN
     type: ss
@@ -768,6 +768,8 @@ describe('Proxy structured producers', function () {
     password: password
     plugin: shadow-tls
     client-fingerprint: chrome
+    skip-cert-verify: true
+    name-cert-verify: verify.example.com
     plugin-opts:
       host: cloud.tencent.com
       password: shadow_tls_password
@@ -776,7 +778,9 @@ describe('Proxy structured producers', function () {
         - h2
         - http/1.1`);
 
-        const output = loadProducedJson('sing-box', proxy);
+        const output = loadProducedJson('sing-box', proxy, {
+            'include-unsupported-proxy': true,
+        });
 
         expect(output.outbounds).to.have.length(2);
         expectSubset(output.outbounds[0], {
@@ -796,6 +800,8 @@ describe('Proxy structured producers', function () {
             tls: {
                 enabled: true,
                 server_name: 'cloud.tencent.com',
+                insecure: true,
+                certificate_server_name: 'verify.example.com',
                 alpn: ['h2', 'http/1.1'],
                 utls: {
                     enabled: true,
@@ -4447,6 +4453,28 @@ describe('Proxy structured producers', function () {
                 max_early_data: 2048,
             },
         });
+    });
+
+    it('emits sing-box certificate_server_name only with unsupported proxies enabled', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'Certificate Server Name',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            'name-cert-verify': 'verify.example.com',
+        };
+
+        const supported = loadProducedJson('sing-box', proxy).outbounds[0];
+        const unsupported = loadProducedJson('sing-box', proxy, {
+            'include-unsupported-proxy': true,
+        }).outbounds[0];
+
+        expect(supported.tls).to.not.have.property('certificate_server_name');
+        expect(unsupported.tls.certificate_server_name).to.equal(
+            'verify.example.com',
+        );
     });
 
     it('validates sing-box uTLS fingerprints for regular TLS and Reality outbounds', function () {
