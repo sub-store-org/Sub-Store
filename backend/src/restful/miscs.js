@@ -35,6 +35,7 @@ export default function register($app) {
     $app.route('/api/storage')
         .get((req, res) => {
             res.set('content-type', 'application/json')
+                .set('access-control-expose-headers', 'content-disposition')
                 .set(
                     'content-disposition',
                     `attachment; filename="${encodeURIComponent(
