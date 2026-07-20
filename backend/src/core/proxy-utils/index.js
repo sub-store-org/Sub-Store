@@ -782,6 +782,18 @@ function lastParse(proxy) {
             .replace(/\]$/, '');
     }
     if (
+        ['vmess', 'vless', 'trojan', 'anytls'].includes(proxy.type) &&
+        proxy['shadow-tls-opts']
+    ) {
+        proxy.plugin = 'shadow-tls';
+        proxy['plugin-opts'] = {
+            host: proxy.sni,
+            password: proxy['shadow-tls-opts'].password,
+            version: proxy['shadow-tls-opts'].version,
+        };
+        delete proxy['shadow-tls-opts'];
+    }
+    if (
         proxy.type === 'snell' &&
         proxy['obfs-opts']?.mode === 'shadow-tls' &&
         !proxy.plugin
@@ -800,6 +812,32 @@ function lastParse(proxy) {
             proxy['plugin-opts'].alpn = proxy.alpn;
         }
         delete proxy.alpn;
+    }
+    const xhttpDownloadSettings =
+        proxy.type === 'vless' && proxy.network === 'xhttp'
+            ? proxy['xhttp-opts']?.['download-settings']
+            : undefined;
+    if (xhttpDownloadSettings?.['shadow-tls-opts']) {
+        xhttpDownloadSettings.plugin = 'shadow-tls';
+        xhttpDownloadSettings['plugin-opts'] = {
+            host: xhttpDownloadSettings.servername,
+            password: xhttpDownloadSettings['shadow-tls-opts'].password,
+            version: xhttpDownloadSettings['shadow-tls-opts'].version,
+        };
+        delete xhttpDownloadSettings['shadow-tls-opts'];
+    }
+    if (
+        xhttpDownloadSettings?.plugin === 'shadow-tls' &&
+        xhttpDownloadSettings['plugin-opts']
+    ) {
+        if (
+            xhttpDownloadSettings.alpn &&
+            !xhttpDownloadSettings['plugin-opts'].alpn
+        ) {
+            xhttpDownloadSettings['plugin-opts'].alpn =
+                xhttpDownloadSettings.alpn;
+        }
+        delete xhttpDownloadSettings.alpn;
     }
     if (proxy.network === 'ws') {
         if (!proxy['ws-opts'] && (proxy['ws-path'] || proxy['ws-headers'])) {

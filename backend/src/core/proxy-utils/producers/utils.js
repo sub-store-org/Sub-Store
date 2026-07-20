@@ -71,6 +71,42 @@ export function supportsShadowsocksV2rayPluginMode(proxy, supportedModes) {
     return supportedModes.includes(normalizedMode);
 }
 
+function restoreShadowTLSOpts(target, serverNameKey) {
+    if (target?.plugin !== 'shadow-tls' || !target['plugin-opts']) {
+        return undefined;
+    }
+
+    const opts = target['plugin-opts'];
+    const enabled =
+        Boolean(opts.password) ||
+        (opts.version != null && Number(opts.version) !== 0);
+    target['shadow-tls-opts'] = {
+        password: opts.password,
+        version: opts.version,
+    };
+    if (opts.host != null) target[serverNameKey] = opts.host;
+    if (opts.alpn != null) target.alpn = opts.alpn;
+    delete target.plugin;
+    delete target['plugin-opts'];
+    return enabled;
+}
+
+export function restoreShadowTLSProxyOpts(proxy) {
+    if (['vmess', 'vless', 'trojan', 'anytls'].includes(proxy.type)) {
+        const restored = restoreShadowTLSOpts(proxy, 'sni');
+        if (restored && ['vmess', 'vless'].includes(proxy.type)) {
+            proxy.tls = true;
+        }
+    }
+
+    if (proxy.type === 'vless' && proxy.network === 'xhttp') {
+        const downloadSettings = proxy['xhttp-opts']?.['download-settings'];
+        if (restoreShadowTLSOpts(downloadSettings, 'servername')) {
+            downloadSettings.tls = true;
+        }
+    }
+}
+
 function parseWireGuardCIDR(cidr, max) {
     if (cidr == null) return undefined;
     const normalized = `${cidr}`.trim();

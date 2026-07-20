@@ -679,6 +679,260 @@ describe('Proxy structured producers', function () {
         expect(external.proxies[0]).to.not.have.property('plugin-opts');
     });
 
+    it('normalizes and restores protocol-specific ShadowTLS fields', function () {
+        const proxies = ProxyUtils.parse(`proxies:
+  - name: VMess ShadowTLS
+    type: vmess
+    server: vmess.example.com
+    port: 443
+    uuid: ${UUID}
+    cipher: auto
+    tls: true
+    servername: vmess-mask.example.com
+    alpn: [h2, http/1.1]
+    shadow-tls-opts: { password: vmess-shadow, version: 3 }
+  - name: VLESS ShadowTLS
+    type: vless
+    server: vless.example.com
+    port: 443
+    uuid: ${UUID}
+    tls: true
+    servername: vless-mask.example.com
+    alpn: [h2, http/1.1]
+    shadow-tls-opts: { password: vless-shadow, version: 3 }
+  - name: Trojan ShadowTLS
+    type: trojan
+    server: trojan.example.com
+    port: 443
+    password: secret
+    sni: trojan-mask.example.com
+    alpn: [h2, http/1.1]
+    shadow-tls-opts: { password: trojan-shadow, version: 3 }
+  - name: AnyTLS ShadowTLS
+    type: anytls
+    server: anytls.example.com
+    port: 443
+    password: secret
+    sni: anytls-mask.example.com
+    alpn: [h2, http/1.1]
+    shadow-tls-opts: { password: anytls-shadow, version: 3 }`);
+
+        for (const proxy of proxies) {
+            expectSubset(proxy, {
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    host: `${proxy.type}-mask.example.com`,
+                    password: `${proxy.type}-shadow`,
+                    version: 3,
+                    alpn: ['h2', 'http/1.1'],
+                },
+            });
+            expect(proxy).to.not.have.property('shadow-tls-opts');
+            expect(proxy).to.not.have.property('alpn');
+        }
+
+        for (const platform of ['Mihomo', 'Shadowrocket']) {
+            const output = loadProducedYaml(platform, proxies).proxies;
+
+            expect(output).to.have.length(4);
+            for (const proxy of output) {
+                expectSubset(proxy, {
+                    'shadow-tls-opts': {
+                        password: `${proxy.type}-shadow`,
+                        version: 3,
+                    },
+                    alpn: ['h2', 'http/1.1'],
+                });
+                expect(proxy).to.not.have.property('plugin');
+                expect(proxy).to.not.have.property('plugin-opts');
+                if (['vmess', 'vless'].includes(proxy.type)) {
+                    expect(proxy.servername).to.equal(
+                        `${proxy.type}-mask.example.com`,
+                    );
+                    expect(proxy.tls).to.equal(true);
+                } else {
+                    expect(proxy.sni).to.equal(
+                        `${proxy.type}-mask.example.com`,
+                    );
+                }
+            }
+        }
+    });
+
+    it('preserves explicitly disabled root ShadowTLS', function () {
+        const proxies = ProxyUtils.parse(
+            JSON.stringify({
+                proxies: ['vmess', 'vless'].map((type) => ({
+                    name: `${type} ShadowTLS Disabled`,
+                    type,
+                    server: `${type}.example.com`,
+                    port: 443,
+                    uuid: UUID,
+                    ...(type === 'vmess' ? { cipher: 'auto' } : {}),
+                    tls: false,
+                    'shadow-tls-opts': {},
+                })),
+            }),
+        );
+
+        for (const platform of ['Mihomo', 'Shadowrocket']) {
+            const output = loadProducedYaml(platform, proxies).proxies;
+
+            for (const proxy of output) {
+                expect(proxy.tls).to.equal(false);
+                expect(proxy['shadow-tls-opts']).to.deep.equal({});
+            }
+        }
+    });
+
+    it('normalizes and restores VLESS XHTTP download ShadowTLS states', function () {
+        const proxies = ProxyUtils.parse(`proxies:
+  - name: XHTTP ShadowTLS Override
+    type: vless
+    server: upload.example.com
+    port: 443
+    uuid: ${UUID}
+    tls: true
+    servername: upload-mask.example.com
+    network: xhttp
+    shadow-tls-opts: { password: upload-pass, version: 3 }
+    xhttp-opts:
+      mode: stream-up
+      download-settings:
+        tls: true
+        servername: download-mask.example.com
+        alpn: [h2]
+        shadow-tls-opts: { password: download-pass, version: 2 }
+  - name: XHTTP ShadowTLS Inherit
+    type: vless
+    server: upload.example.com
+    port: 443
+    uuid: ${UUID}
+    tls: true
+    servername: upload-mask.example.com
+    network: xhttp
+    shadow-tls-opts: { password: upload-pass, version: 3 }
+    xhttp-opts:
+      mode: stream-up
+      download-settings: { tls: true }
+  - name: XHTTP ShadowTLS Disable
+    type: vless
+    server: upload.example.com
+    port: 443
+    uuid: ${UUID}
+    tls: true
+    servername: upload-mask.example.com
+    network: xhttp
+    shadow-tls-opts: { password: upload-pass, version: 3 }
+    xhttp-opts:
+      mode: stream-up
+      download-settings: { tls: false, shadow-tls-opts: {} }`);
+        const byName = Object.fromEntries(
+            proxies.map((proxy) => [proxy.name, proxy]),
+        );
+        const override =
+            byName['XHTTP ShadowTLS Override']['xhttp-opts'][
+                'download-settings'
+            ];
+        expectSubset(override, {
+            servername: 'download-mask.example.com',
+            plugin: 'shadow-tls',
+            'plugin-opts': {
+                host: 'download-mask.example.com',
+                password: 'download-pass',
+                version: 2,
+                alpn: ['h2'],
+            },
+        });
+        expect(override).to.not.have.property('shadow-tls-opts');
+        expect(override).to.not.have.property('alpn');
+
+        const inherit =
+            byName['XHTTP ShadowTLS Inherit']['xhttp-opts'][
+                'download-settings'
+            ];
+        expect(inherit).to.not.have.property('plugin');
+        expect(inherit).to.not.have.property('shadow-tls-opts');
+
+        const disabled =
+            byName['XHTTP ShadowTLS Disable']['xhttp-opts'][
+                'download-settings'
+            ];
+        expect(disabled.plugin).to.equal('shadow-tls');
+        expect(disabled.tls).to.equal(false);
+
+        for (const platform of ['Mihomo', 'Shadowrocket']) {
+            const output = Object.fromEntries(
+                loadProducedYaml(platform, proxies).proxies.map((proxy) => [
+                    proxy.name,
+                    proxy,
+                ]),
+            );
+            const outputOverride =
+                output['XHTTP ShadowTLS Override']['xhttp-opts'][
+                    'download-settings'
+                ];
+            expectSubset(outputOverride, {
+                tls: true,
+                servername: 'download-mask.example.com',
+                alpn: ['h2'],
+                'shadow-tls-opts': {
+                    password: 'download-pass',
+                    version: 2,
+                },
+            });
+            expect(outputOverride).to.not.have.property('plugin');
+            expect(
+                output['XHTTP ShadowTLS Inherit']['xhttp-opts'][
+                    'download-settings'
+                ],
+            ).to.not.have.property('shadow-tls-opts');
+            const outputDisabled =
+                output['XHTTP ShadowTLS Disable']['xhttp-opts'][
+                    'download-settings'
+                ];
+            expect(outputDisabled.tls).to.equal(false);
+            expect(outputDisabled['shadow-tls-opts']).to.deep.equal({});
+            expect(outputDisabled).to.not.have.property('plugin');
+        }
+    });
+
+    it('keeps default and filters unsupported VLESS XHTTP download ShadowTLS versions for Mihomo', function () {
+        const proxies = ProxyUtils.parse(`proxies:
+  - name: XHTTP ShadowTLS Default Version
+    type: vless
+    server: upload.example.com
+    port: 443
+    uuid: ${UUID}
+    network: xhttp
+    xhttp-opts:
+      mode: stream-up
+      download-settings:
+        tls: true
+        shadow-tls-opts: { password: download-pass, version: 0 }
+  - name: XHTTP ShadowTLS Invalid Version
+    type: vless
+    server: upload.example.com
+    port: 443
+    uuid: ${UUID}
+    network: xhttp
+    xhttp-opts:
+      mode: stream-up
+      download-settings:
+        tls: true
+        shadow-tls-opts: { password: download-pass, version: 4 }`);
+
+        const output = loadProducedYaml('Mihomo', proxies).proxies;
+
+        expect(output.map((proxy) => proxy.name)).to.deep.equal([
+            'XHTTP ShadowTLS Default Version',
+        ]);
+        expect(
+            output[0]['xhttp-opts']['download-settings']['shadow-tls-opts']
+                .version,
+        ).to.equal(0);
+    });
+
     it('filters Mihomo Snell shadow-tls when obfs also exists', function () {
         const proxy = {
             type: 'snell',
@@ -871,7 +1125,7 @@ describe('Proxy structured producers', function () {
         expect(shadowtls.tls).to.not.have.property('utls');
     });
 
-    it('keeps only Shadowsocks shadow-tls versions 1 through 3 for Mihomo', function () {
+    it('keeps supported shadow-tls versions and protocols for Mihomo', function () {
         const buildShadowTlsProxy = (name, version) => ({
             type: 'ss',
             name,
@@ -887,6 +1141,7 @@ describe('Proxy structured producers', function () {
             },
         });
         const proxies = [
+            buildShadowTlsProxy('SS ShadowTLS Invalid Version 0', 0),
             buildShadowTlsProxy('ShadowTLS 1', 1),
             {
                 type: 'ss',
@@ -906,7 +1161,7 @@ describe('Proxy structured producers', function () {
             buildShadowTlsProxy('ShadowTLS 4', 4),
             {
                 type: 'vmess',
-                name: 'VMess ShadowTLS',
+                name: 'VMess ShadowTLS Default Version',
                 server: 'vmess.example.com',
                 port: 443,
                 uuid: UUID,
@@ -915,7 +1170,21 @@ describe('Proxy structured producers', function () {
                 'plugin-opts': {
                     host: 'mask.example.com',
                     password: 'shadow-pass',
-                    version: 3,
+                    version: 0,
+                },
+            },
+            {
+                type: 'vmess',
+                name: 'VMess ShadowTLS Invalid Version',
+                server: 'vmess.example.com',
+                port: 443,
+                uuid: UUID,
+                cipher: 'auto',
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    host: 'mask.example.com',
+                    password: 'shadow-pass',
+                    version: 4,
                 },
             },
         ];
@@ -927,15 +1196,24 @@ describe('Proxy structured producers', function () {
             'ShadowTLS 1',
             'ShadowTLS 2',
             'ShadowTLS 3',
+            'VMess ShadowTLS Default Version',
         ]);
         expect(
-            internal.map((proxy) => proxy['plugin-opts'].version),
+            internal
+                .filter((proxy) => proxy.type === 'ss')
+                .map((proxy) => proxy['plugin-opts'].version),
         ).to.deep.equal([1, 2, 3]);
         expect(external.proxies.map((proxy) => proxy.name)).to.deep.equal([
             'ShadowTLS 1',
             'ShadowTLS 2',
             'ShadowTLS 3',
+            'VMess ShadowTLS Default Version',
         ]);
+        expect(
+            external.proxies.find((proxy) => proxy.type === 'vmess')[
+                'shadow-tls-opts'
+            ].version,
+        ).to.equal(0);
     });
 
     it('keeps only supported shadowsocks v2ray-plugin modes for Shadowrocket by default', function () {

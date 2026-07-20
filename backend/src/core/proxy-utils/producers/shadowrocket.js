@@ -3,6 +3,7 @@ import {
     isPresent,
     isShadowsocksOverTls,
     produceProxyListOutput,
+    restoreShadowTLSProxyOpts,
     supportsShadowsocksV2rayPluginMode,
 } from '@/core/proxy-utils/producers/utils';
 import {
@@ -58,6 +59,8 @@ export default function Shadowrocket_Producer() {
                 return true;
             })
             .map((proxy) => {
+                restoreShadowTLSProxyOpts(proxy);
+
                 if (proxy.type === 'vmess') {
                     // handle vmess aead
                     if (isPresent(proxy, 'aead')) {

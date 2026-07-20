@@ -3,6 +3,7 @@ import {
     isPresent,
     normalizePluginMuxBooleanValue,
     produceProxyListOutput,
+    restoreShadowTLSProxyOpts,
     supportsShadowsocksV2rayPluginMode,
 } from '@/core/proxy-utils/producers/utils';
 import { isNotBlank, isPlainObject } from '@/utils';
@@ -76,11 +77,34 @@ export default function ClashMeta_Producer() {
                     return false;
                 } else if (
                     hasMihomoShadowTls(proxy) &&
-                    (!['ss', 'snell'].includes(proxy.type) ||
+                    (![
+                        'ss',
+                        'snell',
+                        'vmess',
+                        'vless',
+                        'trojan',
+                        'anytls',
+                    ].includes(proxy.type) ||
                         !isSupportedMihomoVersion(
                             getMihomoShadowTlsVersion(proxy),
-                            [1, 2, 3],
+                            ['ss', 'snell'].includes(proxy.type)
+                                ? [1, 2, 3]
+                                : [0, 1, 2, 3],
                         ))
+                ) {
+                    return false;
+                } else if (
+                    proxy.type === 'vless' &&
+                    proxy.network === 'xhttp' &&
+                    hasMihomoShadowTls(
+                        proxy['xhttp-opts']?.['download-settings'],
+                    ) &&
+                    !isSupportedMihomoVersion(
+                        getMihomoShadowTlsVersion(
+                            proxy['xhttp-opts']['download-settings'],
+                        ),
+                        [0, 1, 2, 3],
+                    )
                 ) {
                     return false;
                 } else if (hasMihomoSnellShadowTlsObfsConflict(proxy)) {
@@ -149,6 +173,8 @@ export default function ClashMeta_Producer() {
             })
             .map((proxy) => {
                 warnMihomoUnsupportedEchDnsFields(proxy, type);
+
+                restoreShadowTLSProxyOpts(proxy);
 
                 if (proxy['reality-opts'] && !proxy['client-fingerprint']) {
                     proxy['client-fingerprint'] = 'chrome';
