@@ -1065,6 +1065,348 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('exports stream protocols with ShadowTLS as sing-box chained outbounds', function () {
+        const proxies = [
+            {
+                type: 'vmess',
+                uuid: UUID,
+                cipher: 'auto',
+                tls: true,
+            },
+            {
+                type: 'vless',
+                uuid: UUID,
+                tls: true,
+            },
+            {
+                type: 'trojan',
+                password: 'secret',
+            },
+        ].map((proxy) => ({
+            ...proxy,
+            name: `${proxy.type} ShadowTLS`,
+            server: `${proxy.type}.example.com`,
+            port: 443,
+            plugin: 'shadow-tls',
+            'plugin-opts': {
+                host: `${proxy.type}-mask.example.com`,
+                password: `${proxy.type}-shadow`,
+                version: 3,
+                alpn: ['h2', 'http/1.1'],
+            },
+        }));
+
+        const output = loadProducedJson('sing-box', proxies, {
+            'include-unsupported-proxy': true,
+        });
+
+        expect(output.outbounds).to.have.length(6);
+        expect(output.outbounds.map((item) => item.tag)).to.deep.equal(
+            proxies.flatMap((proxy) => [
+                proxy.name,
+                `${proxy.name}_shadowtls`,
+            ]),
+        );
+        for (const proxy of proxies) {
+            const outbound = output.outbounds.find(
+                (item) => item.tag === proxy.name,
+            );
+            const shadowtls = output.outbounds.find(
+                (item) => item.tag === `${proxy.name}_shadowtls`,
+            );
+
+            expectSubset(outbound, {
+                type: proxy.type,
+                server: proxy.server,
+                server_port: proxy.port,
+                detour: `${proxy.name}_shadowtls`,
+            });
+            expect(outbound).to.not.have.property('tls');
+            expectSubset(shadowtls, {
+                type: 'shadowtls',
+                server: proxy.server,
+                server_port: proxy.port,
+                version: 3,
+                password: `${proxy.type}-shadow`,
+                tls: {
+                    enabled: true,
+                    server_name: `${proxy.type}-mask.example.com`,
+                    alpn: ['h2', 'http/1.1'],
+                },
+            });
+        }
+    });
+
+    it('preserves stream transports on sing-box ShadowTLS chains', function () {
+        const proxies = [
+            {
+                type: 'vmess',
+                uuid: UUID,
+                cipher: 'auto',
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: { Host: 'ws-target.example.com' },
+                },
+            },
+            {
+                type: 'vless',
+                uuid: UUID,
+                network: 'http',
+                'http-opts': {
+                    path: ['/http'],
+                    headers: { Host: ['http-target.example.com'] },
+                },
+            },
+            {
+                type: 'trojan',
+                password: 'secret',
+                network: 'grpc',
+                'grpc-opts': { 'grpc-service-name': 'trojan-service' },
+            },
+        ].map((proxy) => ({
+            ...proxy,
+            name: `${proxy.type} ShadowTLS Transport`,
+            server: `${proxy.type}-transport.example.com`,
+            port: 443,
+            tls: true,
+            plugin: 'shadow-tls',
+            'plugin-opts': {
+                host: `${proxy.type}-mask.example.com`,
+                password: 'shadow-password',
+                version: 2,
+            },
+        }));
+
+        const output = loadProducedJson('sing-box', proxies);
+        const findOutbound = (type) =>
+            output.outbounds.find(
+                (item) => item.tag === `${type} ShadowTLS Transport`,
+            );
+
+        expectSubset(findOutbound('vmess'), {
+            server: 'vmess-transport.example.com',
+            server_port: 443,
+            transport: {
+                type: 'ws',
+                path: '/ws',
+                headers: { Host: 'ws-target.example.com' },
+            },
+        });
+        expectSubset(findOutbound('vless'), {
+            server: 'vless-transport.example.com',
+            server_port: 443,
+            transport: {
+                type: 'http',
+                path: '/http',
+                host: 'http-target.example.com',
+            },
+        });
+        expectSubset(findOutbound('trojan'), {
+            server: 'trojan-transport.example.com',
+            server_port: 443,
+            transport: {
+                type: 'grpc',
+                service_name: 'trojan-service',
+            },
+        });
+    });
+
+    it('normalizes active stream ShadowTLS versions without enabling empty configs', function () {
+        const proxies = [
+            {
+                type: 'vmess',
+                name: 'VMess ShadowTLS Default Version',
+                uuid: UUID,
+                cipher: 'auto',
+                'plugin-opts': {
+                    host: 'vmess-mask.example.com',
+                    password: 'shadow-password',
+                },
+            },
+            {
+                type: 'vless',
+                name: 'VLESS ShadowTLS Zero Version',
+                uuid: UUID,
+                'plugin-opts': {
+                    host: 'vless-mask.example.com',
+                    password: 'shadow-password',
+                    version: 0,
+                },
+            },
+            {
+                type: 'trojan',
+                name: 'Trojan ShadowTLS String Version',
+                password: 'secret',
+                'plugin-opts': {
+                    host: 'trojan-mask.example.com',
+                    password: 'shadow-password',
+                    version: '1',
+                },
+            },
+            {
+                type: 'vmess',
+                name: 'VMess ShadowTLS Host Only',
+                uuid: UUID,
+                cipher: 'auto',
+                'plugin-opts': { host: 'host-only.example.com' },
+            },
+            {
+                type: 'vless',
+                name: 'VLESS ShadowTLS Empty Zero',
+                uuid: UUID,
+                'plugin-opts': {
+                    host: 'empty-zero.example.com',
+                    password: '',
+                    version: 0,
+                },
+            },
+        ].map((proxy) => ({
+            ...proxy,
+            server: `${proxy.type}-version.example.com`,
+            port: 443,
+            tls: true,
+            plugin: 'shadow-tls',
+        }));
+
+        const output = loadProducedJson('sing-box', proxies);
+        const findOutbound = (tag) =>
+            output.outbounds.find((item) => item.tag === tag);
+
+        expect(
+            findOutbound('VMess ShadowTLS Default Version_shadowtls').version,
+        ).to.equal(2);
+        expect(
+            findOutbound('VLESS ShadowTLS Zero Version_shadowtls').version,
+        ).to.equal(2);
+        expect(
+            findOutbound('Trojan ShadowTLS String Version_shadowtls').version,
+        ).to.equal(1);
+        for (const tag of [
+            'VMess ShadowTLS Host Only',
+            'VLESS ShadowTLS Empty Zero',
+        ]) {
+            expect(findOutbound(tag)).to.not.have.property('detour');
+            expect(findOutbound(`${tag}_shadowtls`)).to.equal(undefined);
+        }
+    });
+
+    it('filters invalid stream ShadowTLS versions atomically', function () {
+        const cases = [
+            ['vmess', 'fractional', 1.5],
+            ['vless', 'out of range', 4],
+            ['trojan', 'non numeric', 'latest'],
+        ];
+        const proxies = cases.map(([type, label, version]) => ({
+            type,
+            name: `${type} ShadowTLS ${label}`,
+            server: `${type}-invalid.example.com`,
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            password: 'secret',
+            tls: true,
+            plugin: 'shadow-tls',
+            'plugin-opts': {
+                host: `${type}-mask.example.com`,
+                password: 'shadow-password',
+                version,
+            },
+        }));
+
+        const { result, errors } = captureErrors(() =>
+            loadProducedJson('sing-box', proxies),
+        );
+
+        expect(result.outbounds).to.deep.equal([]);
+        expect(errors).to.deep.equal(
+            cases.map(
+                ([type, label, version]) =>
+                    `Platform sing-box does not support shadow-tls version ${version} for proxy ${type} ShadowTLS ${label}`,
+            ),
+        );
+    });
+
+    it('filters unsupported stream ShadowTLS chains atomically', function () {
+        const proxies = [
+            {
+                type: 'vmess',
+                name: 'VMess ShadowTLS H2',
+                network: 'h2',
+            },
+            {
+                type: 'vless',
+                name: 'VLESS ShadowTLS H2',
+                network: 'h2',
+            },
+            {
+                type: 'vless',
+                name: 'VLESS ShadowTLS Vision',
+                flow: 'xtls-rprx-vision',
+            },
+            {
+                type: 'vless',
+                name: 'VLESS ShadowTLS Reality',
+                'reality-opts': {
+                    'public-key': 'fake-public-key',
+                    'short-id': '01',
+                },
+            },
+        ].map((proxy) => ({
+            ...proxy,
+            server: `${proxy.type}-unsupported.example.com`,
+            port: 443,
+            uuid: UUID,
+            cipher: 'auto',
+            tls: true,
+            plugin: 'shadow-tls',
+            'plugin-opts': {
+                host: `${proxy.type}-mask.example.com`,
+                password: 'shadow-password',
+                version: 2,
+            },
+        }));
+
+        const { result, errors } = captureErrors(() =>
+            loadProducedJson('sing-box', proxies),
+        );
+
+        expect(result.outbounds).to.deep.equal([]);
+        expect(errors).to.deep.equal([
+            'Platform sing-box cannot chain ShadowTLS with network h2 for proxy VMess ShadowTLS H2',
+            'Platform sing-box cannot chain ShadowTLS with network h2 for proxy VLESS ShadowTLS H2',
+            'Platform sing-box cannot chain ShadowTLS with flow xtls-rprx-vision for proxy VLESS ShadowTLS Vision',
+            'Platform sing-box cannot chain ShadowTLS with Reality for proxy VLESS ShadowTLS Reality',
+        ]);
+    });
+
+    it('does not silently drop ShadowTLS from sing-box AnyTLS output', function () {
+        const proxy = {
+            type: 'anytls',
+            name: 'AnyTLS ShadowTLS',
+            server: 'anytls.example.com',
+            port: 443,
+            password: 'secret',
+            plugin: 'shadow-tls',
+            'plugin-opts': {
+                host: 'anytls-mask.example.com',
+                password: 'anytls-shadow',
+                version: 3,
+            },
+        };
+
+        const { result, errors } = captureErrors(() =>
+            loadProducedJson('sing-box', proxy, {
+                'include-unsupported-proxy': true,
+            }),
+        );
+
+        expect(result.outbounds).to.deep.equal([]);
+        expect(errors).to.deep.equal([
+            'Platform sing-box cannot replace AnyTLS TLS with ShadowTLS',
+        ]);
+    });
+
     it('does not emit sing-box ShadowTLS uTLS without client fingerprint', function () {
         const [proxy] = ProxyUtils.parse(`proxies:
   - name: SS ShadowTLS No Fingerprint
