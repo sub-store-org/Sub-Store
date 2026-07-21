@@ -187,8 +187,13 @@ fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
 tls_host = comma sni:("tls-host") equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1'); }
-tls_verification = comma "tls-verification" equals flag:bool { 
-    proxy["skip-cert-verify"] = !flag;
+tls_verification = comma "tls-verification" equals raw:$[^,]+ {
+    const value = raw.trim();
+    if (value === "true" || value === "false") {
+        proxy["skip-cert-verify"] = value !== "true";
+    } else {
+        proxy["name-cert-verify"] = value;
+    }
 }
 tls_fingerprint = comma "tls-cert-sha256" equals tls_fingerprint:$[^,]+ { proxy["tls-fingerprint"] = tls_fingerprint.trim(); }
 tls_pubkey_sha256 = comma "tls-pubkey-sha256" equals param:$[^=,]+ { proxy["tls-pubkey-sha256"] = param; }

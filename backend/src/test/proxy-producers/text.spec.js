@@ -32,6 +32,21 @@ function captureErrors(fn) {
 }
 
 describe('Proxy text producers', function () {
+    it('uses name-cert-verify as Quantumult X tls-verification', function () {
+        const output = produceExternal('QX', {
+            type: 'vless',
+            name: 'VLESS',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            'skip-cert-verify': true,
+            'name-cert-verify': 'verify.example.com',
+        });
+
+        expect(output).to.include('tls-verification=verify.example.com');
+    });
+
     it('produces Quantumult X shadowsocks over-tls lines from canonical tls nodes', function () {
         const output = produceExternal('QX', {
             type: 'ss',

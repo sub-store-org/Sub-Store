@@ -2474,6 +2474,13 @@ describe('Platform raw-format parser coverage', function () {
                 },
             },
             {
+                title: 'parses non-boolean tls-verification as name-cert-verify',
+                input: `vless=qx-vless-verify-name.example.com:443,method=none,password=${UUID},obfs=wss,tls-verification=true.example.com,tag=QX VLESS Verify Name`,
+                expected: {
+                    'name-cert-verify': 'true.example.com',
+                },
+            },
+            {
                 title: 'parses shadowsocks over-tls lines without obfs-host',
                 input: 'shadowsocks=qx-ss-tls-no-host.example.com:443,method=aes-128-gcm,password=secret,obfs=over-tls,udp-relay=true,tag=QX SS Over TLS No Host',
                 expected: {
