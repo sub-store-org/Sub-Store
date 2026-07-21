@@ -96,7 +96,7 @@ describe('open-api HTTP adapter', function () {
         expect(agentOptions[0].requestTls.allowH2).to.equal(false);
     });
 
-    it('adds a curl-like Accept header by default in Node.js', async function () {
+    it('normalizes Node.js request header names to lowercase', async function () {
         await HTTP({
             headers: {
                 'User-Agent': 'Surge',
@@ -104,21 +104,35 @@ describe('open-api HTTP adapter', function () {
         }).get('https://example.com/subscription');
 
         expect(requestOptions.headers).to.include({
-            'User-Agent': 'Surge',
-            Accept: '*/*',
+            'user-agent': 'Surge',
+            accept: '*/*',
         });
     });
 
     it('keeps an explicit Accept header in Node.js', async function () {
         await HTTP({
             headers: {
-                accept: 'application/json',
+                Accept: 'application/json',
             },
         }).get('https://example.com/subscription');
 
         expect(requestOptions.headers).to.deep.equal({
             accept: 'application/json',
         });
+    });
+
+    it('preserves __proto__ headers when normalizing names', async function () {
+        await HTTP({
+            headers: Object.fromEntries([['__proto__', 'sent']]),
+        }).get('https://example.com/subscription');
+
+        expect(
+            Object.prototype.hasOwnProperty.call(
+                requestOptions.headers,
+                '__proto__',
+            ),
+        ).to.equal(true);
+        expect(requestOptions.headers.__proto__).to.equal('sent');
     });
 
     it('omits Accept when callers set it to null in Node.js', async function () {
@@ -130,7 +144,7 @@ describe('open-api HTTP adapter', function () {
         }).get('https://example.com/subscription');
 
         expect(requestOptions.headers).to.deep.equal({
-            'User-Agent': 'Surge',
+            'user-agent': 'Surge',
         });
     });
 });

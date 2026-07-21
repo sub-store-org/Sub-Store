@@ -44,20 +44,23 @@ function parseSocks5Uri(uri) {
 }
 
 function normalizeNodeRequestHeaders(headers) {
-    const normalized = { ...(headers || {}) };
+    const normalized = [];
     let hasAccept = false;
 
-    for (const key of Object.keys(normalized)) {
-        if (key.toLowerCase() !== 'accept') continue;
-        hasAccept = true;
-        if (normalized[key] == null) delete normalized[key];
+    for (const [key, value] of Object.entries(headers || {})) {
+        const normalizedKey = key.toLowerCase();
+        if (normalizedKey === 'accept') {
+            hasAccept = true;
+            if (value == null) continue;
+        }
+        normalized.push([normalizedKey, value]);
     }
 
     if (!hasAccept) {
-        normalized.Accept = '*/*';
+        normalized.push(['accept', '*/*']);
     }
 
-    return normalized;
+    return Object.fromEntries(normalized);
 }
 
 export class OpenAPI {
