@@ -165,7 +165,7 @@ This project is under the GPL V3 LICENSE.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=sub-store-org/sub-store&type=Date)](https://star-history.com/#sub-store-org/sub-store&Date)
+[![Star History Chart](https://api.star-history.com/chart?repos=sub-store-org/sub-store%2Csub-store-org/Sub-Store-Front-End&type=date&legend=top-left&sealed_token=eosyz0LudI33OwdhCobxPdrzc7N995D0MQkMYW6ebwWqEomQ2dshRf-NBVYCc4Gtrq42RSaQLARZItWSFEutp_SKVd_yCm7c1z96JKJKjOw9DoCioeno6A)](https://www.star-history.com/?repos=sub-store-org%2Fsub-store%2Csub-store-org%2FSub-Store-Front-End&type=date&legend=top-left)
 
 ## Acknowledgements
 
