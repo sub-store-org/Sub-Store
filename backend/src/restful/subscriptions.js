@@ -256,6 +256,7 @@ function getSubscription(req, res) {
     if (sub) {
         if (raw) {
             res.set('content-type', 'application/json')
+                .set('access-control-expose-headers', 'content-disposition')
                 .set(
                     'content-disposition',
                     `attachment; filename="${encodeURIComponent(

@@ -46,6 +46,7 @@ function getCollection(req, res) {
     if (collection) {
         if (raw) {
             res.set('content-type', 'application/json')
+                .set('access-control-expose-headers', 'content-disposition')
                 .set(
                     'content-disposition',
                     `attachment; filename="${encodeURIComponent(
