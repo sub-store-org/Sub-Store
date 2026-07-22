@@ -165,7 +165,10 @@ This project is under the GPL V3 LICENSE.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=sub-store-org/sub-store&type=Date)](https://star-history.com/#sub-store-org/sub-store&Date)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sub-store-org/Sub-Store/refs/heads/star-history/assets/my-star-history/star-history-dark.svg">
+  <img src="https://raw.githubusercontent.com/sub-store-org/Sub-Store/refs/heads/star-history/assets/my-star-history/star-history-light.svg" alt="Star History">
+</picture>
 
 ## Acknowledgements
 
