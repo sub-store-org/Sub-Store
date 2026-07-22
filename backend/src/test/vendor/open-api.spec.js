@@ -19,8 +19,10 @@ describe('open-api HTTP adapter', function () {
     let originalEnv;
     let originalEnvHttpProxyAgent;
     let originalProxyAgent;
+    let originalRedirect;
     let originalRequest;
     let agentOptions;
+    let redirectOptions;
     let requestOptions;
 
     beforeEach(function () {
@@ -33,8 +35,10 @@ describe('open-api HTTP adapter', function () {
 
         originalEnvHttpProxyAgent = undici.EnvHttpProxyAgent;
         originalProxyAgent = undici.ProxyAgent;
+        originalRedirect = undici.interceptors.redirect;
         originalRequest = undici.request;
         agentOptions = [];
+        redirectOptions = undefined;
         requestOptions = undefined;
 
         class CapturingAgent {
@@ -49,6 +53,10 @@ describe('open-api HTTP adapter', function () {
 
         undici.EnvHttpProxyAgent = CapturingAgent;
         undici.ProxyAgent = CapturingAgent;
+        undici.interceptors.redirect = (options) => {
+            redirectOptions = options;
+            return () => {};
+        };
         undici.request = async (_url, options) => {
             requestOptions = options;
             return {
@@ -65,6 +73,7 @@ describe('open-api HTTP adapter', function () {
     afterEach(function () {
         undici.EnvHttpProxyAgent = originalEnvHttpProxyAgent;
         undici.ProxyAgent = originalProxyAgent;
+        undici.interceptors.redirect = originalRedirect;
         undici.request = originalRequest;
         proxyEnvKeys.forEach((key) => {
             if (originalEnv[key] == null) {
@@ -94,6 +103,33 @@ describe('open-api HTTP adapter', function () {
         expect(agentOptions[0].allowH2).to.equal(false);
         expect(agentOptions[0].connect.allowH2).to.equal(false);
         expect(agentOptions[0].requestTls.allowH2).to.equal(false);
+    });
+
+    it('passes proxyTunnel to undici proxy agents', async function () {
+        await HTTP().get({
+            url: 'http://example.com/subscription',
+            proxy: 'http://127.0.0.1:8080',
+            proxyTunnel: true,
+        });
+        await HTTP().get({
+            url: 'http://example.com/subscription',
+            proxyTunnel: true,
+        });
+
+        expect(agentOptions).to.have.length(2);
+        expect(agentOptions.map(({ proxyTunnel }) => proxyTunnel)).to.deep.equal([
+            true,
+            true,
+        ]);
+    });
+
+    it('uses the Undici option that throws at the redirect limit', async function () {
+        await HTTP().get('https://example.com/subscription');
+
+        expect(redirectOptions).to.deep.equal({
+            maxRedirections: 3,
+            throwOnMaxRedirect: true,
+        });
     });
 
     it('normalizes Node.js request header names to lowercase', async function () {

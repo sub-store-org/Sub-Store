@@ -8,6 +8,9 @@ on:
       - master
     paths:
       - "backend/package.json"
+concurrency:
+  group: build
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -13,6 +13,7 @@ import {
 let $;
 let openApi;
 let download;
+let downloadFile;
 let resourceCache;
 let headersResourceCache;
 let originalRead;
@@ -49,7 +50,7 @@ describe('download github proxy regex', function () {
         ({
             default: headersResourceCache,
         } = require('@/utils/headers-resource-cache'));
-        ({ default: download } = require('@/utils/download'));
+        ({ default: download, downloadFile } = require('@/utils/download'));
         ageUtils = require('@/utils/age');
 
         originalRead = $.read.bind($);
@@ -320,5 +321,44 @@ describe('download github proxy regex', function () {
         expect(errorLogs.join('\n')).to.not.contain(
             wrongPair['age-secret-key'],
         );
+    });
+
+    it('uses the Undici option that throws at the file redirect limit', async function () {
+        const undici = eval("require('undici')");
+        const originalAgent = undici.Agent;
+        const originalRedirect = undici.interceptors.redirect;
+        const originalRequest = undici.request;
+        let redirectOptions;
+        let error;
+
+        undici.Agent = class {
+            compose() {
+                return this;
+            }
+        };
+        undici.interceptors.redirect = (options) => {
+            redirectOptions = options;
+            return () => {};
+        };
+        undici.request = async () => ({ statusCode: 500 });
+
+        try {
+            await downloadFile(
+                'https://example.com/redirecting-file',
+                path.join(tempDir, 'redirecting-file'),
+            );
+        } catch (e) {
+            error = e;
+        } finally {
+            undici.Agent = originalAgent;
+            undici.interceptors.redirect = originalRedirect;
+            undici.request = originalRequest;
+        }
+
+        expect(error).to.be.instanceOf(Error);
+        expect(redirectOptions).to.deep.equal({
+            maxRedirections: 3,
+            throwOnMaxRedirect: true,
+        });
     });
 });

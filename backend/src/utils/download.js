@@ -521,7 +521,7 @@ export async function downloadFile(url, file) {
         dispatcher: new Agent().compose(
             interceptors.redirect({
                 maxRedirections: 3,
-                throwOnRedirect: true,
+                throwOnMaxRedirect: true,
             }),
         ),
     });

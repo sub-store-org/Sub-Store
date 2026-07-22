@@ -570,12 +570,14 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                                     ...agentOpts,
                                     uri: opts.proxy,
                                     requestTls: tlsOptions,
+                                    proxyTunnel: opts.proxyTunnel,
                                 });
                             }
                         } else {
                             dispatcher = new EnvHttpProxyAgent({
                                 ...agentOpts,
                                 requestTls: tlsOptions,
+                                proxyTunnel: opts.proxyTunnel,
                             });
                         }
                         const response = await request(opts.url, {
@@ -584,7 +586,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                             dispatcher: dispatcher.compose(
                                 interceptors.redirect({
                                     maxRedirections: 3,
-                                    throwOnMaxRedirects: true,
+                                    throwOnMaxRedirect: true,
                                 }),
                             ),
                         });
