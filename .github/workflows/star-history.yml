@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: xream/mystarhistory@2ddda1fdf89924ca35d5c254e9a6c970802fbec5
+      - uses: carsteneu/mystarhistory@v1
         with:
           repos: ${{ github.repository }}
           token: ${{ secrets.STAR_HISTORY_TOKEN }}
