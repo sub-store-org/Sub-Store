@@ -8,6 +8,7 @@ const VLESS_WS = `vless://${UUID}@1.1.1.1:443?security=tls&type=ws&host=cdn.exam
 
 let $;
 let registerDownloadRoutes;
+let shouldFetchRemoteFlowHeaders;
 let originalError;
 let originalInfo;
 let originalNotify;
@@ -171,7 +172,10 @@ async function expectDecryptFailure(armored, secretKey) {
 describe('download routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
-        ({ default: registerDownloadRoutes } = require('@/restful/download'));
+        ({
+            default: registerDownloadRoutes,
+            shouldFetchRemoteFlowHeaders,
+        } = require('@/restful/download'));
         ageUtils = require('@/utils/age');
 
         originalRead = $.read.bind($);
@@ -681,4 +685,43 @@ describe('download routes', function () {
         await expectDecryptFailure(res.sent, sourcePair['age-secret-key']);
     });
 
+    it('skips remote flow header requests when static sub-userinfo is configured', function () {
+        expect(
+            shouldFetchRemoteFlowHeaders(
+                {},
+                'upload=1; download=2; total=3',
+                'https://example.com/sub',
+            ),
+        ).to.equal(false);
+    });
+
+    it('keeps remote flow header requests for custom flow URLs or missing sub-userinfo', function () {
+        expect(
+            shouldFetchRemoteFlowHeaders(
+                {},
+                'https://example.com/flow',
+                'https://example.com/sub',
+            ),
+        ).to.equal(true);
+        expect(
+            shouldFetchRemoteFlowHeaders({}, undefined, 'https://example.com/sub'),
+        ).to.equal(true);
+    });
+
+    it('respects noFlow and non-HTTP subscription URLs for remote flow headers', function () {
+        expect(
+            shouldFetchRemoteFlowHeaders(
+                { noFlow: true },
+                undefined,
+                'https://example.com/sub',
+            ),
+        ).to.equal(false);
+        expect(
+            shouldFetchRemoteFlowHeaders(
+                {},
+                undefined,
+                'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=',
+            ),
+        ).to.equal(false);
+    });
 });

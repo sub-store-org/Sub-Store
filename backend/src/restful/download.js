@@ -377,7 +377,13 @@ async function downloadSubscription(req, res) {
                             }
                         }
                     }
-                    if (!$arguments.noFlow && /^https?/.test(url)) {
+                    if (
+                        shouldFetchRemoteFlowHeaders(
+                            $arguments,
+                            sub.subUserinfo,
+                            url,
+                        )
+                    ) {
                         // forward flow headers
                         flowInfo = await getFlowHeaders(
                             $arguments?.insecure ? `${url}#insecure` : url,
@@ -542,6 +548,18 @@ async function downloadSubscription(req, res) {
             404,
         );
     }
+}
+
+export function shouldFetchRemoteFlowHeaders(
+    $arguments = {},
+    subUserinfo,
+    url,
+) {
+    if ($arguments.noFlow || !/^https?/.test(url)) {
+        return false;
+    }
+
+    return !subUserinfo || /^https?:\/\//.test(subUserinfo);
 }
 
 async function downloadCollection(req, res) {
