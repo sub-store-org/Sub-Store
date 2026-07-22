@@ -132,6 +132,31 @@ describe('open-api HTTP adapter', function () {
         });
     });
 
+    it('rejects request setup errors', async function () {
+        let timeoutCalls = 0;
+        const options = {
+            url: 'https://example.com/subscription',
+            timeout: 5,
+            events: {
+                onTimeout() {
+                    timeoutCalls += 1;
+                },
+            },
+        };
+        options.circular = options;
+
+        let error;
+        try {
+            await HTTP().get(options);
+        } catch (e) {
+            error = e;
+        }
+
+        expect(error).to.be.instanceOf(TypeError);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(timeoutCalls).to.equal(0);
+    });
+
     it('normalizes Node.js request header names to lowercase', async function () {
         await HTTP({
             headers: {

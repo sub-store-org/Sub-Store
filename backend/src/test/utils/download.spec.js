@@ -208,6 +208,27 @@ describe('download github proxy regex', function () {
         expect(maxActiveRequests).to.equal(1);
     });
 
+    it('logs download failures before rejecting', async function () {
+        openApi.HTTP = () => ({
+            get: async () => {
+                throw new Error('request setup failed');
+            },
+        });
+
+        let error;
+        try {
+            await download('https://example.com/failing.txt');
+        } catch (e) {
+            error = e;
+        }
+
+        expect(error).to.be.instanceOf(Error);
+        expect(error.message).to.equal(
+            '无法下载 URL https://example.com/failing.txt: request setup failed',
+        );
+        expect(errorLogs).to.deep.equal([error.message]);
+    });
+
     it('returns unpreprocessed raw content when requested', async function () {
         responseBody = [
             'proxies:',

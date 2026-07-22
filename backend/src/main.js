@@ -22,5 +22,21 @@ console.log(
 import migrate from '@/utils/migration';
 import serve from '@/restful';
 
+if ($.env.isNode) {
+    if (typeof Promise.withResolvers !== 'function') {
+        eval("require('core-js/actual/promise/with-resolvers')");
+    }
+
+    const workerThreads = eval("require('node:worker_threads')");
+    if (typeof workerThreads.markAsUncloneable !== 'function') {
+        // ponytail: Node < 22 cannot mark web objects uncloneable; remove this fallback when the Android runtime reaches Node 22.
+        workerThreads.markAsUncloneable = () => {};
+    }
+
+    eval('process').on('uncaughtExceptionMonitor', (error, origin) => {
+        console.error(`[FATAL] ${origin}: ${error?.stack ?? error}`);
+    });
+}
+
 migrate();
 serve();

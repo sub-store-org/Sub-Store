@@ -484,7 +484,9 @@ export default async function download(
                     );
                 }
             }
-            throw new Error(`无法下载 URL ${safeUrl}: ${e.message ?? e}`);
+            const message = `无法下载 URL ${safeUrl}: ${e.message ?? e}`;
+            $.error(message);
+            throw new Error(message);
         }
     }
 
