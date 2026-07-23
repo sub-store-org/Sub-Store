@@ -3,24 +3,41 @@ import { Base64 } from 'js-base64';
 import $ from '@/core/app';
 
 export function normalizeClashYaml(raw) {
+    if (typeof raw !== 'string') return raw;
+
+    const normalizedRaw = raw.replace(
+        /(^|[,\s{])((?:sni|servername|peer):)([ \t]*)\[([^\]\n]+)\]\((https?:\/\/[^\s)\n]+)\)/gim,
+        (matched, prefix, key, spacing, label, url) => {
+            const trimmedLabel = label.trim();
+            if (/^[A-Za-z0-9.-]+$/.test(trimmedLabel)) {
+                return `${prefix}${key}${spacing}${trimmedLabel}`;
+            }
+            try {
+                const host = new URL(url).hostname;
+                return `${prefix}${key}${spacing}${host || trimmedLabel}`;
+            } catch (e) {
+                return `${prefix}${key}${spacing}${trimmedLabel}`;
+            }
+        },
+    );
+
     if (
-        typeof raw !== 'string' ||
-        !raw.includes('proxies:') ||
-        !raw.includes('short-id:')
+        !normalizedRaw.includes('proxies:') ||
+        !normalizedRaw.includes('short-id:')
     ) {
-        return raw;
+        return normalizedRaw;
     }
 
     try {
-        const content = safeLoad(raw);
+        const content = safeLoad(normalizedRaw);
         if (!Array.isArray(content.proxies) || content.proxies.length === 0)
-            return raw;
+            return normalizedRaw;
     } catch (e) {
-        return raw;
+        return normalizedRaw;
     }
     // 防止 VLESS 节点 reality-opts 里的 short-id 被 YAML 标量推断成数字
     // 例如 08 / 0088 在部分内核重新解析时会触发 invalid REALITY short ID
-    return raw.replace(/short-id:([ \t]*[^#\n,}]*)/g, (matched, value) => {
+    return normalizedRaw.replace(/short-id:([ \t]*[^#\n,}]*)/g, (matched, value) => {
         const afterTrim = value.trim();
 
         if (!afterTrim || afterTrim === '') {
@@ -110,7 +127,7 @@ function Clash() {
     const name = 'Clash Pre-processor';
     const test = function (raw) {
         if (!/proxies/.test(raw)) return false;
-        const content = safeLoad(raw);
+        const content = safeLoad(normalizeClashYaml(raw));
         return (
             Array.isArray(content.proxies) ||
             Array.isArray(content['proxy-groups'])

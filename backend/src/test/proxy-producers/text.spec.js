@@ -5,7 +5,7 @@ import { describe, it } from 'mocha';
 import $ from '@/core/app';
 import { ProxyUtils } from '@/core/proxy-utils';
 import QX_Producer from '@/core/proxy-utils/producers/qx';
-import { produceExternal, UUID } from './helpers';
+import { produceDefaultExternal, produceExternal, UUID } from './helpers';
 
 function captureWarns(fn) {
     const originalWarn = $.warn;
@@ -1607,6 +1607,75 @@ describe('Proxy text producers', function () {
         expect(output).to.not.include('ipv6-cidr');
     });
 
+    it('emits full Surfboard profiles by default', function () {
+        const output = produceDefaultExternal('Surfboard', [
+            {
+                type: 'trojan',
+                name: 'Trojan WS',
+                server: 'trojan.example.com',
+                port: 443,
+                password: 'secret',
+                network: 'ws',
+                tls: true,
+                sni: 'sni.example.com',
+            },
+            {
+                type: 'anytls',
+                name: 'AnyTLS',
+                server: 'anytls.example.com',
+                port: 443,
+                password: 'secret',
+                sni: 'anytls.example.com',
+                reuse: false,
+            },
+            {
+                type: 'ss',
+                name: 'SS',
+                server: 'ss.example.com',
+                port: 8388,
+                cipher: 'chacha20-ietf-poly1305',
+                password: 'secret',
+            },
+        ]);
+
+        expect(output).to.include('[General]');
+        expect(output).to.include('[Proxy]');
+        expect(output).to.include('[Proxy Group]');
+        expect(output).to.include('[Rule]');
+        expect(output).to.include(
+            'Trojan WS=trojan,trojan.example.com,443,password=secret,ws=true,ws-path=/,tls=true,sni=sni.example.com',
+        );
+        expect(output).to.include(
+            'AnyTLS=anytls,anytls.example.com,443,secret,sni=anytls.example.com,reuse=false',
+        );
+        expect(output).to.include('节点选择 = select, 自动选择, DIRECT, REJECT, Trojan WS, AnyTLS, SS');
+        expect(output).to.include('FINAL,节点选择');
+    });
+
+    it('sanitizes Surfboard profile names and newlines', function () {
+        const output = produceDefaultExternal('Surfboard', {
+            type: 'trojan',
+            name: 'Bad=Name,\nInjected',
+            server: 'trojan.example.com',
+            port: 443,
+            password: 'sec\nret',
+            network: 'ws',
+            tls: true,
+            sni: 'sni.example.com',
+            'ws-opts': {
+                headers: {
+                    Host: 'cdn.example.com',
+                    'X-Test': 'a\nb',
+                },
+            },
+        });
+
+        expect(output).to.include('BadNameInjected=trojan');
+        expect(output).to.include('password=secret');
+        expect(output).to.include('ws-headers=Host:cdn.example.com|X-Test:ab');
+        expect(output).to.not.include('sec\nret');
+    });
+
     it('produces Surfboard trojan websocket lines', function () {
         const output = produceExternal('Surfboard', {
             type: 'trojan',
@@ -1626,7 +1695,7 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            'Trojan=trojan,trojan.example.com,443,password=secret,ws=true,ws-path=/ws,ws-headers=Host:"cdn.example.com",tls=true,sni="sni.example.com"',
+            'Trojan=trojan,trojan.example.com,443,password=secret,ws=true,ws-path=/ws,ws-headers=Host:cdn.example.com,tls=true,sni=sni.example.com',
         );
     });
 
@@ -1646,7 +1715,7 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            'Surfboard Hysteria2=hysteria2,hy2.example.com,443,password="secret",port-hopping="8443;8445-8447",port-hopping-interval=30,sni="peer.example.com",skip-cert-verify=true,download-bandwidth=100,udp-relay=true',
+            'Surfboard Hysteria2=hysteria2,hy2.example.com,443,password="secret",port-hopping="8443;8445-8447",port-hopping-interval=30,sni=peer.example.com,skip-cert-verify=true,download-bandwidth=100,udp-relay=true',
         );
     });
 
@@ -1669,7 +1738,7 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            `ProxyTuic=tuic-v5,1.2.3.4,443,uuid=${UUID},password="pwd",alpn="h3",port-hopping="1234;5000-6000",port-hopping-interval=30,server-cert-fingerprint-sha256=fac26f65c034829da42d740d23c4a7202475a3834f0ebaecae5f934adbbfd640,sni="example.com",skip-cert-verify=true,udp-relay=true`,
+            `ProxyTuic=tuic-v5,1.2.3.4,443,uuid=${UUID},password="pwd",alpn="h3",port-hopping="1234;5000-6000",port-hopping-interval=30,server-cert-fingerprint-sha256=fac26f65c034829da42d740d23c4a7202475a3834f0ebaecae5f934adbbfd640,sni=example.com,skip-cert-verify=true,udp-relay=true`,
         );
     });
 
@@ -1705,7 +1774,7 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            'Surfboard Hysteria2 Plain=hysteria2,hy2.example.com,443,password="secret",sni="peer.example.com",skip-cert-verify=true',
+            'Surfboard Hysteria2 Plain=hysteria2,hy2.example.com,443,password="secret",sni=peer.example.com,skip-cert-verify=true',
         );
     });
 

@@ -6,8 +6,10 @@ import { ProxyUtils } from '@/core/proxy-utils';
 import {
     UUID,
     expectSubset,
+    loadDefaultProducedJson,
     loadProducedJson,
     loadProducedYaml,
+    produceDefaultExternal,
     produceExternal,
     produceInternal,
 } from './helpers';
@@ -37,6 +39,116 @@ function captureErrors(fn) {
 }
 
 describe('Proxy structured producers', function () {
+    it('emits full Clash-family profiles by default', function () {
+        const output = produceDefaultExternal('Mihomo', {
+            type: 'ss',
+            name: 'HK01',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'chacha20-ietf-poly1305',
+            password: 'secret',
+        });
+        const parsed = ProxyUtils.yaml.safeLoad(output);
+
+        expect(output).to.not.include('- {"name"');
+        expect(parsed['mixed-port']).to.equal(7890);
+        expect(parsed.proxies[0]).to.include({
+            name: 'HK01',
+            type: 'ss',
+            server: 'ss.example.com',
+        });
+        expect(parsed['proxy-groups'].map((group) => group.name)).to.include.members([
+            '节点选择',
+            '自动选择',
+            '故障转移',
+        ]);
+        expect(parsed.rules.at(-1)).to.equal('MATCH,节点选择');
+    });
+
+    it('normalizes Markdown SNI and emits full sing-box profiles by default', function () {
+        const raw = `
+proxies:
+  - { name: Trojan WS, type: trojan, server: trojan.example.com, port: 443, password: secret, udp: true, network: ws, sni: "[www.samsung.com](https://www.samsung.com)", skip-cert-verify: false }
+  - { name: AnyTLS, type: anytls, server: anytls.example.com, port: 443, password: secret, client-fingerprint: chrome, udp: true, alpn: [h2, http/1.1], sni: "[www.samsung.com](https://www.samsung.com)", skip-cert-verify: true }
+  - { name: SS, type: ss, server: ss.example.com, port: 8388, cipher: chacha20-ietf-poly1305, password: secret, udp: true }
+`;
+        const proxies = ProxyUtils.parse(raw);
+        expect(proxies.map((proxy) => proxy.sni).filter(Boolean)).to.deep.equal([
+            'www.samsung.com',
+            'www.samsung.com',
+        ]);
+
+        const clash = produceDefaultExternal('Mihomo', proxies);
+        expect(clash).to.not.include('[www.samsung.com](https://www.samsung.com)');
+        expect(ProxyUtils.yaml.safeLoad(clash).proxies).to.have.length(3);
+
+        const singbox = loadDefaultProducedJson('sing-box', proxies);
+        expect(singbox).to.have.property('dns');
+        expect(singbox).to.have.property('inbounds');
+        expect(singbox).to.have.property('route');
+        expect(singbox.experimental.clash_api.external_controller).to.equal(
+            '127.0.0.1:9090',
+        );
+        const selector = singbox.outbounds.find((item) => item.tag === '节点选择');
+        const urltest = singbox.outbounds.find((item) => item.tag === '自动选择');
+        const trojan = singbox.outbounds.find((item) => item.tag === 'Trojan WS');
+        const anytls = singbox.outbounds.find((item) => item.tag === 'AnyTLS');
+
+        expect(selector.outbounds).to.include.members(['自动选择', 'Trojan WS', 'AnyTLS', 'SS']);
+        expect(urltest.outbounds).to.include.members(['Trojan WS', 'AnyTLS', 'SS']);
+        expectSubset(trojan, {
+            type: 'trojan',
+            tls: { server_name: 'www.samsung.com' },
+            transport: { type: 'ws', path: '/' },
+        });
+        expect(anytls.tls.server_name).to.equal('www.samsung.com');
+        expect(anytls.domain_resolver).to.equal('local');
+    });
+
+    it('keeps legacy sing-box fragments when fragment is requested', function () {
+        const output = loadProducedJson('sing-box', {
+            type: 'ss',
+            name: 'SS',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'chacha20-ietf-poly1305',
+            password: 'secret',
+        });
+
+        expect(output).to.have.keys(['outbounds', 'endpoints']);
+        expect(output.outbounds[0].tag).to.equal('SS');
+    });
+
+    it('keeps sing-box websocket nodes without Host headers', function () {
+        const output = loadDefaultProducedJson('sing-box', {
+            type: 'trojan',
+            name: 'Trojan Header',
+            server: 'trojan.example.com',
+            port: 443,
+            password: 'secret',
+            tls: true,
+            network: 'ws',
+            'skip-cert-verify': true,
+            'ws-opts': {
+                headers: {
+                    'X-Test': '1',
+                },
+            },
+        });
+        const trojan = output.outbounds.find((item) => item.tag === 'Trojan Header');
+
+        expectSubset(trojan, {
+            tls: { server_name: 'trojan.example.com', insecure: true },
+            transport: {
+                type: 'ws',
+                path: '/',
+                headers: {
+                    'X-Test': '1',
+                },
+            },
+        });
+    });
+
     it('filters unsupported Clash proxies by default and normalizes vmess ws early data', function () {
         const proxies = [
             {

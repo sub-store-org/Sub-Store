@@ -108,8 +108,35 @@ const smuxParser = (smux, proxy) => {
     }
 };
 
+const normalizeHeaderValue = (value) => {
+    if (value === '') return undefined;
+    if (Array.isArray(value)) return value.map((item) => `${item}`).filter(Boolean);
+    return [`${value}`];
+};
+
+const mergeWsHeaders = (transport, wsHeaders = {}) => {
+    if (!wsHeaders || Object.keys(wsHeaders).length === 0) return;
+    const headers = {};
+    for (const key of Object.keys(wsHeaders)) {
+        const value = normalizeHeaderValue(wsHeaders[key]);
+        if (value?.length > 0) headers[key] = value;
+    }
+    const wsHost = headers.Host;
+    if (Array.isArray(wsHost) && wsHost.length === 1) {
+        for (const item of `Host:${wsHost[0]}`.split('\n')) {
+            const [key, ...rest] = item.split(':');
+            const value = rest.join(':');
+            if (!value || value.trim() === '') continue;
+            headers[key.trim()] = value.trim().split(',');
+        }
+    }
+    for (const key of Object.keys(headers)) {
+        transport.headers[key] = headers[key];
+    }
+};
+
 const wsParser = (proxy, parsedProxy) => {
-    const transport = { type: 'ws', headers: {} };
+    const transport = { type: 'ws', headers: {}, path: '/' };
     if (proxy['ws-opts']) {
         const {
             path: wsPath = '',
@@ -122,41 +149,10 @@ const wsParser = (proxy, parsedProxy) => {
             ? parseInt(max_early_data, 10)
             : undefined;
         if (wsPath !== '') transport.path = `${wsPath}`;
-        if (Object.keys(wsHeaders).length > 0) {
-            const headers = {};
-            for (const key of Object.keys(wsHeaders)) {
-                let value = wsHeaders[key];
-                if (value === '') continue;
-                if (!Array.isArray(value)) value = [`${value}`];
-                if (value.length > 0) headers[key] = value;
-            }
-            const { Host: wsHost } = headers;
-            if (wsHost.length === 1)
-                for (const item of `Host:${wsHost[0]}`.split('\n')) {
-                    const [key, value] = item.split(':');
-                    if (value.trim() === '') continue;
-                    headers[key.trim()] = value.trim().split(',');
-                }
-            transport.headers = headers;
-        }
+        mergeWsHeaders(transport, wsHeaders);
     }
     if (proxy['ws-headers']) {
-        const headers = {};
-        for (const key of Object.keys(proxy['ws-headers'])) {
-            let value = proxy['ws-headers'][key];
-            if (value === '') continue;
-            if (!Array.isArray(value)) value = [`${value}`];
-            if (value.length > 0) headers[key] = value;
-        }
-        const { Host: wsHost } = headers;
-        if (wsHost.length === 1)
-            for (const item of `Host:${wsHost[0]}`.split('\n')) {
-                const [key, value] = item.split(':');
-                if (value.trim() === '') continue;
-                headers[key.trim()] = value.trim().split(',');
-            }
-        for (const key of Object.keys(headers))
-            transport.headers[key] = headers[key];
+        mergeWsHeaders(transport, proxy['ws-headers']);
     }
     if (proxy['ws-path'] && proxy['ws-path'] !== '')
         transport.path = `${proxy['ws-path']}`;
@@ -170,11 +166,12 @@ const wsParser = (proxy, parsedProxy) => {
         }
     }
 
-    if (parsedProxy.tls.insecure)
-        parsedProxy.tls.server_name = transport.headers.Host[0];
+    const wsHost = transport.headers.Host;
+    if (parsedProxy.tls.insecure && Array.isArray(wsHost) && wsHost.length > 0)
+        parsedProxy.tls.server_name = wsHost[0];
     if (proxy['ws-opts'] && proxy['ws-opts']['v2ray-http-upgrade']) {
         transport.type = 'httpupgrade';
-        if (transport.headers.Host) {
+        if (Array.isArray(transport.headers.Host) && transport.headers.Host.length) {
             transport.host = transport.headers.Host[0];
             delete transport.headers.Host;
         }
@@ -1296,6 +1293,165 @@ const wireguardParser = (proxy = {}) => {
     return parsedProxy;
 };
 
+const SING_BOX_SELECTOR_TAG = '节点选择';
+const SING_BOX_URLTEST_TAG = '自动选择';
+const SING_BOX_DIRECT_TAG = 'DIRECT';
+
+function wantsSingBoxFragment(opts = {}) {
+    return Boolean(
+        opts.fragment ||
+            opts.outboundsOnly ||
+            opts['outbounds-only'] ||
+            opts.outboundOnly ||
+            opts['outbound-only'],
+    );
+}
+
+function getOutboundTags(outbounds = []) {
+    return outbounds.map((outbound) => outbound.tag).filter(Boolean);
+}
+
+function withDefaultDomainResolver(outbound) {
+    if (
+        outbound &&
+        outbound.type !== 'direct' &&
+        outbound.type !== 'selector' &&
+        outbound.type !== 'urltest' &&
+        !outbound.domain_resolver
+    ) {
+        outbound.domain_resolver = 'local';
+    }
+    return outbound;
+}
+
+function buildSingBoxConfig(categorized, opts = {}) {
+    const proxyTags = getOutboundTags(categorized.outbounds);
+    const selectableTags = proxyTags.length ? proxyTags : [SING_BOX_DIRECT_TAG];
+    const selectorTag = opts['selector-tag'] || opts.selectorTag || SING_BOX_SELECTOR_TAG;
+    const urltestTag = opts['urltest-tag'] || opts.urltestTag || SING_BOX_URLTEST_TAG;
+    const testUrl = opts['test-url'] || opts.testUrl || 'https://www.gstatic.com/generate_204';
+
+    return {
+        dns: {
+            servers: [
+                { type: 'local', tag: 'local' },
+                { type: 'udp', tag: 'remote', server: '1.1.1.1' },
+                { type: 'udp', tag: 'cn', server: '223.5.5.5' },
+            ],
+            rules: [{ rule_set: ['geosite-cn'], action: 'route', server: 'cn' }],
+            final: 'remote',
+        },
+        inbounds: [
+            {
+                tag: 'tun-in',
+                type: 'tun',
+                address: ['172.19.0.1/30', '2001:0470:f9da:fdfa::1/64'],
+                auto_route: true,
+                mtu: 9000,
+                stack: 'system',
+                strict_route: true,
+                route_exclude_address_set: ['geoip-cn'],
+            },
+            {
+                tag: 'socks-in',
+                type: 'socks',
+                listen: '127.0.0.1',
+                listen_port: Number(opts['socks-port'] || opts.socksPort) || 2333,
+                users: [],
+            },
+            {
+                tag: 'mixed-in',
+                type: 'mixed',
+                listen: '127.0.0.1',
+                listen_port: Number(opts['mixed-port'] || opts.mixedPort) || 2334,
+                users: [],
+            },
+        ],
+        outbounds: [
+            {
+                tag: SING_BOX_DIRECT_TAG,
+                type: 'direct',
+                domain_resolver: { server: 'local' },
+            },
+            {
+                tag: selectorTag,
+                type: 'selector',
+                interrupt_exist_connections: true,
+                outbounds: [urltestTag, ...selectableTags],
+            },
+            {
+                tag: urltestTag,
+                type: 'urltest',
+                url: testUrl,
+                interval: opts.interval || '10m',
+                tolerance: Number(opts.tolerance) || 50,
+                idle_timeout: opts['idle-timeout'] || opts.idleTimeout || '30m',
+                interrupt_exist_connections: false,
+                outbounds: selectableTags,
+            },
+            ...categorized.outbounds.map(withDefaultDomainResolver),
+        ],
+        endpoints: categorized.endpoints,
+        route: {
+            rules: [
+                { action: 'sniff' },
+                { protocol: 'dns', action: 'hijack-dns' },
+                {
+                    rule_set: ['category-ads-all'],
+                    action: 'reject',
+                    method: 'default',
+                    no_drop: false,
+                },
+                { ip_is_private: true, action: 'route', outbound: SING_BOX_DIRECT_TAG },
+                { clash_mode: '关闭代理', action: 'route', outbound: SING_BOX_DIRECT_TAG },
+                { clash_mode: '全局代理', action: 'route', outbound: selectorTag },
+                { rule_set: ['geosite-cn', 'geoip-cn'], action: 'route', outbound: SING_BOX_DIRECT_TAG },
+            ],
+            auto_detect_interface: true,
+            final: selectorTag,
+            default_domain_resolver: { server: 'remote' },
+            rule_set: [
+                {
+                    tag: 'geosite-geolocation-!cn',
+                    type: 'remote',
+                    format: 'binary',
+                    url: 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs',
+                    download_detour: selectorTag,
+                },
+                {
+                    tag: 'geoip-cn',
+                    type: 'remote',
+                    format: 'binary',
+                    url: 'https://raw.githubusercontent.com/Loyalsoldier/geoip/release/srs/cn.srs',
+                    download_detour: selectorTag,
+                },
+                {
+                    tag: 'geosite-cn',
+                    type: 'remote',
+                    format: 'binary',
+                    url: 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs',
+                    download_detour: selectorTag,
+                },
+                {
+                    tag: 'category-ads-all',
+                    type: 'remote',
+                    format: 'binary',
+                    url: 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs',
+                    download_detour: selectorTag,
+                },
+            ],
+        },
+        experimental: {
+            cache_file: { enabled: true },
+            clash_api: {
+                default_mode: '海外代理',
+                external_controller: opts['external-controller'] || '127.0.0.1:9090',
+                secret: opts.secret || '',
+            },
+        },
+    };
+}
+
 export default function singbox_Producer() {
     const type = 'ALL';
     const produce = (proxies, type, opts = {}) => {
@@ -1599,7 +1755,11 @@ export default function singbox_Producer() {
             { outbounds: [], endpoints: [] },
         );
 
-        return JSON.stringify(categorized, null, 2);
+        if (wantsSingBoxFragment(opts)) {
+            return JSON.stringify(categorized, null, 2);
+        }
+
+        return JSON.stringify(buildSingBoxConfig(categorized, opts), null, 2);
     };
     return { type, produce };
 }

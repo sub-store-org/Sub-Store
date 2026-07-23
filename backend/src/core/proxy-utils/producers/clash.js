@@ -218,7 +218,7 @@ export default function Clash_Producer() {
                 }
                 return proxy;
             });
-        return produceProxyListOutput(list, type, opts);
+        return produceProxyListOutput(list, type, { ...opts, _clashProfile: true });
     };
     return { type, produce };
 }

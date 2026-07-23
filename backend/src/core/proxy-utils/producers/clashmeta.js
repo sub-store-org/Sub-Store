@@ -441,7 +441,7 @@ export default function ClashMeta_Producer() {
                 return proxy;
             });
 
-        return produceProxyListOutput(list, type, opts);
+        return produceProxyListOutput(list, type, { ...opts, _clashProfile: true });
     };
     return { type, produce };
 }

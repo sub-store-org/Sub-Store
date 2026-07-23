@@ -549,6 +549,9 @@ function produce(proxies, targetPlatform, type, opts = {}) {
     });
 
     $.log(`Producing proxies for target: ${targetPlatform}`);
+    if (producer.produceAll && (type !== 'internal' || producer.type !== 'ALL')) {
+        return producer.produceAll(proxies, type, opts);
+    }
     if (typeof producer.type === 'undefined' || producer.type === 'SINGLE') {
         let list = proxies
             .map((proxy) => {
@@ -718,6 +721,60 @@ function formatTransportPath(path) {
     return path;
 }
 
+function normalizeHostnameValue(value) {
+    if (value == null || value === '') return value;
+    const raw = `${value}`.trim();
+    if (!raw || raw === 'off') return value;
+
+    const isValidHostname = (host) => {
+        const normalized = `${host || ''}`.trim().replace(/^\[/, '').replace(/\]$/, '');
+        return (
+            normalized.length > 0 &&
+            normalized.length <= 253 &&
+            !/^https?:\/\//i.test(normalized) &&
+            !/[\s/?#@()[\]]/.test(normalized) &&
+            (/^[A-Za-z0-9.-]+$/.test(normalized) || isIP(normalized))
+        );
+    };
+
+    const cleanHostname = (host) => `${host}`.trim().replace(/^\[/, '').replace(/\]$/, '');
+    const markdown = raw.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/i);
+    if (markdown) {
+        if (isValidHostname(markdown[1])) return cleanHostname(markdown[1]);
+        try {
+            const host = new URL(markdown[2]).hostname;
+            if (isValidHostname(host)) return cleanHostname(host);
+        } catch (e) {
+            return undefined;
+        }
+        return undefined;
+    }
+
+    if (/^https?:\/\//i.test(raw)) {
+        try {
+            const host = new URL(raw).hostname;
+            if (isValidHostname(host)) return cleanHostname(host);
+        } catch (e) {
+            return undefined;
+        }
+        return undefined;
+    }
+
+    return value;
+}
+
+function normalizeProxySni(proxy) {
+    for (const key of ['sni', 'servername', 'peer']) {
+        if (!Object.prototype.hasOwnProperty.call(proxy, key)) continue;
+        const normalized = normalizeHostnameValue(proxy[key]);
+        if (normalized == null) {
+            delete proxy[key];
+        } else {
+            proxy[key] = normalized;
+        }
+    }
+}
+
 function lastParse(proxy) {
     proxy.udp = ![false, 0, '0', 'false', 'off'].includes(
         typeof proxy.udp === 'string' ? proxy.udp.toLowerCase() : proxy.udp,
@@ -781,6 +838,7 @@ function lastParse(proxy) {
             .replace(/^\[/, '')
             .replace(/\]$/, '');
     }
+    normalizeProxySni(proxy);
     if (
         ['vmess', 'vless', 'trojan', 'anytls'].includes(proxy.type) &&
         proxy['shadow-tls-opts']

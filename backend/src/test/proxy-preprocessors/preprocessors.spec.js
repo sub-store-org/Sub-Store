@@ -47,6 +47,21 @@ describe('Proxy preprocessors', function () {
             expect(output).to.include('short-id: null');
         });
 
+        it('normalizes unquoted markdown SNI before parsing Clash YAML', function () {
+            const raw = `proxies:
+  - name: AnyTLS
+    type: anytls
+    server: anytls.example.com
+    port: 443
+    password: secret
+    sni: [www.samsung.com](https://www.samsung.com)
+`;
+
+            const output = normalizeClashYaml(raw);
+
+            expect(output).to.include('sni: www.samsung.com');
+        });
+
         it('keeps non-clash or invalid yaml input untouched', function () {
             const invalid = 'proxies:\n  - name: broken\n    short-id: [';
             const unrelated = 'ss://YWVzLTEyOC1nY206c2VjcmV0@example.com:8388';
@@ -173,7 +188,7 @@ proxy-groups:
             expect(output).to.include('"name":"Clash SS"');
             expect(output).to.include('"name":"Clash VLESS"');
             expect(output).to.include('"short-id":"08"');
-            expect(wrapped).to.match(/^proxies:\n  - /);
+            expect(wrapped).to.match(/^proxies:\n {2}- /);
         });
     });
 

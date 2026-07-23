@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import YAML from '@/utils/yaml';
-import { isIPv4, isIPv6 } from '@/utils';
+import { isIPv4, isIPv6, isNotBlank } from '@/utils';
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 
 export class Result {
@@ -184,24 +184,123 @@ export function getWireGuardAddressWithCIDR(proxy = {}, family = 'ipv4') {
     }`;
 }
 
+const DEFAULT_CLASH_PROXY_GROUP = '节点选择';
+const DEFAULT_CLASH_AUTO_GROUP = '自动选择';
+const DEFAULT_CLASH_FALLBACK_GROUP = '故障转移';
+
+function wantsProxyListFragment(opts = {}) {
+    return Boolean(
+        opts.fragment ||
+            opts['proxy-provider'] ||
+            opts.proxyProvider ||
+            opts.proxiesOnly ||
+            opts['proxies-only'],
+    );
+}
+
+function getProxyNames(list = []) {
+    return list.map((proxy) => proxy.name).filter((name) => isNotBlank(name));
+}
+
+function produceClashProxyListOutput(list) {
+    return normalizeClashYaml(
+        YAML.safeDump(
+            {
+                proxies: list,
+            },
+            {
+                lineWidth: -1,
+            },
+        ),
+    );
+}
+
+export function produceClashProfileOutput(list, opts = {}) {
+    const proxyGroup = opts['proxy-group'] || opts.proxyGroup || DEFAULT_CLASH_PROXY_GROUP;
+    const autoGroup = opts['auto-group'] || opts.autoGroup || DEFAULT_CLASH_AUTO_GROUP;
+    const fallbackGroup =
+        opts['fallback-group'] || opts.fallbackGroup || DEFAULT_CLASH_FALLBACK_GROUP;
+    const testUrl = opts['test-url'] || opts.testUrl || 'http://www.gstatic.com/generate_204';
+    const proxyNames = getProxyNames(list);
+    const selectable = [autoGroup, fallbackGroup, ...proxyNames];
+    const fullConfig = {
+        'mixed-port': Number(opts['mixed-port'] || opts.mixedPort) || 7890,
+        'allow-lan': opts['allow-lan'] ?? opts.allowLan ?? true,
+        'bind-address': opts['bind-address'] || opts.bindAddress || '*',
+        mode: opts.mode || 'rule',
+        'log-level': opts['log-level'] || opts.logLevel || 'info',
+        'external-controller':
+            opts['external-controller'] || opts.externalController || '127.0.0.1:9090',
+        dns: {
+            enable: true,
+            ipv6: false,
+            'default-nameserver': ['223.5.5.5', '119.29.29.29', '114.114.114.114'],
+            'enhanced-mode': 'fake-ip',
+            'fake-ip-range': '198.18.0.1/16',
+            'use-hosts': true,
+            'respect-rules': true,
+            'proxy-server-nameserver': ['223.5.5.5', '119.29.29.29', '114.114.114.114'],
+            nameserver: ['223.5.5.5', '119.29.29.29', '114.114.114.114'],
+            fallback: ['1.1.1.1', '8.8.8.8'],
+            'fallback-filter': {
+                geoip: true,
+                'geoip-code': 'CN',
+                geosite: ['gfw'],
+                ipcidr: ['240.0.0.0/4'],
+                domain: ['+.google.com', '+.facebook.com', '+.youtube.com'],
+            },
+        },
+        proxies: list,
+        'proxy-groups': [
+            {
+                name: proxyGroup,
+                type: 'select',
+                proxies: selectable,
+            },
+            {
+                name: autoGroup,
+                type: 'url-test',
+                proxies: proxyNames,
+                url: testUrl,
+                interval: Number(opts['test-interval'] || opts.testInterval) || 600,
+            },
+            {
+                name: fallbackGroup,
+                type: 'fallback',
+                proxies: proxyNames,
+                url: testUrl,
+                interval: Number(opts['fallback-interval'] || opts.fallbackInterval) || 600,
+            },
+        ],
+        rules: [
+            'DOMAIN-KEYWORD,adservice,REJECT',
+            'DOMAIN-SUFFIX,doubleclick.net,REJECT',
+            'IP-CIDR,127.0.0.0/8,DIRECT',
+            'IP-CIDR,10.0.0.0/8,DIRECT',
+            'IP-CIDR,172.16.0.0/12,DIRECT',
+            'IP-CIDR,192.168.0.0/16,DIRECT',
+            'IP-CIDR,100.64.0.0/10,DIRECT',
+            'DOMAIN-SUFFIX,cn,DIRECT',
+            'GEOIP,CN,DIRECT',
+            `MATCH,${proxyGroup}`,
+        ],
+    };
+
+    if (proxyNames.length === 0) {
+        fullConfig['proxy-groups'][0].proxies = ['DIRECT'];
+        fullConfig['proxy-groups'][1].proxies = ['DIRECT'];
+        fullConfig['proxy-groups'][2].proxies = ['DIRECT'];
+    }
+
+    return normalizeClashYaml(YAML.safeDump(fullConfig, { lineWidth: -1 }));
+}
+
 export function produceProxyListOutput(list, type, opts = {}) {
     if (type === 'internal') return list;
 
-    if (opts.prettyYaml || opts['pretty-yaml']) {
-        return normalizeClashYaml(
-            YAML.safeDump(
-                {
-                    proxies: list,
-                },
-                {
-                    lineWidth: -1,
-                },
-            ),
-        );
+    if (wantsProxyListFragment(opts) || !opts._clashProfile) {
+        return produceClashProxyListOutput(list);
     }
 
-    return (
-        'proxies:\n' +
-        list.map((proxy) => '  - ' + JSON.stringify(proxy) + '\n').join('')
-    );
+    return produceClashProfileOutput(list, opts);
 }
