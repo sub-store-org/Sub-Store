@@ -719,6 +719,33 @@ function formatTransportPath(path) {
 }
 
 function lastParse(proxy) {
+    // normalize keys to lowercase for all -opts keys and their subkeys
+    // 通常来说够用了, 在重构之前暂不考虑引入更复杂的逻辑
+    const hasOwn = (value, key) =>
+        Object.prototype.hasOwnProperty.call(value, key);
+    const normalizeOpts = (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+        for (const key of Object.keys(value)) {
+            const normalizedKey = key.toLowerCase();
+            if (key !== normalizedKey) {
+                if (!hasOwn(value, normalizedKey)) {
+                    value[normalizedKey] = value[key];
+                }
+                delete value[key];
+            }
+        }
+    };
+    for (const key of Object.keys(proxy)) {
+        const normalizedKey = key.toLowerCase();
+        if (!normalizedKey.endsWith('-opts')) continue;
+        if (key !== normalizedKey) {
+            if (!hasOwn(proxy, normalizedKey)) {
+                proxy[normalizedKey] = proxy[key];
+            }
+            delete proxy[key];
+        }
+        normalizeOpts(proxy[normalizedKey]);
+    }
     proxy.udp = ![false, 0, '0', 'false', 'off'].includes(
         typeof proxy.udp === 'string' ? proxy.udp.toLowerCase() : proxy.udp,
     );
