@@ -116,7 +116,7 @@ describe('settings routes', function () {
         });
     });
 
-    describe('age key settings', function () {
+    describe('validated settings', function () {
         const originalRead = $.read.bind($);
         const originalWrite = $.write.bind($);
 
@@ -214,6 +214,16 @@ describe('settings routes', function () {
             expect(res.body.error.message).to.contain(
                 'age-secret-key 仅支持',
             );
+        });
+
+        it('rejects an invalid Gist download token strategy', async function () {
+            const { res } = await patchSettings(
+                {},
+                { gistDownloadTokenStrategy: 'invalid' },
+            );
+
+            expect(res.body.status).to.equal('failed');
+            expect(res.body.error.message).to.contain('Token 处理方式');
         });
     });
 

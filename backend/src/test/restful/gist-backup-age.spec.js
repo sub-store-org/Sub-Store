@@ -74,7 +74,7 @@ describe('Gist backup age encryption', function () {
             return {};
         };
 
-        await gistBackupAction('upload', undefined, 'age');
+        await gistBackupAction('upload', { encode: 'age' });
 
         expect(uploadedContent).to.contain(AGE_ARMOR_HEADER);
         const decrypted = await decryptArmorIfPresent(
@@ -108,7 +108,7 @@ describe('Gist backup age encryption', function () {
             return {};
         };
 
-        await gistBackupAction('upload', undefined, 'base64');
+        await gistBackupAction('upload', { encode: 'base64' });
 
         expect(uploadedContent).not.to.contain(AGE_ARMOR_HEADER);
         const backup = JSON.parse(Base64.decode(uploadedContent));
@@ -143,7 +143,7 @@ describe('Gist backup age encryption', function () {
             return {};
         };
 
-        await gistBackupAction('upload', undefined, 'age');
+        await gistBackupAction('upload', { encode: 'age' });
 
         expect(uploadedContent).to.contain(AGE_ARMOR_HEADER);
     });
@@ -186,6 +186,80 @@ describe('Gist backup age encryption', function () {
         expect($.cache.subs).to.deep.equal(restoredBackup.subs);
     });
 
+    it('uses the stored token strategy when downloading', async function () {
+        installState({
+            settings: {
+                gistToken: 'current-token',
+                gistDownloadTokenStrategy: 'keep',
+            },
+            subs: [],
+        });
+
+        Gist.prototype.download = async () =>
+            Base64.encode(
+                JSON.stringify({
+                    settings: {
+                        gistToken: 'backup-token',
+                        gistDownloadTokenStrategy: 'overwrite',
+                    },
+                    subs: [],
+                }),
+            );
+
+        await gistBackupAction('download');
+
+        expect($.cache.settings.gistToken).to.equal('current-token');
+        expect($.cache.settings.gistDownloadTokenStrategy).to.equal('keep');
+    });
+
+    it('lets the query strategy override the stored token strategy', async function () {
+        installState({
+            settings: {
+                gistToken: 'current-token',
+                gistDownloadTokenStrategy: 'keep',
+            },
+            subs: [],
+        });
+
+        Gist.prototype.download = async () =>
+            Base64.encode(
+                JSON.stringify({
+                    settings: {
+                        gistToken: 'backup-token',
+                        gistDownloadTokenStrategy: 'overwrite',
+                    },
+                    subs: [],
+                }),
+            );
+
+        await gistBackupAction('download', {
+            tokenStrategy: 'overwrite',
+        });
+
+        expect($.cache.settings.gistToken).to.equal('backup-token');
+        expect($.cache.settings.gistDownloadTokenStrategy).to.equal('keep');
+    });
+
+    it('rejects an invalid query token strategy', async function () {
+        installState({
+            settings: {
+                gistToken: 'current-token',
+            },
+            subs: [],
+        });
+
+        let error;
+        try {
+            await gistBackupAction('download', {
+                tokenStrategy: 'invalid',
+            });
+        } catch (caught) {
+            error = caught;
+        }
+
+        expect(error?.message).to.contain('Token 处理方式');
+    });
+
     it('rejects age upload mode without an age secret key', async function () {
         installState({
             settings: {
@@ -198,7 +272,7 @@ describe('Gist backup age encryption', function () {
         Gist.prototype.download = async () => 'old backup';
 
         try {
-            await gistBackupAction('upload', undefined, 'age');
+            await gistBackupAction('upload', { encode: 'age' });
             throw new Error('Expected age upload to fail');
         } catch (error) {
             expect(error.message).to.contain('age 解密私钥');

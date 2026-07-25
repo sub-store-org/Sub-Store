@@ -1,4 +1,8 @@
-import { SETTINGS_KEY, ARTIFACT_REPOSITORY_KEY } from '@/constants';
+import {
+    SETTINGS_KEY,
+    ARTIFACT_REPOSITORY_KEY,
+    GIST_DOWNLOAD_TOKEN_STRATEGIES,
+} from '@/constants';
 import { success, failed } from './response';
 import { InternalServerError, RequestInvalidError } from '@/restful/errors';
 import $ from '@/core/app';
@@ -168,6 +172,17 @@ async function updateSettings(req, res) {
         }
         if (shouldValidateGistAgeSecretKey(newSettings, req.body)) {
             await normalizeAndValidateGistAgeSecretKey(newSettings);
+        }
+        if (
+            hasOwn(req.body, 'gistDownloadTokenStrategy') &&
+            !GIST_DOWNLOAD_TOKEN_STRATEGIES.includes(
+                req.body.gistDownloadTokenStrategy,
+            )
+        ) {
+            throw new RequestInvalidError(
+                'INVALID_GIST_DOWNLOAD_TOKEN_STRATEGY',
+                'Token 处理方式仅支持 ask、overwrite 或 keep',
+            );
         }
         $.write(newSettings, SETTINGS_KEY);
         clearLogSettingsCache();

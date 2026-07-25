@@ -25,6 +25,10 @@ import {
     isAgeArmor,
 } from '@/utils/age';
 
+const GIST_TOKEN_PATH = 'settings.gistToken';
+const GIST_DOWNLOAD_TOKEN_STRATEGY_PATH =
+    'settings.gistDownloadTokenStrategy';
+
 export default function register($app) {
     // utils
     $app.get('/api/utils/env', getEnv); // get runtime environment
@@ -211,9 +215,36 @@ async function decryptGistBackupContent(content, settings, encoding) {
     return decryptArmorIfPresent(content, ageSecretKey);
 }
 
-async function gistBackupAction(action, keep, encode) {
-    // read token
-    const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
+function resolveGistDownloadTokenStrategy(
+    storedStrategy,
+    queryStrategy,
+    keep,
+) {
+    if (queryStrategy !== undefined) {
+        if (queryStrategy !== 'overwrite' && queryStrategy !== 'keep') {
+            throw new RequestInvalidError(
+                'INVALID_GIST_DOWNLOAD_TOKEN_STRATEGY',
+                'Token 处理方式仅支持 overwrite 或 keep',
+            );
+        }
+        return queryStrategy;
+    }
+
+    if (keep !== undefined) {
+        return String(keep).split(',').includes(GIST_TOKEN_PATH)
+            ? 'keep'
+            : 'overwrite';
+    }
+
+    return storedStrategy === 'keep' ? 'keep' : 'overwrite';
+}
+
+async function gistBackupAction(
+    action,
+    { keep, encode, tokenStrategy: queryTokenStrategy } = {},
+) {
+    const settings = $.read(SETTINGS_KEY);
+    const { gistToken, syncPlatform } = settings;
     if (!gistToken) throw new Error('GitHub Token is required for backup!');
 
     const gist = new Gist({
@@ -223,14 +254,21 @@ async function gistBackupAction(action, keep, encode) {
     });
     let currentContent = readCurrentBackupContent();
     let content;
-    const settings = $.read(SETTINGS_KEY);
     const updated = settings.syncTime;
 
     const encoding = normalizeGistBackupEncoding(
         encode || settings.gistUpload || 'base64',
     );
+    const tokenStrategy =
+        action === 'download'
+            ? resolveGistDownloadTokenStrategy(
+                  settings.gistDownloadTokenStrategy,
+                  queryTokenStrategy,
+                  keep,
+              )
+            : undefined;
     $.info(
-        `Gist backup action: ${action}, keep: ${keep}, encode: ${encode}, settings encode: ${settings.gistUpload}, final encoding: ${encoding}`,
+        `Gist backup action: ${action}, keep: ${keep}, token strategy: ${queryTokenStrategy}, settings token strategy: ${settings.gistDownloadTokenStrategy}, final token strategy: ${tokenStrategy}, encode: ${encode}, settings encode: ${settings.gistUpload}, final encoding: ${encoding}`,
     );
     switch (action) {
         case 'upload':
@@ -288,7 +326,7 @@ async function gistBackupAction(action, keep, encode) {
                 throw err;
             }
             break;
-        case 'download':
+        case 'download': {
             $.info(`还原备份中...`);
             content = await gist.download(GIST_BACKUP_FILE_NAME);
             content = await decryptGistBackupContent(
@@ -316,12 +354,32 @@ async function gistBackupAction(action, keep, encode) {
                     throw new Error('Gist 备份文件校验失败, 无法还原');
                 }
             }
-            if (keep) {
-                $.info(`保留原有设置 ${keep}`);
-                keep.split(',').forEach((path) => {
-                    _.set(content, path, _.get(currentContent, path));
-                });
+            const keepPaths = keep
+                ? String(keep)
+                      .split(',')
+                      .map((path) => path.trim())
+                      .filter(Boolean)
+                : [];
+            const tokenPathIndex = keepPaths.indexOf(GIST_TOKEN_PATH);
+            if (tokenStrategy === 'keep' && tokenPathIndex === -1) {
+                keepPaths.push(GIST_TOKEN_PATH);
+            } else if (
+                tokenStrategy === 'overwrite' &&
+                tokenPathIndex !== -1
+            ) {
+                keepPaths.splice(tokenPathIndex, 1);
             }
+            if (!keepPaths.includes(GIST_DOWNLOAD_TOKEN_STRATEGY_PATH)) {
+                keepPaths.push(GIST_DOWNLOAD_TOKEN_STRATEGY_PATH);
+            }
+            $.info(`保留原有设置 ${keepPaths}`);
+            keepPaths.forEach((path) => {
+                if (_.has(currentContent, path)) {
+                    _.set(content, path, _.get(currentContent, path));
+                } else {
+                    _.unset(content, path);
+                }
+            });
             // restore settings
             $.write(JSON.stringify(content, null, `  `), '#sub-store');
             if ($.env.isNode) {
@@ -333,10 +391,11 @@ async function gistBackupAction(action, keep, encode) {
             $.info(`migration completed`);
             $.info(`还原备份完成`);
             break;
+        }
     }
 }
 async function gistBackup(req, res) {
-    const { action, keep, encode } = req.query;
+    const { action, keep, encode, tokenStrategy } = req.query;
     // read token
     const { gistToken } = $.read(SETTINGS_KEY);
     if (!gistToken) {
@@ -349,7 +408,11 @@ async function gistBackup(req, res) {
         );
     } else {
         try {
-            await gistBackupAction(action, keep, encode);
+            await gistBackupAction(action, {
+                keep,
+                encode,
+                tokenStrategy,
+            });
             success(res);
         } catch (err) {
             $.error(
@@ -357,11 +420,13 @@ async function gistBackup(req, res) {
             );
             failed(
                 res,
-                new InternalServerError(
-                    'BACKUP_FAILED',
-                    `Failed to ${action} gist data!`,
-                    `Reason: ${err.message ?? err}`,
-                ),
+                err instanceof RequestInvalidError
+                    ? err
+                    : new InternalServerError(
+                          'BACKUP_FAILED',
+                          `Failed to ${action} gist data!`,
+                          `Reason: ${err.message ?? err}`,
+                      ),
             );
         }
     }

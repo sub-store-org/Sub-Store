@@ -10,6 +10,7 @@ export const TOKENS_KEY = 'tokens';
 export const ARCHIVES_KEY = 'archives';
 export const GIST_BACKUP_KEY = 'Auto Generated Sub-Store Backup';
 export const GIST_BACKUP_FILE_NAME = 'Sub-Store';
+export const GIST_DOWNLOAD_TOKEN_STRATEGIES = ['ask', 'overwrite', 'keep'];
 export const ARTIFACT_REPOSITORY_KEY = 'Sub-Store Artifacts Repository';
 export const RESOURCE_CACHE_KEY = '#sub-store-cached-resource';
 export const HEADERS_RESOURCE_CACHE_KEY = '#sub-store-cached-headers-resource';
