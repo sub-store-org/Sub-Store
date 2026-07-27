@@ -749,6 +749,8 @@ const snellParser = (proxy = {}, includeUnsupportedProxy = false) => {
     if (proxy._userkey) parsedProxy.userkey = proxy._userkey;
     if (outputVersion === 6) {
         if (proxy.mode) parsedProxy.mode = proxy.mode;
+        if (includeUnsupportedProxy && proxy['quic-proxy-mode'])
+            parsedProxy.quic_proxy_mode = !!proxy['quic-proxy-mode'];
     } else {
         if (
             proxy['obfs-opts']?.mode &&

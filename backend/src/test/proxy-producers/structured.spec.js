@@ -416,6 +416,7 @@ describe('Proxy structured producers', function () {
             psk: 'secret',
             version,
             mode: 'unshaped',
+            'quic-proxy-mode': true,
             udp: true,
             reuse: true,
             'obfs-opts': {
@@ -431,6 +432,7 @@ describe('Proxy structured producers', function () {
         expect(result.map((proxy) => proxy.version)).to.deep.equal([4, 4, 6]);
         expect(result[1].tag).to.equal('sing-box Snell 5');
         expect(result[2].mode).to.equal('unshaped');
+        expect(result[2]).to.not.have.property('quic_proxy_mode');
         expect(result[2]).to.not.have.property('obfs_mode');
         expect(errors).to.have.length(2);
         expect(errors[0]).to.include(
@@ -450,6 +452,7 @@ describe('Proxy structured producers', function () {
             psk: 'secret',
             version,
             _userkey: `user-${version}`,
+            'quic-proxy-mode': version === 6 ? false : true,
             udp: true,
             reuse: true,
         }));
@@ -475,6 +478,12 @@ describe('Proxy structured producers', function () {
         expect(result.find((proxy) => proxy.version === 5).userkey).to.equal(
             'user-5',
         );
+        expect(
+            result.find((proxy) => proxy.version === 5),
+        ).to.not.have.property('quic_proxy_mode');
+        expect(
+            result.find((proxy) => proxy.version === 6).quic_proxy_mode,
+        ).to.equal(undefined);
         expect(errors).to.have.length(1);
         expect(errors[0]).to.include(
             'Platform sing-box does not support snell version 4x',
@@ -1102,10 +1111,7 @@ describe('Proxy structured producers', function () {
 
         expect(output.outbounds).to.have.length(6);
         expect(output.outbounds.map((item) => item.tag)).to.deep.equal(
-            proxies.flatMap((proxy) => [
-                proxy.name,
-                `${proxy.name}_shadowtls`,
-            ]),
+            proxies.flatMap((proxy) => [proxy.name, `${proxy.name}_shadowtls`]),
         );
         for (const proxy of proxies) {
             const outbound = output.outbounds.find(
