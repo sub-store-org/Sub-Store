@@ -52,9 +52,9 @@ export default function serve() {
                 ? createFrontendStaticMiddleware(fe_path, '/index.html')
                 : null;
         if (be_prefix || be_merge) {
-            if (!fe_be_path.startsWith('/')) {
+            if (!fe_be_path?.startsWith('/')) {
                 throw new Error(
-                    'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
+                    'SUB_STORE_FRONTEND_BACKEND_PATH must be set and start with "/" when SUB_STORE_BACKEND_PREFIX or SUB_STORE_BACKEND_MERGE is enabled',
                 );
             }
             if (be_merge) {
@@ -371,7 +371,7 @@ export default function serve() {
             if (fe_be_path) {
                 if (!fe_be_path.startsWith('/')) {
                     throw new Error(
-                        'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
+                        'SUB_STORE_FRONTEND_BACKEND_PATH must start with "/"',
                     );
                 }
                 be_api_rewrite = `${
