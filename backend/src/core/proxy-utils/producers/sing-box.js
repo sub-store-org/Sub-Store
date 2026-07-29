@@ -1117,7 +1117,7 @@ const tuic5Parser = (proxy = {}) => {
     domainResolverParser(proxy, parsedProxy);
     return parsedProxy;
 };
-const anytlsParser = (proxy = {}) => {
+const anytlsParser = (proxy = {}, includeUnsupportedProxy = false) => {
     const parsedProxy = {
         tag: proxy.name,
         type: 'anytls',
@@ -1126,6 +1126,8 @@ const anytlsParser = (proxy = {}) => {
         password: proxy.password,
         tls: { enabled: true, server_name: proxy.server, insecure: false },
     };
+    if (includeUnsupportedProxy && proxy['client-name'])
+        parsedProxy.client_name = `${proxy['client-name']}`;
     if (/^\d+$/.test(proxy['idle-session-check-interval']))
         parsedProxy.idle_session_check_interval = `${proxy['idle-session-check-interval']}s`;
     if (/^\d+$/.test(proxy['idle-session-timeout']))
@@ -1553,7 +1555,12 @@ export default function singbox_Producer() {
                             list.push(wireguardParser(proxy));
                             break;
                         case 'anytls':
-                            list.push(anytlsParser(proxy));
+                            list.push(
+                                anytlsParser(
+                                    proxy,
+                                    opts['include-unsupported-proxy'],
+                                ),
+                            );
                             break;
                         case 'tailscale':
                             list.push(tailscaleParser(proxy));
