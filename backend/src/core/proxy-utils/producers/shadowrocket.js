@@ -47,6 +47,7 @@ export default function Shadowrocket_Producer() {
                         'openvpn',
                         'gost-relay',
                         'shadowquic',
+                        'zerotier',
                     ].includes(proxy.type)
                 ) {
                     return false;

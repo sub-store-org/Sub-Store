@@ -233,6 +233,7 @@ function shadowsocks(proxy) {
     if (!proxy.cipher) {
         proxy.cipher = 'none';
     }
+    // TODO: Surge 5 5.102.0 (3792) removed unsupported legacy Shadowsocks ciphers including `bf-cfb`, `camellia-*-cfb`, `cast5-cfb`, `des-cfb`, `idea-cfb`, `rc2-cfb`, and `seed-cfb`
     if (
         ![
             'aes-128-gcm',
