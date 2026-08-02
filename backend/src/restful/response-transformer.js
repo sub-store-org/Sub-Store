@@ -37,6 +37,7 @@ export async function applyResponseTransformers({
     targetPlatform,
     source,
     $options,
+    executionContext,
 }) {
     const currentHeaders = getCurrentHeaders(res);
     const transformed = await ProxyUtils.processResponse(
@@ -49,6 +50,7 @@ export async function applyResponseTransformers({
         targetPlatform,
         source,
         $options,
+        executionContext,
     );
     setHeaders(res, currentHeaders, transformed.header || transformed.headers);
     setStatus(res, transformed.status || transformed.statusCode);

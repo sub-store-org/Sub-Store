@@ -65,6 +65,18 @@ async function getFlowInfo(req, res) {
         );
         return;
     }
+    if (req.query.noFlow || sub.noFlow) {
+        failed(
+            res,
+            new RequestInvalidError(
+                'NO_FLOW_INFO',
+                'N/A',
+                `Subscription ${name}: noFlow`,
+            ),
+            400,
+        );
+        return;
+    }
     if (
         sub.source === 'local' &&
         !['localFirst', 'remoteFirst'].includes(sub.mergeSources)

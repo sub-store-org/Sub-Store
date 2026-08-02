@@ -141,6 +141,7 @@ async function processFn(
     source,
     $options,
     raw,
+    executionContext = {},
 ) {
     let context = {};
     if (raw !== undefined) {
@@ -182,7 +183,10 @@ async function processFn(
         let script;
         let $arguments = {};
         if (item.type.indexOf('Script') !== -1) {
-            ({ script, $arguments } = await loadScriptItem(item));
+            ({ script, $arguments } = await loadScriptItem(
+                item,
+                executionContext,
+            ));
         }
 
         if (!PROXY_PROCESSORS[item.type]) {
@@ -206,7 +210,10 @@ async function processFn(
                 context,
             );
         } else {
-            processor = PROXY_PROCESSORS[item.type](item.args || {});
+            processor = PROXY_PROCESSORS[item.type](
+                item.args || {},
+                executionContext,
+            );
         }
         proxies = await ApplyProcessor(processor, proxies);
     }
@@ -219,6 +226,7 @@ async function processResponseFn(
     targetPlatform,
     source,
     $options,
+    executionContext = {},
 ) {
     let context = {};
     let output = normalizeResponse(response);
@@ -243,7 +251,10 @@ async function processResponseFn(
             continue;
         }
 
-        const { script, $arguments } = await loadScriptItem(item);
+        const { script, $arguments } = await loadScriptItem(
+            item,
+            executionContext,
+        );
         $.log(
             `Applying "${item.type}" with arguments:\n >>> ${
                 JSON.stringify(item.args, null, 2) || 'None'
@@ -264,7 +275,7 @@ async function processResponseFn(
     return output;
 }
 
-async function loadScriptItem(item) {
+async function loadScriptItem(item, executionContext = {}) {
     let script;
     let $arguments = {};
     const { mode, content } = item.args || {};
@@ -319,6 +330,7 @@ async function loadScriptItem(item) {
                     script = await produceArtifact({
                         type: 'file',
                         name,
+                        noFlow: executionContext.noFlow,
                     });
                 }
             } catch (err) {
@@ -341,7 +353,17 @@ async function loadScriptItem(item) {
         } else {
             // if this is a remote script, download it
             try {
-                script = await download(url);
+                script = await download(
+                    url,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    { noFlow: executionContext.noFlow },
+                );
                 // $.info(`Script loaded: >>>\n ${script}`);
             } catch (err) {
                 $.error(

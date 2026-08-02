@@ -291,6 +291,9 @@ async function downloadSubscription(req, res) {
     if (noCache) {
         $.info(`指定不使用缓存: ${noCache}`);
     }
+    if (req.query.noFlow) {
+        $.info(`指定不查询订阅流量信息: ${req.query.noFlow}`);
+    }
 
     const allSubs = $.read(SUBS_KEY);
     const fakeSub = _fakeNode ? {
@@ -306,6 +309,7 @@ async function downloadSubscription(req, res) {
     const sub = (_fakeNode || _fakeSub) ? fakeSub : findByName(allSubs, name);
     if (sub) {
         try {
+            const noFlow = req.query.noFlow || sub.noFlow;
             const passThroughUA = sub.passThroughUA;
             if (passThroughUA) {
                 $.info(
@@ -335,6 +339,7 @@ async function downloadSubscription(req, res) {
                 $options,
                 proxy,
                 noCache,
+                noFlow,
             };
             if (_fakeNode || _fakeSub) {
                 if(_fakeNode) {
@@ -377,7 +382,11 @@ async function downloadSubscription(req, res) {
                             }
                         }
                     }
-                    if (!$arguments.noFlow && /^https?/.test(url)) {
+                    if (
+                        !noFlow &&
+                        !$arguments.noFlow &&
+                        /^https?/.test(url)
+                    ) {
                         // forward flow headers
                         flowInfo = await getFlowHeaders(
                             $arguments?.insecure ? `${url}#insecure` : url,
@@ -414,7 +423,7 @@ async function downloadSubscription(req, res) {
                     );
                 }
             }
-            if (sub.subUserinfo) {
+            if (!noFlow && sub.subUserinfo) {
                 let subUserInfo;
                 if (/^https?:\/\//.test(sub.subUserinfo)) {
                     try {
@@ -499,6 +508,7 @@ async function downloadSubscription(req, res) {
                 targetPlatform: platform,
                 source: { [sub.name]: sub },
                 $options,
+                executionContext: { noFlow },
             });
             res.send(
                 await applyAgeOutputEncryption({
@@ -644,9 +654,13 @@ async function downloadCollection(req, res) {
     if (noCache) {
         $.info(`指定不使用缓存: ${noCache}`);
     }
+    if (req.query.noFlow) {
+        $.info(`指定不查询订阅流量信息: ${req.query.noFlow}`);
+    }
 
     if (collection) {
         try {
+            const noFlow = req.query.noFlow || collection.noFlow;
             let output = await produceArtifact({
                 type: 'collection',
                 name,
@@ -665,11 +679,12 @@ async function downloadCollection(req, res) {
                 $options,
                 proxy,
                 noCache,
+                noFlow,
                 ua: reqUA,
             });
             let subUserInfoOfSub;
             // 默认透传第一个子订阅的流量信息，除非 firstSubFlow 显式设置为 false
-            if (collection.firstSubFlow !== false) {
+            if (!noFlow && collection.firstSubFlow !== false) {
                 // forward flow header from the first subscription in this collection
                 const allSubs = $.read(SUBS_KEY);
                 const subnames = collection.subscriptions;
@@ -707,7 +722,11 @@ async function downloadCollection(req, res) {
                                     }
                                 }
                             }
-                            if (!$arguments.noFlow && /^https?:/.test(url)) {
+                            if (
+                                !sub.noFlow &&
+                                !$arguments.noFlow &&
+                                /^https?:/.test(url)
+                            ) {
                                 subUserInfoOfSub = await getFlowHeaders(
                                     $arguments?.insecure
                                         ? `${url}#insecure`
@@ -729,7 +748,7 @@ async function downloadCollection(req, res) {
                             );
                         }
                     }
-                    if (sub.subUserinfo) {
+                    if (!sub.noFlow && sub.subUserinfo) {
                         let subUserInfo;
                         if (/^https?:\/\//.test(sub.subUserinfo)) {
                             try {
@@ -764,24 +783,26 @@ async function downloadCollection(req, res) {
             }
 
             let subUserInfoOfCol;
-            if (/^https?:\/\//.test(collection.subUserinfo)) {
-                try {
-                    subUserInfoOfCol = await getFlowHeaders(
-                        undefined,
-                        undefined,
-                        undefined,
-                        proxy || collection.proxy,
-                        collection.subUserinfo,
-                    );
-                } catch (e) {
-                    $.error(
-                        `组合订阅 ${name} 使用自定义流量链接 ${
-                            collection.subUserinfo
-                        } 获取流量信息时发生错误: ${JSON.stringify(e)}`,
-                    );
+            if (!noFlow) {
+                if (/^https?:\/\//.test(collection.subUserinfo)) {
+                    try {
+                        subUserInfoOfCol = await getFlowHeaders(
+                            undefined,
+                            undefined,
+                            undefined,
+                            proxy || collection.proxy,
+                            collection.subUserinfo,
+                        );
+                    } catch (e) {
+                        $.error(
+                            `组合订阅 ${name} 使用自定义流量链接 ${
+                                collection.subUserinfo
+                            } 获取流量信息时发生错误: ${JSON.stringify(e)}`,
+                        );
+                    }
+                } else {
+                    subUserInfoOfCol = collection.subUserinfo;
                 }
-            } else {
-                subUserInfoOfCol = collection.subUserinfo;
             }
             const subUserInfo = [subUserInfoOfCol, subUserInfoOfSub]
                 .filter((i) => i)
@@ -846,6 +867,7 @@ async function downloadCollection(req, res) {
                 targetPlatform: platform,
                 source: { _collection: collection },
                 $options,
+                executionContext: { noFlow },
             });
             res.send(
                 await applyAgeOutputEncryption({

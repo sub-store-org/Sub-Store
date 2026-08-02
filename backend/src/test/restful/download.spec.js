@@ -1,13 +1,15 @@
 import { expect } from 'chai';
 import { after, before, beforeEach, describe, it } from 'mocha';
 
-import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
+import { COLLECTIONS_KEY, FILES_KEY, SUBS_KEY } from '@/constants';
 
 const UUID = '11111111-1111-4111-8111-111111111111';
 const VLESS_WS = `vless://${UUID}@1.1.1.1:443?security=tls&type=ws&host=cdn.example.com&path=%2Fws&sni=sni.example.com#VLESS%20WS`;
 
 let $;
+let openApi;
 let registerDownloadRoutes;
+let registerSubscriptionRoutes;
 let originalError;
 let originalInfo;
 let originalNotify;
@@ -26,12 +28,43 @@ function createRouteApp() {
             handlers.set(`GET ${pattern}`, handler);
             return this;
         },
+        route(pattern) {
+            const chain = {
+                get(handler) {
+                    handlers.set(`GET ${pattern}`, handler);
+                    return chain;
+                },
+                patch(handler) {
+                    handlers.set(`PATCH ${pattern}`, handler);
+                    return chain;
+                },
+                delete(handler) {
+                    handlers.set(`DELETE ${pattern}`, handler);
+                    return chain;
+                },
+                post(handler) {
+                    handlers.set(`POST ${pattern}`, handler);
+                    return chain;
+                },
+                put(handler) {
+                    handlers.set(`PUT ${pattern}`, handler);
+                    return chain;
+                },
+            };
+            return chain;
+        },
     };
 }
 
 function getHandler(pattern) {
     const app = createRouteApp();
     registerDownloadRoutes(app);
+    return app.handlers.get(`GET ${pattern}`);
+}
+
+function getSubscriptionHandler(pattern) {
+    const app = createRouteApp();
+    registerSubscriptionRoutes(app);
     return app.handlers.get(`GET ${pattern}`);
 }
 
@@ -136,6 +169,21 @@ async function requestDownloadCollection(query) {
     return res;
 }
 
+async function requestSubscriptionFlow(query) {
+    const handler = getSubscriptionHandler('/api/sub/flow/:name');
+    const res = createResponse('/api/sub/flow/:name');
+
+    await handler(
+        {
+            params: { name: 'local-vless' },
+            query,
+        },
+        res,
+    );
+
+    return res;
+}
+
 async function requestShareSubscription({ query = {}, shareToken } = {}) {
     const handler = getHandler('/share/sub/:name');
     const res = createResponse('/share/sub/:name');
@@ -171,7 +219,11 @@ async function expectDecryptFailure(armored, secretKey) {
 describe('download routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
+        openApi = require('@/vendor/open-api');
         ({ default: registerDownloadRoutes } = require('@/restful/download'));
+        ({ default: registerSubscriptionRoutes } = require(
+            '@/restful/subscriptions'
+        ));
         ageUtils = require('@/utils/age');
 
         originalRead = $.read.bind($);
@@ -220,6 +272,311 @@ describe('download routes', function () {
         $.warn = () => {};
         $.error = () => {};
         $.notify = () => {};
+    });
+
+    it('uses truthiness for subscription noFlow query values', async function () {
+        state[SUBS_KEY][0].subUserinfo =
+            'upload=1; download=2; total=3; expire=4';
+
+        const queryOmitted = await requestDownloadSubscription({
+            target: 'JSON',
+        });
+        expect(queryOmitted.headers).to.have.property('subscription-userinfo');
+
+        const bareQuery = await requestDownloadSubscription({
+            target: 'JSON',
+            noFlow: '',
+        });
+        expect(bareQuery.headers).to.have.property('subscription-userinfo');
+
+        const queryDisabled = await requestDownloadSubscription({
+            target: 'JSON',
+            noFlow: 'false',
+        });
+        expect(queryDisabled.headers).to.not.have.property(
+            'subscription-userinfo',
+        );
+
+        state[SUBS_KEY][0].noFlow = true;
+        const settingDisabled = await requestDownloadSubscription({
+            target: 'JSON',
+        });
+        expect(settingDisabled.headers).to.not.have.property(
+            'subscription-userinfo',
+        );
+    });
+
+    it('logs noFlow query overrides for subscriptions and collections', async function () {
+        const logs = [];
+        $.info = (message) => logs.push(message);
+
+        for (const request of [
+            requestDownloadSubscription,
+            requestDownloadCollection,
+        ]) {
+            logs.length = 0;
+            await request({ target: 'JSON', noFlow: 'false' });
+            expect(logs).to.include('指定不查询订阅流量信息: false');
+        }
+    });
+
+    it('returns 400 when noFlow disables the flow endpoint', async function () {
+        state[SUBS_KEY][0].subUserinfo =
+            'upload=1; download=2; total=3; expire=4';
+        const bareQuery = await requestSubscriptionFlow({ noFlow: '' });
+        expect(bareQuery.statusCode).to.equal(200);
+
+        const res = await requestSubscriptionFlow({ noFlow: 'false' });
+        expect(res.statusCode).to.equal(400);
+        expect(res.sent.error.code).to.equal('NO_FLOW_INFO');
+    });
+
+    it('skips validCheck flow requests for direct and internal file noFlow links', async function () {
+        const originalHTTP = openApi.HTTP;
+
+        try {
+            for (const [sourceUrl, request, viaFile] of [
+                [
+                    'https://example.com/subscription#validCheck',
+                    requestDownloadSubscription,
+                ],
+                [
+                    'https://example.com/collection#validCheck',
+                    requestDownloadCollection,
+                ],
+                [
+                    'https://example.com/nested-file-subscription#validCheck',
+                    requestDownloadSubscription,
+                    true,
+                ],
+                [
+                    'https://example.com/nested-file-collection#validCheck',
+                    requestDownloadCollection,
+                    true,
+                ],
+            ]) {
+                const requestedUrls = [];
+                state[SUBS_KEY][0] = {
+                    name: 'local-vless',
+                    source: 'remote',
+                    url: viaFile ? '/api/file/nested-flow' : sourceUrl,
+                };
+                if (viaFile) {
+                    state[FILES_KEY] = [
+                        {
+                            name: 'nested-flow',
+                            source: 'remote',
+                            url: sourceUrl,
+                        },
+                    ];
+                }
+                openApi.HTTP = () => ({
+                    get: async ({ url }) => {
+                        requestedUrls.push(url);
+                        return {
+                            body: VLESS_WS,
+                            headers:
+                                requestedUrls.length > 1
+                                    ? {
+                                          'subscription-userinfo':
+                                              'upload=1; download=2; total=3; expire=4102444800',
+                                      }
+                                    : {},
+                            statusCode: 200,
+                        };
+                    },
+                    head: async ({ url }) => {
+                        requestedUrls.push(url);
+                        return {
+                            headers: {
+                                'subscription-userinfo':
+                                    'upload=1; download=2; total=3; expire=4102444800',
+                            },
+                            statusCode: 200,
+                        };
+                    },
+                });
+
+                const res = await request({
+                    target: 'JSON',
+                    noCache: 'true',
+                    noFlow: 'false',
+                });
+
+                expect(res.statusCode).to.equal(200);
+                expect(requestedUrls).to.deep.equal([
+                    sourceUrl.split('#')[0],
+                ]);
+            }
+        } finally {
+            openApi.HTTP = originalHTTP;
+        }
+    });
+
+    it('keeps noFlow for processor-triggered downloads', async function () {
+        const originalHTTP = openApi.HTTP;
+
+        try {
+            for (const [sourceName, request] of [
+                ['subscription', requestDownloadSubscription],
+                ['collection', requestDownloadCollection],
+            ]) {
+                const scriptUrl = `https://example.com/processor-script-${sourceName}`;
+                const nestedUrl = `https://example.com/processor-sub-${sourceName}`;
+                const requests = [];
+                state[SUBS_KEY] = [
+                    {
+                        name: 'local-vless',
+                        source: 'remote',
+                        url: '/api/file/processor-flow',
+                    },
+                    {
+                        name: 'processor-sub',
+                        source: 'remote',
+                        url: `${nestedUrl}#validCheck&noCache`,
+                    },
+                ];
+                state[FILES_KEY] = [
+                    {
+                        name: 'processor-flow',
+                        type: 'mihomoConfig',
+                        sourceType: 'none',
+                        process: [
+                            {
+                                type: 'Script Operator',
+                                args: {
+                                    mode: 'link',
+                                    content: `${scriptUrl}#validCheck&noCache`,
+                                },
+                            },
+                            {
+                                type: 'Add Proxies From Subscription Operator',
+                                args: {
+                                    sourceName: 'processor-sub',
+                                },
+                            },
+                        ],
+                    },
+                ];
+                openApi.HTTP = () => ({
+                    get: async ({ url }) => {
+                        requests.push(['GET', url]);
+                        return {
+                            body: url.includes('processor-script')
+                                ? 'mixed-port: 7890'
+                                : VLESS_WS,
+                            headers: {},
+                            statusCode: 200,
+                        };
+                    },
+                    head: async ({ url }) => {
+                        requests.push(['HEAD', url]);
+                        return {
+                            headers: {
+                                'subscription-userinfo':
+                                    'upload=1; download=2; total=3; expire=4102444800',
+                            },
+                            statusCode: 200,
+                        };
+                    },
+                });
+
+                const res = await request({
+                    target: 'JSON',
+                    noCache: 'true',
+                    noFlow: 'false',
+                });
+
+                expect(res.statusCode).to.equal(200);
+                expect(requests).to.deep.equal([
+                    ['GET', scriptUrl],
+                    ['GET', nestedUrl],
+                ]);
+            }
+        } finally {
+            openApi.HTTP = originalHTTP;
+        }
+    });
+
+    it('skips validCheck for noFlow URLs in multiline sources', async function () {
+        const originalHTTP = openApi.HTTP;
+        const requests = [];
+
+        try {
+            state[SUBS_KEY][0] = {
+                name: 'local-vless',
+                source: 'remote',
+                url: [
+                    'https://example.com/first#validCheck&noFlow=false',
+                    'https://example.com/second',
+                ].join('\n'),
+            };
+            openApi.HTTP = () => ({
+                get: async ({ url }) => {
+                    requests.push(['GET', url]);
+                    return {
+                        body: VLESS_WS,
+                        headers: {},
+                        statusCode: 200,
+                    };
+                },
+                head: async ({ url }) => {
+                    requests.push(['HEAD', url]);
+                    return {
+                        headers: {
+                            'subscription-userinfo':
+                                'upload=1; download=2; total=3; expire=4102444800',
+                        },
+                        statusCode: 200,
+                    };
+                },
+            });
+
+            const res = await requestDownloadSubscription({
+                target: 'JSON',
+                noCache: 'true',
+            });
+
+            expect(res.statusCode).to.equal(200);
+            expect(requests).to.deep.equal([
+                ['GET', 'https://example.com/first'],
+                ['GET', 'https://example.com/second'],
+            ]);
+        } finally {
+            openApi.HTTP = originalHTTP;
+        }
+    });
+
+    it('uses truthiness for collection noFlow query values', async function () {
+        state[COLLECTIONS_KEY][0].subUserinfo =
+            'upload=1; download=2; total=3; expire=4';
+
+        const queryOmitted = await requestDownloadCollection({
+            target: 'JSON',
+        });
+        expect(queryOmitted.headers).to.have.property('subscription-userinfo');
+
+        const bareQuery = await requestDownloadCollection({
+            target: 'JSON',
+            noFlow: '',
+        });
+        expect(bareQuery.headers).to.have.property('subscription-userinfo');
+
+        const queryDisabled = await requestDownloadCollection({
+            target: 'JSON',
+            noFlow: 'false',
+        });
+        expect(queryDisabled.headers).to.not.have.property(
+            'subscription-userinfo',
+        );
+
+        state[COLLECTIONS_KEY][0].noFlow = true;
+        const settingDisabled = await requestDownloadCollection({
+            target: 'JSON',
+        });
+        expect(settingDisabled.headers).to.not.have.property(
+            'subscription-userinfo',
+        );
     });
 
     it('keeps SurgeMac Mihomo external output unmerged by default', async function () {

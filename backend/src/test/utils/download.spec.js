@@ -208,6 +208,50 @@ describe('download github proxy regex', function () {
         expect(maxActiveRequests).to.equal(1);
     });
 
+    it('keeps noFlow during custom cache refreshes', async function () {
+        for (const awaitCustomCache of [true, false]) {
+            const cacheKey = `refresh-${awaitCustomCache}`;
+            const sourceUrl = `https://example.com/${cacheKey}`;
+            const requests = [];
+            state[`#sub-store-cached-custom-${cacheKey}`] = 'cached-body';
+            openApi.HTTP = () => ({
+                get: async ({ url }) => {
+                    requests.push(['GET', url]);
+                    return {
+                        body: 'fresh-body',
+                        headers: {},
+                        statusCode: 200,
+                    };
+                },
+                head: async ({ url }) => {
+                    requests.push(['HEAD', url]);
+                    return {
+                        headers: {
+                            'subscription-userinfo':
+                                'upload=1; download=2; total=3; expire=4102444800',
+                        },
+                        statusCode: 200,
+                    };
+                },
+            });
+
+            await download(
+                `${sourceUrl}#validCheck&cacheKey=${cacheKey}`,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                awaitCustomCache,
+                true,
+                undefined,
+                { noFlow: 'false' },
+            );
+            if (!awaitCustomCache) await sleep(10);
+
+            expect(requests).to.deep.equal([['GET', sourceUrl]]);
+        }
+    });
+
     it('logs download failures before rejecting', async function () {
         openApi.HTTP = () => ({
             get: async () => {
