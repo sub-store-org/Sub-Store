@@ -1126,8 +1126,8 @@ const anytlsParser = (proxy = {}, includeUnsupportedProxy = false) => {
         password: proxy.password,
         tls: { enabled: true, server_name: proxy.server, insecure: false },
     };
-    if (includeUnsupportedProxy && proxy['client-name'])
-        parsedProxy.client_name = `${proxy['client-name']}`;
+    if (proxy['client-metadata'])
+        parsedProxy.client_metadata = `${proxy['client-metadata']}`;
     if (/^\d+$/.test(proxy['idle-session-check-interval']))
         parsedProxy.idle_session_check_interval = `${proxy['idle-session-check-interval']}s`;
     if (/^\d+$/.test(proxy['idle-session-timeout']))

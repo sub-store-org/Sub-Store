@@ -1413,25 +1413,6 @@ describe('Proxy structured producers', function () {
         ]);
     });
 
-    it('emits sing-box AnyTLS client name only when unsupported output is enabled', function () {
-        const proxy = {
-            type: 'anytls',
-            name: 'AnyTLS Client Name',
-            server: 'anytls.example.com',
-            port: 443,
-            password: 'secret',
-            'client-name': 'Sub-Store',
-        };
-
-        const standard = loadProducedJson('sing-box', proxy).outbounds[0];
-        const unsupported = loadProducedJson('sing-box', proxy, {
-            'include-unsupported-proxy': true,
-        }).outbounds[0];
-
-        expect(standard).to.not.have.property('client_name');
-        expect(unsupported.client_name).to.equal('Sub-Store');
-    });
-
     it('does not emit sing-box ShadowTLS uTLS without client fingerprint', function () {
         const [proxy] = ProxyUtils.parse(`proxies:
   - name: SS ShadowTLS No Fingerprint
