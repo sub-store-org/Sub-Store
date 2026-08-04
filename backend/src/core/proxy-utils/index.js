@@ -598,6 +598,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
                             Base64.encode(
                                 JSON.stringify({
                                     ...opts._merged.config,
+                                    ...(opts._merged.configOverride || {}),
                                     'mixed-port': opts.localPort,
                                 }),
                             ),
