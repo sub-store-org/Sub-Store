@@ -1075,6 +1075,9 @@ const hysteria2Parser = (proxy = {}) => {
     if (proxy['obfs-password'])
         parsedProxy.obfs.password = proxy['obfs-password'];
     if (!parsedProxy.obfs.type) delete parsedProxy.obfs;
+    if (proxy['bbr-profile']) parsedProxy.bbr_profile = proxy['bbr-profile'];
+    if (proxy['disable-chrome-parrot'])
+        parsedProxy.disable_chrome_parrot = !!proxy['disable-chrome-parrot'];
     networkParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
