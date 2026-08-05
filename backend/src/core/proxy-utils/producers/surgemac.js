@@ -211,7 +211,10 @@ function mihomo(proxy, type, opts) {
             // `proxy-groups[0].proxies.push()` 的目标, 使 GLOBAL 出现重复项.
             const configOverride = opts?.config || proxy._config;
             if (configOverride) {
-                opts._merged.configOverride = configOverride;
+                opts._merged.configOverride = {
+                    ...(opts._merged.configOverride || {}),
+                    ...configOverride,
+                };
             }
         } else {
             const external_proxy = {

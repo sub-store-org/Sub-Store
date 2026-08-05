@@ -2111,6 +2111,28 @@ describe('Proxy text producers', function () {
         expect(config['mixed-port']).to.equal(19997);
     });
 
+    it('keeps earlier SurgeMac _config fields when later nodes add partial overrides', function () {
+        const overrides = [{ 'allow-lan': true }, { 'log-level': 'debug' }, {}];
+        const proxies = ['A', 'B', 'C'].map((name, index) => ({
+            type: 'trojan',
+            name,
+            server: `${name.toLowerCase()}.example.com`,
+            port: 443,
+            password: 'secret',
+            _merge: true,
+            _mihomoExternal: true,
+            _localPort: 20000,
+            _config: overrides[index],
+        }));
+
+        const output = ProxyUtils.produce(proxies, 'SurgeMac', 'external', {});
+        const args = [...output.matchAll(/args="([^"]+)"/g)].map((m) => m[1]);
+        const config = JSON.parse(Base64.decode(args[args.length - 1]));
+
+        expect(config['allow-lan']).to.equal(true);
+        expect(config['log-level']).to.equal('debug');
+    });
+
     it('produces URI WireGuard links with stored and default CIDR suffixes', function () {
         const output = produceExternal('URI', [
             {
