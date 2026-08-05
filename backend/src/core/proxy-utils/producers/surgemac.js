@@ -206,10 +206,16 @@ function mihomo(proxy, type, opts) {
                 ...clashProxy,
                 name: proxyName,
             });
-            opts._merged.config = {
-                ...opts._merged.config,
-                ...(opts?.config || proxy._config || {}),
-            };
+            // 只记录覆盖层, 在所有节点都并入后由 index.js 统一合并一次.
+            // 若在这里就合并, 覆盖层里的 proxy-groups 会成为后续节点
+            // `proxy-groups[0].proxies.push()` 的目标, 使 GLOBAL 出现重复项.
+            const configOverride = opts?.config || proxy._config;
+            if (configOverride) {
+                opts._merged.configOverride = {
+                    ...(opts._merged.configOverride || {}),
+                    ...configOverride,
+                };
+            }
         } else {
             const external_proxy = {
                 name: proxy.name,

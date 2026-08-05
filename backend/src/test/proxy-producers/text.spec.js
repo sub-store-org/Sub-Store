@@ -2067,6 +2067,72 @@ describe('Proxy text producers', function () {
         expect(output).to.not.include('Forced Mihomo=tuic-v5');
     });
 
+    it('merges SurgeMac _config once so GLOBAL lists each merged node once', function () {
+        // A Script Operator naturally builds the override once and assigns the
+        // same object to every node, so the shared reference must survive.
+        const override = {
+            'proxy-groups': [
+                {
+                    name: 'GLOBAL',
+                    type: 'fallback',
+                    proxies: ['20000', '19999', '19998'],
+                    url: 'http://cp.cloudflare.com/generate_204',
+                    interval: 300,
+                },
+            ],
+        };
+        const proxies = ['A', 'B', 'C'].map((name) => ({
+            type: 'trojan',
+            name,
+            server: `${name.toLowerCase()}.example.com`,
+            port: 443,
+            password: 'secret',
+            _merge: true,
+            _mihomoExternal: true,
+            _localPort: 20000,
+            _config: override,
+        }));
+
+        const output = ProxyUtils.produce(proxies, 'SurgeMac', 'external', {});
+
+        const args = [...output.matchAll(/args="([^"]+)"/g)].map((m) => m[1]);
+        const config = JSON.parse(Base64.decode(args[args.length - 1]));
+        const globalGroup = config['proxy-groups'].find(
+            (group) => group.name === 'GLOBAL',
+        );
+
+        expect(globalGroup.proxies).to.deep.equal(['20000', '19999', '19998']);
+        expect(globalGroup.url).to.equal(
+            'http://cp.cloudflare.com/generate_204',
+        );
+        expect(globalGroup.interval).to.equal(300);
+        expect(config.listeners).to.have.lengthOf(3);
+        expect(config.proxies).to.have.lengthOf(3);
+        expect(config['mixed-port']).to.equal(19997);
+    });
+
+    it('keeps earlier SurgeMac _config fields when later nodes add partial overrides', function () {
+        const overrides = [{ 'allow-lan': true }, { 'log-level': 'debug' }, {}];
+        const proxies = ['A', 'B', 'C'].map((name, index) => ({
+            type: 'trojan',
+            name,
+            server: `${name.toLowerCase()}.example.com`,
+            port: 443,
+            password: 'secret',
+            _merge: true,
+            _mihomoExternal: true,
+            _localPort: 20000,
+            _config: overrides[index],
+        }));
+
+        const output = ProxyUtils.produce(proxies, 'SurgeMac', 'external', {});
+        const args = [...output.matchAll(/args="([^"]+)"/g)].map((m) => m[1]);
+        const config = JSON.parse(Base64.decode(args[args.length - 1]));
+
+        expect(config['allow-lan']).to.equal(true);
+        expect(config['log-level']).to.equal('debug');
+    });
+
     it('produces URI WireGuard links with stored and default CIDR suffixes', function () {
         const output = produceExternal('URI', [
             {
