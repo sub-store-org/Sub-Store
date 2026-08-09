@@ -390,7 +390,7 @@ export default function Egern_Producer() {
                             };
                         } else if (proxy.network === 'http') {
                             proxy.transport = {
-                                http: {
+                                http1: {
                                     method: proxy['http-opts']?.method,
                                     path: Array.isArray(
                                         proxy['http-opts']?.path,
