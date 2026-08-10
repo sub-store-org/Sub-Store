@@ -998,6 +998,37 @@ describe('Proxy text producers', function () {
         });
     });
 
+    it('round-trips Surge TrustTunnel h3 as network', function () {
+        const [proxy] = ProxyUtils.parse(
+            'Surge TrustTunnel H3 = trust-tunnel,trust.example.com,443,h3=true',
+        );
+
+        expect(proxy.network).to.equal('h3');
+        expect(proxy).to.not.have.property('alpn');
+
+        const output = produceExternal('Surge', proxy);
+        expect(output).to.include(',h3=true');
+        expect(output).to.not.include(',alpn=');
+
+        const [disabled] = ProxyUtils.parse(
+            'Surge TrustTunnel H3 Disabled = trust-tunnel,trust.example.com,443,h3=false',
+        );
+        expect(disabled).to.not.have.property('network');
+        const disabledOutput = produceExternal('Surge', disabled);
+        expect(disabledOutput).to.not.include(',h3=true');
+        expect(disabledOutput).to.not.include(',alpn=');
+
+        const alpnOutput = produceExternal('Surge', {
+            type: 'trusttunnel',
+            name: 'Surge TrustTunnel ALPN H3',
+            server: 'trust.example.com',
+            port: 443,
+            alpn: ['h3'],
+        });
+        expect(alpnOutput).to.include(',alpn="h3"');
+        expect(alpnOutput).to.not.include(',h3=true');
+    });
+
     it('omits Surge alpn and server-cert-verify-name for non-TLS outputs', function () {
         const output = produceExternal('Surge', [
             {

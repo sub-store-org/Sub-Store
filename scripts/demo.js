@@ -59,6 +59,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 34. VLESS/Trojan URI 的 `vcn` 对应 mihomo 的 `name-cert-verify`. Xray-core 支持用逗号分隔多个 name, mihomo 只支持一个, 因此输入时取第一个有效值, 同时用 `_vcn` 数组保留全部有效值; 输出 URI 时优先用 `_vcn` 还原为 `vcn`, 没有 `_vcn` 时才使用 `name-cert-verify`. 若想设置为其他值, 可使用脚本操作设置, 例如 `$server["name-cert-verify"] = $server._vcn?.[1] || $server._vcn?.[0]`
   // 35. sing-box AnyTLS 支持通过节点的字符串字段 `client-metadata` 设置 `client_metadata`
   // 36. sing-box Hysteria 2 支持通过节点的字符串字段 `disable-chrome-parrot` 设置 `disable_chrome_parrot`
+  // 37. Surge TrustTunnel 支持使用 Surge 格式写 `h3=true` 作为输入, 或使用节点字段 `network: 'h3'` 设置 `h3=true`
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件

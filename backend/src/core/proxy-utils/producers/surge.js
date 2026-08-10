@@ -462,6 +462,7 @@ function trusttunnel(proxy) {
         `,max-streams=${proxy['max-streams']}`,
         'max-streams',
     );
+    if (proxy.network === 'h3') result.append(',h3=true');
 
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-version=${ip_version}`, 'ip-version');

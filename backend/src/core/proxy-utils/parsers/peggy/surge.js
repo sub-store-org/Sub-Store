@@ -459,7 +459,7 @@ anytls = tag equals "anytls" address (passwordk/reuse/ip_version/underlying_prox
     proxy.type = "anytls";
     proxy.tls = true;
 }
-trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/headers/max_streams/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/fast_open/tfo/block_quic/others)* {
+trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/headers/max_streams/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/h3/fast_open/tfo/block_quic/others)* {
     proxy.type = "trusttunnel";
     proxy.tls = true;
 }
@@ -619,6 +619,7 @@ alpn = comma "alpn" equals match:quoted_value {
     const values = parseAlpn(match);
     if (values.length > 0) proxy.alpn = values;
 }
+h3 = comma "h3" equals flag:bool { if (flag) proxy.network = "h3"; }
 quoted_value = '"' match:$[^"]* '"' { return match; } / "'" match:$[^']* "'" { return match; } / match:$[^,]+ { return match; }
 uuidk = comma "uuid" equals match:[^,]+ { proxy.uuid = match.join(""); }
 salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); proxy.obfs = 'salamander'; }
