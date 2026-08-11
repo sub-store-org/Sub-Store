@@ -1,18 +1,23 @@
-<div align="center">
-<br>
-<img width="200" src="https://raw.githubusercontent.com/cc63/ICON/main/Sub-Store.png" alt="Sub-Store">
-<br>
-<br>
-<h2 align="center">Sub-Store<h2>
-</div>
-
-<p align="center" color="#6a737d">
-Advanced Subscription Manager for QX, Loon, Surge, Stash, Egern and Shadowrocket.
+<p align="center">
+<img src="https://raw.githubusercontent.com/cc63/ICON/main/Sub-Store.png" alt="Sub-Store" width="100">
 </p>
+<h1 align="center">Sub-Store</h1>
 
-[![Build](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/sub-store-org/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/sub-store-org/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Lines of code](https://img.shields.io/tokei/lines/github/sub-store-org/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/sub-store-org/Sub-Store)
-<a href="https://trendshift.io/repositories/4572" target="_blank"><img src="https://trendshift.io/api/badge/repositories/4572" alt="sub-store-org%2FSub-Store | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/PengYM)
+> Advanced Subscription Manager for QX, Loon, Surge, Stash, Egern and Shadowrocket
+
+[![Build](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/sub-store-org/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/sub-store-org/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/sub-store-org/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/sub-store-org/Sub-Store)
+<br>
+<a href="https://trendshift.io/repositories/4572" target="_blank"><img src="https://trendshift.io/api/badge/repositories/4572" alt="sub-store-org%2FSub-Store | Trendshift" height="25"/></a>
+<a href="https://www.buymeacoffee.com/PengYM" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="25"/></a>
+
+<table>
+<tbody>
+<tr>
+<td width="180"><a href="https://api.muteki.site/register?aff=XREAM&promo=XREAM"><img src="./assets/banners/MaruCode.jpg" alt="MaruCode" width="150"></a></td>
+<td><a href="https://api.muteki.site/register?aff=XREAM&promo=XREAM">MaruCode</a> 是一家偶尔做做慈善的小破站 API，自营号池，不搞充值营销套路，主要提供 Codex、Claude Code、GPT Image-2 等主流模型，支持 WebSocket 协议，明码标价(Codex 0.25x, CC 1.5x)，透明汇率(1:1)，<a href="https://api.muteki.site/register?aff=XREAM&promo=XREAM">新用户注册</a> 送 2 刀 💰 <a href="https://images-2.muteki.site">生图工作台 🖼</a></td>
+</tr>
+</tbody>
+</table>
 
 [📚 文档/DOC](https://github.com/sub-store-org/Sub-Store/wiki)
 
