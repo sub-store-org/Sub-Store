@@ -1110,7 +1110,10 @@ function lastParse(proxy) {
             }
         }
     }
-    if (['ws', 'http', 'h2'].includes(proxy.network)) {
+    if (
+        ['ws', 'http', 'h2'].includes(proxy.network) &&
+        !['masque'].includes(proxy.type)
+    ) {
         if (
             ['ws', 'h2'].includes(proxy.network) &&
             !proxy[`${proxy.network}-opts`]?.path

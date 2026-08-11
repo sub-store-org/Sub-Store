@@ -36,6 +36,7 @@ export default function Stash_Producer() {
                         'anytls',
                         'tailscale',
                         'trusttunnel',
+                        'masque',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ![
@@ -262,9 +263,9 @@ export default function Stash_Producer() {
                         proxy['h2-opts']?.headers?.host ??
                         proxy['h2-opts']?.headers?.Host;
                     if (
-                        (isPresent(proxy, 'h2-opts.host') ||
-                            isPresent(proxy, 'h2-opts.headers.host') ||
-                            isPresent(proxy, 'h2-opts.headers.Host'))
+                        isPresent(proxy, 'h2-opts.host') ||
+                        isPresent(proxy, 'h2-opts.headers.host') ||
+                        isPresent(proxy, 'h2-opts.headers.Host')
                     ) {
                         proxy['h2-opts'].host = Array.isArray(host)
                             ? host
