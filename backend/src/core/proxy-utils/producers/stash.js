@@ -37,6 +37,7 @@ export default function Stash_Producer() {
                         'tailscale',
                         'trusttunnel',
                         'masque',
+                        'mieru',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ![
@@ -78,8 +79,6 @@ export default function Stash_Producer() {
                         (['tcp'].includes(proxy.network) &&
                             proxy['reality-opts']))
                 ) {
-                    return false;
-                } else if (['xhttp'].includes(proxy.network)) {
                     return false;
                 } else if (
                     proxy.encryption &&
