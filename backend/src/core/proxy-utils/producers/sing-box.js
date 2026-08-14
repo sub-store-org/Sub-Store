@@ -401,7 +401,21 @@ const tlsParser = (proxy, parsedProxy) => {
     if (proxy['_client_key']) parsedProxy.tls.client_key = proxy['_client_key'];
     if (proxy['_client_key_path'])
         parsedProxy.tls.client_key_path = proxy['_client_key_path'];
-    if (!parsedProxy.tls.enabled) delete parsedProxy.tls;
+    if (!parsedProxy.tls.enabled) {
+        delete parsedProxy.tls;
+    } else if (
+        (proxy.fingerprint || proxy['tls-fingerprint']) &&
+        !parsedProxy.tls.reality &&
+        !parsedProxy.tls.certificate &&
+        !parsedProxy.tls.certificate_path &&
+        !parsedProxy.tls.certificate_public_key_sha256
+    ) {
+        // sing-box can only pin the SHA-256 of the certificate public key
+        // https://sing-box.sagernet.org/configuration/shared/tls/#certificate_public_key_sha256
+        $.warn(
+            `Platform sing-box does not support certificate fingerprint pinning, it is dropped for proxy ${proxy.name}. Set _certificate_public_key_sha256 to pin the certificate public key instead`,
+        );
+    }
 };
 
 const sshParser = (proxy = {}) => {
