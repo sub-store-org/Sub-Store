@@ -4442,6 +4442,70 @@ describe('Proxy structured producers', function () {
         });
     });
 
+    it('warns about the dropped certificate fingerprint for sing-box', function () {
+        const fingerprint =
+            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+        const publicKeySha256 = '428F7quaQJvBhEr5TclcjPpsl1ryyNQo7oLBGhhC3UU=';
+        const { result, warnings } = captureWarns(() =>
+            produceInternal('sing-box', [
+                {
+                    type: 'trojan',
+                    name: 'Trojan Pinned',
+                    server: 'trojan.example.com',
+                    port: 443,
+                    password: 'secret',
+                    tls: true,
+                    'tls-fingerprint': fingerprint,
+                },
+                {
+                    type: 'hysteria2',
+                    name: 'Hysteria2 Public Key Pinned',
+                    server: 'hy2.example.com',
+                    port: 443,
+                    password: 'secret',
+                    'tls-fingerprint': fingerprint,
+                    _certificate_public_key_sha256: [publicKeySha256],
+                },
+                {
+                    type: 'vless',
+                    name: 'VLESS Reality Pinned',
+                    server: 'vless.example.com',
+                    port: 443,
+                    uuid: UUID,
+                    tls: true,
+                    'tls-fingerprint': fingerprint,
+                    'reality-opts': {
+                        'public-key': 'pubkey',
+                        'short-id': '08',
+                    },
+                },
+            ]),
+        );
+
+        expect(warnings).to.have.length(1);
+        expect(warnings[0]).to.include('Trojan Pinned');
+        expect(warnings[0]).to.include('_certificate_public_key_sha256');
+        expect(result[0].tls).to.not.have.property(
+            'certificate_public_key_sha256',
+        );
+        expectSubset(result[1], {
+            tls: {
+                enabled: true,
+                certificate_public_key_sha256: [publicKeySha256],
+            },
+        });
+        expectSubset(result[2], {
+            tls: {
+                enabled: true,
+                reality: {
+                    enabled: true,
+                    public_key: 'pubkey',
+                    short_id: '08',
+                },
+            },
+        });
+    });
+
     it('emits WireGuard interface CIDR suffixes for Egern exports', function () {
         const proxies = [
             {
