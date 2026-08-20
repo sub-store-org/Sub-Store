@@ -57,7 +57,7 @@ export default class Gist {
     constructor({ token, key, syncPlatform }) {
         const { isStash, isLoon, isShadowRocket, isQX } = ENV();
         const { defaultProxy, githubApiTimeout, githubProxy, githubApiUrl } =
-            $.read(SETTINGS_KEY);
+            $.read(SETTINGS_KEY) || {};
         const githubApiRequestTimeout = githubApiTimeout || 10000;
         const githubGistBaseURL = getGithubGistBaseURL({
             githubApiUrl,

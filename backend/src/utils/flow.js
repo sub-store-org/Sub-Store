@@ -64,7 +64,7 @@ export async function getFlowHeaders(
             : { insecure: true }
         : undefined;
     const { defaultProxy, defaultFlowUserAgent, defaultTimeout } =
-        $.read(SETTINGS_KEY);
+        $.read(SETTINGS_KEY) || {};
     let proxy = customProxy || defaultProxy;
     if ($.env.isNode) {
         proxy = proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');

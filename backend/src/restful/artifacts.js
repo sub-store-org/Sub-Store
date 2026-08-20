@@ -64,7 +64,7 @@ export default function register($app) {
 async function restoreArtifacts(_, res) {
     $.info('开始恢复远程配置...');
     try {
-        const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
+        const { gistToken, syncPlatform } = $.read(SETTINGS_KEY) || {};
         if (!gistToken) {
             return Promise.reject('未设置 GitHub Token！');
         }
@@ -355,7 +355,7 @@ function getArtifactGistEmptyFileFallback() {
 }
 
 async function syncToGist(files, options = {}) {
-    const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
+    const { gistToken, syncPlatform } = $.read(SETTINGS_KEY) || {};
     if (!gistToken) {
         return Promise.reject('未设置 GitHub Token！');
     }
@@ -398,7 +398,7 @@ async function syncToGist(files, options = {}) {
     } catch (e) {}
 
     const url = body?.html_url ?? body?.web_url;
-    const settings = $.read(SETTINGS_KEY);
+    const settings = $.read(SETTINGS_KEY) || {};
     if (url) {
         $.log(`同步 Gist 后, 找到 Sub-Store Gist: ${url}`);
         settings.artifactStore = url;

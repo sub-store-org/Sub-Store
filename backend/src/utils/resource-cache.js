@@ -89,7 +89,7 @@ function normalizeTTL(ttl) {
 }
 
 function getTTL() {
-    const settings = $.read(SETTINGS_KEY);
+    const settings = $.read(SETTINGS_KEY) || {};
     let ttl = settings?.resourceCacheTtl;
     if (ttl) {
         ttl = Number(ttl);

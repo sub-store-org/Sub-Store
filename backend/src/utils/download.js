@@ -170,7 +170,7 @@ export default async function download(
         defaultUserAgent,
         defaultTimeout,
         cacheThreshold: defaultCacheThreshold,
-    } = $.read(SETTINGS_KEY);
+    } = $.read(SETTINGS_KEY) || {};
     const cacheThreshold = defaultCacheThreshold || 1024;
     let proxy = customProxy || defaultProxy;
     if ($.env.isNode) {

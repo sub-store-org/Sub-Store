@@ -243,7 +243,7 @@ async function gistBackupAction(
     action,
     { keep, encode, tokenStrategy: queryTokenStrategy } = {},
 ) {
-    const settings = $.read(SETTINGS_KEY);
+    const settings = $.read(SETTINGS_KEY) || {};
     const { gistToken, syncPlatform } = settings;
     if (!gistToken) throw new Error('GitHub Token is required for backup!');
 
@@ -397,7 +397,7 @@ async function gistBackupAction(
 async function gistBackup(req, res) {
     const { action, keep, encode, tokenStrategy } = req.query;
     // read token
-    const { gistToken } = $.read(SETTINGS_KEY);
+    const { gistToken } = $.read(SETTINGS_KEY) || {};
     if (!gistToken) {
         failed(
             res,

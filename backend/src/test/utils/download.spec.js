@@ -160,6 +160,16 @@ describe('download github proxy regex', function () {
         expect(capturedUrls).to.deep.equal(['https://example.com/archive.txt']);
     });
 
+    it('uses download defaults when settings are missing', async function () {
+        delete state[SETTINGS_KEY];
+
+        await download('https://example.com/no-settings.txt');
+
+        expect(capturedUrls).to.deep.equal([
+            'https://example.com/no-settings.txt',
+        ]);
+    });
+
     it('matches regex patterns case-insensitively by default', async function () {
         state[SETTINGS_KEY].githubProxyRegex =
             '^https://RAW\\.GITHUBUSERCONTENT\\.COM';
