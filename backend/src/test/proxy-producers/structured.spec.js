@@ -315,7 +315,7 @@ describe('Proxy structured producers', function () {
         }
     });
 
-    it('keeps Mihomo Snell versions 1 through 5', function () {
+    it('keeps Mihomo and Stash Snell versions 1 through 5', function () {
         const proxies = [1, 2, 3, 4, 5, 6].map((version) => ({
             type: 'snell',
             name: `Snell ${version}`,
@@ -326,27 +326,41 @@ describe('Proxy structured producers', function () {
             udp: true,
         }));
 
-        const internal = produceInternal('Mihomo', proxies);
-        const external = loadProducedYaml('Mihomo', proxies);
+        for (const platform of ['Mihomo', 'Stash']) {
+            const internal = produceInternal(
+                platform,
+                proxies.map((proxy) => ({ ...proxy })),
+            );
+            const external = loadProducedYaml(
+                platform,
+                proxies.map((proxy) => ({ ...proxy })),
+            );
 
-        expect(internal.map((proxy) => proxy.version)).to.deep.equal([
-            1, 2, 3, 4, 5,
-        ]);
-        expect(external.proxies.map((proxy) => proxy.version)).to.deep.equal([
-            1, 2, 3, 4, 5,
-        ]);
-        expect(
-            internal.find((proxy) => proxy.version === 1),
-        ).to.not.have.property('udp');
-        expect(
-            internal.find((proxy) => proxy.version === 2),
-        ).to.not.have.property('udp');
-        expect(internal.find((proxy) => proxy.version === 4).udp).to.equal(
-            true,
-        );
-        expect(internal.find((proxy) => proxy.version === 5).udp).to.equal(
-            true,
-        );
+            expect(
+                internal.map((proxy) => proxy.version),
+                platform,
+            ).to.deep.equal([1, 2, 3, 4, 5]);
+            expect(
+                external.proxies.map((proxy) => proxy.version),
+                platform,
+            ).to.deep.equal([1, 2, 3, 4, 5]);
+            expect(
+                internal.find((proxy) => proxy.version === 1),
+                platform,
+            ).to.not.have.property('udp');
+            expect(
+                internal.find((proxy) => proxy.version === 2),
+                platform,
+            ).to.not.have.property('udp');
+            expect(internal.find((proxy) => proxy.version === 4).udp).to.equal(
+                true,
+                platform,
+            );
+            expect(internal.find((proxy) => proxy.version === 5).udp).to.equal(
+                true,
+                platform,
+            );
+        }
     });
 
     it('keeps supported Snell in sing-box by default', function () {
@@ -2412,7 +2426,7 @@ describe('Proxy structured producers', function () {
         });
     });
 
-    it('keeps Stash VLESS TCP REALITY nodes while still filtering non-tcp and unsupported variants', function () {
+    it('keeps Stash VLESS TCP REALITY and Encryption nodes while filtering non-tcp REALITY', function () {
         const proxies = [
             {
                 type: 'vless',
@@ -2495,15 +2509,17 @@ describe('Proxy structured producers', function () {
         const internal = produceInternal('Stash', proxies);
         const external = loadProducedYaml('Stash', proxies);
 
-        expect(internal).to.have.length(2);
-        expect(external.proxies).to.have.length(2);
+        expect(internal).to.have.length(3);
+        expect(external.proxies).to.have.length(3);
         expect(internal.map((proxy) => proxy.name)).to.deep.equal([
             'Supported Reality',
             'Custom Flow',
+            'Encrypted VLESS',
         ]);
         expect(external.proxies.map((proxy) => proxy.name)).to.deep.equal([
             'Supported Reality',
             'Custom Flow',
+            'Encrypted VLESS',
         ]);
         expectSubset(internal[0], {
             type: 'vless',
@@ -2514,6 +2530,11 @@ describe('Proxy structured producers', function () {
             name: 'Custom Flow',
             flow: 'xtls-rprx-unknown',
         });
+        expectSubset(internal[2], {
+            type: 'vless',
+            name: 'Encrypted VLESS',
+            encryption: 'aes-128-gcm',
+        });
         expectSubset(external.proxies[0], {
             type: 'vless',
             name: 'Supported Reality',
@@ -2522,6 +2543,11 @@ describe('Proxy structured producers', function () {
             type: 'vless',
             name: 'Custom Flow',
             flow: 'xtls-rprx-unknown',
+        });
+        expectSubset(external.proxies[2], {
+            type: 'vless',
+            name: 'Encrypted VLESS',
+            encryption: 'aes-128-gcm',
         });
     });
 

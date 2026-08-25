@@ -58,7 +58,7 @@ export default function Stash_Producer() {
                             '2022-blake3-aes-128-gcm',
                             '2022-blake3-aes-256-gcm',
                         ].includes(proxy.cipher)) ||
-                    (proxy.type === 'snell' && proxy.version >= 4)
+                    (proxy.type === 'snell' && proxy.version >= 6)
                 ) {
                     return false;
                 } else if (
@@ -83,12 +83,6 @@ export default function Stash_Producer() {
                 } else if (
                     !['vless'].includes(proxy.type) &&
                     ['xhttp'].includes(proxy.network)
-                ) {
-                    return false;
-                } else if (
-                    proxy.encryption &&
-                    proxy.encryption !== 'none' &&
-                    ['vless'].includes(proxy.type)
                 ) {
                     return false;
                 } else if (
