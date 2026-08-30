@@ -1,5 +1,4 @@
 import { getPlatformFromHeaders } from '@/utils/user-agent';
-import { ProxyUtils } from '@/core/proxy-utils';
 import { COLLECTIONS_KEY, SUBS_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { getFlowHeaders, normalizeFlowHeader } from '@/utils/flow';
@@ -11,10 +10,6 @@ import {
     ResourceNotFoundError,
 } from '@/restful/errors';
 import { produceArtifact } from '@/restful/sync';
-// eslint-disable-next-line no-unused-vars
-import { isIPv4, isIPv6 } from '@/utils';
-import { getISO } from '@/utils/geo';
-import env from '@/utils/env';
 import { applyResponseTransformers } from '@/restful/response-transformer';
 import {
     applyAgeOutputEncryption,
@@ -22,18 +17,6 @@ import {
 } from '@/restful/age-output';
 import { findShareToken } from '@/restful/token';
 import { maskAgeSecretInUrl } from '@/utils/age';
-
-function buildEmptyNezhaPayload() {
-    return JSON.stringify(
-        {
-            code: 0,
-            message: 'success',
-            result: [],
-        },
-        null,
-        2,
-    );
-}
 
 function getMihomoExternalOptions(query) {
     const useMihomoExternal = query.target === 'SurgeMac';
@@ -97,41 +80,10 @@ export default function register($app) {
         await downloadSubscription(req, res);
     });
     $app.get('/download/:name', downloadSubscription);
-
-    $app.get(
-        '/download/collection/:name/api/v1/server/details',
-        async (req, res) => {
-            req.query.platform = 'JSON';
-            req.query.produceType = 'internal';
-            req.query.resultFormat = 'nezha';
-            await downloadCollection(req, res);
-        },
-    );
-    $app.get('/download/:name/api/v1/server/details', async (req, res) => {
-        req.query.platform = 'JSON';
-        req.query.produceType = 'internal';
-        req.query.resultFormat = 'nezha';
-        await downloadSubscription(req, res);
-    });
-    $app.get(
-        '/download/collection/:name/api/v1/monitor/:nezhaIndex',
-        async (req, res) => {
-            req.query.platform = 'JSON';
-            req.query.produceType = 'internal';
-            req.query.resultFormat = 'nezha-monitor';
-            await downloadCollection(req, res);
-        },
-    );
-    $app.get('/download/:name/api/v1/monitor/:nezhaIndex', async (req, res) => {
-        req.query.platform = 'JSON';
-        req.query.produceType = 'internal';
-        req.query.resultFormat = 'nezha-monitor';
-        await downloadSubscription(req, res);
-    });
 }
 
 async function downloadSubscription(req, res) {
-    let { name, nezhaIndex } = req.params;
+    const { name } = req.params;
     const isShareRoute = req.path?.startsWith('/share/');
 
     const {
@@ -159,7 +111,6 @@ async function downloadSubscription(req, res) {
         ignoreFailedRemoteSub,
         produceType,
         includeUnsupportedProxy,
-        resultFormat,
         proxy,
         noCache,
         _fakeNode,
@@ -348,7 +299,7 @@ async function downloadSubscription(req, res) {
                 delete opt.name;
                 opt.subscription = fakeSub;
             }
-            let output = await produceArtifact(opt);
+            const output = await produceArtifact(opt);
             let flowInfo;
             if (
                 sub.source !== 'local' ||
@@ -467,22 +418,6 @@ async function downloadSubscription(req, res) {
             }
 
             if (platform === 'JSON') {
-                if (resultFormat === 'nezha') {
-                    output = nezhaTransform(output);
-                } else if (resultFormat === 'nezha-monitor') {
-                    if (!Array.isArray(output) || output.length === 0) {
-                        output = buildEmptyNezhaPayload();
-                    } else {
-                        nezhaIndex = /^\d+$/.test(nezhaIndex)
-                            ? parseInt(nezhaIndex, 10)
-                            : output.findIndex((i) => i.name === nezhaIndex);
-                        output = await nezhaMonitor(
-                            output[nezhaIndex],
-                            nezhaIndex,
-                            req.query,
-                        );
-                    }
-                }
                 res.set('Content-Type', 'application/json;charset=utf-8');
             } else {
                 res.set('Content-Type', 'text/plain; charset=utf-8');
@@ -555,7 +490,7 @@ async function downloadSubscription(req, res) {
 }
 
 async function downloadCollection(req, res) {
-    let { name, nezhaIndex } = req.params;
+    const { name } = req.params;
 
     const {
         useMihomoExternal,
@@ -581,7 +516,6 @@ async function downloadCollection(req, res) {
         ignoreFailedRemoteSub,
         produceType,
         includeUnsupportedProxy,
-        resultFormat,
         proxy,
         noCache,
     } = req.query;
@@ -661,7 +595,7 @@ async function downloadCollection(req, res) {
     if (collection) {
         try {
             const noFlow = req.query.noFlow || collection.noFlow;
-            let output = await produceArtifact({
+            const output = await produceArtifact({
                 type: 'collection',
                 name,
                 platform,
@@ -826,22 +760,6 @@ async function downloadCollection(req, res) {
                 }
             }
             if (platform === 'JSON') {
-                if (resultFormat === 'nezha') {
-                    output = nezhaTransform(output);
-                } else if (resultFormat === 'nezha-monitor') {
-                    if (!Array.isArray(output) || output.length === 0) {
-                        output = buildEmptyNezhaPayload();
-                    } else {
-                        nezhaIndex = /^\d+$/.test(nezhaIndex)
-                            ? parseInt(nezhaIndex, 10)
-                            : output.findIndex((i) => i.name === nezhaIndex);
-                        output = await nezhaMonitor(
-                            output[nezhaIndex],
-                            nezhaIndex,
-                            req.query,
-                        );
-                    }
-                }
                 res.set('Content-Type', 'application/json;charset=utf-8');
             } else {
                 res.set('Content-Type', 'text/plain; charset=utf-8');
@@ -913,169 +831,4 @@ async function downloadCollection(req, res) {
             404,
         );
     }
-}
-
-async function nezhaMonitor(proxy, index, query) {
-    const result = {
-        code: 0,
-        message: 'success',
-        result: [],
-    };
-
-    try {
-        const { isLoon, isSurge, isEgern } = $.env;
-        if (!isLoon && !isSurge && !isEgern)
-            throw new Error(
-                '仅支持 Loon、Egern 和 Surge(ability=http-client-policy)',
-            );
-        // const node = ProxyUtils.produce([proxy], isLoon ? 'Loon' : 'Surge');
-        let node;
-        if (isEgern) {
-            node = JSON.stringify(
-                ProxyUtils.produce([proxy], 'Egern', 'internal', {
-                    'include-unsupported-proxy': includeUnsupportedProxy,
-                })[0],
-            );
-        } else {
-            node = ProxyUtils.produce(
-                [proxy],
-                isLoon ? 'Loon' : 'Surge',
-                undefined,
-                {
-                    'include-unsupported-proxy': includeUnsupportedProxy,
-                },
-            );
-        }
-        if (!node) throw new Error('当前客户端不兼容此节点');
-        const monitors = proxy._monitors || [
-            {
-                name: 'Cloudflare',
-                url: 'http://cp.cloudflare.com/generate_204',
-                method: 'HEAD',
-                number: 3,
-                timeout: 2000,
-            },
-            {
-                name: 'Google',
-                url: 'http://www.google.com/generate_204',
-                method: 'HEAD',
-                number: 3,
-                timeout: 2000,
-            },
-        ];
-        const number =
-            query.number || Math.max(...monitors.map((i) => i.number)) || 3;
-        for (const monitor of monitors) {
-            const interval = 10 * 60 * 1000;
-            const data = {
-                monitor_id: monitors.indexOf(monitor),
-                server_id: index,
-                monitor_name: monitor.name,
-                server_name: proxy.name,
-                created_at: [],
-                avg_delay: [],
-            };
-            for (let index = 0; index < number; index++) {
-                const startedAt = Date.now();
-                try {
-                    await $.http[(monitor.method || 'HEAD').toLowerCase()]({
-                        timeout: monitor.timeout || 2000,
-                        url: monitor.url,
-                        'policy-descriptor': node,
-                        node,
-                    });
-                    const latency = Date.now() - startedAt;
-                    $.info(`${monitor.name} latency: ${latency}`);
-                    data.avg_delay.push(latency);
-                } catch (e) {
-                    $.error(e);
-                    data.avg_delay.push(0);
-                }
-
-                data.created_at.push(
-                    Date.now() - interval * (monitor.number - index - 1),
-                );
-            }
-
-            result.result.push(data);
-        }
-    } catch (e) {
-        $.error(e);
-        result.result.push({
-            monitor_id: 0,
-            server_id: 0,
-            monitor_name: `❌ ${e.message ?? e}`,
-            server_name: proxy.name,
-            created_at: [Date.now()],
-            avg_delay: [0],
-        });
-    }
-
-    return JSON.stringify(result, null, 2);
-}
-function nezhaTransform(output) {
-    const result = {
-        code: 0,
-        message: 'success',
-        result: [],
-    };
-    output.map((proxy, index) => {
-        // 如果节点上有数据 就取节点上的数据
-        let CountryCode = proxy._geo?.countryCode || proxy._geo?.country;
-        // 简单判断下
-        if (!/^[a-z]{2}$/i.test(CountryCode)) {
-            CountryCode = getISO(proxy.name);
-        }
-        // 简单判断下
-        if (/^[a-z]{2}$/i.test(CountryCode)) {
-            // 如果节点上有数据 就取节点上的数据
-            let now = Math.round(new Date().getTime() / 1000);
-            let time = proxy._unavailable ? 0 : now;
-
-            const uptime = parseInt(proxy._uptime || 0, 10);
-
-            result.result.push({
-                id: index,
-                name: proxy.name,
-                tag: `${proxy._tag ?? ''}`,
-                last_active: time,
-                // 暂时不用处理 现在 VPings App 端的接口支持域名查询
-                // 其他场景使用 自己在 Sub-Store 加一步域名解析
-                valid_ip: proxy._IP || proxy.server,
-                ipv4: proxy._IPv4 || proxy.server,
-                ipv6: proxy._IPv6 || (isIPv6(proxy.server) ? proxy.server : ''),
-                host: {
-                    Platform: 'Sub-Store',
-                    PlatformVersion: env.version,
-                    CPU: [],
-                    MemTotal: 1024,
-                    DiskTotal: 1024,
-                    SwapTotal: 1024,
-                    Arch: '',
-                    Virtualization: '',
-                    BootTime: now - uptime,
-                    CountryCode, // 目前需要
-                    Version: '0.0.1',
-                },
-                status: {
-                    CPU: 0,
-                    MemUsed: 0,
-                    SwapUsed: 0,
-                    DiskUsed: 0,
-                    NetInTransfer: 0,
-                    NetOutTransfer: 0,
-                    NetInSpeed: 0,
-                    NetOutSpeed: 0,
-                    Uptime: uptime,
-                    Load1: 0,
-                    Load5: 0,
-                    Load15: 0,
-                    TcpConnCount: 0,
-                    UdpConnCount: 0,
-                    ProcessCount: 0,
-                },
-            });
-        }
-    });
-    return JSON.stringify(result, null, 2);
 }
