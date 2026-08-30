@@ -36,7 +36,7 @@
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "fetch-socks": "^1.3.3",
     "http-proxy-middleware": "^3.0.3",
-    "ip-address": "^9.0.5",
+    "ip-address": "^10.3.1",
     "js-base64": "^3.7.2",
     "json5": "^2.2.3",
     "jsrsasign": "^11.1.0",
