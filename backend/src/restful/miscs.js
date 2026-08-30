@@ -26,8 +26,7 @@ import {
 } from '@/utils/age';
 
 const GIST_TOKEN_PATH = 'settings.gistToken';
-const GIST_DOWNLOAD_TOKEN_STRATEGY_PATH =
-    'settings.gistDownloadTokenStrategy';
+const GIST_DOWNLOAD_TOKEN_STRATEGY_PATH = 'settings.gistDownloadTokenStrategy';
 
 export default function register($app) {
     // utils
@@ -215,11 +214,7 @@ async function decryptGistBackupContent(content, settings, encoding) {
     return decryptArmorIfPresent(content, ageSecretKey);
 }
 
-function resolveGistDownloadTokenStrategy(
-    storedStrategy,
-    queryStrategy,
-    keep,
-) {
+function resolveGistDownloadTokenStrategy(storedStrategy, queryStrategy, keep) {
     if (queryStrategy !== undefined) {
         if (queryStrategy !== 'overwrite' && queryStrategy !== 'keep') {
             throw new RequestInvalidError(
@@ -272,10 +267,7 @@ async function gistBackupAction(
     );
     switch (action) {
         case 'upload':
-            const gists = await gist.locate();
-
             let backupContent;
-
             try {
                 const keepAgeSecretKey = isAgeGistBackupEncoding(encoding);
 
@@ -289,7 +281,6 @@ async function gistBackupAction(
 
                 const downloadedContent = await gist.download(
                     GIST_BACKUP_FILE_NAME,
-                    gists,
                 );
 
                 const onlineContent = await decryptGistBackupContent(
@@ -337,9 +328,7 @@ async function gistBackupAction(
                         [GIST_BACKUP_FILE_NAME]: {
                             content: uploadContent,
                         },
-                    },
-                    {},
-                    gists,
+                    }
                 );
 
                 $.info(`上传备份完成`);
@@ -430,10 +419,7 @@ async function gistBackupAction(
             const tokenPathIndex = keepPaths.indexOf(GIST_TOKEN_PATH);
             if (tokenStrategy === 'keep' && tokenPathIndex === -1) {
                 keepPaths.push(GIST_TOKEN_PATH);
-            } else if (
-                tokenStrategy === 'overwrite' &&
-                tokenPathIndex !== -1
-            ) {
+            } else if (tokenStrategy === 'overwrite' && tokenPathIndex !== -1) {
                 keepPaths.splice(tokenPathIndex, 1);
             }
             if (!keepPaths.includes(GIST_DOWNLOAD_TOKEN_STRATEGY_PATH)) {

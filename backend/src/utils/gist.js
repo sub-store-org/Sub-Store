@@ -199,12 +199,12 @@ export default class Gist {
         }
     }
 
-    async upload(input, options = {}, gists) {
+    async upload(input, options = {}) {
         if (Object.keys(input).length === 0) {
             return Promise.reject('未提供需上传的文件');
         }
 
-        const gist = gists !== undefined ? gists : await this.locate();
+        const gist = await this.locate();
 
         let files = input;
         const emptyFileFallback = options.emptyFileFallback;
@@ -415,8 +415,8 @@ export default class Gist {
         }
     }
 
-    async download(filename, gists) {
-        const gist = gists !== undefined ? gists : await this.locate();
+    async download(filename) {
+        const gist = await this.locate();
         if (gist?.id) {
             try {
                 const { files } = await this.http
