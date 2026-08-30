@@ -442,7 +442,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
             options.url = baseURL ? baseURL + options.url : options.url;
         }
         options = { ...defaultOptions, ...options };
-        const timeout = (Number(options.timeout) || 0) + 100;
+        const timeout = options.timeout;
         const requestId = options.requestId || generateRequestId();
         const events = {
             ...{
@@ -476,7 +476,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 opts: options.opts,
             });
         } else if (isLoon || isSurge || isNode || isEgern) {
-            worker = new Promise(async (resolve, reject) => {
+            worker = new Promise((resolve, reject) => {
                 const body = options.body;
                 const opts = JSON.parse(JSON.stringify(options));
 
@@ -623,7 +623,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                     // );
                     // const httpClientTs = Date.now();
                     try {
-                        await $httpClient[method.toLowerCase()](
+                        $httpClient[method.toLowerCase()](
                             opts,
                             (err, response, body) => {
                                 // $.info(
@@ -633,7 +633,6 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                                 // );
 
                                 if (err) {
-                                    $.error(err);
                                     reject(err);
                                     return;
                                 }
@@ -649,7 +648,6 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                             },
                         );
                     } catch (e) {
-                        $.error(e);
                         reject(e);
                     }
                 }
@@ -724,9 +722,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                     // $.info(`🍉 [${requestId}] worker resolved`);
                     try {
                         await resolveOnce(value);
-                    } catch (error) {
-                        $.error(error);
-                    }
+                    } catch (error) {}
                 },
                 (error) => {
                     rejectOnce(error);
@@ -741,12 +737,12 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
 
                     try {
                         events.onTimeout();
-                    } catch (e) {
-                        $.error(e);
-                    }
+                    } catch (e) {}
 
                     rejectOnce(
-                        `${method} URL: ${options.url} exceeds the timeout ${timeout} ms`,
+                        new Error(
+                            `${method} URL: ${options.url} exceeds the timeout ${timeout} ms`,
+                        ),
                     );
                 }, timeout);
             }
