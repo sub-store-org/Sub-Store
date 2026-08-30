@@ -117,10 +117,18 @@ describe('open-api HTTP adapter', function () {
         });
 
         expect(agentOptions).to.have.length(2);
-        expect(agentOptions.map(({ proxyTunnel }) => proxyTunnel)).to.deep.equal([
-            true,
-            true,
-        ]);
+        expect(
+            agentOptions.map(({ proxyTunnel }) => proxyTunnel),
+        ).to.deep.equal([true, true]);
+    });
+
+    it('normalizes numeric string timeouts for undici', async function () {
+        await HTTP({ timeout: '5000' }).get('https://example.com/subscription');
+
+        expect(agentOptions[0]).to.include({
+            bodyTimeout: 5000,
+            headersTimeout: 5000,
+        });
     });
 
     it('uses the Undici option that throws at the redirect limit', async function () {

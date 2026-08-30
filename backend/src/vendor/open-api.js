@@ -481,11 +481,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                 const opts = JSON.parse(JSON.stringify(options));
 
                 opts.body = body;
-                opts.timeout = opts.timeout || 8000;
-
-                if (isNaN(opts.timeout)) {
-                    opts.timeout = 8000;
-                }
+                opts.timeout = Number(opts.timeout) || 8000;
 
                 if (isNode) {
                     const undici = eval("require('undici')");
