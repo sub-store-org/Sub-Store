@@ -151,6 +151,24 @@ export default class Gist {
 
         this.key = key;
         this.syncPlatform = syncPlatform;
+
+        // 串行请求队列锁 防止响应串扰
+        this._requestQueue = Promise.resolve();
+        const queuedMethods = ['get', 'post', 'put', 'patch', 'delete'];
+        for (const method of queuedMethods) {
+            const original = this.http[method];
+            if (typeof original === 'function') {
+                this.http[method] = (...args) => {
+                    return new Promise((resolve, reject) => {
+                        this._requestQueue = this._requestQueue.then(() =>
+                            original
+                                .apply(this.http, args)
+                                .then(resolve, reject),
+                        );
+                    });
+                };
+            }
+        }
     }
 
     async locate() {
@@ -181,25 +199,25 @@ export default class Gist {
         }
     }
 
-    async upload(input, options = {}) {
+    async upload(input, options = {}, gists) {
         if (Object.keys(input).length === 0) {
             return Promise.reject('未提供需上传的文件');
         }
 
-        const gist = await this.locate();
+        const gist = gists !== undefined ? gists : await this.locate();
 
         let files = input;
         const emptyFileFallback = options.emptyFileFallback;
         const hasEmptyFileFallback = Boolean(emptyFileFallback?.filename);
         const uploadMeta = {};
 
-        const attachUploadMeta = (request) =>
-            request.then((response) => {
-                if (Object.keys(uploadMeta).length > 0) {
-                    response.subStoreUploadMeta = uploadMeta;
-                }
-                return response;
-            });
+        const attachUploadMeta = async (request) => {
+            const response = await request;
+            if (Object.keys(uploadMeta).length > 0) {
+                response.subStoreUploadMeta = uploadMeta;
+            }
+            return response;
+        };
 
         const applyEmptyFileFallback = ({ actions, existingFiles, result }) => {
             if (!hasEmptyFileFallback) return;
@@ -338,6 +356,10 @@ export default class Gist {
                 return attachUploadMeta(
                     this.http.patch({
                         url: `/gists/${gist.id}`,
+                        headers: {
+                            ...this.headers,
+                            'Accept-Encoding': 'gzip, deflate, br',
+                        },
                         body: JSON.stringify({ files }),
                     }),
                 );
@@ -393,8 +415,8 @@ export default class Gist {
         }
     }
 
-    async download(filename) {
-        const gist = await this.locate();
+    async download(filename, gists) {
+        const gist = gists !== undefined ? gists : await this.locate();
         if (gist?.id) {
             try {
                 const { files } = await this.http

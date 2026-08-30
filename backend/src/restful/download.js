@@ -923,10 +923,29 @@ async function nezhaMonitor(proxy, index, query) {
     };
 
     try {
-        const { isLoon, isSurge } = $.env;
-        if (!isLoon && !isSurge)
-            throw new Error('仅支持 Loon 和 Surge(ability=http-client-policy)');
-        const node = ProxyUtils.produce([proxy], isLoon ? 'Loon' : 'Surge');
+        const { isLoon, isSurge, isEgern } = $.env;
+        if (!isLoon && !isSurge && !isEgern)
+            throw new Error(
+                '仅支持 Loon、Egern 和 Surge(ability=http-client-policy)',
+            );
+        // const node = ProxyUtils.produce([proxy], isLoon ? 'Loon' : 'Surge');
+        let node;
+        if (isEgern) {
+            node = JSON.stringify(
+                ProxyUtils.produce([proxy], 'Egern', 'internal', {
+                    'include-unsupported-proxy': includeUnsupportedProxy,
+                })[0],
+            );
+        } else {
+            node = ProxyUtils.produce(
+                [proxy],
+                isLoon ? 'Loon' : 'Surge',
+                undefined,
+                {
+                    'include-unsupported-proxy': includeUnsupportedProxy,
+                },
+            );
+        }
         if (!node) throw new Error('当前客户端不兼容此节点');
         const monitors = proxy._monitors || [
             {

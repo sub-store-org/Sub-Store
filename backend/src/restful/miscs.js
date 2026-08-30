@@ -272,27 +272,37 @@ async function gistBackupAction(
     );
     switch (action) {
         case 'upload':
+            const gists = await gist.locate();
+
+            let backupContent;
+
             try {
                 const keepAgeSecretKey = isAgeGistBackupEncoding(encoding);
-                content = serializeGistBackupContent(
+
+                backupContent = serializeGistBackupContent(
                     readCurrentBackupContent(),
                     getGistBackupPayloadEncoding(encoding),
                     { keepAgeSecretKey },
                 );
 
                 $.info(`下载备份, 与本地内容对比...`);
+
                 const downloadedContent = await gist.download(
                     GIST_BACKUP_FILE_NAME,
+                    gists,
                 );
+
                 const onlineContent = await decryptGistBackupContent(
                     downloadedContent,
                     settings,
                     encoding,
                 );
+
                 const canReuseOnlineContent =
                     !isAgeGistBackupEncoding(encoding) ||
                     isAgeArmor(downloadedContent);
-                if (canReuseOnlineContent && onlineContent === content) {
+
+                if (canReuseOnlineContent && onlineContent === backupContent) {
                     $.info(`内容一致, 无需上传备份`);
                     return;
                 }
@@ -303,24 +313,81 @@ async function gistBackupAction(
             // update syncTime
             settings.syncTime = new Date().getTime();
             $.write(settings, SETTINGS_KEY);
-            content = serializeGistBackupContent(
+
+            // 重新生成，避免前面的逻辑改变了状态
+            backupContent = serializeGistBackupContent(
                 readCurrentBackupContent(),
                 getGistBackupPayloadEncoding(encoding),
-                { keepAgeSecretKey: isAgeGistBackupEncoding(encoding) },
+                {
+                    keepAgeSecretKey: isAgeGistBackupEncoding(encoding),
+                },
             );
-            content = await encryptGistBackupContent(
-                content,
+
+            const uploadContent = await encryptGistBackupContent(
+                backupContent,
                 settings,
                 encoding,
             );
+
             $.info(`上传备份中...`);
+            await $.wait(100);
             try {
-                await gist.upload({
-                    [GIST_BACKUP_FILE_NAME]: { content },
-                });
+                await gist.upload(
+                    {
+                        [GIST_BACKUP_FILE_NAME]: {
+                            content: uploadContent,
+                        },
+                    },
+                    {},
+                    gists,
+                );
+
                 $.info(`上传备份完成`);
             } catch (err) {
-                // restore syncTime if upload failed
+                $.error(`上传请求异常: ${err?.message ?? err}`);
+
+                /*
+                 * PATCH 可能已经成功，
+                 * 只是没有收到 callback。
+                 *
+                 * 因此先重新 GET 确认。
+                 */
+                try {
+                    $.info(`重新获取备份, 确认上传结果...`);
+                    await $.wait(500);
+                    const downloadedContent = await gist.download(
+                        GIST_BACKUP_FILE_NAME,
+                        gists,
+                    );
+
+                    const onlineContent = await decryptGistBackupContent(
+                        downloadedContent,
+                        settings,
+                        encoding,
+                    );
+
+                    const canReuseOnlineContent =
+                        !isAgeGistBackupEncoding(encoding) ||
+                        isAgeArmor(downloadedContent);
+
+                    if (
+                        canReuseOnlineContent &&
+                        onlineContent === backupContent
+                    ) {
+                        $.info(`线上内容与本次上传内容一致, 上传实际已成功`);
+
+                        break;
+                    }
+
+                    $.error(`线上内容与本次上传内容不一致, 上传确认失败`);
+                } catch (verifyError) {
+                    $.error(
+                        `上传结果确认失败: ${
+                            verifyError?.message ?? verifyError
+                        }`,
+                    );
+                }
+
                 settings.syncTime = updated;
                 $.write(settings, SETTINGS_KEY);
                 throw err;
