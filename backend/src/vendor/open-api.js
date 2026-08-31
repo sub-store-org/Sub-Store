@@ -583,6 +583,9 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                                     maxRedirections: 3,
                                     throwOnMaxRedirect: true,
                                 }),
+                                interceptors.decompress({
+                                    skipErrorResponses: false,
+                                }),
                             ),
                         })
                             .then(async (response) => {
