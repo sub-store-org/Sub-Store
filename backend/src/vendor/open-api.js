@@ -482,7 +482,6 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
 
                 opts.body = body;
                 opts.timeout = Number(opts.timeout) || 8000;
-
                 if (isNode) {
                     const undici = eval("require('undici')");
                     const { socksDispatcher } = eval("require('fetch-socks')");
@@ -606,7 +605,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                         reject(e);
                     }
                 } else {
-                    if (isSurge || isStash || isShadowRocket) {
+                    if (isSurge || isEgern || isStash || isShadowRocket) {
                         opts.timeout = Math.ceil(opts.timeout / 1000);
                     }
 
@@ -719,9 +718,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
             worker.then(
                 async (value) => {
                     // $.info(`🍉 [${requestId}] worker resolved`);
-                    try {
-                        await resolveOnce(value);
-                    } catch (error) {}
+                    await resolveOnce(value);
                 },
                 (error) => {
                     rejectOnce(error);
