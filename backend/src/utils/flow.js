@@ -370,7 +370,7 @@ export function validCheck(flow) {
     if (flow?.total) {
         const upload = flow.usage?.upload || 0;
         const download = flow.usage?.download || 0;
-        if (flow.total - upload - download < 0) {
+        if (flow.total - upload - download <= 0) {
             const current = upload + download;
             const currT = flowTransfer(Math.abs(current));
             currT.value = current < 0 ? '-' + currT.value : currT.value;
