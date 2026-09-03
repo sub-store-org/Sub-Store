@@ -1029,6 +1029,29 @@ describe('Proxy text producers', function () {
         expect(alpnOutput).to.not.include(',h3=true');
     });
 
+    it('round-trips Surge MASQUE without conflating it with Mihomo MASQUE', function () {
+        const [proxy] = ProxyUtils.parse(
+            'Surge MASQUE = masque,masque.example.com,443,username=user,password=secret,port-hopping="8443;8445-8447",port-hopping-interval=30,sni=sni.example.com,alpn=h3,skip-cert-verify=true,udp-relay=false,ecn=false',
+        );
+
+        expect(proxy).to.deep.include({
+            type: 'masque-surge',
+            username: 'user',
+            password: 'secret',
+            ports: '8443,8445-8447',
+            'hop-interval': 30,
+            tls: true,
+            sni: 'sni.example.com',
+            alpn: ['h3'],
+            'skip-cert-verify': true,
+            udp: false,
+            ecn: false,
+        });
+        expect(produceExternal('Surge', proxy)).to.equal(
+            'Surge MASQUE=masque,masque.example.com,443,username="user",password="secret",port-hopping="8443;8445-8447",port-hopping-interval=30,sni="sni.example.com",alpn="h3",skip-cert-verify=true,udp-relay=false,ecn=false',
+        );
+    });
+
     it('omits Surge alpn and server-cert-verify-name for non-TLS outputs', function () {
         const output = produceExternal('Surge', [
             {

@@ -2905,6 +2905,19 @@ function Surge_TrustTunnel() {
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
+function Surge_Masque() {
+    const name = 'Surge MASQUE Parser';
+    const test = (line) => {
+        return /^.*=\s*masque/.test(line.split(',')[0]);
+    };
+    const parse = (raw) => {
+        const { port_hopping, line } = surge_port_hopping(raw);
+        const proxy = getSurgeParser().parse(line);
+        proxy.ports = port_hopping;
+        return proxy;
+    };
+    return { name, test, parse };
+}
 function Surge_H2Connect() {
     const name = 'Surge HTTP/2 CONNECT Parser';
     const test = (line) => {
@@ -3117,6 +3130,7 @@ export default [
     Surge_Direct(),
     Surge_AnyTLS(),
     Surge_TrustTunnel(),
+    Surge_Masque(),
     Surge_H2Connect(),
     Surge_SSH(),
     Surge_SS(),

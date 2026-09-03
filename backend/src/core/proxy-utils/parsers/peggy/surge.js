@@ -369,7 +369,7 @@ const grammars = String.raw`
     }
 }
 
-start = (anytls/shadowsocks/vmess/trojan/h2_connect/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard/hysteria2/ssh/trust_tunnel/direct) {
+start = (masque/anytls/shadowsocks/vmess/trojan/h2_connect/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard/hysteria2/ssh/trust_tunnel/direct) {
     return proxy;
 }
 
@@ -461,6 +461,10 @@ anytls = tag equals "anytls" address (passwordk/reuse/ip_version/underlying_prox
 }
 trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/headers/max_streams/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/h3/fast_open/tfo/block_quic/others)* {
     proxy.type = "trusttunnel";
+    proxy.tls = true;
+}
+masque = tag equals "masque" address (usernamek/passwordk/port_hopping_interval/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/fast_open/tfo/udp_relay/ecn/block_quic/others)* {
+    proxy.type = "masque-surge";
     proxy.tls = true;
 }
 
