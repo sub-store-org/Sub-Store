@@ -6,6 +6,7 @@ import { HEADERS_RESOURCE_CACHE_KEY, SETTINGS_KEY } from '@/constants';
 let $;
 let openApi;
 let getFlowHeaders;
+let validCheck;
 let headersResourceCache;
 let originalRead;
 let originalWrite;
@@ -28,7 +29,7 @@ describe('flow headers requests', function () {
     before(function () {
         ({ default: $ } = require('@/core/app'));
         openApi = require('@/vendor/open-api');
-        ({ getFlowHeaders } = require('@/utils/flow'));
+        ({ getFlowHeaders, validCheck } = require('@/utils/flow'));
         ({ default: headersResourceCache } = require(
             '@/utils/headers-resource-cache'
         ));
@@ -188,5 +189,17 @@ describe('flow headers requests', function () {
             'https://example.com/cached-flow',
         ]);
         expect(maxActiveRequests).to.equal(1);
+    });
+
+    it('throws when remaining traffic is exactly zero', function () {
+        const flow = {
+            total: 100,
+            usage: {
+                upload: 20,
+                download: 80,
+            },
+        };
+
+        expect(() => validCheck(flow)).to.throw('流量已用完');
     });
 });
