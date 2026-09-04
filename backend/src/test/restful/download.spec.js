@@ -274,6 +274,24 @@ describe('download routes', function () {
         $.notify = () => {};
     });
 
+    it('passes native Shadowrocket output through subscription and collection downloads', async function () {
+        const expected =
+            'VLESS WS=vless,1.1.1.1,443,password=11111111-1111-4111-8111-111111111111,tls=true,obfs=websocket,peer=sni.example.com';
+
+        for (const request of [
+            downloadSubscription,
+            downloadCollection,
+        ]) {
+            const output = await request({
+                target: 'Shadowrocket',
+                native: 'true',
+            });
+
+            expect(output).to.include(expected);
+            expect(output).to.not.include('proxies:');
+        }
+    });
+
     it('uses truthiness for subscription noFlow query values', async function () {
         state[SUBS_KEY][0].subUserinfo =
             'upload=1; download=2; total=3; expire=4';

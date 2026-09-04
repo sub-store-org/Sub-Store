@@ -13,6 +13,328 @@ import {
 import $ from '@/core/app';
 import { normalizeVmessSecurity } from '../vmess-security';
 
+
+function getNativeSingleValue(value, key) {
+    if (!Array.isArray(value)) {
+        return value;
+    }
+
+    if (value.length <= 1) {
+        return value[0];
+    }
+
+    throw new Error(
+        `Unsupported multiple Shadowrocket native ${key} values`,
+    );
+}
+
+function appendNativeOption(parts, key, value) {
+    if (value !== undefined && value !== null && value !== '') {
+        parts.push(`${key}=${value}`);
+    }
+}
+
+function produceNativeVless(proxy) {
+    const parts = [
+        `${proxy.name}=vless`,
+        proxy.server,
+        proxy.port,
+        `password=${proxy.uuid}`,
+    ];
+
+    if (proxy.tls) {
+        parts.push('tls=true');
+    }
+
+    if (proxy.network === 'ws') {
+        parts.push('obfs=websocket');
+    }
+
+    appendNativeOption(parts, 'peer', proxy.sni ?? proxy.servername);
+
+    return parts.join(',');
+}
+
+function produceNativeHysteria2(proxy) {
+    const parts = [
+        `${proxy.name}=hysteria2`,
+        proxy.server,
+        proxy.port,
+        `auth=${proxy.password}`,
+    ];
+
+    appendNativeOption(
+        parts,
+        'obfsParam',
+        proxy['obfs-password'] ?? proxy.obfs,
+    );
+
+    if (proxy.udp !== false) {
+        parts.push('udp=1');
+    }
+
+    appendNativeOption(parts, 'peer', proxy.sni ?? proxy.servername);
+
+    if (proxy.alpn) {
+        appendNativeOption(
+            parts,
+            'alpn',
+            getNativeSingleValue(proxy.alpn, 'alpn'),
+        );
+    }
+
+    return parts.join(',');
+}
+
+
+function produceNativeShadowsocks(proxy) {
+    const parts = [
+        `${proxy.name}=ss`,
+        proxy.server,
+        proxy.port,
+        `password=${proxy.password}`,
+    ];
+
+    appendNativeOption(parts, 'method', proxy.cipher);
+
+    return parts.join(',');
+}
+
+function produceNativeVmess(proxy) {
+    const parts = [
+        `${proxy.name}=vmess`,
+        proxy.server,
+        proxy.port,
+        `password=${proxy.uuid}`,
+    ];
+
+    appendNativeOption(parts, 'alterId', proxy.alterId);
+    appendNativeOption(parts, 'method', proxy.cipher);
+
+    return parts.join(',');
+}
+
+function produceNativeHttp(proxy) {
+    const type = proxy.tls ? 'https' : 'http';
+
+    return [
+        `${proxy.name}=${type}`,
+        proxy.server,
+        proxy.port,
+        proxy.username ?? '',
+        proxy.password ?? '',
+    ].join(',');
+}
+
+function produceNativeSocks5(proxy) {
+    const type = proxy.tls ? 'socks5-tls' : 'socks5';
+
+    return [
+        `${proxy.name}=${type}`,
+        proxy.server,
+        proxy.port,
+        proxy.username ?? '',
+        proxy.password ?? '',
+    ].join(',');
+}
+
+function produceNativeTrojan(proxy) {
+    const parts = [
+        `${proxy.name}=trojan`,
+        proxy.server,
+        proxy.port,
+        `password=${proxy.password}`,
+    ];
+
+    appendNativeOption(parts, 'peer', proxy.sni ?? proxy.servername);
+
+    return parts.join(',');
+}
+
+
+function produceNativeHysteria(proxy) {
+    const parts = [
+        `${proxy.name}=hysteria`,
+        proxy.server,
+        proxy.port,
+    ];
+
+    appendNativeOption(
+        parts,
+        'auth',
+        proxy['auth-str'] ?? proxy.auth,
+    );
+
+    appendNativeOption(parts, 'obfsParam', proxy.obfs);
+    appendNativeOption(parts, 'protocol', proxy.protocol);
+
+    if (proxy.udp !== false) {
+        parts.push('udp=1');
+    }
+
+    appendNativeOption(parts, 'peer', proxy.sni ?? proxy.servername);
+
+    if (proxy.alpn) {
+        appendNativeOption(
+            parts,
+            'alpn',
+            getNativeSingleValue(proxy.alpn, 'alpn'),
+        );
+    }
+
+    appendNativeOption(parts, 'upmbps', proxy.up);
+    appendNativeOption(parts, 'downmbps', proxy.down);
+
+    return parts.join(',');
+}
+
+function produceNativeTuic(proxy) {
+    if (proxy.token && (!proxy.uuid || !proxy.password)) {
+        throw new Error(
+            'Unsupported Shadowrocket native TUIC token authentication',
+        );
+    }
+
+    const parts = [
+        `${proxy.name}=tuic`,
+        proxy.server,
+        proxy.port,
+        `password=${proxy.password}`,
+    ];
+
+    if (proxy.udp !== false) {
+        parts.push('udp=1');
+    }
+
+    appendNativeOption(parts, 'user', proxy.uuid);
+    appendNativeOption(parts, 'peer', proxy.sni ?? proxy.servername);
+
+    if (proxy.alpn) {
+        appendNativeOption(
+            parts,
+            'alpn',
+            getNativeSingleValue(proxy.alpn, 'alpn'),
+        );
+    }
+
+    return parts.join(',');
+}
+
+function produceNativeJuicity(proxy) {
+    const parts = [
+        `${proxy.name}=juicity`,
+        proxy.server,
+        proxy.port,
+        `password=${proxy.password}`,
+    ];
+
+    if (proxy.udp !== false) {
+        parts.push('udp=1');
+    }
+
+    appendNativeOption(parts, 'user', proxy.uuid);
+    appendNativeOption(parts, 'peer', proxy.sni ?? proxy.servername);
+
+    if (proxy.alpn) {
+        appendNativeOption(
+            parts,
+            'alpn',
+            getNativeSingleValue(proxy.alpn, 'alpn'),
+        );
+    }
+
+    return parts.join(',');
+}
+
+function produceNativeWireGuard(proxy) {
+    const parts = [
+        `${proxy.name}=wireguard`,
+        proxy.server,
+        proxy.port,
+    ];
+
+    appendNativeOption(parts, 'privateKey', proxy['private-key']);
+    appendNativeOption(parts, 'publicKey', proxy['public-key']);
+    appendNativeOption(parts, 'ip', proxy.ip);
+
+    if (proxy.udp !== false) {
+        parts.push('udp=1');
+    }
+
+    if (proxy.dns) {
+        appendNativeOption(
+            parts,
+            'dns',
+            getNativeSingleValue(proxy.dns, 'dns'),
+        );
+    }
+
+    appendNativeOption(parts, 'mtu', proxy.mtu);
+    appendNativeOption(parts, 'keepalive', proxy.keepalive);
+
+    if (proxy.reserved) {
+        appendNativeOption(
+            parts,
+            'reserved',
+            Array.isArray(proxy.reserved)
+                ? proxy.reserved.join('/')
+                : proxy.reserved,
+        );
+    }
+
+    return parts.join(',');
+}
+
+function produceNativeSnell(proxy) {
+    const parts = [
+        `${proxy.name}=snell`,
+        proxy.server,
+        proxy.port,
+        `password=${proxy.psk}`,
+    ];
+
+    if (proxy.udp === true) {
+        parts.push('udp=1');
+    }
+
+    appendNativeOption(parts, 'obfs', proxy['obfs-opts']?.mode);
+    appendNativeOption(parts, 'obfs-host', proxy['obfs-opts']?.host);
+    appendNativeOption(parts, 'obfs-uri', proxy['obfs-opts']?.path);
+
+    return parts.join(',');
+}
+
+function produceNativeShadowrocketProxy(proxy) {
+    switch (proxy.type) {
+        case 'ss':
+            return produceNativeShadowsocks(proxy);
+        case 'vmess':
+            return produceNativeVmess(proxy);
+        case 'vless':
+            return produceNativeVless(proxy);
+        case 'http':
+            return produceNativeHttp(proxy);
+        case 'socks5':
+            return produceNativeSocks5(proxy);
+        case 'trojan':
+            return produceNativeTrojan(proxy);
+        case 'hysteria':
+            return produceNativeHysteria(proxy);
+        case 'hysteria2':
+            return produceNativeHysteria2(proxy);
+        case 'tuic':
+            return produceNativeTuic(proxy);
+        case 'juicity':
+            return produceNativeJuicity(proxy);
+        case 'wireguard':
+            return produceNativeWireGuard(proxy);
+        case 'snell':
+            return produceNativeSnell(proxy);
+        default:
+            return null;
+    }
+}
+
 export default function Shadowrocket_Producer() {
     const type = 'ALL';
     const produce = (proxies, type, opts = {}) => {
@@ -306,6 +628,19 @@ export default function Shadowrocket_Producer() {
                 }
                 return proxy;
             });
+        if (opts.native && type !== 'internal') {
+            return list
+                .map((proxy) => {
+                    const output = produceNativeShadowrocketProxy(proxy);
+                    if (!output) {
+                        throw new Error(
+                            `Unsupported Shadowrocket native proxy type: ${proxy.type}`,
+                        );
+                    }
+                    return output;
+                })
+                .join('\n');
+        }
         return produceProxyListOutput(list, type, opts);
     };
     return { type, produce };
