@@ -60,6 +60,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 35. sing-box AnyTLS 支持通过节点的字符串字段 `client-metadata` 设置 `client_metadata`
   // 36. sing-box Hysteria 2 支持通过节点的字符串字段 `disable-chrome-parrot` 设置 `disable_chrome_parrot`
   // 37. Surge TrustTunnel 支持使用 Surge 格式写 `h3=true` 作为输入, 或使用节点字段 `network: 'h3'` 设置 `h3=true`
+  // 38. QX 输入的 `tls-alpn` 会保留原始十六进制值(支持带或不带冒号), 同时解码为 `alpn` 数组; QX 输出时优先使用 `tls-alpn`, 否则将 `alpn` 编码为 `tls-alpn`
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
