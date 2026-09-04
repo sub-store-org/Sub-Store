@@ -1,4 +1,6 @@
 import { expect } from 'chai';
+import { describe, it } from 'mocha';
+
 import getQxParser from '@/core/proxy-utils/parsers/peggy/qx';
 import QX_Producer from '@/core/proxy-utils/producers/qx';
 
