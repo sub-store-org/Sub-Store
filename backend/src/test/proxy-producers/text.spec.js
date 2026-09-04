@@ -32,6 +32,48 @@ function captureErrors(fn) {
 }
 
 describe('Proxy text producers', function () {
+    it('decodes and preserves Quantumult X tls-alpn forms', function () {
+        for (const tlsAlpn of [
+            '02683208687474702f312e31',
+            '02:68:32:08:68:74:74:70:2f:31:2e:31',
+        ]) {
+            const raw = `vless=example.com:443,method=none,password=${UUID},obfs=over-tls,tls-alpn=${tlsAlpn},tag=QX ALPN`;
+            const [proxy] = ProxyUtils.parse(raw);
+
+            expect(proxy.alpn).to.deep.equal(['h2', 'http/1.1']);
+            proxy.alpn = ['h3'];
+            const output = ProxyUtils.produce([proxy], 'QX', 'external');
+            expect(output).to.include(`tls-alpn=${tlsAlpn}`);
+            expect(output).not.to.include('tls-alpn=026833');
+        }
+    });
+
+    it('encodes canonical ALPN for every Quantumult X TLS producer', function () {
+        const credentials = {
+            ss: { cipher: 'aes-128-gcm', password: 'secret' },
+            trojan: { password: 'secret' },
+            vmess: { cipher: 'none', uuid: UUID },
+            vless: { uuid: UUID },
+            anytls: { password: 'secret' },
+            http: {},
+            socks5: {},
+        };
+
+        for (const [type, fields] of Object.entries(credentials)) {
+            const output = produceExternal('QX', {
+                type,
+                name: type,
+                server: 'example.com',
+                port: 443,
+                tls: true,
+                alpn: ['h2', 'http/1.1'],
+                ...fields,
+            });
+
+            expect(output).to.include('tls-alpn=02683208687474702f312e31');
+        }
+    });
+
     it('uses name-cert-verify as Quantumult X tls-verification', function () {
         const output = produceExternal('QX', {
             type: 'vless',
