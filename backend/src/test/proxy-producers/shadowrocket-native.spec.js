@@ -43,6 +43,52 @@ describe('Shadowrocket native output', function () {
         );
     });
 
+    it('preserves VMess WebSocket and TLS connection settings', function () {
+        expect(
+            produce({
+                type: 'vmess',
+                name: 'VMess-WS-TLS',
+                server: 'example.com',
+                port: 443,
+                uuid: '11111111-1111-4111-8111-111111111111',
+                alterId: 0,
+                cipher: 'auto',
+                tls: true,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                'client-fingerprint': 'chrome',
+                alpn: ['h2'],
+                network: 'ws',
+                'ws-opts': {
+                    path: '/ws',
+                    headers: {
+                        Host: 'cdn.example.com',
+                    },
+                },
+            }),
+        ).to.equal(
+            'VMess-WS-TLS=vmess,example.com,443,password=11111111-1111-4111-8111-111111111111,alterId=0,method=auto,tls=true,obfs=websocket,path=/ws,obfsParam=cdn.example.com,peer=sni.example.com,allowInsecure=1,fp=chrome,alpn=h2',
+        );
+    });
+
+    it('rejects unsupported VMess transports instead of dropping them', function () {
+        expect(() =>
+            produce({
+                type: 'vmess',
+                name: 'VMess-gRPC',
+                server: 'example.com',
+                port: 443,
+                uuid: '11111111-1111-4111-8111-111111111111',
+                alterId: 0,
+                cipher: 'auto',
+                network: 'grpc',
+                'grpc-opts': {
+                    'grpc-service-name': 'example',
+                },
+            }),
+        ).to.throw('Unsupported Shadowrocket native VMess network: grpc');
+    });
+
     it('outputs VLESS', function () {
         expect(
             produce({

@@ -34,6 +34,54 @@ function appendNativeOption(parts, key, value) {
     }
 }
 
+function appendNativeVmessTransport(parts, proxy) {
+    const network = proxy.network ?? 'tcp';
+    if (!['tcp', 'none', 'ws'].includes(network)) {
+        throw new Error(
+            `Unsupported Shadowrocket native VMess network: ${network}`,
+        );
+    }
+
+    if (proxy.tls) {
+        parts.push('tls=true');
+    }
+
+    if (network === 'ws') {
+        const wsOpts = proxy['ws-opts'] ?? {};
+        const headers = wsOpts.headers ?? {};
+        const unsupportedHeaders = Object.keys(headers).filter(
+            (key) => key.toLowerCase() !== 'host',
+        );
+        if (unsupportedHeaders.length > 0) {
+            throw new Error(
+                `Unsupported Shadowrocket native VMess WebSocket headers: ${unsupportedHeaders.join(
+                    ', ',
+                )}`,
+            );
+        }
+
+        parts.push('obfs=websocket');
+        appendNativeOption(parts, 'path', wsOpts.path);
+        appendNativeOption(parts, 'obfsParam', headers.Host ?? headers.host);
+    }
+
+    appendNativeOption(parts, 'peer', proxy.sni ?? proxy.servername);
+
+    if (proxy['skip-cert-verify']) {
+        parts.push('allowInsecure=1');
+    }
+
+    appendNativeOption(parts, 'fp', proxy['client-fingerprint']);
+
+    if (proxy.alpn) {
+        appendNativeOption(
+            parts,
+            'alpn',
+            getNativeSingleValue(proxy.alpn, 'alpn'),
+        );
+    }
+}
+
 function produceNativeVless(proxy) {
     const parts = [
         `${proxy.name}=vless`,
@@ -110,6 +158,7 @@ function produceNativeVmess(proxy) {
 
     appendNativeOption(parts, 'alterId', proxy.alterId);
     appendNativeOption(parts, 'method', proxy.cipher);
+    appendNativeVmessTransport(parts, proxy);
 
     return parts.join(',');
 }
