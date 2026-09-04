@@ -1,7 +1,45 @@
+import { Buffer } from 'buffer';
 import { isPresent, isShadowsocksOverTls, Result } from './utils';
 import { formatQXVmessMethod } from '../vmess-security';
 
 const targetPlatform = 'QX';
+
+function encodeQxAlpn(alpn) {
+    if (!alpn) return undefined;
+
+    const protocols = Array.isArray(alpn)
+        ? alpn
+        : String(alpn)
+              .split(',')
+              .map((item) => item.trim())
+              .filter(Boolean);
+
+    if (!protocols.length) return undefined;
+
+    return protocols
+        .map((protocol) => {
+            const bytes = Buffer.from(protocol, 'utf8');
+            return Buffer.concat([Buffer.from([bytes.length]), bytes]).toString(
+                'hex',
+            );
+        })
+        .join('');
+}
+
+function appendTlsAlpn(result, proxy) {
+    if (isPresent(proxy, 'tls-alpn')) {
+        result.append(`,tls-alpn=${proxy['tls-alpn']}`);
+        return;
+    }
+
+    if (isPresent(proxy, 'alpn')) {
+        const encoded = encodeQxAlpn(proxy.alpn);
+        if (encoded) {
+            result.append(`,tls-alpn=${encoded}`);
+        }
+    }
+}
+
 
 export default function QX_Producer() {
     // eslint-disable-next-line no-unused-vars
@@ -66,6 +104,7 @@ function getQxHttpObfs(proxy) {
         ? proxy._qx_obfs_http
         : 'http';
 }
+
 
 function appendTlsVerification(result, proxy) {
     const attr = isPresent(proxy, 'name-cert-verify')
@@ -488,7 +527,7 @@ function vless(proxy) {
             `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
             'tls-pubkey-sha256',
         );
-        appendIfPresent(`,tls-alpn=${proxy['tls-alpn']}`, 'tls-alpn');
+        appendTlsAlpn(result, proxy);
         appendIfPresent(
             `,tls-no-session-ticket=${proxy['tls-no-session-ticket']}`,
             'tls-no-session-ticket',
