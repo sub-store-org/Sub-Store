@@ -4,10 +4,12 @@ import { afterEach, describe, it } from 'mocha';
 import express from '@/vendor/express';
 
 const ENV_KEY = 'SUB_STORE_CORS_ALLOWED_ORIGINS';
+const CUSTOM_NAME_ENV_KEY = 'SUB_STORE_BACKEND_CUSTOM_NAME';
 const HOST = '127.0.0.1';
 
 describe('express CORS allowlist adapter', function () {
     let originalCorsEnv;
+    let originalCustomName;
 
     afterEach(function () {
         if (originalCorsEnv == null) {
@@ -15,22 +17,80 @@ describe('express CORS allowlist adapter', function () {
         } else {
             process.env[ENV_KEY] = originalCorsEnv;
         }
+        if (originalCustomName == null) {
+            delete process.env[CUSTOM_NAME_ENV_KEY];
+        } else {
+            process.env[CUSTOM_NAME_ENV_KEY] = originalCustomName;
+        }
     });
 
-    it('keeps Node default wildcard behavior', async function () {
-        await withServer(undefined, async ({ baseUrl, getRouteCalls }) => {
-            const res = await fetch(`${baseUrl}/probe`, {
-                headers: {
-                    Origin: 'https://evil.example',
-                },
-            });
+    it('uses and logs the bundled frontend origins by default', async function () {
+        await withServer(
+            undefined,
+            async ({ baseUrl, getRouteCalls, logs }) => {
+                const res = await fetch(`${baseUrl}/probe`, {
+                    headers: {
+                        Origin: 'https://evil.example',
+                    },
+                });
 
-            expect(res.status).to.equal(200);
-            expect(getRouteCalls()).to.equal(1);
-            expect(res.headers.get('access-control-allow-origin')).to.equal(
-                '*',
-            );
-        });
+                expect(res.status).to.equal(403);
+                expect(getRouteCalls()).to.equal(0);
+                expect(
+                    logs.filter((log) => log.startsWith('[CORS]')),
+                ).to.deep.equal([
+                    '[CORS] SUB_STORE_CORS_ALLOWED_ORIGINS is not set; using default allowed origins: https://sub-store.vercel.app,http://substore.stash,https://substore.stash',
+                ]);
+            },
+        );
+    });
+
+    it('allows only bundled and local origins for custom backends without logging the bypass', async function () {
+        await withServer(
+            undefined,
+            async ({ baseUrl, logs }) => {
+                const official = await fetch(`${baseUrl}/probe`, {
+                    headers: {
+                        Origin: 'https://sub-store.vercel.app',
+                    },
+                });
+                const localhost = await fetch(`${baseUrl}/probe`, {
+                    headers: { Origin: 'http://localhost:5173' },
+                });
+                const loopback = await fetch(`${baseUrl}/probe`, {
+                    headers: { Origin: 'http://127.0.0.1:8888' },
+                });
+                const rejected = await fetch(`${baseUrl}/probe`, {
+                    headers: { Origin: 'https://evil.example' },
+                });
+
+                expect(official.status).to.equal(200);
+                expect(localhost.status).to.equal(200);
+                expect(loopback.status).to.equal(200);
+                expect(rejected.status).to.equal(403);
+                expect(
+                    localhost.headers.get('access-control-allow-origin'),
+                ).to.equal('http://localhost:5173');
+                expect(
+                    loopback.headers.get('access-control-allow-origin'),
+                ).to.equal('http://127.0.0.1:8888');
+                expect(
+                    rejected.headers.get('access-control-allow-origin'),
+                ).to.equal(null);
+                expect(
+                    official.headers.get('access-control-allow-origin'),
+                ).to.equal('https://sub-store.vercel.app');
+                expect(logs.some((log) => log.includes('is not set'))).to.equal(
+                    false,
+                );
+                expect(
+                    logs.filter((log) => log.startsWith('[CORS]')),
+                ).to.deep.equal([
+                    '[CORS] allowed origins: https://sub-store.vercel.app,http://substore.stash,https://substore.stash,http://localhost:<any-port>,http://127.0.0.1:<any-port> (default:node)',
+                ]);
+            },
+            'custom',
+        );
     });
 
     it('rejects disallowed actual requests before route handlers run', async function () {
@@ -91,9 +151,9 @@ describe('express CORS allowlist adapter', function () {
                 expect(
                     official.headers.get('access-control-allow-origin'),
                 ).to.equal('https://sub-store.vercel.app');
-                expect(local.headers.get('access-control-allow-origin')).to.equal(
-                    'http://127.0.0.1:8888',
-                );
+                expect(
+                    local.headers.get('access-control-allow-origin'),
+                ).to.equal('http://127.0.0.1:8888');
                 expect(official.headers.get('vary')).to.include('Origin');
             },
         );
@@ -125,12 +185,18 @@ describe('express CORS allowlist adapter', function () {
         );
     });
 
-    async function withServer(corsEnv, run) {
+    async function withServer(corsEnv, run, customName) {
         originalCorsEnv = process.env[ENV_KEY];
+        originalCustomName = process.env[CUSTOM_NAME_ENV_KEY];
         if (corsEnv == null) {
             delete process.env[ENV_KEY];
         } else {
             process.env[ENV_KEY] = corsEnv;
+        }
+        if (customName == null) {
+            delete process.env[CUSTOM_NAME_ENV_KEY];
+        } else {
+            process.env[CUSTOM_NAME_ENV_KEY] = customName;
         }
 
         const logs = [];

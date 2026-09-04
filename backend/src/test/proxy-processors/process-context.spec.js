@@ -4,7 +4,70 @@ import { describe, it } from 'mocha';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { generateKeyPair } from '@/utils/age';
 
+const PATH_ENV_KEY = 'SUB_STORE_FRONTEND_BACKEND_PATH';
+const CUSTOM_NAME_ENV_KEY = 'SUB_STORE_BACKEND_CUSTOM_NAME';
+const MISSING_PATH_ERROR =
+    'Node.js 环境下，脚本操作、脚本过滤和修改响应必须设置 SUB_STORE_FRONTEND_BACKEND_PATH 才能生效；若不想改变当前 path，可设置 SUB_STORE_FRONTEND_BACKEND_PATH=/';
+
 describe('Process context control', function () {
+    it('requires a backend path for Node.js script actions unless the backend is custom', async function () {
+        const originalPath = process.env[PATH_ENV_KEY];
+        const originalCustomName = process.env[CUSTOM_NAME_ENV_KEY];
+        const actions = [
+            () =>
+                ProxyUtils.process([], [
+                    {
+                        type: 'Script Operator',
+                        args: {
+                            mode: 'script',
+                            content: 'function operator() {}',
+                        },
+                    },
+                ]),
+            () =>
+                ProxyUtils.process([], [
+                    {
+                        type: 'Script Filter',
+                        args: {
+                            mode: 'script',
+                            content: 'function filter() { return []; }',
+                        },
+                    },
+                ]),
+            () =>
+                ProxyUtils.processResponse({}, [
+                    {
+                        type: 'Response Transformer',
+                        args: {
+                            mode: 'script',
+                            content:
+                                'function transformFunction(res) { return res; }',
+                        },
+                    },
+                ]),
+        ];
+
+        try {
+            delete process.env[PATH_ENV_KEY];
+            delete process.env[CUSTOM_NAME_ENV_KEY];
+            const rejected = await Promise.allSettled(
+                actions.map((run) => run()),
+            );
+            expect(rejected.map(({ reason }) => reason?.message)).to.deep.equal(
+                actions.map(() => MISSING_PATH_ERROR),
+            );
+
+            process.env[CUSTOM_NAME_ENV_KEY] = 'custom';
+            await Promise.all(actions.map((run) => run()));
+        } finally {
+            if (originalPath == null) delete process.env[PATH_ENV_KEY];
+            else process.env[PATH_ENV_KEY] = originalPath;
+            if (originalCustomName == null)
+                delete process.env[CUSTOM_NAME_ENV_KEY];
+            else process.env[CUSTOM_NAME_ENV_KEY] = originalCustomName;
+        }
+    });
+
     it('disables later actions by customName from shared context', async function () {
         const operators = [
             {

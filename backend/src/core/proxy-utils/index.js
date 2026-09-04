@@ -276,6 +276,17 @@ async function processResponseFn(
 }
 
 async function loadScriptItem(item, executionContext = {}) {
+    if (
+        $.env.isNode &&
+        !eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH')?.startsWith('/') &&
+        !eval('process.env.SUB_STORE_BACKEND_CUSTOM_NAME')
+    ) {
+        const message =
+            'Node.js 环境下，脚本操作、脚本过滤和修改响应必须设置 SUB_STORE_FRONTEND_BACKEND_PATH 才能生效；若不想改变当前 path，可设置 SUB_STORE_FRONTEND_BACKEND_PATH=/';
+        $.error(message);
+        throw new Error(message);
+    }
+
     let script;
     let $arguments = {};
     const { mode, content } = item.args || {};

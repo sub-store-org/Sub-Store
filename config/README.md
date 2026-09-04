@@ -16,7 +16,7 @@ https://xream.notion.site/Sub-Store-abe6a96944724dc6a36833d5c9ab7c87
 
 Sub-Store 后端会根据请求的 `Origin` 判断浏览器跨域访问是否允许。允许值是 origin, 需要包含协议、域名和端口, 不包含路径。例如 `https://sub-store.vercel.app` 或 `http://127.0.0.1:8888`。
 
-Node/服务器/Docker/Android 版可以通过环境变量 `SUB_STORE_CORS_ALLOWED_ORIGINS` 设置, 默认值为 `*`, 以保持旧行为。多个 origin 用 `,` 分隔, 例如:
+Node/服务器/Docker/Android 版可以通过环境变量 `SUB_STORE_CORS_ALLOWED_ORIGINS` 设置, 默认值为 `https://sub-store.vercel.app,http://substore.stash,https://substore.stash`。多个 origin 用 `,` 分隔, 例如:
 
 ```bash
 SUB_STORE_CORS_ALLOWED_ORIGINS=https://sub-store.vercel.app,http://127.0.0.1:8888

@@ -10,25 +10,42 @@ import {
 } from '@/utils/cors';
 
 describe('CORS allowlist policy', function () {
-    it('defaults Node environments to wildcard origins', function () {
+    it('defaults Node environments to bundled frontend origins', function () {
         const policy = resolveCorsPolicy({ isNode: true });
 
         expect(policy).to.deep.include({
-            wildcard: true,
-            value: '*',
+            wildcard: false,
+            value: NON_NODE_CORS_DEFAULT,
             source: 'default:node',
         });
-        expect(isOriginAllowed(policy, 'https://evil.example')).to.equal(true);
-        expect(getCorsHeaders(policy, 'https://evil.example')).to.deep.equal({
-            'Access-Control-Allow-Origin': '*',
+        expect(isOriginAllowed(policy, 'https://evil.example')).to.equal(false);
+    });
+
+    it('allows bundled and local HTTP origins for custom backends', function () {
+        const policy = resolveCorsPolicy({
+            isNode: true,
+            customBackendName: 'custom',
         });
+
+        expect(policy.wildcard).to.equal(false);
+        expect(
+            isOriginAllowed(policy, 'https://sub-store.vercel.app'),
+        ).to.equal(true);
+        expect(isOriginAllowed(policy, 'http://localhost:5173')).to.equal(true);
+        expect(isOriginAllowed(policy, 'http://127.0.0.1:8888')).to.equal(true);
+        expect(isOriginAllowed(policy, 'https://localhost:5173')).to.equal(
+            false,
+        );
+        expect(isOriginAllowed(policy, 'http://localhost.evil:5173')).to.equal(
+            false,
+        );
+        expect(isOriginAllowed(policy, 'https://evil.example')).to.equal(false);
     });
 
     it('reads Node allowlist values from the environment setting', function () {
         const policy = resolveCorsPolicy({
             isNode: true,
-            envValue:
-                'https://sub-store.vercel.app, http://127.0.0.1:8888',
+            envValue: 'https://sub-store.vercel.app, http://127.0.0.1:8888',
         });
 
         expect(policy).to.deep.include({
@@ -39,12 +56,8 @@ describe('CORS allowlist policy', function () {
         expect(
             isOriginAllowed(policy, 'https://sub-store.vercel.app'),
         ).to.equal(true);
-        expect(isOriginAllowed(policy, 'http://127.0.0.1:8888')).to.equal(
-            true,
-        );
-        expect(isOriginAllowed(policy, 'https://evil.example')).to.equal(
-            false,
-        );
+        expect(isOriginAllowed(policy, 'http://127.0.0.1:8888')).to.equal(true);
+        expect(isOriginAllowed(policy, 'https://evil.example')).to.equal(false);
     });
 
     it('defaults non-Node environments to bundled frontend origins', function () {
@@ -62,9 +75,7 @@ describe('CORS allowlist policy', function () {
         expect(isOriginAllowed(policy, 'https://substore.stash')).to.equal(
             true,
         );
-        expect(isOriginAllowed(policy, 'https://evil.example')).to.equal(
-            false,
-        );
+        expect(isOriginAllowed(policy, 'https://evil.example')).to.equal(false);
     });
 
     it('reads non-Node allowlist values from script arguments', function () {
@@ -117,11 +128,14 @@ describe('CORS allowlist policy', function () {
             },
         });
 
-        expect(isOriginAllowed(policy, 'https://sub-store.vercel.app')).to.equal(
-            true,
-        );
         expect(
-            isOriginAllowed(policy, 'https://evil.example.sub-store.vercel.app'),
+            isOriginAllowed(policy, 'https://sub-store.vercel.app'),
+        ).to.equal(true);
+        expect(
+            isOriginAllowed(
+                policy,
+                'https://evil.example.sub-store.vercel.app',
+            ),
         ).to.equal(false);
         expect(isOriginAllowed(policy, 'http://sub-store.vercel.app')).to.equal(
             false,
@@ -140,9 +154,9 @@ describe('CORS allowlist policy', function () {
         });
 
         expect(nodePolicy).to.deep.include({
-            wildcard: true,
+            wildcard: false,
             source: 'default:node',
-            value: '*',
+            value: NON_NODE_CORS_DEFAULT,
         });
         expect(nonNodePolicy).to.deep.include({
             wildcard: false,
@@ -152,9 +166,9 @@ describe('CORS allowlist policy', function () {
         expect(
             isOriginAllowed(nonNodePolicy, 'https://sub-store.vercel.app'),
         ).to.equal(true);
-        expect(isOriginAllowed(nonNodePolicy, 'http://substore.stash')).to.equal(
-            true,
-        );
+        expect(
+            isOriginAllowed(nonNodePolicy, 'http://substore.stash'),
+        ).to.equal(true);
         expect(
             isOriginAllowed(nonNodePolicy, 'https://substore.stash'),
         ).to.equal(true);

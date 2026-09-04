@@ -4,13 +4,21 @@ import {
     describeCorsPolicy,
     getCorsHeaders,
     isOriginAllowed,
+    NODE_CORS_ALLOWED_ORIGINS_ENV,
     resolveRuntimeCorsPolicy,
 } from '@/utils/cors';
 
 export default function express({ substore: $, port, host }) {
     const { isNode } = ENV();
     const corsPolicy = resolveRuntimeCorsPolicy({ isNode });
-    $.info(`[CORS] allowed origins: ${describeCorsPolicy(corsPolicy)}`);
+    $.info(
+        isNode &&
+            corsPolicy.source === 'default:node' &&
+            !corsPolicy.wildcard &&
+            !corsPolicy.allowLocalOrigins
+            ? `[CORS] ${NODE_CORS_ALLOWED_ORIGINS_ENV} is not set; using default allowed origins: ${corsPolicy.value}`
+            : `[CORS] allowed origins: ${describeCorsPolicy(corsPolicy)}`,
+    );
 
     const DEFAULT_HEADERS = {
         'Content-Type': 'text/plain;charset=UTF-8',
@@ -308,7 +316,9 @@ export default function express({ substore: $, port, host }) {
         return {
             allowed,
             preflight:
-                Boolean(origin) && allowed && method?.toUpperCase() === 'OPTIONS',
+                Boolean(origin) &&
+                allowed &&
+                method?.toUpperCase() === 'OPTIONS',
             headers: allowed ? getCorsHeaders(corsPolicy, origin) : {},
         };
     }
