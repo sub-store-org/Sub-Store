@@ -188,7 +188,8 @@ port = digits:[0-9]+ {
 }
 
 username = comma "username" equals username:[^,]+ { proxy.username = username.join("").trim(); }
-password = comma "password" equals password:[^,]+ { proxy.password = password.join("").trim(); }
+password = comma "password" equals password:$((!next_parameter .)+) { proxy.password = password.trim(); }
+next_parameter = "," _ [^=,]+ equals
 uuid = comma "password" equals uuid:[^,]+ { proxy.uuid = uuid.join("").trim(); }
 
 method = comma "method" equals cipher:cipher { 
