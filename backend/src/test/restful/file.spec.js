@@ -4,8 +4,11 @@ import { after, before, beforeEach, describe, it } from 'mocha';
 import { FILES_KEY } from '@/constants';
 
 let $;
+let openApi;
 let registerFileRoutes;
+let registerPreviewRoutes;
 let originalError;
+let originalHTTP;
 let originalInfo;
 let originalNotify;
 let originalRead;
@@ -104,6 +107,27 @@ async function requestFile(query = {}, { name = 'local-file' } = {}) {
     return res;
 }
 
+async function preview(type, body) {
+    const app = createRouteApp();
+    registerPreviewRoutes(app);
+    const path = `/api/preview/${type}`;
+    const res = createResponse(path);
+
+    await app.handlers.get(`POST ${path}`)(
+        {
+            body,
+            headers: {},
+            method: 'POST',
+            path,
+            query: {},
+            url: path,
+        },
+        res,
+    );
+
+    return res;
+}
+
 async function updateFile(data, { name = 'local-file' } = {}) {
     const handler = getHandler('/api/file/:name', 'PATCH');
     const res = createResponse('/api/file/:name');
@@ -159,9 +183,12 @@ async function expectDecryptFailure(armored, secretKey) {
 describe('file routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
+        openApi = require('@/vendor/open-api');
         ({ default: registerFileRoutes } = require('@/restful/file'));
+        ({ default: registerPreviewRoutes } = require('@/restful/preview'));
         ageUtils = require('@/utils/age');
 
+        originalHTTP = openApi.HTTP;
         originalRead = $.read.bind($);
         originalWrite = $.write.bind($);
         originalInfo = $.info.bind($);
@@ -179,9 +206,11 @@ describe('file routes', function () {
             $.error = originalError;
             $.notify = originalNotify;
         }
+        if (openApi) openApi.HTTP = originalHTTP;
     });
 
     beforeEach(function () {
+        openApi.HTTP = originalHTTP;
         state = {
             [FILES_KEY]: [
                 {
@@ -255,6 +284,35 @@ describe('file routes', function () {
 
         expect(res.headers['x-from-options']).to.equal('carried');
         expect(res.sent).to.equal('base-script-carried');
+    });
+
+    it('bypasses remote cache in subscription and file previews', async function () {
+        const requests = { sub: 0, file: 0 };
+        openApi.HTTP = () => ({
+            get: async ({ url }) => {
+                const type = url.includes('preview-sub') ? 'sub' : 'file';
+                requests[type] += 1;
+                return {
+                    body:
+                        'Cache = ss, 127.0.0.1, 8388, encrypt-method=aes-128-gcm, password=test',
+                    headers: {},
+                    statusCode: 200,
+                };
+            },
+        });
+        for (const type of ['sub', 'file']) {
+            const source = {
+                name: `preview-${type}`,
+                source: 'remote',
+                url: `https://example.com/preview-${type}-${Date.now()}`,
+                noCache: true,
+                process: [],
+            };
+            await preview(type, source);
+            await preview(type, source);
+        }
+
+        expect(requests).to.deep.equal({ sub: 2, file: 2 });
     });
 
     it('passes runtime file overrides to response transformers', async function () {

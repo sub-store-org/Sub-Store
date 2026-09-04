@@ -120,7 +120,7 @@ async function downloadFileSources({
                     file.proxy || proxy,
                     undefined,
                     undefined,
-                    noCache,
+                    noCache || file.noCache,
                     undefined,
                     { noFlow },
                 );
