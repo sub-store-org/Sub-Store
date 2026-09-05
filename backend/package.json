@@ -1,6 +1,6 @@
 {
   "name": "sub-store",
-  "version": "2.38.0",
+  "version": "2.38.2",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.",
   "main": "src/main.js",
   "packageManager": "pnpm@11.0.9",
@@ -16,7 +16,7 @@
     "changelog": "conventional-changelog -p cli -i CHANGELOG.md -s"
   },
   "author": "Peng-YM",
-  "license": "GPL-3.0",
+  "license": "AGPL-3.0",
   "pnpm": {
     "patchedDependencies": {
       "http-proxy@1.18.1": "patches/http-proxy@1.18.1.patch"

@@ -1,3 +1,4 @@
+import { withShadowrocketNativeParserValidation } from '../../shadowrocket-native-validation';
 import { Buffer } from 'buffer';
 import peggy from 'peggy';
 
@@ -38,6 +39,11 @@ const grammars = String.raw`
     const obfs = {};
     const $ = {};
 
+    function parsedOption(value) {
+        if (options.onParsedOption) options.onParsedOption(location(), value);
+        return value;
+    }
+
     function setQxHttpObfs(type) {
         // Preserve the original QX http-obfs token for round-trip output,
         // including the upstream "vemss-http" typo that appears in QX
@@ -48,7 +54,14 @@ const grammars = String.raw`
     }
 
     function handleObfs() {
+        if (!["ws", "wss", "http"].includes(obfs.type) &&
+            ("path" in obfs || ("host" in obfs && obfs.type !== "over-tls")) && options.onIgnoredOption) {
+            options.onIgnoredOption(proxy, "transport options without a supported transport");
+        }
         if (obfs.type === "ws" || obfs.type === "wss") {
+            if (typeof proxy.tls === "boolean" && proxy.tls !== (obfs.type === "wss") && options.onConflictingOption) {
+                options.onConflictingOption(proxy, "over-tls/obfs");
+            }
             proxy.network = "ws";
             if (obfs.type === 'wss') {
                 proxy.tls = true;
@@ -56,6 +69,10 @@ const grammars = String.raw`
             $set(proxy, "ws-opts.path", obfs.path);
             $set(proxy, "ws-opts.headers.Host", obfs.host);
         } else if (obfs.type === "over-tls") {
+            if (options.onConflictingOption) {
+                if (proxy.tls === false) options.onConflictingOption(proxy, "over-tls/obfs");
+                if (obfs.host && proxy.sni && obfs.host !== proxy.sni) options.onConflictingOption(proxy, "obfs-host/tls-host");
+            }
             proxy.tls = true;
             // Some QX share links use obfs-host as the TLS server name for
             // plain over-tls TCP nodes instead of the explicit tls-host field.
@@ -93,6 +110,10 @@ shadowsocks = "shadowsocks" equals address
         if (obfs.type) proxy.obfs = obfs.type;
     } else {
         proxy.type = "ss";
+        if ((!obfs.type && ("host" in obfs || "path" in obfs) ||
+            obfs.type === "over-tls" && "path" in obfs) && options.onIgnoredOption) {
+            options.onIgnoredOption(proxy, "obfs options without a supported obfs mode");
+        }
         // handle ss obfs
         if (obfs.type == "http" || obfs.type === "tls") {
             proxy.plugin = "obfs";
@@ -187,9 +208,10 @@ port = digits:[0-9]+ {
     }
 }
 
-username = comma "username" equals username:[^,]+ { proxy.username = username.join("").trim(); }
-password = comma "password" equals password:[^,]+ { proxy.password = password.join("").trim(); }
-uuid = comma "password" equals uuid:[^,]+ { proxy.uuid = uuid.join("").trim(); }
+username = comma "username" equals username:[^,]+ { proxy.username = parsedOption(username.join("").trim()); }
+password = comma "password" equals password:$((!next_parameter .)+) { proxy.password = parsedOption(password.trim()); }
+next_parameter = "," _ [^=,]+ equals
+uuid = comma "password" equals uuid:[^,]+ { proxy.uuid = parsedOption(uuid.join("").trim()); }
 
 method = comma "method" equals cipher:cipher { 
     proxy.cipher = cipher;
@@ -204,7 +226,9 @@ udp_over_tcp_new = comma "udp-over-tcp" equals param:$[^=,]+ { if (param === "sp
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
-tls_host = comma sni:("tls-host") equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1'); }
+tls_host = comma sni:("tls-host") equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1');
+    if (options.onParsedOption) options.onParsedOption(location(), proxy.sni);
+}
 tls_verification = comma "tls-verification" equals raw:$[^,]+ {
     const value = raw.trim();
     if (value === "true" || value === "false") {
@@ -250,8 +274,8 @@ obfs_vless = comma "obfs" equals (
     }
 );
 
-obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").replace(/^"(.*)"$/, '$1'); }
-obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = uri; }
+obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = parsedOption(match.join("").replace(/^"(.*)"$/, '$1')); }
+obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = parsedOption(uri); }
 
 ssr_protocol = comma "ssr-protocol" equals protocol:("origin"/"auth_sha1_v4"/"auth_aes128_md5"/"auth_aes128_sha1"/"auth_chain_a"/"auth_chain_b") { proxy.protocol = protocol; return protocol; }
 ssr_protocol_param = comma "ssr-protocol-param" equals param:$[^=,]+ { proxy["protocol-param"] = param; }
@@ -269,16 +293,22 @@ server_check_url = comma "server_check_url" equals param:$[^=,]+ { proxy["test-u
 uri = $[^,]+
 
 tag = comma "tag" equals tag:[^=,]+ { proxy.name = tag.join(""); }
-others = comma [^=,]+ equals [^=,]+
-comma = _ "," _
-equals = _ "=" _
+others = comma key:$[^=,]+ equals [^=,]+ {
+    if (options.onIgnoredOption) options.onIgnoredOption(proxy, key.trim());
+}
+comma = _ "," _ {
+    if (options.onOptionBoundary) options.onOptionBoundary(location());
+}
+equals = _ "=" _ {
+    if (options.onOptionEquals) options.onOptionEquals(location());
+}
 _ = [ \r\t]*
 bool = b:("true"/"false") { return b === "true" }
 `;
 let parser;
 export default function getParser() {
     if (!parser) {
-        const generated = peggy.generate(grammars);
+        const generated = withShadowrocketNativeParserValidation(peggy.generate(grammars));
         parser = {
             parse(input, options) {
                 const proxy = generated.parse(input, options);

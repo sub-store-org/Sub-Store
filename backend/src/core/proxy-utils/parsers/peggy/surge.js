@@ -1,3 +1,4 @@
+import { withShadowrocketNativeParserValidation } from '../../shadowrocket-native-validation';
 import peggy from 'peggy';
 const grammars = String.raw`
 // global initializer
@@ -21,7 +22,15 @@ const grammars = String.raw`
     const shadowTLS = {};
     const $ = {};
 
+    function parsedOption(value) {
+        if (options.onParsedOption) options.onParsedOption(location(), value);
+        return value;
+    }
+
     function handleWebsocket() {
+        if (obfs.type !== "ws" && ("path" in obfs || "ws-headers" in obfs) && options.onIgnoredOption) {
+            options.onIgnoredOption(proxy, "WebSocket options without WebSocket");
+        }
         if (obfs.type === "ws") {
             proxy.network = "ws";
             $set(proxy, "ws-opts.path", obfs.path);
@@ -32,6 +41,9 @@ const grammars = String.raw`
         }
     }
     function handleShadowTLS() {
+        if (Object.keys(shadowTLS).length > 0 && !shadowTLS.password && options.onIgnoredOption) {
+            options.onIgnoredOption(proxy, "incomplete ShadowTLS options");
+        }
         if (shadowTLS.password && !shadowTLS.version) {
             shadowTLS.version = 2;
         }
@@ -350,6 +362,12 @@ const grammars = String.raw`
             const value = stripQuotes(pair.slice(index + 1));
 
             if (key) {
+                if (key === '__proto__' && options.onIgnoredOption) {
+                    options.onIgnoredOption(proxy, key);
+                }
+                if (Object.prototype.hasOwnProperty.call(result, key) && result[key] !== value && options.onConflictingOption) {
+                    options.onConflictingOption(proxy, key);
+                }
                 result[key] = value;
             }
         });
@@ -380,6 +398,10 @@ start = (masque/anytls/shadowsocks/vmess/trojan/h2_connect/https/http/snell/sock
 
 shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/alpn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/udp_port/others)* {
     proxy.type = "ss";
+    // Report orphan obfs fields before the local object is discarded.
+    if (!obfs.type && ("host" in obfs || "path" in obfs) && options.onIgnoredOption) {
+        options.onIgnoredOption(proxy, "obfs options without obfs");
+    }
     // handle obfs
     if (obfs.type == "http" || obfs.type === "tls") {
         proxy.plugin = "obfs";
@@ -426,6 +448,10 @@ ssh = tag equals "ssh" address (username password)? (usernamek passwordk)? (serv
 }
 snell = tag equals "snell" address (snell_version/snell_mode/snell_psk/obfs/obfs_host/obfs_uri/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/reuse/alpn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "snell";
+    // Report orphan obfs fields before the local object is discarded.
+    if (!obfs.type && ("host" in obfs || "path" in obfs) && options.onIgnoredOption) {
+        options.onIgnoredOption(proxy, "obfs options without obfs");
+    }
     // handle obfs
     if (obfs.type == "http" || obfs.type === "tls") {
         $set(proxy, "obfs-opts.mode", obfs.type);
@@ -539,6 +565,7 @@ password = comma match:[^,]+ { proxy.password = match.join("").replace(/^"(.*)"$
 tls = comma "tls" equals flag:bool { proxy.tls = flag; }
 sni = comma "sni" equals match:[^,]+ { 
     const sni = match.join("").replace(/^"(.*)"$/, '$1');
+    if (options.onParsedOption) options.onParsedOption(location(), sni);
     if (sni === "off") {
         proxy["disable-sni"] = true;
     } else {
@@ -550,29 +577,31 @@ tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-
 tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:$[^,]+ { proxy["tls-fingerprint"] = tls_fingerprint.trim(); }
 client_cert = comma "client-cert" equals match:[^,]+ { proxy["keystore-client-cert"] = stripQuotes(match.join("")); }
 
-snell_psk = comma "psk" equals match:[^,]+ { proxy.psk = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
-snell_version = comma "version" equals match:$[0-9]+ { proxy.version = parseInt(match.trim()); }
+snell_psk = comma "psk" equals match:[^,]+ { proxy.psk = parsedOption(match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1')); }
+snell_version = comma "version" equals match:$[0-9]+ { proxy.version = parsedOption(parseInt(match.trim())); }
 snell_mode = comma "mode" equals match:[^,]+ {
     const mode = stripQuotes(match.join("")).trim();
     if (["default", "unshaped", "unsafe-raw"].includes(mode)) {
         proxy.mode = mode;
+    } else if (options.onIgnoredOption) {
+        options.onIgnoredOption(proxy, "invalid Snell mode");
     }
 }
 
-usernamek = comma "username" equals match:[^,]+ { proxy.username = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
-passwordk = comma "password" equals match:[^,]+ { proxy.password = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
-vmess_uuid = comma "username" equals match:[^,]+ { proxy.uuid = match.join(""); }
+usernamek = comma "username" equals match:[^,]+ { proxy.username = parsedOption(match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1')); }
+passwordk = comma "password" equals match:[^,]+ { proxy.password = parsedOption(match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1')); }
+vmess_uuid = comma "username" equals match:[^,]+ { proxy.uuid = parsedOption(match.join("")); }
 vmess_aead = comma "vmess-aead" equals flag:bool { proxy.aead = flag; }
 
 method = comma "encrypt-method" equals cipher:cipher {
     proxy.cipher = cipher;
 }
 vmess_method = comma "encrypt-method" equals cipher:$[^,]+ {
-    proxy.cipher = normalizeVmessSecurity(cipher);
+    proxy.cipher = parsedOption(normalizeVmessSecurity(cipher));
 }
 cipher = ("aes-128-cfb"/"aes-128-ctr"/"aes-128-gcm"/"aes-192-cfb"/"aes-192-ctr"/"aes-192-gcm"/"aes-256-cfb"/"aes-256-ctr"/"aes-256-gcm"/"bf-cfb"/"camellia-128-cfb"/"camellia-192-cfb"/"camellia-256-cfb"/"cast5-cfb"/"chacha20-ietf-poly1305"/"chacha20-ietf"/"chacha20-poly1305"/"chacha20"/"des-cfb"/"idea-cfb"/"none"/"rc2-cfb"/"rc4-md5"/"rc4"/"salsa20"/"seed-cfb"/"xchacha20-ietf-poly1305"/"2022-blake3-aes-128-gcm"/"2022-blake3-aes-256-gcm");
 
-ws = comma "ws" equals flag:bool { obfs.type = "ws"; }
+ws = comma "ws" equals flag:bool { obfs.type = flag ? "ws" : undefined; }
 ws_headers = comma "ws-headers" equals & {
     const start = peg$currPos;
     const index = readHeadersEnd(input, start, "|");
@@ -580,8 +609,8 @@ ws_headers = comma "ws-headers" equals & {
     $.headers = input.substring(start, index);
     peg$currPos = index;
     return $.headers.trim().length > 0;
-} { obfs["ws-headers"] = parseHeaders($.headers, "|"); }
-ws_path = comma "ws-path" equals path:uri { obfs.path = path.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
+} { obfs["ws-headers"] = parsedOption(parseHeaders($.headers, "|")); }
+ws_path = comma "ws-path" equals path:uri { obfs.path = parsedOption(path.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1')); }
 headers = comma "headers" equals & {
     const start = peg$currPos;
     const index = readHeadersEnd(input, start, ";");
@@ -592,8 +621,8 @@ headers = comma "headers" equals & {
 } { proxy.headers = parseHeaders($.headers, ";"); }
 
 obfs = comma "obfs" equals type:("http"/"tls") { obfs.type = type; }
-obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").replace(/^"(.*)"$/, '$1'); };
-obfs_uri = comma "obfs-uri" equals path:uri { obfs.path = path }
+obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = parsedOption(match.join("").replace(/^"(.*)"$/, '$1')); };
+obfs_uri = comma "obfs-uri" equals path:uri { obfs.path = parsedOption(path); }
 uri = $[^,]+
 
 udp_relay = comma "udp-relay" equals flag:bool { proxy.udp = flag; }
@@ -622,29 +651,35 @@ block_quic = comma "block-quic" equals match:[^,]+ { proxy["block-quic"] = match
 udp_port = comma "udp-port" equals match:$[0-9]+ { proxy["udp-port"] = parseInt(match.trim()); }
 shadow_tls_version = comma "shadow-tls-version" equals match:$[0-9]+ { shadowTLS.version = parseInt(match.trim()); }
 shadow_tls_sni = comma "shadow-tls-sni" equals match:[^,]+ { shadowTLS.host = match.join(""); }
-shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { shadowTLS.password = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
+shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { shadowTLS.password = parsedOption(match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1')); }
 token = comma "token" equals match:[^,]+ { proxy.token = match.join(""); }
 alpn = comma "alpn" equals match:quoted_value {
-    const values = parseAlpn(match);
+    const values = parsedOption(parseAlpn(match));
     if (values.length > 0) proxy.alpn = values;
 }
 h3 = comma "h3" equals flag:bool { if (flag) proxy.network = "h3"; }
 quoted_value = '"' match:$[^"]* '"' { return match; } / "'" match:$[^']* "'" { return match; } / match:$[^,]+ { return match; }
-uuidk = comma "uuid" equals match:[^,]+ { proxy.uuid = match.join(""); }
-salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); proxy.obfs = 'salamander'; }
-gecko_password = comma "gecko-password" equals match:[^,]+ { proxy['obfs-password'] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); proxy.obfs = 'gecko'; }
+uuidk = comma "uuid" equals match:[^,]+ { proxy.uuid = parsedOption(match.join("")); }
+salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = parsedOption(match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1')); proxy.obfs = 'salamander'; }
+gecko_password = comma "gecko-password" equals match:[^,]+ { proxy['obfs-password'] = parsedOption(match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1')); proxy.obfs = 'gecko'; }
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
-comma = _ "," _
-equals = _ "=" _
+comma = _ "," _ {
+    if (options.onOptionBoundary) options.onOptionBoundary(location());
+}
+equals = _ "=" _ {
+    if (options.onOptionEquals) options.onOptionEquals(location());
+}
 _ = [ \r\t]*
 bool = b:("true"/"false") { return b === "true" }
-others = comma [^=,]+ equals [^=,]+
+others = comma key:$[^=,]+ equals [^=,]+ {
+    if (options.onIgnoredOption) options.onIgnoredOption(proxy, key.trim());
+}
 `;
 let parser;
 export default function getParser() {
     if (!parser) {
-        parser = peggy.generate(grammars);
+        parser = withShadowrocketNativeParserValidation(peggy.generate(grammars));
     }
     return parser;
 }

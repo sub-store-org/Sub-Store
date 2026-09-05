@@ -1,3 +1,4 @@
+import { isEqual } from 'lodash';
 import { normalizeVmessSecurity } from './vmess-security';
 import { isIPv4, isIPv6 } from '@/utils';
 // Preserve validation failures before shared parsers normalize away raw values.
@@ -86,8 +87,72 @@ function record(value, key) {
     }
 }
 
+// Canonicalize spelling only: validate original values before shared parsers
+// coerce or discard them. Conflicting aliases must never select a winner.
+export function normalizeShadowrocketNativeKeys(proxy) {
+    const isRecord = (value) =>
+        value && typeof value === 'object' && !Array.isArray(value);
+    const canonicalize = (value, keyFor, valueFor, path) => {
+        if (!isRecord(value)) return value;
+        const result = {};
+        for (const [key, raw] of Object.entries(value)) {
+            const name = keyFor(key);
+            const normalized = valueFor(raw, name);
+            if (Object.prototype.hasOwnProperty.call(result, name)) {
+                if (!isEqual(result[name], normalized)) {
+                    const label =
+                        path === 'ws-opts.headers'
+                            ? `${
+                                  NATIVE_PROTOCOL_NAMES[proxy.type] ??
+                                  proxy.type
+                              } WebSocket Host aliases`
+                            : `${path ? `${path}.` : ''}${name} aliases`;
+                    throw new Error(`Conflicting Shadowrocket native ${label}`);
+                }
+            } else {
+                Object.defineProperty(result, name, {
+                    value: normalized,
+                    enumerable: true,
+                    configurable: true,
+                    writable: true,
+                });
+            }
+        }
+        return result;
+    };
+    const headers = (value) =>
+        canonicalize(
+            value,
+            (key) => (key.toLowerCase() === 'host' ? 'Host' : key),
+            (raw) => raw,
+            'ws-opts.headers',
+        );
+    const result = canonicalize(
+        proxy,
+        (key) =>
+            key.toLowerCase().endsWith('-opts') ? key.toLowerCase() : key,
+        (value, key) =>
+            key.endsWith('-opts')
+                ? canonicalize(
+                      value,
+                      (name) => name.toLowerCase(),
+                      (raw, name) =>
+                          key === 'ws-opts' && name === 'headers'
+                              ? headers(raw)
+                              : raw,
+                      key,
+                  )
+                : key === 'ws-headers'
+                ? headers(value)
+                : value,
+        '',
+    );
+    return copyShadowrocketNativeValidation(proxy, result);
+}
+
 export function validateShadowrocketNativeInput(proxy) {
     if (proxy[ERROR_FIELD]) throw new Error(proxy[ERROR_FIELD]);
+    proxy = normalizeShadowrocketNativeKeys(proxy);
     for (const keys of [
         ['sni', 'servername'],
         ['tfo', 'fast-open'],
@@ -103,12 +168,17 @@ export function validateShadowrocketNativeInput(proxy) {
     ]) {
         const values = keys
             .map((key) => proxy[key])
-            .filter((value) => value != null && value !== '');
+            .filter((value) => value != null);
         if (new Set(values.map((value) => String(value))).size > 1) {
             throw new Error(
                 `Conflicting Shadowrocket native ${keys.join('/')} aliases`,
             );
         }
+    }
+    if (proxy.type === 'hysteria' && proxy.auth != null && proxy.auth !== '') {
+        throw new Error(
+            'Unsupported Shadowrocket native Hysteria auth: Base64 authentication is not supported; use auth-str for literal authentication',
+        );
     }
     // Port hopping is unsupported by the enabled native syntax. Reject the
     // original fields, including malformed values that lastParse would delete.
@@ -169,6 +239,38 @@ export function validateShadowrocketNativeInput(proxy) {
     }
     for (const key of TEXT_FIELDS) scalar(proxy[key], key, key === 'password');
     for (const key of NUMBER_FIELDS) scalar(proxy[key], key, true);
+    if (proxy.server) {
+        const host = proxy.server.replace(/^\[|\]$/g, '');
+        if (!isIPv6(host) && /[:[\]/\\?#@=\s]/u.test(proxy.server)) {
+            throw new Error('Invalid Shadowrocket native server: expected hostname or IP address');
+        }
+    }
+    for (const key of [
+        'up',
+        'down',
+        'mtu',
+        'keepalive',
+        'persistent-keepalive',
+        'version',
+    ]) {
+        const value = proxy[key];
+        if (value == null || value === '') continue;
+        const bandwidth = ['up', 'down'].includes(key);
+        const numeric = Number(value);
+        if (
+            !(bandwidth ? /^\d+(?:\.\d+)?$/ : /^\d+$/).test(String(value)) ||
+            !Number.isFinite(numeric) ||
+            (!bandwidth && !Number.isSafeInteger(numeric)) ||
+            (['mtu', 'version'].includes(key) && numeric === 0)
+        ) {
+            throw new Error(
+                `Invalid Shadowrocket native ${key}: expected non-negative ${
+                    bandwidth ? 'number' : 'integer'
+                }`,
+            );
+        }
+    }
+
     if (proxy.port != null && proxy.port !== '') {
         const port = Number(proxy.port);
         if (
@@ -218,6 +320,27 @@ export function validateShadowrocketNativeInput(proxy) {
         record(proxy['ws-headers'], 'ws-headers');
         for (const value of Object.values(proxy['ws-headers']))
             scalar(value, 'ws-headers');
+    }
+    if (proxy.network !== 'ws' && ['ws-opts', 'ws-path', 'ws-headers'].some(
+        (key) => proxy[key] != null && proxy[key] !== '',
+    )) {
+        throw new Error('Unsupported Shadowrocket native WebSocket options without WebSocket');
+    }
+    if (proxy.network === 'ws' && proxy['ws-opts']) {
+        for (const [legacy, field] of [
+            ['ws-path', 'path'],
+            ['ws-headers', 'headers'],
+        ]) {
+            if (
+                proxy[legacy] != null &&
+                proxy[legacy] !== '' &&
+                !isEqual(proxy[legacy], proxy['ws-opts'][field])
+            ) {
+                throw new Error(
+                    `Conflicting Shadowrocket native ${legacy}/ws-opts.${field} aliases`,
+                );
+            }
+        }
     }
     if (
         proxy.type !== 'wireguard' &&
@@ -286,6 +409,8 @@ export function validateShadowrocketNativeInput(proxy) {
         'fast-open',
         'udp',
         'aead',
+        'disable-sni',
+        'reduce-rtt',
     ]) {
         if (proxy[key] !== undefined && typeof proxy[key] !== 'boolean') {
             throw new Error(
@@ -326,6 +451,180 @@ export function validateShadowrocketNativeInput(proxy) {
                 'Conflicting Shadowrocket native VMess aead and alterId',
             );
         }
+    }
+}
+
+// The VMess URI parser accepts several schemas and normalizes before lastParse.
+// Check the URI fields themselves so native validation does not see only defaults.
+export function rememberShadowrocketNativeVmessUriValidation(proxy, params) {
+    try {
+        const allowed = new Set([
+            'v',
+            'ps',
+            'remarks',
+            'remark',
+            'add',
+            'port',
+            'scy',
+            'id',
+            'aid',
+            'alterId',
+            'aead',
+            'tls',
+            'verify_cert',
+            'allowInsecure',
+            'sni',
+            'peer',
+            'net',
+            'obfs',
+            'type',
+            'host',
+            'obfsParam',
+            'path',
+            'fp',
+            'alpn',
+        ]);
+        for (const [key, value] of Object.entries(params)) {
+            if (value != null && !allowed.has(key)) {
+                throw new Error(
+                    `Unsupported Shadowrocket native VMess URI option: ${key}`,
+                );
+            }
+        }
+        for (const key of [
+            'ps',
+            'remarks',
+            'remark',
+            'add',
+            'scy',
+            'id',
+            'net',
+            'obfs',
+            'type',
+            'host',
+            'obfsParam',
+            'path',
+            'sni',
+            'peer',
+            'fp',
+            'alpn',
+            'authority',
+        ]) {
+            scalar(params[key], `VMess URI ${key}`);
+        }
+        for (const keys of [
+            ['aid', 'alterId'],
+            ['sni', 'peer'],
+            ['host', 'obfsParam'],
+        ]) {
+            const values = keys
+                .map((key) => params[key])
+                .filter((value) => value != null);
+            const normalized = values.map((value) =>
+                keys[0] === 'aid' && /^\d+$/.test(String(value)) &&
+                Number.isSafeInteger(Number(value))
+                    ? String(Number(value)) : String(value),
+            );
+            if (new Set(normalized).size > 1) {
+                throw new Error(
+                    `Conflicting Shadowrocket native VMess URI ${keys.join(
+                        '/',
+                    )} aliases`,
+                );
+            }
+        }
+        if (
+            params.net != null &&
+            !['', 'tcp', 'none', 'ws'].includes(params.net)
+        ) {
+            throw new Error(
+                'Unsupported Shadowrocket native VMess URI transport',
+            );
+        }
+        if (
+            params.obfs != null &&
+            !['', 'none', 'websocket'].includes(params.obfs)
+        ) {
+            throw new Error('Unsupported Shadowrocket native VMess URI obfs');
+        }
+        if (params.type != null && !['', 'none'].includes(params.type)) {
+            throw new Error(
+                'Unsupported Shadowrocket native VMess URI header type',
+            );
+        }
+        for (const key of ['tls', 'verify_cert', 'allowInsecure']) {
+            const value = params[key];
+            const allowedValues = [
+                undefined,
+                null,
+                false,
+                true,
+                0,
+                1,
+                '0',
+                '1',
+                'false',
+                'true',
+            ];
+            if (key === 'tls') allowedValues.push('', 'tls');
+            if (!allowedValues.includes(value)) {
+                throw new Error(`Invalid Shadowrocket native VMess URI ${key}`);
+            }
+        }
+        // Validate a separate view; native support decisions must never change
+        // how the shared parser interprets TLS for other output targets.
+        const bool = (value) => [true, 1, '1', 'true', 'tls'].includes(value);
+        const tls = bool(params.tls);
+        if (
+            !tls &&
+            [params.sni, params.peer].some(
+                (value) => value != null && value !== '',
+            )
+        ) {
+            throw new Error(
+                'Unsupported Shadowrocket native VMess URI SNI without TLS',
+            );
+        }
+        const websocket = params.net === 'ws' || params.obfs === 'websocket';
+        if ((params.obfs === 'websocket' && params.net && params.net !== 'ws') ||
+            (params.net === 'ws' && params.obfs != null && params.obfs !== 'websocket')) {
+            throw new Error(
+                'Conflicting Shadowrocket native VMess URI transport aliases',
+            );
+        }
+        if (
+            !websocket &&
+            [params.host, params.obfsParam, params.path].some(
+                (value) => value != null && value !== '',
+            )
+        ) {
+            throw new Error(
+                'Unsupported Shadowrocket native VMess URI transport options without WebSocket',
+            );
+        }
+
+        const verify =
+            params.verify_cert != null ? !bool(params.verify_cert) : undefined;
+        const insecure =
+            params.allowInsecure != null
+                ? bool(params.allowInsecure)
+                : undefined;
+        if (verify != null && insecure != null && verify !== insecure) {
+            throw new Error(
+                'Conflicting Shadowrocket native VMess URI certificate verification aliases',
+            );
+        }
+        validateShadowrocketNativeInput({
+            ...proxy,
+            tls,
+            'skip-cert-verify': verify ?? insecure,
+            cipher: params.scy,
+            port: params.port,
+            alterId: params.aid ?? params.alterId,
+            aead: params.aead,
+        });
+    } catch (error) {
+        rememberShadowrocketNativeError(proxy, error.message);
     }
 }
 
@@ -375,4 +674,94 @@ export function copyShadowrocketNativeValidation(source, target) {
         });
     }
     return target;
+}
+
+// Quantumult VMess URI values are scalars; commas inside quotes belong to
+// their values. Text grammars report their own boundaries below.
+export function splitShadowrocketOptions(input) {
+    const parts = [];
+    let start = 0;
+    let quote = '';
+    let escaped = false;
+    for (let index = 0; index < input.length; index++) {
+        const char = input[index];
+        if (quote) {
+            if (escaped) escaped = false;
+            else if (char === '\\') escaped = true;
+            else if (char === quote) quote = '';
+        } else if ((char === '"' || char === "'") &&
+            /(?:^|[=:,])\s*$/.test(input.slice(start, index))) {
+            quote = char;
+        } else if (char === ',') {
+            parts.push(input.slice(start, index).trim());
+            start = index + 1;
+        }
+    }
+    parts.push(input.slice(start).trim());
+    return parts;
+}
+
+export function rememberShadowrocketNativeDuplicateOptions(proxy, entries) {
+    const seen = new Map();
+    for (const [rawKey, value] of entries) {
+        const key = ['sni', 'tls-name', 'tls-host'].includes(rawKey) ? 'sni'
+            : ['tls', 'over-tls'].includes(rawKey) ? 'tls'
+            : ['tfo', 'fast-open'].includes(rawKey) ? 'tfo' : rawKey;
+        if (seen.has(key) && !isEqual(seen.get(key), value)) {
+            rememberShadowrocketNativeError(proxy, `Conflicting Shadowrocket native option: ${key}`);
+        }
+        seen.set(key, value);
+    }
+}
+
+// Text grammars intentionally ignore unknown options for legacy targets.
+// Preserve that loss as private metadata so native export can reject it.
+export function withShadowrocketNativeParserValidation(parser) {
+    return {
+        ...parser,
+        parse(input, options = {}) {
+            // Use actual grammar separators, not a second tokenizer with
+            // different rules for literal brackets/quotes in credentials.
+            // PEG alternatives can revisit a separator; deduplicate offsets.
+            const boundaries = new Map();
+            const equals = new Map();
+            const parsedValues = new Map();
+            const proxy = parser.parse(input, {
+                ...options,
+                onOptionBoundary: ({ start, end }) =>
+                    boundaries.set(start.offset, end.offset),
+                onOptionEquals: ({ start, end }) =>
+                    equals.set(input.indexOf('=', start.offset), end.offset),
+                onParsedOption: ({ start }, value) =>
+                    parsedValues.set(start.offset, value),
+                onConflictingOption: (proxy, key) =>
+                    rememberShadowrocketNativeError(proxy, `Conflicting Shadowrocket native option: ${key}`),
+                onIgnoredOption: (proxy, key) =>
+                    rememberShadowrocketNativeError(
+                        proxy,
+                        `Unsupported Shadowrocket native option: ${key}`,
+                    ),
+            });
+            const positions = Array.from(boundaries).sort(([a], [b]) => a - b);
+            const entries = positions.flatMap(([start, end], index) => {
+                const next = positions[index + 1]?.[0] ?? input.length;
+                const part = input.slice(end, next);
+                const match = /^([\w-]+)\s*=/.exec(part);
+                if (!match) return [];
+                // A literal '=' in a positional password is not a named
+                // option: only accept equals signs consumed by the grammar.
+                const separator = end + match[0].length - 1;
+                if (!equals.has(separator)) return [];
+                // Rules that interpret quotes/whitespace report their value.
+                // Unreported raw values must not be trimmed: whitespace
+                // can be significant in credentials and paths.
+                const value = parsedValues.has(start)
+                    ? parsedValues.get(start)
+                    : input.slice(equals.get(separator), next);
+                return [[match[1], value]];
+            });
+            rememberShadowrocketNativeDuplicateOptions(proxy, entries);
+            return proxy;
+        },
+    };
 }

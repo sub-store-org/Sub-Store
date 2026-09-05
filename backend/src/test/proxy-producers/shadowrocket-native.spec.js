@@ -21,6 +21,349 @@ function parseAndProduce(raw) {
 }
 
 describe('Shadowrocket native output', function () {
+
+    const vmessUri = (fields) =>
+        'vmess://' +
+        Base64.encode(
+            JSON.stringify({
+                v: '2',
+                ps: 'URI',
+                add: 'example.com',
+                port: '443',
+                id: '11111111-1111-4111-8111-111111111111',
+                aid: '0',
+                scy: 'auto',
+                net: 'tcp',
+                tls: 'tls',
+                ...fields,
+            }),
+        );
+    for (const fields of [
+        { tls: {} },
+        { tls: ['tls'] },
+        { net: {} },
+        { net: 'xhttp' },
+        { net: 'ws', path: {} },
+        { net: 'ws', path: 42 },
+        { net: 'ws', host: {} },
+        { net: 'ws', host: ['cdn.example.com'] },
+        { net: 'ws', host: 'one.example', obfsParam: 'two.example' },
+        { sni: 'one.example', peer: 'two.example' },
+        { aid: 0, alterId: 2 },
+        { aid: 2, aead: true },
+        { verify_cert: {} },
+        { allowInsecure: {} },
+        { unknownOption: true },
+        { ed: 'bogus' }, { authority: 'lost.example' },
+        { tls: false, sni: 'lost.example' },
+        { net: 'tcp', path: '/lost' },
+        { net: 'tcp', host: 'lost.example' },
+        { net: 'tcp', obfs: 'websocket' },
+    ]) {
+        it(`rejects lossy VMess URI mapping ${JSON.stringify(
+            fields,
+        )}`, function () {
+            expect(() =>
+                ProxyUtils.parse(vmessUri(fields), { native: true }),
+            ).to.throw('Shadowrocket native');
+            expect(() => parseAndProduce(vmessUri(fields))).to.throw(
+                'Shadowrocket native',
+            );
+        });
+    }
+    for (const raw of [
+        'ss://YWVzLTEyOC1nY206c2VjcmV0@example.com:8388#SS',
+        'ss://YWVzLTEyOC1nY206c2VjcmV0@example.com:8388/?udp=1#SS',
+    ]) {
+        it('exports standard SS URIs without mistaking absent flags for disabled options', function () {
+            expect(parseAndProduce(raw)).to.equal(
+                'SS=ss,example.com,8388,password=secret,method=aes-128-gcm',
+            );
+        });
+    }
+    for (const suffix of ['udp=0', 'udp=false', 'udp=bogus']) {
+        it(`validates explicitly configured SS ${suffix}`, function () {
+            expect(() =>
+                parseAndProduce(
+                    'ss://YWVzLTEyOC1nY206c2VjcmV0@example.com:8388/?' +
+                        suffix +
+                        '#SS',
+                ),
+            ).to.throw('Shadowrocket native');
+        });
+    }
+    it('rejects SS URI ports before numeric extraction', function () {
+        expect(() =>
+            parseAndProduce(
+                'ss://YWVzLTEyOC1nY206c2VjcmV0@example.com:443garbage#SS',
+            ),
+        ).to.throw('Shadowrocket native');
+    });
+    it('keeps legitimate empty Clash lists distinct from malformed sources', function () {
+        expect(
+            ProxyUtils.parse('{"proxies":[]}', { native: true }),
+        ).to.deep.equal([]);
+        for (const raw of [
+            '<!DOCTYPE html><html>Error</html>',
+            '{"proxies":"invalid","proxy-groups":[]}',
+        ]) {
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'Shadowrocket native',
+            );
+            expect(ProxyUtils.parse(raw)).to.deep.equal([]);
+        }
+    });
+
+    const wsInput = {
+        name: 'WS',
+        type: 'vless',
+        server: 'example.com',
+        port: 443,
+        uuid: 'test-uuid',
+        tls: true,
+        network: 'ws',
+        sni: 'tls.example.com',
+    };
+    const clash = (proxy) => JSON.stringify({ proxies: [proxy] });
+
+    for (const type of ['vmess', 'vless']) {
+        for (const key of ['Host', 'host', 'HOST', 'HoSt']) {
+            it(`preserves case-insensitive ${type} WebSocket ${key} through Clash parsing`, function () {
+                const proxy = {
+                    ...wsInput,
+                    type,
+                    cipher: type === 'vmess' ? 'auto' : undefined,
+                    'ws-opts': {
+                        path: '/',
+                        headers: { [key]: 'cdn.example.com' },
+                    },
+                };
+                expect(parseAndProduce(clash(proxy))).to.include(
+                    'obfsParam=cdn.example.com',
+                );
+                expect(produce(proxy)).to.include('obfsParam=cdn.example.com');
+                delete proxy.sni;
+                expect(parseAndProduce(clash(proxy))).to.include(
+                    'peer=cdn.example.com',
+                );
+            });
+        }
+    }
+    it('checks legacy WebSocket aliases before shared normalization deletes them', function () {
+        const opts = { path: '/ws', headers: { Host: 'cdn.example.com' } };
+        const base = { ...wsInput, 'ws-opts': opts };
+        expect(
+            parseAndProduce(
+                clash({
+                    ...base,
+                    'ws-path': '/ws',
+                    'ws-headers': { HOST: 'cdn.example.com' },
+                }),
+            ),
+        ).to.include('path=/ws,obfsParam=cdn.example.com');
+        for (const fields of [
+            { 'ws-path': '/different' },
+            { 'ws-headers': { Host: 'different.example.com' } },
+            { 'ws-headers': { 'X-Auth': 'secret' } },
+            { 'ws-opts': {}, 'ws-path': '/lost' },
+        ]) {
+            const raw = clash({ ...base, ...fields });
+            expect(() => parseAndProduce(raw)).to.throw(
+                'Conflicting Shadowrocket native',
+            );
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'Conflicting Shadowrocket native',
+            );
+        }
+    });
+
+    it('accepts equivalent option aliases and rejects conflicting case variants', function () {
+        const same = {
+            ...wsInput,
+            'WS-OPTS': { HEADERS: { HOST: 'cdn.example.com' }, PATH: '/' },
+            'ws-opts': { path: '/', headers: { host: 'cdn.example.com' } },
+        };
+        expect(parseAndProduce(clash(same))).to.include(
+            'obfsParam=cdn.example.com',
+        );
+        expect(
+            parseAndProduce(
+                clash({
+                    ...wsInput,
+                    'ws-opts': {
+                        headers: {
+                            Host: 'cdn.example.com',
+                            HOST: 'cdn.example.com',
+                        },
+                    },
+                }),
+            ),
+        ).to.include('obfsParam=cdn.example.com');
+        for (const fields of [
+            {
+                'ws-opts': {
+                    headers: { Host: 'one.example', HOST: 'two.example' },
+                },
+            },
+            { 'ws-opts': { path: '/', PATH: '/other' } },
+            { 'ws-opts': { path: '/' }, 'WS-OPTS': { PATH: '/other' } },
+        ]) {
+            const raw = clash({ ...wsInput, ...fields });
+            expect(() => parseAndProduce(raw)).to.throw(
+                'Conflicting Shadowrocket native',
+            );
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'Conflicting Shadowrocket native',
+            );
+        }
+    });
+    for (const fields of [
+        { 'Reality-Opts': {} },
+        { 'REALITY-OPTS': { 'PUBLIC-KEY': 'key' } },
+        { 'WS-OPTS': { PATH: 42 } },
+        { 'Ws-Opts': { HEADERS: { HOST: {} } } },
+    ]) {
+        it(`validates original values behind ${JSON.stringify(
+            fields,
+        )} aliases`, function () {
+            const raw = clash({ ...wsInput, ...fields });
+            expect(() => parseAndProduce(raw)).to.throw('Shadowrocket native');
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'Shadowrocket native',
+            );
+            expect(
+                ProxyUtils.produce(ProxyUtils.parse(raw), 'JSON', 'external'),
+            ).not.to.include('_shadowrocket-native-validation-error');
+        });
+    }
+    it('does not confuse Hysteria Base64 auth with literal auth-str', function () {
+        const base = {
+            name: 'HY',
+            type: 'hysteria',
+            server: 'example.com',
+            port: 443,
+            up: 10,
+            down: 20,
+        };
+        expect(
+            parseAndProduce(clash({ ...base, 'auth-str': 'c2VjcmV0' })),
+        ).to.include('auth=c2VjcmV0');
+        for (const fields of [
+            { auth: 'c2VjcmV0' },
+            { auth: 'c2VjcmV0', 'auth-str': 'c2VjcmV0' },
+        ]) {
+            const raw = clash({ ...base, ...fields });
+            expect(() => parseAndProduce(raw)).to.throw('Hysteria');
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'Hysteria',
+            );
+            expect(
+                JSON.parse(
+                    ProxyUtils.produce(
+                        ProxyUtils.parse(raw),
+                        'JSON',
+                        'external',
+                    ),
+                )[0].auth,
+            ).to.equal('c2VjcmV0');
+        }
+    });
+    it('accepts only known resolver metadata among underscore fields', function () {
+        const proxy = {
+            ...wsInput,
+            _IP: '192.0.2.1',
+            _IPv4: '192.0.2.1',
+            _IPv6: '2001:db8::1',
+            _IP4P: {},
+            _domain: 'example.com',
+            _resolved: true,
+            _resolved_ips: ['192.0.2.1'],
+            '_no-resolve': true,
+        };
+        expect(produce(proxy)).to.include('WS=vless,example.com,443');
+        expect(() => produce({ ...proxy, _h2: true })).to.throw(
+            'Shadowrocket native',
+        );
+    });
+
+    for (const [label, raw] of [
+        [
+            'Loon hop',
+            'HY=hysteria2,example.com,443,"secret",hop-interval=bogus',
+        ],
+        [
+            'Surge hop',
+            'HY=hysteria2,example.com,443,password=secret,port-hopping-interval=bogus',
+        ],
+        [
+            'Loon ports',
+            'HY=hysteria2,example.com,443,"secret",server-ports=443-445',
+        ],
+        [
+            'Loon unknown',
+            'HY=hysteria2,example.com,443,"secret",unknown-setting=value',
+        ],
+        [
+            'Surge unknown',
+            'HY=hysteria2,example.com,443,password=secret,unknown-setting=value',
+        ],
+        [
+            'QX unknown',
+            'shadowsocks=example.com:443,method=aes-128-gcm,password=secret,tag=SS,unknown-setting=value',
+        ],
+    ]) {
+        it(`rejects ignored ${label} fields while preserving ordinary parsing`, function () {
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'Shadowrocket native',
+            );
+            expect(() => parseAndProduce(raw)).to.throw('Shadowrocket native');
+            const ordinary = ProxyUtils.produce(
+                ProxyUtils.parse(raw),
+                'JSON',
+                'external',
+            );
+            expect(JSON.parse(ordinary)).to.have.length(1);
+            expect(ordinary).not.to.include(
+                '_shadowrocket-native-validation-error',
+            );
+        });
+    }
+
+    it('rejects malformed native rows instead of returning partial subscriptions', function () {
+        const good = 'Good=hysteria2,example.com,443,"secret"';
+        const bad = 'Bad=hysteria2,example.com,443,"secret",hop-interval=30-10';
+        for (const raw of [
+            bad,
+            `${good}\n${bad}`,
+            `${bad}\n${good}`,
+            `${good}\nnot-a-node`,
+        ]) {
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'Cannot parse Shadowrocket native input at line',
+            );
+        }
+        expect(ProxyUtils.parse(`${good}\n${bad}`)).to.have.length(1);
+    });
+
+    it('accepts comments and Proxy sections in strict native parsing', function () {
+        const row = 'Good=hysteria2,example.com,443,"secret"';
+        for (const raw of [
+            `# subscription\n; comment\n// comment\n\n${row}`,
+            `[General]\nloglevel=notify\n[Proxy]\n# comment\n${row}\n[Rule]\nFINAL,DIRECT`,
+            `[Proxy]\n${row}`,
+        ]) {
+            const output = ProxyUtils.produce(
+                ProxyUtils.parse(raw, { native: true }),
+                'Shadowrocket',
+                'external',
+                { native: true },
+            );
+            expect(output).to.equal(
+                'Good=hysteria2,example.com,443,auth=secret,udp=1,peer=example.com',
+            );
+        }
+    });
+
     for (const cipher of ['bogus', 'zero', 'chacha20-poly1305']) {
         it(`rejects the Loon cipher ${cipher} before Loon's auto fallback`, function () {
             const raw = `VM=vmess,example.com,443,${cipher},"11111111-1111-4111-8111-111111111111"`;

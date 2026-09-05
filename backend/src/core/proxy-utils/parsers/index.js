@@ -1,6 +1,10 @@
 import {
     rememberShadowrocketNativeValidation,
     rememberShadowrocketNativeError,
+    rememberShadowrocketNativeVmessUriValidation,
+    rememberShadowrocketNativeDuplicateOptions,
+    copyShadowrocketNativeValidation,
+    splitShadowrocketOptions,
 } from '../shadowrocket-native-validation';
 import {
     isIPv4,
@@ -73,6 +77,12 @@ function decodeShadowsocksUserInfo(rawUserInfoStr) {
     }
 
     return Base64.decode(decodedUserInfoStr);
+}
+
+// URI query values may contain equals signs (for example padded credentials).
+function splitURIOption(entry) {
+    const index = entry.indexOf('=');
+    return index < 0 ? [entry, undefined] : [entry.slice(0, index), entry.slice(index + 1)];
 }
 
 function isNumericEarlyData(value) {
@@ -221,7 +231,7 @@ function URI_SOCKS() {
         if (auth) {
             const parsed = Base64.decode(decodeURIComponent(auth)).split(':');
             username = parsed[0];
-            password = parsed[1];
+            password = parsed.slice(1).join(':');
         }
 
         const proxy = {
@@ -291,14 +301,19 @@ function URI_SS() {
         const params = {};
         for (const addon of query.replace(/^\?/, '').split('&')) {
             if (addon) {
-                const [key, valueRaw] = addon.split('=');
+                const [key, valueRaw] = splitURIOption(addon);
                 let value = valueRaw;
                 value = decodeURIComponent(valueRaw);
                 params[key] = value;
             }
         }
         proxy.tls = params.security && params.security !== 'none';
-        proxy['skip-cert-verify'] = !!params['allowInsecure'];
+        if (params.allowInsecure != null) {
+            proxy['skip-cert-verify'] = /^(true|1)$/i.test(params.allowInsecure);
+            if (!/^(true|false|0|1)$/i.test(params.allowInsecure)) {
+                rememberShadowrocketNativeError(proxy, 'Invalid Shadowrocket native SS allowInsecure');
+            }
+        }
         proxy.sni = params['sni'] || params['peer'];
         proxy['client-fingerprint'] = params.fp;
         proxy.alpn = params.alpn
@@ -405,7 +420,13 @@ function URI_SS() {
             }
         }
 
-        proxy.udp = !!params['udp'];
+        // An absent URI flag is not an explicit request to disable UDP.
+        if (params.udp != null) {
+            proxy.udp = /^(true|1)$/i.test(params.udp);
+            if (!/^(true|false|0|1)$/i.test(params.udp)) {
+                rememberShadowrocketNativeError(proxy, 'Invalid Shadowrocket native SS udp');
+            }
+        }
 
         const serverAndPort = serverAndPortArray[1];
         const portIdx = serverAndPort.lastIndexOf(':');
@@ -413,6 +434,9 @@ function URI_SS() {
         proxy.port = `${serverAndPort.substring(portIdx + 1)}`.match(
             /\d+/,
         )?.[0];
+        rememberShadowrocketNativeValidation(proxy, {
+            ...proxy, port: serverAndPort.substring(portIdx + 1),
+        });
         let userInfo = userInfoStr.match(/(^.*?):(.*$)/);
         proxy.cipher = userInfo?.[1];
         proxy.password = userInfo?.[2];
@@ -621,20 +645,24 @@ function URI_VMess() {
     const test = (line) => {
         return /^vmess:\/\//.test(line);
     };
+    const uriBoolean = (value) => {
+        if (value == null) return undefined;
+        if (['true', '1', true, 1].includes(value)) return true;
+        if (['false', '0', false, 0].includes(value)) return false;
+        return value;
+    };
     const parse = (line) => {
         let { content: lineWithoutFragment, fragment: fragmentName } =
             splitURIFragment(line.split('vmess://')[1]);
         let content = Base64.decode(lineWithoutFragment.replace(/\?.*?$/, ''));
         if (/=\s*vmess/.test(content)) {
             // Quantumult VMess URI format
-            const partitions = content.split(',').map((p) => p.trim());
+            const partitions = splitShadowrocketOptions(content);
             // get keyword params
-            const params = {};
-            for (const part of partitions) {
-                if (part.indexOf('=') !== -1) {
-                    const [key, val] = part.split('=');
-                    params[key.trim()] = val.trim();
-                }
+            const params = Object.create(null);
+            const entries = partitions.slice(5).map(splitURIOption);
+            for (const [key, val] of entries) {
+                params[key.trim()] = val?.trim();
             }
 
             const proxy = {
@@ -647,35 +675,61 @@ function URI_VMess() {
                 ),
                 uuid: partitions[4].match(/^"(.*)"$/)[1],
                 tls: params.obfs === 'wss',
-                udp: getIfPresent(params['udp-relay']),
-                tfo: getIfPresent(params['fast-open']),
+                udp: uriBoolean(params['udp-relay']),
+                tfo: uriBoolean(params['fast-open']),
                 'skip-cert-verify': isPresent(params['tls-verification'])
-                    ? !params['tls-verification']
+                    ? typeof uriBoolean(params['tls-verification']) === 'boolean'
+                        ? !uriBoolean(params['tls-verification']) : params['tls-verification']
                     : undefined,
             };
 
+            if (lineWithoutFragment.includes('?')) {
+                rememberShadowrocketNativeError(proxy, 'Unsupported Shadowrocket native Quantumult VMess outer query');
+            }
+            rememberShadowrocketNativeDuplicateOptions(proxy,
+                entries.map(([key, value]) => [key.trim(),
+                    ['udp-relay', 'fast-open', 'tls-verification'].includes(key.trim())
+                        ? uriBoolean(value?.trim()) : value?.trim()]));
             rememberShadowrocketNativeValidation(proxy, {
                 ...proxy,
                 cipher: partitions[3],
             });
+            if (!params.obfs && (params['obfs-path'] != null || params['obfs-header'] != null)) {
+                rememberShadowrocketNativeError(proxy, 'Unsupported Shadowrocket native Quantumult VMess WebSocket options without WebSocket');
+            }
 
+            for (const part of partitions.slice(5)) {
+                const key = splitURIOption(part)[0].trim();
+                if (!['obfs', 'obfs-path', 'obfs-header', 'udp-relay', 'fast-open', 'tls-verification'].includes(key)) {
+                    rememberShadowrocketNativeError(proxy, `Unsupported Shadowrocket native Quantumult VMess option: ${key}`);
+                }
+            }
             // handle ws headers
             if (isPresent(params.obfs)) {
                 if (params.obfs === 'ws' || params.obfs === 'wss') {
                     proxy.network = 'ws';
+                    proxy['ws-opts'] = {};
                     proxy['ws-opts'].path = (
                         getIfNotBlank(params['obfs-path']) || '"/"'
                     ).match(/^"(.*)"$/)[1];
-                    let obfs_host = params['obfs-header'];
-                    if (obfs_host && obfs_host.indexOf('Host') !== -1) {
-                        obfs_host = obfs_host.match(
-                            /Host:\s*([a-zA-Z0-9-.]*)/,
-                        )[1];
-                    }
-                    if (isNotBlank(obfs_host)) {
-                        proxy['ws-opts'].headers = {
-                            Host: obfs_host,
-                        };
+                    const headerText = params['obfs-header'];
+                    if (headerText != null) {
+                        const text = headerText.replace(/^"(.*)"$/, '$1');
+                        const headers = {};
+                        const headerEntries = [];
+                        for (const line of text.split(/\\r\\n|\r?\n/)) {
+                            const match = /^([^:]+):\s*(.*)$/.exec(line);
+                            if (!match) {
+                                rememberShadowrocketNativeError(proxy, 'Invalid Shadowrocket native Quantumult VMess header');
+                                continue;
+                            }
+                            const key = match[1].trim();
+                            const value = match[2].trim();
+                            headerEntries.push([key.toLowerCase(), value]);
+                            Object.defineProperty(headers, key, {value, enumerable: true, configurable: true, writable: true});
+                        }
+                        rememberShadowrocketNativeDuplicateOptions(proxy, headerEntries);
+                        proxy['ws-opts'].headers = headers;
                     }
                 } else {
                     throw new Error(`Unsupported obfs: ${params.obfs}`);
@@ -686,11 +740,15 @@ function URI_VMess() {
             }
             return proxy;
         } else {
-            let params = {};
+            let params = Object.create(null);
+            const rawValidation = {};
 
             try {
                 // V2rayN URI format
                 params = JSON.parse(content);
+                if (lineWithoutFragment.includes('?')) {
+                    rememberShadowrocketNativeError(rawValidation, 'Unsupported Shadowrocket native VMess JSON outer query');
+                }
             } catch (e) {
                 // Shadowrocket URI format
                 // eslint-disable-next-line no-unused-vars
@@ -699,16 +757,22 @@ function URI_VMess() {
                 );
                 content = Base64.decode(base64Line);
 
-                for (const addon of qs.split('&')) {
-                    const [key, valueRaw] = addon.split('=');
+                const queryEntries = [];
+                for (const addon of qs.split('&').filter(Boolean)) {
+                    const [key, valueRaw] = splitURIOption(addon);
                     let value = valueRaw;
-                    value = decodeURIComponent(valueRaw);
+                    value = decodeURIComponent(valueRaw ?? '');
+                    queryEntries.push([key, value]);
+                    if (['scy', 'id', 'port', 'add'].includes(key)) {
+                        rememberShadowrocketNativeError(rawValidation, `Unsupported Shadowrocket native VMess URI authority option: ${key}`);
+                    }
                     if (value.indexOf(',') === -1) {
                         params[key] = value;
                     } else {
                         params[key] = value.split(',');
                     }
                 }
+                rememberShadowrocketNativeDuplicateOptions(rawValidation, queryEntries);
                 // eslint-disable-next-line no-unused-vars
                 let [___, cipher, uuid, server, port] =
                     /(^[^:]+?):([^:]+?)@(.*):(\d+)$/.exec(content);
@@ -737,17 +801,13 @@ function URI_VMess() {
                     getIfPresent(params.aid ?? params.alterId, 0),
                     10,
                 ),
-                tls: ['tls', true, 1, '1'].includes(params.tls),
+                tls: ['tls', true, 1, '1', 'true'].includes(params.tls),
                 'skip-cert-verify': isPresent(params.verify_cert)
-                    ? !params.verify_cert
+                    ? !uriBoolean(params.verify_cert)
                     : undefined,
             };
-            rememberShadowrocketNativeValidation(proxy, {
-                ...proxy,
-                cipher: params.scy,
-                port: params.port,
-                alterId: params.aid ?? params.alterId,
-            });
+            copyShadowrocketNativeValidation(rawValidation, proxy);
+            rememberShadowrocketNativeVmessUriValidation(proxy, params);
             if (!proxy['skip-cert-verify'] && isPresent(params.allowInsecure)) {
                 proxy['skip-cert-verify'] = /(TRUE)|1/i.test(
                     params.allowInsecure,
@@ -789,9 +849,13 @@ function URI_VMess() {
             // }
             if (proxy.network) {
                 let transportHost = params.host ?? params.obfsParam;
+                let transportHeaders;
                 try {
                     const parsedObfs = JSON.parse(transportHost);
-                    const parsedHost = parsedObfs?.Host;
+                    if (parsedObfs && typeof parsedObfs === 'object') {
+                        transportHeaders = parsedObfs;
+                    }
+                    const parsedHost = parsedObfs?.Host ?? parsedObfs?.host;
                     if (parsedHost) {
                         transportHost = parsedHost;
                     }
@@ -874,7 +938,8 @@ function URI_VMess() {
                                 opts.host = h2Hosts;
                             }
                         } else {
-                            opts.headers = { Host: normalizedTransportHost };
+                            opts.headers = proxy.network === 'ws' && transportHeaders
+                                ? transportHeaders : { Host: normalizedTransportHost };
                         }
                         if (httpupgrade) {
                             opts['v2ray-http-upgrade'] = true;
@@ -1855,7 +1920,7 @@ function URI_VLESS() {
         const params = {};
         for (const addon of addons.split('&')) {
             if (addon) {
-                const [key, valueRaw] = addon.split('=');
+                const [key, valueRaw] = splitURIOption(addon);
                 let value = valueRaw;
                 value = decodeURIComponent(valueRaw);
                 params[key] = value;
@@ -2143,7 +2208,7 @@ function URI_AnyTLS() {
 
         for (const addon of addons.split('&')) {
             if (addon) {
-                let [key, value] = addon.split('=');
+                let [key, value] = splitURIOption(addon);
                 key = key.replace(/_/g, '-');
                 value = decodeURIComponent(value);
                 if (['alpn'].includes(key)) {
@@ -2227,7 +2292,7 @@ function URI_Hysteria2() {
         const params = {};
         for (const addon of addons.split('&')) {
             if (addon) {
-                const [key, valueRaw] = addon.split('=');
+                const [key, valueRaw] = splitURIOption(addon);
                 let value = valueRaw;
                 value = decodeURIComponent(valueRaw);
                 params[key] = value;
@@ -2303,7 +2368,7 @@ function URI_Hysteria() {
         const params = {};
         for (const addon of addons.split('&')) {
             if (addon) {
-                let [key, value] = addon.split('=');
+                let [key, value] = splitURIOption(addon);
                 key = key.replace(/_/, '-');
                 value = decodeURIComponent(value);
                 if (['alpn'].includes(key)) {
@@ -2363,7 +2428,6 @@ function URI_TUIC() {
         if (isNaN(port)) {
             port = 443;
         }
-        password = decodeURIComponent(password);
         if (name != null) {
             name = decodeURIComponent(name);
         }
@@ -2380,7 +2444,7 @@ function URI_TUIC() {
 
         for (const addon of addons.split('&')) {
             if (addon) {
-                let [key, value] = addon.split('=');
+                let [key, value] = splitURIOption(addon);
                 key = key.replace(/_/g, '-');
                 value = decodeURIComponent(value);
                 if (['alpn'].includes(key)) {
@@ -2388,7 +2452,7 @@ function URI_TUIC() {
                 } else if (['allow-insecure', 'insecure'].includes(key)) {
                     proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
                 } else if (['fast-open'].includes(key)) {
-                    proxy.tfo = true;
+                    proxy.tfo = /^(true|1)$/i.test(value);
                 } else if (['disable-sni', 'reduce-rtt'].includes(key)) {
                     proxy[key] = /(TRUE)|1/i.test(value);
                 } else if (key === 'congestion-control') {
@@ -2429,7 +2493,7 @@ function URI_WireGuard() {
         if (isNaN(port)) {
             port = 51820;
         }
-        privateKey = decodeURIComponent(privateKey);
+        privateKey = privateKey != null ? decodeURIComponent(privateKey) : undefined;
         if (name != null) {
             name = decodeURIComponent(name);
         }
@@ -2510,12 +2574,12 @@ function URI_Trojan() {
     };
 
     const parse = (line) => {
-        const matched = /^(trojan:\/\/.*?@.*?)(:(\d+))?\/?(\?.*?)?$/.exec(line);
-        const port = matched?.[2];
-        if (!port) {
-            line = line.replace(matched[1], `${matched[1]}:443`);
-        }
         let [newLine, name] = line.split(/#(.+)/, 2);
+        const matched = /^(trojan:\/\/.*?@.*?)(:(\d+))?\/?(\?.*?)?$/.exec(newLine);
+        const port = matched?.[2];
+        if (matched && !port) {
+            newLine = newLine.replace(matched[1], `${matched[1]}:443`);
+        }
         const parser = getTrojanURIParser();
         const proxy = parser.parse(newLine);
         if (isNotBlank(name)) {

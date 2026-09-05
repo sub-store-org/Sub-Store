@@ -1,5 +1,7 @@
+import { rememberShadowrocketNativeUriValidation } from './shadowrocket-native-uri-validation';
 import {
     rememberShadowrocketNativeValidation,
+    normalizeShadowrocketNativeKeys,
     withoutShadowrocketNativeValidation,
     validateShadowrocketNativeInput,
 } from './shadowrocket-native-validation';
@@ -52,14 +54,15 @@ const ageUtils = {
     derivePublicKey,
 };
 
-function preprocess(raw) {
+function preprocess(raw, { native = false } = {}) {
     for (const processor of PROXY_PREPROCESSORS) {
         try {
             if (processor.test(raw)) {
                 $.info(`Pre-processor [${processor.name}] activated`);
-                return processor.parse(raw);
+                return processor.parse(raw, undefined, { native });
             }
         } catch (e) {
+            if (native) throw new Error(`Cannot preprocess Shadowrocket native input (${processor.name})`);
             $.error(`Parser [${processor.name}] failed\n Reason: ${e}`);
         }
     }
@@ -71,15 +74,15 @@ function parse(raw, { native = false } = {}) {
         if (native) validateShadowrocketNativeInput(proxy);
         return lastParse(proxy);
     };
-    raw = preprocess(raw);
+    raw = preprocess(raw, { native });
     // parse
     const lines = raw.split('\n');
     const proxies = [];
     let lastParser;
 
-    for (let line of lines) {
-        line = line.trim();
-        if (line.length === 0) continue; // skip empty line
+    for (const [lineIndex, rawLine] of lines.entries()) {
+        const line = rawLine.trim();
+        if (line.length === 0 || (native && /^(#|;|\/\/)/.test(line))) continue;
         let success = false;
 
         // try to parse with last used parser
@@ -106,6 +109,10 @@ function parse(raw, { native = false } = {}) {
         }
 
         if (!success) {
+            if (native) {
+                // Do not echo the raw row: it may contain proxy credentials.
+                throw new Error(`Cannot parse Shadowrocket native input at line ${lineIndex + 1}`);
+            }
             $.error(`Failed to parse line: ${line}`);
         }
     }
@@ -743,6 +750,7 @@ function tryParse(parser, line) {
     if (!safeMatch(parser, line)) return [null, new Error('Parser mismatch')];
     try {
         const proxy = parser.parse(line);
+        rememberShadowrocketNativeUriValidation(proxy, line);
         return [proxy, null];
     } catch (err) {
         return [null, err];
@@ -772,6 +780,12 @@ function formatTransportPath(path) {
 
 function lastParse(proxy) {
     rememberShadowrocketNativeValidation(proxy);
+    try {
+        proxy = normalizeShadowrocketNativeKeys(proxy);
+    } catch (_) {
+        // Keep legacy alias precedence for other targets. Native export will
+        // reject the private validation failure recorded above.
+    }
     // normalize keys to lowercase for all -opts keys and their subkeys
     // 通常来说够用了, 在重构之前暂不考虑引入更复杂的逻辑
     const hasOwn = (value, key) =>
@@ -1059,7 +1073,11 @@ function lastParse(proxy) {
                 ? transportHost[0]
                 : transportHost;
             if (transportHost) {
-                proxy.sni = transportHost;
+                // HTTP Host may be an authority including a port; TLS SNI
+                // only uses the hostname. Preserve the original header.
+                proxy.sni = typeof transportHost === 'string'
+                    ? transportHost.replace(/^\[([^\]]+)\](?::\d+)?$/, '$1').replace(/^([^:]+):\d+$/, '$1')
+                    : transportHost;
             }
         }
         // 不区分是不是域名, 总之如果到这里还没 sni, 可以设置域名 server 为 sni
