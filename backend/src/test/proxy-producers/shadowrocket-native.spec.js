@@ -1,6 +1,8 @@
+import { Base64 } from 'js-base64';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import { ProxyUtils } from '@/core/proxy-utils';
+import { ApplyProcessor } from '@/core/proxy-utils/processors';
 import Shadowrocket_Producer from '@/core/proxy-utils/producers/shadowrocket';
 
 function produce(proxy) {
@@ -19,6 +21,284 @@ function parseAndProduce(raw) {
 }
 
 describe('Shadowrocket native output', function () {
+    it('rejects review F-J semantic losses before Clash normalization and filtering', function () {
+        const cases = [
+            [
+                { type: 'vmess', uuid: 'test-uuid', cipher: 'bogus' },
+                'VMess cipher',
+            ],
+            [
+                { type: 'hysteria2', password: 'secret', obfs: 'gecko' },
+                'Hysteria2 obfs',
+            ],
+            [
+                {
+                    type: 'wireguard',
+                    'private-key': 'private',
+                    'public-key': 'public',
+                    ip: '10.0.0.2/32',
+                    'ip-cidr': 24,
+                },
+                'WireGuard ip-cidr conflict',
+            ],
+            [
+                {
+                    type: 'wireguard',
+                    'private-key': 'private',
+                    'public-key': 'public',
+                    ip: '10.0.0.2',
+                    ipv6: 'fd00::2/128',
+                    'ipv6-cidr': 64,
+                },
+                'WireGuard ipv6-cidr conflict',
+            ],
+            ...[
+                {},
+                { 'short-id': 'abcd' },
+                { 'public-key': '' },
+                { 'public-key': 'key' },
+            ].map((reality) => [
+                { type: 'vless', uuid: 'test-uuid', 'reality-opts': reality },
+                'Reality',
+            ]),
+        ];
+        for (const [fields, message] of cases) {
+            const proxy = {
+                name: 'Review',
+                server: 'example.com',
+                port: 443,
+                ...fields,
+            };
+            for (const run of [
+                produce,
+                (value) =>
+                    parseAndProduce(JSON.stringify({ proxies: [value] })),
+            ]) {
+                expect(
+                    () => run(JSON.parse(JSON.stringify(proxy))),
+                    JSON.stringify(fields),
+                ).to.throw(message);
+            }
+        }
+    });
+
+    it('keeps native errors out of non-native exports without clearing the source failure', function () {
+        const raw = JSON.stringify({
+            proxies: [
+                {
+                    type: 'vmess',
+                    name: 'Review',
+                    server: 'example.com',
+                    port: 443,
+                    uuid: 'test-uuid',
+                    cipher: 'bogus',
+                },
+            ],
+        });
+        for (const target of ['JSON', 'ClashMeta', 'Shadowrocket', 'URI']) {
+            const proxies = ProxyUtils.parse(raw);
+            expect(JSON.stringify(proxies)).not.to.include(
+                '_shadowrocket-native-validation-error',
+            );
+            const output = ProxyUtils.produce(proxies, target, 'external');
+            expect(output).not.to.include(
+                '_shadowrocket-native-validation-error',
+            );
+            expect(() =>
+                ProxyUtils.produce(proxies, 'Shadowrocket', 'external', {
+                    native: true,
+                }),
+            ).to.throw('VMess cipher');
+        }
+    });
+
+    it('does not let generic export filters silently drop unsupported native nodes', function () {
+        for (const fields of [
+            { type: 'http', headers: { Host: 'custom.example.com' } },
+            {
+                type: 'vless',
+                uuid: 'test-uuid',
+                network: 'xhttp',
+                'xhttp-opts': {
+                    mode: 'stream-one',
+                    'download-settings': { address: 'example.com' },
+                },
+            },
+            {
+                type: 'vmess',
+                uuid: 'test-uuid',
+                cipher: 'auto',
+                supported: { Shadowrocket: false },
+            },
+        ]) {
+            const raw = JSON.stringify({
+                proxies: [
+                    {
+                        name: 'Filtered',
+                        server: 'example.com',
+                        port: 443,
+                        ...fields,
+                    },
+                ],
+            });
+            expect(() => parseAndProduce(raw)).to.throw('Shadowrocket native');
+        }
+    });
+
+    it('also checks raw cipher values in VMess share links before their parser fallback', function () {
+        const raw =
+            'vmess://' +
+            Base64.encode(
+                JSON.stringify({
+                    ps: 'VM',
+                    add: 'example.com',
+                    port: 443,
+                    id: 'test-uuid',
+                    aid: 0,
+                    scy: 'bogus',
+                    net: 'tcp',
+                }),
+            );
+        expect(() => parseAndProduce(raw)).to.throw('VMess cipher');
+        const output = ProxyUtils.produce(
+            ProxyUtils.parse(raw),
+            'JSON',
+            'external',
+        );
+        expect(JSON.parse(output)[0].cipher).to.equal('auto');
+        expect(output).not.to.include('_shadowrocket-native-validation-error');
+    });
+
+    it('retains private validation failures across built-in operator cloning', async function () {
+        const proxies = ProxyUtils.parse(
+            JSON.stringify({
+                proxies: [
+                    {
+                        type: 'vmess',
+                        name: 'Before',
+                        server: 'example.com',
+                        port: 443,
+                        uuid: 'test-uuid',
+                        cipher: 'bogus',
+                    },
+                ],
+            }),
+        );
+        const processed = await ApplyProcessor(
+            {
+                name: 'Test Operator',
+                func: (nodes) => {
+                    nodes[0].name = 'After';
+                    return nodes;
+                },
+            },
+            proxies,
+        );
+        expect(processed[0].name).to.equal('After');
+        expect(proxies[0].name).to.equal('Before');
+        expect(JSON.stringify(processed)).not.to.include(
+            '_shadowrocket-native-validation-error',
+        );
+        expect(() =>
+            ProxyUtils.produce(processed, 'Shadowrocket', 'external', {
+                native: true,
+            }),
+        ).to.throw('VMess cipher');
+    });
+
+    it('fails native parsing before malformed obfs nodes can be filtered away', function () {
+        const raw = JSON.stringify({
+            proxies: [
+                {
+                    type: 'hysteria2',
+                    name: 'HY2',
+                    server: 'example.com',
+                    port: 443,
+                    password: 'secret',
+                    obfs: 'salamander',
+                },
+            ],
+        });
+        expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+            'salamander obfs-password',
+        );
+        expect(ProxyUtils.parse(raw)).to.deep.equal([]);
+    });
+
+    it('preserves supported cipher aliases, Salamander, and matching CIDRs', function () {
+        for (const cipher of [
+            'auto',
+            'none',
+            'zero',
+            'aes-128-gcm',
+            'chacha20-poly1305',
+            'chacha20-ietf-poly1305',
+            ' AES-128-GCM ',
+        ]) {
+            const expected = cipher
+                .trim()
+                .toLowerCase()
+                .replace('chacha20-ietf-poly1305', 'chacha20-poly1305');
+            expect(
+                parseAndProduce(
+                    JSON.stringify({
+                        proxies: [
+                            {
+                                type: 'vmess',
+                                name: 'VM',
+                                server: 'example.com',
+                                port: 443,
+                                uuid: 'test-uuid',
+                                cipher,
+                            },
+                        ],
+                    }),
+                ),
+            ).to.equal(
+                `VM=vmess,example.com,443,password=test-uuid,alterId=0,method=${expected}`,
+            );
+        }
+        expect(
+            parseAndProduce(
+                JSON.stringify({
+                    proxies: [
+                        {
+                            type: 'wireguard',
+                            name: 'WG',
+                            server: 'example.com',
+                            port: 51820,
+                            'private-key': 'private',
+                            'public-key': 'public',
+                            ip: '10.0.0.2/24',
+                            'ip-cidr': '24',
+                        },
+                    ],
+                }),
+            ),
+        ).to.equal(
+            'WG=wireguard,example.com,51820,privateKey=private,publicKey=public,ip=10.0.0.2/24,udp=1',
+        );
+        expect(
+            parseAndProduce(
+                JSON.stringify({
+                    proxies: [
+                        {
+                            type: 'hysteria2',
+                            name: 'HY2',
+                            server: 'example.com',
+                            port: 443,
+                            password: 'secret',
+                            obfs: 'salamander',
+                            'obfs-password': 'obfs-secret',
+                        },
+                    ],
+                }),
+            ),
+        ).to.equal(
+            'HY2=hysteria2,example.com,443,auth=secret,obfsParam=obfs-secret,udp=1,peer=example.com',
+        );
+    });
+
     it('rejects malformed scalars through Clash JSON and direct native output', function () {
         const base = {
             type: 'vmess',

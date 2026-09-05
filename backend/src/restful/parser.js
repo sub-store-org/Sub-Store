@@ -30,7 +30,10 @@ async function proxy_parser(req, res) {
         } else {
             raw = data ?? content
         }
-        var proxies = ProxyUtils.parse(raw);
+        var proxies = ProxyUtils.parse(raw, {
+            native: String(client ?? platform).toLowerCase() === 'shadowrocket' &&
+                produceOpts?.native && type !== 'internal',
+        });
         var par_res = ProxyUtils.produce(proxies, client ?? platform, type, produceOpts);
         result['par_res'] = par_res;
     } catch (err) {

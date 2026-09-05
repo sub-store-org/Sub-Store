@@ -651,6 +651,11 @@ function URI_VMess() {
                     : undefined,
             };
 
+            rememberShadowrocketNativeValidation(proxy, {
+                ...proxy,
+                cipher: partitions[3],
+            });
+
             // handle ws headers
             if (isPresent(params.obfs)) {
                 if (params.obfs === 'ws' || params.obfs === 'wss') {
@@ -734,6 +739,12 @@ function URI_VMess() {
                     ? !params.verify_cert
                     : undefined,
             };
+            rememberShadowrocketNativeValidation(proxy, {
+                ...proxy,
+                cipher: params.scy,
+                port: params.port,
+                alterId: params.aid ?? params.alterId,
+            });
             if (!proxy['skip-cert-verify'] && isPresent(params.allowInsecure)) {
                 proxy['skip-cert-verify'] = /(TRUE)|1/i.test(
                     params.allowInsecure,

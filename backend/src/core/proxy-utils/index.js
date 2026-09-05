@@ -1,5 +1,6 @@
 import {
     rememberShadowrocketNativeValidation,
+    withoutShadowrocketNativeValidation,
     validateShadowrocketNativeInput,
 } from './shadowrocket-native-validation';
 import { Base64 } from 'js-base64';
@@ -65,7 +66,11 @@ function preprocess(raw) {
     return raw;
 }
 
-function parse(raw) {
+function parse(raw, { native = false } = {}) {
+    const normalize = (proxy) => {
+        if (native) validateShadowrocketNativeInput(proxy);
+        return lastParse(proxy);
+    };
     raw = preprocess(raw);
     // parse
     const lines = raw.split('\n');
@@ -81,7 +86,7 @@ function parse(raw) {
         if (lastParser) {
             const [proxy, error] = tryParse(lastParser, line);
             if (!error) {
-                proxies.push(lastParse(proxy));
+                proxies.push(normalize(proxy));
                 success = true;
             }
         }
@@ -91,7 +96,7 @@ function parse(raw) {
             for (const parser of PROXY_PARSERS) {
                 const [proxy, error] = tryParse(parser, line);
                 if (!error) {
-                    proxies.push(lastParse(proxy));
+                    proxies.push(normalize(proxy));
                     lastParser = parser;
                     success = true;
                     $.info(`${parser.name} is activated`);
@@ -431,12 +436,18 @@ function produce(proxies, targetPlatform, type, opts = {}) {
     }
 
     const normalizedTarget = String(targetPlatform).toLowerCase();
-    if (normalizedTarget === 'shadowrocket' && opts.native && type !== 'internal') {
+    const producingNativeText =
+        normalizedTarget === 'shadowrocket' && opts.native && type !== 'internal';
+    if (producingNativeText) {
         proxies.forEach(validateShadowrocketNativeInput);
+    } else {
+        proxies = proxies.map(withoutShadowrocketNativeValidation);
     }
 
     // filter unsupported proxies
     proxies = proxies.filter((proxy) => {
+        // Native output must reject unsupported nodes, not silently filter them.
+        if (producingNativeText) return true;
         const includeUnsupportedProxy = opts['include-unsupported-proxy'];
 
         // 检查代理是否支持目标平台

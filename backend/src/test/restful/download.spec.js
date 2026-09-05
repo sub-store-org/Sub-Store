@@ -292,6 +292,22 @@ describe('download routes', function () {
 
     it('rejects invalid Clash JSON in native subscription and collection downloads', async function () {
         for (const proxy of [
+            { type: 'hysteria2', password: 'secret', obfs: 'salamander' },
+            { type: 'vmess', uuid: 'test-uuid', cipher: 'bogus' },
+            { type: 'hysteria2', password: 'secret', obfs: 'gecko' },
+            {
+                type: 'wireguard',
+                'private-key': 'private',
+                'public-key': 'public',
+                ip: '10.0.0.2/32',
+                'ip-cidr': 24,
+            },
+            { type: 'vless', uuid: 'test-uuid', 'reality-opts': {} },
+            {
+                type: 'vless',
+                uuid: 'test-uuid',
+                'reality-opts': { 'short-id': 'abcd' },
+            },
             { type: 'ss', cipher: 'aes-128-gcm', password: {} },
             { type: 'vmess', uuid: 'test-uuid', cipher: {} },
             {

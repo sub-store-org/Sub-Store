@@ -1,3 +1,4 @@
+import { normalizeVmessSecurity } from './vmess-security';
 import { isIPv4, isIPv6 } from '@/utils';
 // Preserve validation failures before shared parsers normalize away raw values.
 // Other output formats retain their existing normalization behavior.
@@ -116,6 +117,38 @@ export function validateShadowrocketNativeInput(proxy) {
             throw new Error(`Unsupported Shadowrocket native option: ${key}`);
         }
     }
+    if (
+        Object.prototype.hasOwnProperty.call(proxy, 'reality-opts') &&
+        proxy['reality-opts'] != null
+    ) {
+        throw new Error(
+            `Unsupported Shadowrocket native ${
+                NATIVE_PROTOCOL_NAMES[proxy.type] ?? proxy.type
+            } options: Reality (reality-opts)`,
+        );
+    }
+    if (
+        proxy.type === 'hysteria2' &&
+        proxy.obfs != null &&
+        proxy.obfs !== '' &&
+        proxy.obfs !== 'salamander'
+    ) {
+        throw new Error(
+            `Unsupported Shadowrocket native Hysteria2 obfs: ${
+                typeof proxy.obfs === 'string' ? proxy.obfs : 'invalid type'
+            }`,
+        );
+    }
+    if (
+        proxy.type === 'hysteria2' &&
+        proxy.obfs === 'salamander' &&
+        !proxy['obfs-password'] &&
+        !proxy.obfs_password
+    ) {
+        throw new Error(
+            'Missing required Shadowrocket native Hysteria2 salamander obfs-password',
+        );
+    }
     if (proxy.plugin === 'shadow-tls') {
         throw new Error(
             proxy.type === 'snell'
@@ -192,6 +225,15 @@ export function validateShadowrocketNativeInput(proxy) {
             if (address != null && address !== '') {
                 const [host, cidr, ...extra] = address.split('/');
                 if (
+                    cidr !== undefined &&
+                    proxy[cidrKey] != null &&
+                    Number(cidr) !== Number(proxy[cidrKey])
+                ) {
+                    throw new Error(
+                        `Invalid Shadowrocket native WireGuard ${cidrKey} conflict`,
+                    );
+                }
+                if (
                     !valid(host.replace(/^\[|\]$/g, '')) ||
                     extra.length ||
                     (cidr !== undefined &&
@@ -246,6 +288,16 @@ export function validateShadowrocketNativeInput(proxy) {
         );
     }
     if (proxy.type === 'vmess') {
+        // Use the shared supported-value/alias table, but never its lossy
+        // fallback for an explicitly supplied cipher.
+        if (
+            proxy.cipher != null &&
+            normalizeVmessSecurity(proxy.cipher, undefined, {
+                fallback: null,
+            }) === null
+        ) {
+            throw new Error('Unsupported Shadowrocket native VMess cipher');
+        }
         const aid = proxy.alterId;
         if (
             aid != null &&
@@ -266,10 +318,45 @@ export function validateShadowrocketNativeInput(proxy) {
     }
 }
 
-export function rememberShadowrocketNativeValidation(proxy) {
+export function rememberShadowrocketNativeValidation(proxy, original = proxy) {
     try {
-        validateShadowrocketNativeInput(proxy);
+        validateShadowrocketNativeInput(original);
     } catch (error) {
-        proxy[ERROR_FIELD] = error.message;
+        Object.defineProperty(proxy, ERROR_FIELD, {
+            value: error.message,
+            enumerable: false,
+            configurable: true,
+        });
     }
+}
+
+// Export a clean copy without changing the original validation state.
+export function withoutShadowrocketNativeValidation(proxy) {
+    if (!Object.prototype.hasOwnProperty.call(proxy, ERROR_FIELD)) return proxy;
+    const copy = { ...proxy };
+    delete copy[ERROR_FIELD];
+    return copy;
+}
+
+// Built-in operators clone proxy arrays through JSON. Explicitly carry their
+// non-enumerable validation state into that clone; never serialize it.
+export function copyShadowrocketNativeValidation(source, target) {
+    if (Array.isArray(source) && Array.isArray(target)) {
+        source.forEach((proxy, index) =>
+            copyShadowrocketNativeValidation(proxy, target[index]),
+        );
+    } else if (
+        source &&
+        target &&
+        typeof source === 'object' &&
+        typeof target === 'object' &&
+        source[ERROR_FIELD]
+    ) {
+        Object.defineProperty(target, ERROR_FIELD, {
+            value: source[ERROR_FIELD],
+            enumerable: false,
+            configurable: true,
+        });
+    }
+    return target;
 }

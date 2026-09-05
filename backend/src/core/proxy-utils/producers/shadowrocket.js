@@ -1,5 +1,6 @@
 import {
     NATIVE_PROTOCOL_NAMES,
+    withoutShadowrocketNativeValidation,
     validateShadowrocketNativeInput,
 } from '../shadowrocket-native-validation';
 import {
@@ -1063,6 +1064,9 @@ export default function Shadowrocket_Producer() {
     const type = 'ALL';
     const produce = (proxies, type, opts = {}) => {
         const producingNativeText = opts.native && type !== 'internal';
+        if (!producingNativeText) {
+            proxies = proxies.map(withoutShadowrocketNativeValidation);
+        }
         const list = proxies
             .filter((proxy) => {
                 if (producingNativeText) {
