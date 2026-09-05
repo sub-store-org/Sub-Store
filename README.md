@@ -164,7 +164,7 @@ pnpm bundle:esbuild
 
 ## LICENSE
 
-This project is under the GPL V3 LICENSE.
+This project is under the AGPL-3.0 LICENSE.
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store?ref=badge_large)
 
