@@ -98,6 +98,7 @@ jobs:
             ./backend/dist/cron-sync-artifacts.min.js
             ./backend/dist/proxy-utils.esm.mjs
             ./backend/dist/sub-store.bundle.js
+            ./backend/dist/runtime-manifest.json
       - name: Git push assets to "release" branch
         run: |
           cd backend/dist || exit 1
