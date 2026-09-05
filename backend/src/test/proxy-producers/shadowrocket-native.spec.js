@@ -21,6 +21,127 @@ function parseAndProduce(raw) {
 }
 
 describe('Shadowrocket native output', function () {
+    for (const cipher of ['bogus', 'zero', 'chacha20-poly1305']) {
+        it(`rejects the Loon cipher ${cipher} before Loon's auto fallback`, function () {
+            const raw = `VM=vmess,example.com,443,${cipher},"11111111-1111-4111-8111-111111111111"`;
+            expect(() => parseAndProduce(raw)).to.throw('VMess cipher');
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'VMess cipher',
+            );
+            const ordinary = ProxyUtils.produce(
+                ProxyUtils.parse(raw),
+                'JSON',
+                'external',
+            );
+            expect(JSON.parse(ordinary)[0].cipher).to.equal('auto');
+            expect(ordinary).not.to.include(
+                '_shadowrocket-native-validation-error',
+            );
+        });
+    }
+
+    for (const cipher of [
+        'auto',
+        'none',
+        'aes-128-gcm',
+        'chacha20-ietf-poly1305',
+    ]) {
+        it(`preserves supported Loon cipher ${cipher}`, function () {
+            const raw = `VM=vmess,example.com,443,${cipher},"11111111-1111-4111-8111-111111111111"`;
+            expect(parseAndProduce(raw)).to.equal(
+                `VM=vmess,example.com,443,password=11111111-1111-4111-8111-111111111111,alterId=0,method=${cipher.replace(
+                    'chacha20-ietf-poly1305',
+                    'chacha20-poly1305',
+                )}`,
+            );
+        });
+    }
+
+    for (const cipher of ['bogus', 'none', 'zero']) {
+        it(`rejects the Surge cipher ${cipher} before Surge's auto fallback`, function () {
+            const raw = `VM=vmess,example.com,443,username=11111111-1111-4111-8111-111111111111,vmess-aead=true,encrypt-method=${cipher}`;
+            expect(() => parseAndProduce(raw)).to.throw('VMess cipher');
+            expect(() => ProxyUtils.parse(raw, { native: true })).to.throw(
+                'VMess cipher',
+            );
+            expect(
+                JSON.parse(
+                    ProxyUtils.produce(
+                        ProxyUtils.parse(raw),
+                        'JSON',
+                        'external',
+                    ),
+                )[0].cipher,
+            ).to.equal('auto');
+        });
+    }
+
+    for (const cipher of ['auto', 'aes-128-gcm', 'chacha20-ietf-poly1305']) {
+        it(`preserves equivalent Surge cipher ${cipher}`, function () {
+            const raw = `VM=vmess,example.com,443,username=11111111-1111-4111-8111-111111111111,vmess-aead=true,encrypt-method=${cipher}`;
+            expect(parseAndProduce(raw)).to.equal(
+                `VM=vmess,example.com,443,password=11111111-1111-4111-8111-111111111111,alterId=0,method=${cipher.replace(
+                    'chacha20-ietf-poly1305',
+                    'chacha20-poly1305',
+                )}`,
+            );
+        });
+    }
+
+    for (const type of ['hysteria', 'hysteria2']) {
+        for (const key of ['ports', 'hop-interval', 'hop-interval-max']) {
+            it(`rejects raw ${type} ${key} before cleanup`, function () {
+                for (const value of ['bogus', 0, {}, '30-10', false, '', 30]) {
+                    const proxy = {
+                        type,
+                        name: 'HY',
+                        server: 'example.com',
+                        port: 443,
+                        ...(type === 'hysteria'
+                            ? { 'auth-str': 'secret' }
+                            : { password: 'secret' }),
+                        [key]: value,
+                    };
+                    const raw = JSON.stringify({ proxies: [proxy] });
+                    expect(
+                        () => produce({ ...proxy }),
+                        JSON.stringify(value),
+                    ).to.throw(key);
+                    expect(
+                        () => parseAndProduce(raw),
+                        JSON.stringify(value),
+                    ).to.throw(key);
+                    expect(
+                        () => ProxyUtils.parse(raw, { native: true }),
+                        JSON.stringify(value),
+                    ).to.throw(key);
+                }
+            });
+        }
+    }
+
+    it('keeps legacy non-native hop cleanup unchanged', function () {
+        const raw = JSON.stringify({
+            proxies: [
+                {
+                    type: 'hysteria2',
+                    name: 'HY',
+                    server: 'example.com',
+                    port: 443,
+                    password: 'secret',
+                    'hop-interval': '30-10',
+                },
+            ],
+        });
+        const output = ProxyUtils.produce(
+            ProxyUtils.parse(raw),
+            'JSON',
+            'external',
+        );
+        expect(JSON.parse(output)[0]).not.to.have.property('hop-interval');
+        expect(output).not.to.include('_shadowrocket-native-validation-error');
+    });
+
     it('rejects review F-J semantic losses before Clash normalization and filtering', function () {
         const cases = [
             [

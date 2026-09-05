@@ -1,4 +1,7 @@
-import { rememberShadowrocketNativeValidation } from '../shadowrocket-native-validation';
+import {
+    rememberShadowrocketNativeValidation,
+    rememberShadowrocketNativeError,
+} from '../shadowrocket-native-validation';
 import {
     isIPv4,
     isIPv6,
@@ -2727,7 +2730,14 @@ function Loon_VMess() {
             line.indexOf('username') === -1
         );
     };
-    const parse = (line) => getLoonParser().parse(line);
+    const parse = (line) =>
+        getLoonParser().parse(line, {
+            onUnsupportedVmessCipher: (proxy) =>
+                rememberShadowrocketNativeError(
+                    proxy,
+                    'Unsupported Shadowrocket native VMess cipher in Loon input',
+                ),
+        });
     return { name, test, parse };
 }
 
@@ -2965,7 +2975,14 @@ function Surge_VMess() {
             line.indexOf('username') !== -1
         );
     };
-    const parse = (line) => getSurgeParser().parse(line);
+    const parse = (line) =>
+        getSurgeParser().parse(line, {
+            onUnsupportedVmessCipher: (proxy) =>
+                rememberShadowrocketNativeError(
+                    proxy,
+                    'Unsupported Shadowrocket native VMess cipher in Surge input',
+                ),
+        });
     return { name, test, parse };
 }
 

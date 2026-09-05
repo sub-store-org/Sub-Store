@@ -290,6 +290,43 @@ describe('download routes', function () {
         }
     });
 
+    it('rejects Loon cipher fallback and raw hopping options in native downloads', async function () {
+        const inputs = [
+            'VM=vmess,example.com,443,bogus,"11111111-1111-4111-8111-111111111111"',
+            'VM=vmess,example.com,443,username=11111111-1111-4111-8111-111111111111,vmess-aead=true,encrypt-method=bogus',
+            ...['bogus', 0, {}, '30-10'].map((value) =>
+                JSON.stringify({
+                    proxies: [
+                        {
+                            type: 'hysteria2',
+                            name: 'HY2',
+                            server: 'example.com',
+                            port: 443,
+                            password: 'secret',
+                            'hop-interval': value,
+                        },
+                    ],
+                }),
+            ),
+        ];
+        for (const content of inputs) {
+            state[SUBS_KEY][0].content = content;
+            for (const request of [
+                requestDownloadSubscription,
+                requestDownloadCollection,
+            ]) {
+                const res = await request({
+                    target: 'Shadowrocket',
+                    native: 'true',
+                });
+                expect(res.statusCode, JSON.stringify(res.sent)).to.equal(500);
+                expect(JSON.stringify(res.sent)).to.include(
+                    'Shadowrocket native',
+                );
+            }
+        }
+    });
+
     it('rejects invalid Clash JSON in native subscription and collection downloads', async function () {
         for (const proxy of [
             { type: 'hysteria2', password: 'secret', obfs: 'salamander' },

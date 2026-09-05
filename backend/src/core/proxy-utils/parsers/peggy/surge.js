@@ -358,7 +358,12 @@ const grammars = String.raw`
     function normalizeVmessSecurity(security) {
         const normalized = String(security || "").trim().toLowerCase();
         const supported = ["aes-128-gcm", "chacha20-ietf-poly1305"];
-        if (!supported.includes(normalized)) return "auto";
+        if (!supported.includes(normalized)) {
+            if (normalized !== "auto" && options.onUnsupportedVmessCipher) {
+                options.onUnsupportedVmessCipher(proxy);
+            }
+            return "auto";
+        }
         return normalized === "chacha20-ietf-poly1305" ? "chacha20-poly1305" : normalized;
     }
     function parseAlpn(value) {

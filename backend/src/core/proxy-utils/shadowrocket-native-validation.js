@@ -110,6 +110,17 @@ export function validateShadowrocketNativeInput(proxy) {
             );
         }
     }
+    // Port hopping is unsupported by the enabled native syntax. Reject the
+    // original fields, including malformed values that lastParse would delete.
+    for (const key of ['ports', 'hop-interval', 'hop-interval-max']) {
+        if (proxy[key] != null) {
+            throw new Error(
+                `Unsupported Shadowrocket native ${
+                    NATIVE_PROTOCOL_NAMES[proxy.type] ?? proxy.type
+                } options: ${key}`,
+            );
+        }
+    }
     // These options cannot be preserved by the supported native syntax. Check
     // before restoration/cleanup can discard them, including false flags.
     for (const key of ['tls-fingerprint', 'underlying-proxy', 'no-resolve']) {
@@ -322,12 +333,17 @@ export function rememberShadowrocketNativeValidation(proxy, original = proxy) {
     try {
         validateShadowrocketNativeInput(original);
     } catch (error) {
-        Object.defineProperty(proxy, ERROR_FIELD, {
-            value: error.message,
-            enumerable: false,
-            configurable: true,
-        });
+        rememberShadowrocketNativeError(proxy, error.message);
     }
+}
+
+export function rememberShadowrocketNativeError(proxy, message) {
+    if (proxy[ERROR_FIELD]) return;
+    Object.defineProperty(proxy, ERROR_FIELD, {
+        value: message,
+        enumerable: false,
+        configurable: true,
+    });
 }
 
 // Export a clean copy without changing the original validation state.
