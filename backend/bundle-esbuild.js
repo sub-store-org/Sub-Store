@@ -21,19 +21,21 @@ function getRequireSpecifiers(content) {
     );
 }
 
-function getExternalSpecifiers(metafile) {
+function getExternalSpecifiers(metafiles) {
     return new Set(
-        Object.values(metafile.outputs).flatMap((output) =>
-            (output.imports || [])
-                .filter((item) => item.external)
-                .map((item) => item.path),
+        metafiles.flatMap((metafile) =>
+            Object.values(metafile.outputs).flatMap((output) =>
+                (output.imports || [])
+                    .filter((item) => item.external)
+                    .map((item) => item.path),
+            ),
         ),
     );
 }
 
-function createRuntimeManifest({ metafile, content }) {
+function createRuntimeManifest({ metafiles, content }) {
     const specifiers = new Set([
-        ...getExternalSpecifiers(metafile),
+        ...getExternalSpecifiers(metafiles),
         ...getRequireSpecifiers(content),
     ]);
     const builtins = new Set();
@@ -62,6 +64,20 @@ function createRuntimeManifest({ metafile, content }) {
     };
 }
 
+const nodeBuiltinExternalPlugin = {
+    name: 'node-builtin-external',
+    setup(build) {
+        build.onResolve({ filter: /.*/ }, (args) => {
+            if (
+                args.path !== 'buffer' &&
+                builtinModuleNames.has(normalizeSpecifier(args.path))
+            ) {
+                return { path: args.path, external: true };
+            }
+        });
+    },
+};
+
 !(async () => {
     const version = JSON.parse(
         fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'),
@@ -80,9 +96,10 @@ function createRuntimeManifest({ metafile, content }) {
         { src: 'src/products/sub-store-0.js', dest: 'dist/sub-store-0.min.js' },
         { src: 'src/products/sub-store-1.js', dest: 'dist/sub-store-1.min.js' },
     ];
+    const browserMetafiles = [];
 
     for await (const artifact of artifacts) {
-        await build({
+        const browserBuild = await build({
             entryPoints: [artifact.src],
             bundle: true,
             minify: true,
@@ -91,7 +108,10 @@ function createRuntimeManifest({ metafile, content }) {
             format: 'iife',
             outfile: artifact.dest,
             inject: [objectHasOwnPolyfill],
+            plugins: [nodeBuiltinExternalPlugin],
+            metafile: true,
         });
+        browserMetafiles.push(browserBuild.metafile);
     }
 
     const browserEsmArtifacts = [
@@ -102,7 +122,7 @@ function createRuntimeManifest({ metafile, content }) {
     ];
 
     for await (const artifact of browserEsmArtifacts) {
-        await build({
+        const browserBuild = await build({
             entryPoints: [artifact.src],
             bundle: true,
             minify: true,
@@ -111,7 +131,10 @@ function createRuntimeManifest({ metafile, content }) {
             format: 'esm',
             outfile: artifact.dest,
             inject: [objectHasOwnPolyfill],
+            plugins: [nodeBuiltinExternalPlugin],
+            metafile: true,
         });
+        browserMetafiles.push(browserBuild.metafile);
     }
 
     let content = fs.readFileSync(path.join(__dirname, 'sub-store.min.js'), {
@@ -156,7 +179,7 @@ ${fs.readFileSync(path.join(__dirname, 'dist/sub-store.bundle.js'), {
         path.join(__dirname, 'dist/runtime-manifest.json'),
         `${JSON.stringify(
             createRuntimeManifest({
-                metafile: nodeBuild.metafile,
+                metafiles: [...browserMetafiles, nodeBuild.metafile],
                 content: fs.readFileSync(bundlePath, 'utf8'),
             }),
             null,

@@ -16,6 +16,8 @@ import { produceArtifact } from '@/restful/sync';
 import PROXY_PREPROCESSORS from '@/core/proxy-utils/preprocessors';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { runBackendRequestTask } from '@/utils/request-concurrency';
+import getFs from '@/runtime/fs';
+import getStreamPromises from '@/runtime/stream-promises';
 import {
     AGE_SECRET_KEY,
     decryptArmorIfPresent,
@@ -327,7 +329,7 @@ export default async function download(
         }
     } else if (url?.startsWith('/')) {
         try {
-            const fs = eval(`require("fs")`);
+            const fs = getFs();
             return formatPlainDownloadResult(
                 fs.readFileSync(url.split('#')[0], 'utf8'),
                 returnRaw,
@@ -518,8 +520,8 @@ export default async function download(
 
 export async function downloadFile(url, file) {
     const undici = eval("require('undici')");
-    const fs = eval("require('fs')");
-    const { pipeline } = eval("require('stream/promises')");
+    const fs = getFs();
+    const { pipeline } = getStreamPromises();
     const { Agent, interceptors, request } = undici;
     $.info(`Downloading file...\nURL: ${url}\nFile: ${file}`);
     const { body, statusCode } = await request(url, {

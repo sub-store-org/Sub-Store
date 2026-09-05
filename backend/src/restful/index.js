@@ -33,6 +33,8 @@ import registerLogRoutes from './logs';
 import registerAgeRoutes from './age';
 import { consumeShareToken } from './token';
 import { AGE_PUBLIC_KEY } from '@/utils/age';
+import getFs from '@/runtime/fs';
+import getPath from '@/runtime/path';
 
 export function stripBackendPath(url, backendPath) {
     return (backendPath === '/' ? url : url.replace(backendPath, '')) || '/';
@@ -340,8 +342,8 @@ export default function serve() {
                 // 'Asia/Shanghai' // timeZone
             );
         }
-        const path = eval(`require("path")`);
-        const fs = eval(`require("fs")`);
+        const path = getPath();
+        const fs = getFs();
         const data_url = eval('process.env.SUB_STORE_DATA_URL');
         const data_url_post = eval('process.env.SUB_STORE_DATA_URL_POST');
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
