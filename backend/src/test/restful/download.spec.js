@@ -221,9 +221,9 @@ describe('download routes', function () {
         ({ default: $ } = require('@/core/app'));
         openApi = require('@/vendor/open-api');
         ({ default: registerDownloadRoutes } = require('@/restful/download'));
-        ({ default: registerSubscriptionRoutes } = require(
-            '@/restful/subscriptions'
-        ));
+        ({
+            default: registerSubscriptionRoutes,
+        } = require('@/restful/subscriptions'));
         ageUtils = require('@/utils/age');
 
         originalRead = $.read.bind($);
@@ -276,19 +276,72 @@ describe('download routes', function () {
 
     it('passes native Shadowrocket output through subscription and collection downloads', async function () {
         const expected =
-            'VLESS WS=vless,1.1.1.1,443,password=11111111-1111-4111-8111-111111111111,tls=true,obfs=websocket,peer=sni.example.com';
+            'VLESS WS=vless,1.1.1.1,443,password=11111111-1111-4111-8111-111111111111,tls=true,obfs=websocket,path=/ws,obfsParam=cdn.example.com,peer=sni.example.com';
 
-        for (const request of [
-            downloadSubscription,
-            downloadCollection,
-        ]) {
+        for (const request of [downloadSubscription, downloadCollection]) {
             const output = await request({
                 target: 'Shadowrocket',
                 native: 'true',
             });
 
+            expect(output, JSON.stringify(output)).to.be.a('string');
             expect(output).to.include(expected);
             expect(output).to.not.include('proxies:');
+        }
+    });
+
+    it('rejects invalid Clash JSON in native subscription and collection downloads', async function () {
+        for (const proxy of [
+            { type: 'ss', cipher: 'aes-128-gcm', password: {} },
+            { type: 'vmess', uuid: 'test-uuid', cipher: {} },
+            {
+                type: 'vmess',
+                uuid: 'test-uuid',
+                cipher: 'auto',
+                aead: true,
+                alterId: 2,
+            },
+            {
+                type: 'vless',
+                uuid: 'test-uuid',
+                network: 'ws',
+                'ws-opts': { headers: { Host: {} } },
+            },
+            ...['trojan', 'tuic', 'hysteria', 'hysteria2', 'juicity'].map(
+                (type) => ({
+                    type,
+                    password: 'secret',
+                    uuid: 'test-uuid',
+                    tls: false,
+                }),
+            ),
+        ]) {
+            state[SUBS_KEY][0].content = JSON.stringify({
+                proxies: [
+                    {
+                        name: 'Invalid',
+                        server: 'example.com',
+                        port: 443,
+                        ...proxy,
+                    },
+                ],
+            });
+            for (const request of [
+                requestDownloadSubscription,
+                requestDownloadCollection,
+            ]) {
+                const res = await request({
+                    target: 'Shadowrocket',
+                    native: 'true',
+                });
+                expect(res.statusCode, JSON.stringify(res.sent)).to.equal(500);
+                expect(JSON.stringify(res.sent)).to.include(
+                    'Shadowrocket native',
+                );
+                expect(JSON.stringify(res.sent)).to.not.include(
+                    '[object Object]',
+                );
+            }
         }
     });
 
@@ -422,9 +475,7 @@ describe('download routes', function () {
                 });
 
                 expect(res.statusCode).to.equal(200);
-                expect(requestedUrls).to.deep.equal([
-                    sourceUrl.split('#')[0],
-                ]);
+                expect(requestedUrls).to.deep.equal([sourceUrl.split('#')[0]]);
             }
         } finally {
             openApi.HTTP = originalHTTP;
@@ -1055,5 +1106,4 @@ describe('download routes', function () {
         expect(decrypted).to.include('VLESS WS');
         await expectDecryptFailure(res.sent, sourcePair['age-secret-key']);
     });
-
 });

@@ -1,3 +1,7 @@
+import {
+    rememberShadowrocketNativeValidation,
+    validateShadowrocketNativeInput,
+} from './shadowrocket-native-validation';
 import { Base64 } from 'js-base64';
 import { Buffer } from 'buffer';
 import rs from '@/utils/rs';
@@ -427,6 +431,9 @@ function produce(proxies, targetPlatform, type, opts = {}) {
     }
 
     const normalizedTarget = String(targetPlatform).toLowerCase();
+    if (normalizedTarget === 'shadowrocket' && opts.native && type !== 'internal') {
+        proxies.forEach(validateShadowrocketNativeInput);
+    }
 
     // filter unsupported proxies
     proxies = proxies.filter((proxy) => {
@@ -753,6 +760,7 @@ function formatTransportPath(path) {
 }
 
 function lastParse(proxy) {
+    rememberShadowrocketNativeValidation(proxy);
     // normalize keys to lowercase for all -opts keys and their subkeys
     // 通常来说够用了, 在重构之前暂不考虑引入更复杂的逻辑
     const hasOwn = (value, key) =>

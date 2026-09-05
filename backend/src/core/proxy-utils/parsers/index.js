@@ -1,3 +1,4 @@
+import { rememberShadowrocketNativeValidation } from '../shadowrocket-native-validation';
 import {
     isIPv4,
     isIPv6,
@@ -2568,6 +2569,8 @@ function Clash_All() {
                 `Clash does not support proxy with type: ${proxy.type}`,
             );
         }
+
+        rememberShadowrocketNativeValidation(proxy);
 
         // handle vmess sni
         if (['vmess', 'vless'].includes(proxy.type) && proxy.servername) {
