@@ -31,6 +31,7 @@ import { FILES_KEY, MODULES_KEY } from '@/constants';
 import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
 import { getFlag, removeFlag, getISO, MMDB } from '@/utils/geo';
+import getFs from '@/runtime/fs';
 import Gist from '@/utils/gist';
 import {
     isShadowsocksOverTls,
@@ -352,7 +353,7 @@ async function loadScriptItem(item, executionContext = {}) {
             }
         } else if (url?.startsWith('/')) {
             try {
-                const fs = eval(`require("fs")`);
+                const fs = getFs();
                 script = fs.readFileSync(url.split('#')[0], 'utf8');
                 // $.info(`Script loaded: >>>\n ${script}`);
             } catch (err) {

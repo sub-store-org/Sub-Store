@@ -12,6 +12,7 @@
  */
 import { version } from '../package.json';
 import $ from '@/core/app';
+import getWorkerThreads from '@/runtime/worker-threads';
 console.log(
     `
 ┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅
@@ -27,7 +28,7 @@ if ($.env.isNode) {
         eval("require('core-js/actual/promise/with-resolvers')");
     }
 
-    const workerThreads = eval("require('node:worker_threads')");
+    const workerThreads = getWorkerThreads();
     if (typeof workerThreads.markAsUncloneable !== 'function') {
         // ponytail: Node < 22 cannot mark web objects uncloneable; remove this fallback when the Android runtime reaches Node 22.
         workerThreads.markAsUncloneable = () => {};
