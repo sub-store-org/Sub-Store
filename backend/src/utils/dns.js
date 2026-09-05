@@ -1,5 +1,9 @@
 import $ from '@/core/app';
 import dnsPacket from 'dns-packet';
+import getDgram from '@/runtime/dgram';
+import getNet from '@/runtime/net';
+import { getDnsTransport } from '@/runtime/platform';
+import getTls from '@/runtime/tls';
 import { Buffer } from 'buffer';
 import { isIPv4, isIPv6 } from '@/utils';
 
@@ -155,7 +159,7 @@ export async function doh({
 }
 
 async function queryDnsOverUdp({ server, domain, type = 'A', timeout, edns }) {
-    const dgram = eval("require('dgram')");
+    const dgram = getDgram();
     const buf = buildDnsQuery({
         domain,
         type,
@@ -212,10 +216,7 @@ async function queryDnsOverTcp({
     edns,
     skipCertVerify,
 }) {
-    const transport =
-        server.protocol === 'tls'
-            ? eval("require('tls')")
-            : eval("require('net')");
+    const transport = getDnsTransport(server.protocol, getTls, getNet);
     const transportName = server.protocol === 'tls' ? 'TLS' : 'TCP';
     const payload = buildDnsQuery({
         domain,
