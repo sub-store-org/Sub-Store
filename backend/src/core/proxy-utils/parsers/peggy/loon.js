@@ -1,3 +1,4 @@
+import { withShadowrocketNativeParserValidation } from '../../shadowrocket-native-validation';
 import peggy from 'peggy';
 const grammars = String.raw`
 // global initializer
@@ -22,7 +23,15 @@ const grammars = String.raw`
     const shadowTLS = {};
     const $ = {};
 
+    function parsedOption(value) {
+        if (options.onParsedOption) options.onParsedOption(location(), value);
+        return value;
+    }
+
     function handleTransport() {
+        if (!["ws", "http"].includes(transport.type) && ("path" in transport || "host" in transport) && options.onIgnoredOption) {
+            options.onIgnoredOption(proxy, "transport options without a supported transport");
+        }
         if (transport.type === "tcp") { /* do nothing */ }
         else if (transport.type === "ws") {
             proxy.network = "ws";
@@ -36,6 +45,9 @@ const grammars = String.raw`
     }
 
     function handleShadowTLS() {
+        if (Object.keys(shadowTLS).length > 0 && !shadowTLS.password && options.onIgnoredOption) {
+            options.onIgnoredOption(proxy, "incomplete ShadowTLS options");
+        }
         if (shadowTLS.password) {
             if (shadowTLS.version < 2) {
                 throw new Error("shadow-tls version " + shadowTLS.version + " is not supported");
@@ -56,7 +68,12 @@ const grammars = String.raw`
     function normalizeVmessSecurity(security) {
         const normalized = String(security || "").trim().toLowerCase();
         const supported = ["none", "auto", "aes-128-gcm", "chacha20-ietf-poly1305"];
-        if (!supported.includes(normalized)) return "auto";
+        if (!supported.includes(normalized)) {
+            // Report the fallback before the original value is lost. The
+            // caller records it privately; ordinary Loon parsing stays lenient.
+            if (options.onUnsupportedVmessCipher) options.onUnsupportedVmessCipher(proxy);
+            return "auto";
+        }
         return normalized === "chacha20-ietf-poly1305" ? "chacha20-poly1305" : normalized;
     }
 
@@ -83,6 +100,9 @@ shadowsocksr = tag equals "shadowsocksr"i address method password (ssr_protocol/
 }
 shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs_hostv)? (obfs_ss/obfs_host/obfs_uri/fast_open/udp_relay/udp_port/tls_profile/alpn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/ip_mode/block_quic/udp_over_tcp/others)* {
     proxy.type = "ss";
+    if (!obfs.type && ("host" in obfs || "path" in obfs) && options.onIgnoredOption) {
+        options.onIgnoredOption(proxy, "obfs options without obfs");
+    }
     // handle ss obfs
     if (obfs.type == "http" || obfs.type === "tls") {
         proxy.plugin = "obfs";
@@ -201,27 +221,31 @@ obfs_ss = comma "obfs-name" equals type:("http"/"tls") { obfs.type = type; }
 obfs_ssr = comma "obfs" equals type:("plain"/"http_simple"/"http_post"/"random_head"/"tls1.2_ticket_auth"/"tls1.2_ticket_fastauth") { obfs.type = type; }
 obfs_ssr_param = comma "obfs-param" equals match:$[^,]+ { proxy["obfs-param"] = match; }
 
-obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").replace(/^"(.*)"$/, '$1'); }
-obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = uri; }
+obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = parsedOption(match.join("").replace(/^"(.*)"$/, '$1')); }
+obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = parsedOption(uri); }
 uri = $[^,]+
 
 transport = comma "transport" equals type:("tcp"/"ws"/"http") { transport.type = type; }
-transport_host = comma "host" equals match:[^,]+ { transport.host = match.join("").replace(/^"(.*)"$/, '$1'); }
-transport_path = comma "path" equals path:uri { transport.path = path; }
+transport_host = comma "host" equals match:[^,]+ { transport.host = parsedOption(match.join("").replace(/^"(.*)"$/, '$1')); }
+transport_path = comma "path" equals path:uri { transport.path = parsedOption(path); }
 
 ssr_protocol = comma "protocol" equals protocol:("origin"/"auth_sha1_v4"/"auth_aes128_md5"/"auth_aes128_sha1"/"auth_chain_a"/"auth_chain_b") { proxy.protocol = protocol; }
 ssr_protocol_param = comma "protocol-param" equals param:$[^=,]+ { proxy["protocol-param"] = param; }
 
-vmess_alterId = comma "alterId" equals alterId:$[0-9]+ { proxy.alterId = parseInt(alterId); } 
+vmess_alterId = comma "alterId" equals alterId:$[0-9]+ { proxy.alterId = parsedOption(parseInt(alterId)); }
 
 udp_port = comma "udp-port" equals match:$[0-9]+ { proxy["udp-port"] = parseInt(match.trim()); }
 shadow_tls_version = comma "shadow-tls-version" equals match:$[0-9]+ { shadowTLS.version = parseInt(match.trim()); }
 shadow_tls_sni = comma "shadow-tls-sni" equals match:[^,]+ { shadowTLS.host = match.join(""); }
-shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { shadowTLS.password = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
+shadow_tls_password = comma "shadow-tls-password" equals match:[^,]+ { shadowTLS.password = parsedOption(match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1')); }
 
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
-tls_name = comma sni:("tls-name") equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1'); }
-sni = comma "sni" equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1'); }
+tls_name = comma sni:("tls-name") equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1');
+    if (options.onParsedOption) options.onParsedOption(location(), proxy.sni);
+}
+sni = comma "sni" equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1');
+    if (options.onParsedOption) options.onParsedOption(location(), proxy.sni);
+}
 tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-verify"] = flag; }
 tls_cert_sha256 = comma "tls-cert-sha256" equals match:[^,]+ { proxy["tls-fingerprint"] = match.join("").replace(/^"(.*)"$/, '$1'); }
 tls_pubkey_sha256 = comma "tls-pubkey-sha256" equals match:[^,]+ { proxy["tls-pubkey-sha256"] = match.join("").replace(/^"(.*)"$/, '$1'); }
@@ -251,7 +275,7 @@ ecn = comma "ecn" equals flag:bool { proxy.ecn = flag; }
 download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down = match.join(""); }
 server_ports = comma "server-ports" equals '"' match:$[^"]+ '"' { proxy.ports = match.trim().replace(/\s*-\s*/g, "-").replace(/\s*,\s*/g, ","); }
 hop_interval = comma "hop-interval" equals match:$[0-9]+ { proxy["hop-interval"] = parseInt(match, 10); }
-salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join(""); proxy.obfs = 'salamander'; }
+salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = parsedOption(match.join("")); proxy.obfs = 'salamander'; }
 
 block_quic = comma "block-quic" equals flag:bool { if(flag) proxy["block-quic"] = "on"; else proxy["block-quic"] = "off"; }
 
@@ -263,16 +287,22 @@ max_stream_count = comma "max-stream-count" equals match:$[0-9]+ { proxy["max-st
 udp_over_tcp = comma "udp-over-tcp" equals flag:bool { proxy["udp-over-tcp"] = true; proxy["udp-over-tcp-version"] = 2; }
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
-comma = _ "," _
-equals = _ "=" _
+comma = _ "," _ {
+    if (options.onOptionBoundary) options.onOptionBoundary(location());
+}
+equals = _ "=" _ {
+    if (options.onOptionEquals) options.onOptionEquals(location());
+}
 _ = [ \r\t]*
 bool = b:("true"/"false") { return b === "true" }
-others = comma [^=,]+ equals [^=,]+
+others = comma key:$[^=,]+ equals [^=,]+ {
+    if (options.onIgnoredOption) options.onIgnoredOption(proxy, key.trim());
+}
 `;
 let parser;
 export default function getParser() {
     if (!parser) {
-        parser = peggy.generate(grammars);
+        parser = withShadowrocketNativeParserValidation(peggy.generate(grammars));
     }
     return parser;
 }

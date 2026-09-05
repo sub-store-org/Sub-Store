@@ -290,6 +290,10 @@ async function produceArtifact({
     all,
 }) {
     platform = platform || 'JSON';
+    const native =
+        String(platform).toLowerCase() === 'shadowrocket' &&
+        produceOpts.native &&
+        produceType !== 'internal';
 
     if (['subscription', 'sub'].includes(type)) {
         let sub;
@@ -447,7 +451,7 @@ async function produceArtifact({
             }
             // parse proxies
             let proxies = (Array.isArray(raw) ? raw : [raw])
-                .map((i) => ProxyUtils.parse(i))
+                .map((i) => ProxyUtils.parse(i, { native }))
                 .flat();
 
             proxies.forEach((proxy) => {
@@ -644,7 +648,7 @@ async function produceArtifact({
                         }
                         // parse proxies
                         let currentProxies = (Array.isArray(raw) ? raw : [raw])
-                            .map((i) => ProxyUtils.parse(i))
+                            .map((i) => ProxyUtils.parse(i, { native }))
                             .flat();
 
                         currentProxies.forEach((proxy) => {
@@ -719,9 +723,16 @@ async function produceArtifact({
             );
 
             if (Object.keys(errors).length > 0) {
+                const nativeErrors = native
+                    ? Object.values(errors)
+                          .map((error) => error.message)
+                          .filter((message) =>
+                              message?.includes('Shadowrocket native'),
+                          )
+                    : [];
                 const message = `组合订阅 ${collection.name} 的子订阅 ${Object.keys(
                     errors,
-                ).join(', ')} 发生错误, 请查看日志`;
+                ).join(', ')} 发生错误, 请查看日志${nativeErrors.length ? `: ${nativeErrors.join('; ')}` : ''}`;
                 const notify = () => {
                     $.notify(
                         `🌍 Sub-Store 处理组合订阅失败`,

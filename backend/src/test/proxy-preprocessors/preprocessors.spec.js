@@ -212,14 +212,14 @@ proxy-groups:
             expect(output[0]).to.equal(
                 `ss://${Base64.encode(
                     'aes-128-gcm:base-secret',
-                )}@ssd1.example.com:8388#SSD 1`,
+                )}@ssd1.example.com:8388#SSD%201`,
             );
             expect(output[1]).to.equal(
                 `ss://${Base64.encode(
                     'chacha20-ietf-poly1305:override-secret',
                 )}@ssd2.example.com:443/?plugin=${encodeURIComponent(
                     'v2ray-plugin;host=cdn.example.com;path=/ws;tls',
-                )}#SSD 2`,
+                )}#SSD%202`,
             );
         });
     });

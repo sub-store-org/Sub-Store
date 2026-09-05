@@ -1,3 +1,4 @@
+import { copyShadowrocketNativeValidation } from '../shadowrocket-native-validation';
 import resourceCache from '@/utils/resource-cache';
 import scriptResourceCache from '@/utils/script-resource-cache';
 import { isIPv4, isIPv6, ipAddress, isPlainObject } from '@/utils';
@@ -1746,7 +1747,10 @@ function shuffle(array) {
 
 // deep clone object
 function clone(object) {
-    return JSON.parse(JSON.stringify(object));
+    return copyShadowrocketNativeValidation(
+        object,
+        JSON.parse(JSON.stringify(object)),
+    );
 }
 
 function createDynamicFunction(name, script, $arguments, $options) {
