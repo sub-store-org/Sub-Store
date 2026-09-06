@@ -18,6 +18,7 @@ export default function Egern_Producer() {
                         'https',
                         'socks5',
                         'ss',
+                        'ssr',
                         'trojan',
                         'hysteria2',
                         'vless',
@@ -91,6 +92,8 @@ export default function Egern_Producer() {
                     proxy.type === 'snell' &&
                     normalizeSnellVersion(proxy.version) === null
                 ) {
+                    return false;
+                } else if (proxy.type === 'ssr' && !isEgernSsr(proxy)) {
                     return false;
                 } else if (
                     ['anytls'].includes(proxy.type) &&
@@ -208,6 +211,21 @@ export default function Egern_Producer() {
                                 );
                             }
                         }
+                    } else if (proxy.type === 'ssr') {
+                        proxy = {
+                            type: 'shadowsocksr',
+                            name: proxy.name,
+                            method: normalizeSsrMethod(proxy.cipher),
+                            server: proxy.server,
+                            port: proxy.port,
+                            password: proxy.password,
+                            protocol: normalizeSsrPlugin(proxy.protocol),
+                            protocol_param: proxy['protocol-param'],
+                            obfs: normalizeSsrPlugin(proxy.obfs),
+                            obfs_param: proxy['obfs-param'],
+                            tfo: getTfo(proxy),
+                            udp_relay: getUdpRelay(proxy),
+                        };
                     } else if (proxy.type === 'hysteria2') {
                         proxy = {
                             type: 'hysteria2',
@@ -542,6 +560,7 @@ export default function Egern_Producer() {
                             'https',
                             'socks5',
                             'ss',
+                            'ssr',
                             'trojan',
                             'vless',
                             'vmess',
@@ -578,6 +597,7 @@ export default function Egern_Producer() {
                         [
                             'socks5',
                             'ss',
+                            'ssr',
                             'trojan',
                             'vless',
                             'vmess',
@@ -604,7 +624,7 @@ export default function Egern_Producer() {
                         }
                     }
                     if (
-                        ['ss'].includes(original.type) &&
+                        ['ss', 'ssr'].includes(original.type) &&
                         proxy.shadow_tls &&
                         original['udp-port'] > 0 &&
                         original['udp-port'] <= 65535
@@ -725,6 +745,66 @@ function normalizeSnellVersion(version) {
     if (!/^[1-5]$/.test(normalized)) return null;
 
     return parseInt(normalized, 10);
+}
+
+// Egern 的 shadowsocksr 只支持流加密，protocol / obfs 沿用 SSR 上游插件名。
+const EGERN_SSR_METHODS = [
+    'none',
+    'dummy',
+    'rc4-md5',
+    'aes-128-cfb',
+    'aes-192-cfb',
+    'aes-256-cfb',
+    'aes-128-ctr',
+    'aes-192-ctr',
+    'aes-256-ctr',
+    'chacha20',
+    'chacha20-ietf',
+    'xchacha20',
+];
+
+const EGERN_SSR_PROTOCOLS = [
+    'origin',
+    'auth_sha1_v4',
+    'auth_aes128_md5',
+    'auth_aes128_sha1',
+    'auth_chain_a',
+    'auth_chain_b',
+];
+
+const EGERN_SSR_OBFS = [
+    'plain',
+    'http_simple',
+    'http_post',
+    'random_head',
+    'tls1.2_ticket_auth',
+    'tls1.2_ticket_fastauth',
+];
+
+function normalizeSsrPlugin(value) {
+    if (value == null) return undefined;
+
+    const normalized = `${value}`.trim().toLowerCase();
+    return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeSsrMethod(cipher) {
+    const method = normalizeSsrPlugin(cipher);
+    // Egern 的空加密写作 none / dummy
+    return method === 'plain' ? 'none' : method;
+}
+
+function isEgernSsr(proxy) {
+    if (!EGERN_SSR_METHODS.includes(normalizeSsrMethod(proxy.cipher))) {
+        return false;
+    }
+    // protocol / obfs 留空时由 Egern 补 origin / plain
+    const protocol = normalizeSsrPlugin(proxy.protocol);
+    if (protocol != null && !EGERN_SSR_PROTOCOLS.includes(protocol)) {
+        return false;
+    }
+    const obfs = normalizeSsrPlugin(proxy.obfs);
+    return obfs == null || EGERN_SSR_OBFS.includes(obfs);
 }
 
 function getFirstHeaderValue(headers, ...keys) {
