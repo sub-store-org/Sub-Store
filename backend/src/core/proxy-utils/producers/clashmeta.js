@@ -62,6 +62,12 @@ export default function ClashMeta_Producer() {
                     );
                     return false;
                 }
+                if (proxy.type === 'masque-surge') {
+                    $.error(
+                        `mihomo does not support Surge MASQUE proxy type. Proxy ${proxy.name} has been filtered.`,
+                    );
+                    return false;
+                }
                 if (hasRootHeaders(proxy) && proxy.type === 'trusttunnel') {
                     $.error(
                         `mihomo does not support headers for TrustTunnel proxy ${proxy.name}. Proxy has been filtered.`,
