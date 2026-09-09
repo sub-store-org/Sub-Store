@@ -1,3 +1,4 @@
+import { nativeBoundarySuccesses, nativeBoundaryFailures } from '../fixtures/shadowrocket-native-boundaries';
 import { expect } from 'chai';
 import { after, before, beforeEach, describe, it } from 'mocha';
 
@@ -217,6 +218,119 @@ async function expectDecryptFailure(armored, secretKey) {
 }
 
 describe('download routes', function () {
+    for (const [route, request] of [['subscription', requestDownloadSubscription], ['collection', requestDownloadCollection]]) {
+        for (const [label, raw, expected, absent = []] of nativeBoundarySuccesses) {
+            it(`native boundary: ${route} / ${label}`, async function () {
+                state[SUBS_KEY][0].content = raw;
+                const res = await request({ target: 'Shadowrocket', native: 'true' });
+                expect(res.statusCode, JSON.stringify(res.sent)).to.equal(200);
+                for (const part of expected) expect(res.sent).to.include(part);
+                for (const part of absent) expect(res.sent).not.to.include(part);
+            });
+        }
+        for (const [label, raw] of nativeBoundaryFailures) {
+            it(`native boundary rejection: ${route} / ${label}`, async function () {
+                state[SUBS_KEY][0].content = raw;
+                const res = await request({ target: 'Shadowrocket', native: 'true' });
+                expect(res.statusCode, JSON.stringify(res.sent)).to.equal(500);
+                expect(res.sent.error.details).to.include('Shadowrocket native');
+            });
+        }
+    }
+
+    const makeVmess = (patch) =>
+        'vmess://' +
+        Buffer.from(
+            JSON.stringify({
+                v: '2',
+                ps: 'Review',
+                add: 'example.com',
+                port: '443',
+                id: UUID,
+                aid: '0',
+                scy: 'auto',
+                net: 'tcp',
+                tls: 'tls',
+                ...patch,
+            }),
+        ).toString('base64');
+    for (const [label, content, expectedStatus] of [
+        [
+            'standard SIP002',
+            'ss://YWVzLTEyOC1nY206c2VjcmV0@example.com:8388#SS',
+            200,
+        ],
+        [
+            'SIP002 udp enabled',
+            'ss://YWVzLTEyOC1nY206c2VjcmV0@example.com:8388/?udp=1#SS',
+            200,
+        ],
+        ['VMess TLS object', makeVmess({ tls: { enabled: true } }), 500],
+        ['VMess path object', makeVmess({ net: 'ws', path: {} }), 500],
+        ['VMess host object', makeVmess({ net: 'ws', host: {} }), 500],
+        ['VMess unknown transport', makeVmess({ net: 'xhttp' }), 500],
+        [
+            'HTML upstream error',
+            '<!DOCTYPE html><html><body>unavailable</body></html>',
+            500,
+        ],
+        [
+            'malformed Clash proxies',
+            JSON.stringify({ proxies: 'invalid', 'proxy-groups': [] }),
+            500,
+        ],
+    ]) {
+        for (const [route, request] of [
+            ['subscription', requestDownloadSubscription],
+            ['collection', requestDownloadCollection],
+        ]) {
+            it(
+                'native input validation: ' + route + ' / ' + label,
+                async function () {
+                    state[SUBS_KEY][0].content = content;
+                    const response = await request({
+                        target: 'Shadowrocket',
+                        native: 'true',
+                    });
+                    expect(
+                        response.statusCode,
+                        JSON.stringify(response.sent),
+                    ).to.equal(expectedStatus);
+                },
+            );
+        }
+    }
+    for (const [label, content] of [
+        [
+            'HTML upstream error',
+            '<!DOCTYPE html><html><body>unavailable</body></html>',
+        ],
+        [
+            'malformed Clash proxies',
+            JSON.stringify({ proxies: 'invalid', 'proxy-groups': [] }),
+        ],
+    ]) {
+        it(
+            'native input validation: mixed collection / ' + label,
+            async function () {
+                state[SUBS_KEY].push({
+                    name: 'bad-input',
+                    source: 'local',
+                    content,
+                });
+                state[COLLECTIONS_KEY][0].subscriptions.push('bad-input');
+                const response = await requestDownloadCollection({
+                    target: 'Shadowrocket',
+                    native: 'true',
+                });
+                expect(
+                    response.statusCode,
+                    JSON.stringify(response.sent),
+                ).to.equal(500);
+            },
+        );
+    }
+
     before(async function () {
         ({ default: $ } = require('@/core/app'));
         openApi = require('@/vendor/open-api');
@@ -272,6 +386,149 @@ describe('download routes', function () {
         $.warn = () => {};
         $.error = () => {};
         $.notify = () => {};
+    });
+
+    it('passes native Shadowrocket output through subscription and collection downloads', async function () {
+        const expected =
+            'VLESS WS=vless,1.1.1.1,443,password=11111111-1111-4111-8111-111111111111,tls=true,obfs=websocket,path=/ws,obfsParam=cdn.example.com,peer=sni.example.com';
+
+        for (const request of [downloadSubscription, downloadCollection]) {
+            const output = await request({
+                target: 'Shadowrocket',
+                native: 'true',
+            });
+
+            expect(output, JSON.stringify(output)).to.be.a('string');
+            expect(output).to.include(expected);
+            expect(output).to.not.include('proxies:');
+        }
+    });
+
+    it('rejects Loon cipher fallback and raw hopping options in native downloads', async function () {
+        const inputs = [
+            'HY=hysteria2,example.com,443,"secret",hop-interval=bogus',
+            'HY=hysteria2,example.com,443,password=secret,port-hopping-interval=bogus',
+            'Good=hysteria2,example.com,443,"secret"\nBad=hysteria2,example.com,443,"secret",hop-interval=30-10',
+            'VM=vmess,example.com,443,bogus,"11111111-1111-4111-8111-111111111111"',
+            'VM=vmess,example.com,443,username=11111111-1111-4111-8111-111111111111,vmess-aead=true,encrypt-method=bogus',
+            ...['bogus', 0, {}, '30-10'].map((value) =>
+                JSON.stringify({
+                    proxies: [
+                        {
+                            type: 'hysteria2',
+                            name: 'HY2',
+                            server: 'example.com',
+                            port: 443,
+                            password: 'secret',
+                            'hop-interval': value,
+                        },
+                    ],
+                }),
+            ),
+        ];
+        for (const content of inputs) {
+            state[SUBS_KEY][0].content = content;
+            for (const request of [
+                requestDownloadSubscription,
+                requestDownloadCollection,
+            ]) {
+                const res = await request({
+                    target: 'Shadowrocket',
+                    native: 'true',
+                });
+                expect(res.statusCode, JSON.stringify(res.sent)).to.equal(500);
+                expect(JSON.stringify(res.sent)).to.include(
+                    'Shadowrocket native',
+                );
+            }
+        }
+    });
+
+    it('rejects invalid Clash JSON in native subscription and collection downloads', async function () {
+        for (const proxy of [
+            { type: 'hysteria', auth: 'c2VjcmV0', up: 10, down: 20 },
+            { type: 'vless', uuid: 'test-uuid', 'Reality-Opts': {} },
+            {
+                type: 'vless',
+                uuid: 'test-uuid',
+                network: 'ws',
+                'WS-OPTS': { PATH: 42 },
+            },
+            {
+                type: 'vless',
+                uuid: 'test-uuid',
+                network: 'ws',
+                'ws-opts': {
+                    headers: { Host: 'one.example', HOST: 'two.example' },
+                },
+            },
+            { type: 'hysteria2', password: 'secret', obfs: 'salamander' },
+            { type: 'vmess', uuid: 'test-uuid', cipher: 'bogus' },
+            { type: 'hysteria2', password: 'secret', obfs: 'gecko' },
+            {
+                type: 'wireguard',
+                'private-key': 'private',
+                'public-key': 'public',
+                ip: '10.0.0.2/32',
+                'ip-cidr': 24,
+            },
+            { type: 'vless', uuid: 'test-uuid', 'reality-opts': {} },
+            {
+                type: 'vless',
+                uuid: 'test-uuid',
+                'reality-opts': { 'short-id': 'abcd' },
+            },
+            { type: 'ss', cipher: 'aes-128-gcm', password: {} },
+            { type: 'vmess', uuid: 'test-uuid', cipher: {} },
+            {
+                type: 'vmess',
+                uuid: 'test-uuid',
+                cipher: 'auto',
+                aead: true,
+                alterId: 2,
+            },
+            {
+                type: 'vless',
+                uuid: 'test-uuid',
+                network: 'ws',
+                'ws-opts': { headers: { Host: {} } },
+            },
+            ...['trojan', 'tuic', 'hysteria', 'hysteria2', 'juicity'].map(
+                (type) => ({
+                    type,
+                    password: 'secret',
+                    uuid: 'test-uuid',
+                    tls: false,
+                }),
+            ),
+        ]) {
+            state[SUBS_KEY][0].content = JSON.stringify({
+                proxies: [
+                    {
+                        name: 'Invalid',
+                        server: 'example.com',
+                        port: 443,
+                        ...proxy,
+                    },
+                ],
+            });
+            for (const request of [
+                requestDownloadSubscription,
+                requestDownloadCollection,
+            ]) {
+                const res = await request({
+                    target: 'Shadowrocket',
+                    native: 'true',
+                });
+                expect(res.statusCode, JSON.stringify(res.sent)).to.equal(500);
+                expect(JSON.stringify(res.sent)).to.include(
+                    'Shadowrocket native',
+                );
+                expect(JSON.stringify(res.sent)).to.not.include(
+                    '[object Object]',
+                );
+            }
+        }
     });
 
     it('uses truthiness for subscription noFlow query values', async function () {

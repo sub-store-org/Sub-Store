@@ -1,3 +1,4 @@
+import { validateShadowrocketNativeInput } from '../shadowrocket-native-validation';
 import { safeLoad } from '@/utils/yaml';
 import { Base64 } from 'js-base64';
 import $ from '@/core/app';
@@ -41,7 +42,10 @@ function HTML() {
     const name = 'HTML';
     const test = (raw) => /^<!DOCTYPE html>/.test(raw);
     // simply discard HTML
-    const parse = () => '';
+    const parse = (raw, includeProxies, { native = false } = {}) => {
+        if (native) throw new Error('HTML is not a proxy subscription');
+        return '';
+    };
     return { name, test, parse };
 }
 
@@ -116,12 +120,15 @@ function Clash() {
             Array.isArray(content['proxy-groups'])
         );
     };
-    const parse = function (raw, includeProxies) {
+    const parse = function (raw, includeProxies, { native = false } = {}) {
         // Clash YAML format
 
         const afterReplace = normalizeClashYaml(raw);
 
         const { proxies } = safeLoad(afterReplace);
+        if (native && !Array.isArray(proxies)) {
+            throw new Error('Invalid Clash proxies: expected array');
+        }
         return (
             (includeProxies ? 'proxies:\n' : '') +
             (Array.isArray(proxies) ? proxies : [])
@@ -141,22 +148,38 @@ function SSD() {
     const test = function (raw) {
         return raw.indexOf('ssd://') === 0;
     };
-    const parse = function (raw) {
+    const parse = function (raw, includeProxies, { native = false } = {}) {
         // preprocessing for SSD subscription format
         const output = [];
         let ssdinfo = JSON.parse(Base64.decode(raw.split('ssd://')[1]));
-        let port = ssdinfo.port;
-        let method = ssdinfo.encryption;
-        let password = ssdinfo.password;
         // servers config
         let servers = ssdinfo.servers;
+        if (native) {
+            if (!Array.isArray(servers)) throw new Error('Invalid Shadowrocket native SSD servers');
+            const allowed = ['airport', 'port', 'encryption', 'password', 'servers', 'traffic_used', 'traffic_total', 'expiry', 'url'];
+            for (const key of Object.keys(ssdinfo)) {
+                if (!allowed.includes(key)) throw new Error(`Unsupported Shadowrocket native SSD option: ${key}`);
+            }
+            validateShadowrocketNativeInput({type: 'ss', port: ssdinfo.port, cipher: ssdinfo.encryption, password: ssdinfo.password});
+        }
         for (let i = 0; i < servers.length; i++) {
-            let server = servers[i];
-            method = server.encryption ? server.encryption : method;
-            password = server.password ? server.password : password;
+            const server = servers[i];
+            const method = server.encryption ?? ssdinfo.encryption;
+            const password = server.password ?? ssdinfo.password;
+            const port = server.port ?? ssdinfo.port;
+            if (native) {
+                const allowed = ['id', 'server', 'port', 'encryption', 'password', 'remarks', 'ratio'];
+                for (const key of Object.keys(server)) {
+                    if (!allowed.includes(key)) throw new Error(`Unsupported Shadowrocket native SSD server option: ${key}`);
+                }
+                const proxy = {type: 'ss', name: server.remarks ?? String(i), server: server.server, port, cipher: method, password};
+                validateShadowrocketNativeInput(proxy);
+                // Preserve scalar types until required-value validation.
+                output[i] = JSON.stringify(proxy);
+                continue;
+            }
             let userinfo = Base64.encode(method + ':' + password);
             let hostname = server.server;
-            port = server.port ? server.port : port;
             let tag = server.remarks ? server.remarks : i;
             let plugin = server.plugin_options
                 ? '/?plugin=' +
@@ -173,7 +196,7 @@ function SSD() {
                 port +
                 plugin +
                 '#' +
-                tag;
+                encodeURIComponent(tag);
         }
         return output.join('\n');
     };
@@ -182,14 +205,13 @@ function SSD() {
 
 function FullConfig() {
     const name = 'Full Config Preprocessor';
-    const test = function (raw) {
-        return /^(\[server_local\]|\[Proxy\])/gm.test(raw);
-    };
-    const parse = function (raw) {
-        const match = raw.match(
-            /^\[server_local|Proxy\]([\s\S]+?)^\[.+?\](\r?\n|$)/im,
-        )?.[1];
-        return match || raw;
+    const section = /^\[(?:server_local|Proxy)\][ \t]*\r?$/im;
+    const test = (raw) => section.test(raw);
+    const parse = (raw) => {
+        const header = raw.match(section);
+        if (!header) return raw;
+        const body = raw.slice(header.index + header[0].length);
+        return body.split(/^\[[^\]\r\n]+\][ \t]*\r?$/m)[0];
     };
     return { name, test, parse };
 }

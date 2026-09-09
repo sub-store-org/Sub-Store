@@ -3,6 +3,7 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import dnsPacket from 'dns-packet';
 
 import $ from '@/core/app';
+import { ProxyUtils } from '@/core/proxy-utils';
 import PROCESSORS, { ApplyProcessor } from '@/core/proxy-utils/processors';
 import { SETTINGS_KEY } from '@/constants';
 import resourceCache from '@/utils/resource-cache';
@@ -136,6 +137,50 @@ describe('Resolve Domain Operator', function () {
             delete resourceCache.resourceCache[key];
         });
         resourceCache._persist();
+    });
+
+    it('exports native WebSocket nodes after the built-in domain resolver', async function () {
+        const domain = 'native-resolver.example.com';
+        const cacheKey = hex_md5(`GOOGLE:${domain}:IPv4`);
+        cacheKeys.push(cacheKey);
+        delete resourceCache.resourceCache[cacheKey];
+        ResolveDomainOperator.resolver.Google = async () => '192.0.2.10';
+        const nodes = ProxyUtils.parse(
+            JSON.stringify({
+                proxies: [
+                    {
+                        name: 'Resolved',
+                        type: 'vmess',
+                        server: domain,
+                        port: 443,
+                        uuid: 'test-uuid',
+                        cipher: 'auto',
+                        tls: true,
+                        network: 'ws',
+                        'ws-opts': {
+                            path: '/',
+                            headers: { Host: 'cdn.example.com' },
+                        },
+                    },
+                ],
+            }),
+            { native: true },
+        );
+        const resolved = await ApplyProcessor(
+            ResolveDomainOperator({ provider: 'Google', type: 'IPv4' }),
+            nodes,
+        );
+        expect(resolved[0].server).to.equal('192.0.2.10');
+        const output = ProxyUtils.produce(
+            resolved,
+            'Shadowrocket',
+            'external',
+            { native: true },
+        );
+        expect(output).to.include('Resolved=vmess,192.0.2.10,443');
+        expect(output).to.include('peer=cdn.example.com');
+        expect(output).to.include('obfsParam=cdn.example.com');
+        expect(output).not.to.include('_resolved');
     });
 
     it('limits resolver requests to the configured unresolved unique domains', async function () {

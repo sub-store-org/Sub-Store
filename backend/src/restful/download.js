@@ -117,6 +117,7 @@ async function downloadSubscription(req, res) {
         fakeSub: _fakeSub,
     } = req.query;
     const prettyYaml = req.query.prettyYaml ?? req.query['pretty-yaml'];
+    const native = req.query.native != null;
 
     let $options = {
         _req: {
@@ -286,6 +287,7 @@ async function downloadSubscription(req, res) {
                     mihomoExternal,
                     localPort: mihomoLocalPort,
                     prettyYaml,
+                    native,
                 },
                 $options,
                 proxy,
@@ -520,6 +522,7 @@ async function downloadCollection(req, res) {
         noCache,
     } = req.query;
     const prettyYaml = req.query.prettyYaml ?? req.query['pretty-yaml'];
+    const native = req.query.native != null;
 
     let $options = {
         _req: {
@@ -609,6 +612,7 @@ async function downloadCollection(req, res) {
                     mihomoExternal,
                     localPort: mihomoLocalPort,
                     prettyYaml,
+                    native,
                 },
                 $options,
                 proxy,

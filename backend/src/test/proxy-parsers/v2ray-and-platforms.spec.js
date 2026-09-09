@@ -20,8 +20,9 @@ describe('VMess and VLESS parser coverage', function () {
                 cipher: 'auto',
                 uuid: UUID,
                 udp: true,
-                tfo: 'true',
-                'skip-cert-verify': false,
+                // URI booleans must not use JavaScript string truthiness.
+                tfo: true,
+                'skip-cert-verify': true,
             });
         });
 
