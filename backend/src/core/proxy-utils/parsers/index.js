@@ -2548,6 +2548,7 @@ function Clash_All() {
                 'anytls',
                 'mieru',
                 'masque',
+                'masque-surge',
                 'sudoku',
                 'juicity',
                 'ss',
