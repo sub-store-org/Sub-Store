@@ -315,8 +315,8 @@ describe('Proxy structured producers', function () {
         }
     });
 
-    it('keeps Mihomo and Stash Snell versions 1 through 5', function () {
-        const proxies = [1, 2, 3, 4, 5, 6].map((version) => ({
+    it('keeps Mihomo Snell versions 1 through 5 and Stash versions 1 through 6', function () {
+        const proxies = [1, 2, 3, 4, 5, 6, 7].map((version) => ({
             type: 'snell',
             name: `Snell ${version}`,
             server: 'snell.example.com',
@@ -326,7 +326,10 @@ describe('Proxy structured producers', function () {
             udp: true,
         }));
 
-        for (const platform of ['Mihomo', 'Stash']) {
+        for (const [platform, expectedVersions] of [
+            ['Mihomo', [1, 2, 3, 4, 5]],
+            ['Stash', [1, 2, 3, 4, 5, 6]],
+        ]) {
             const internal = produceInternal(
                 platform,
                 proxies.map((proxy) => ({ ...proxy })),
@@ -339,11 +342,11 @@ describe('Proxy structured producers', function () {
             expect(
                 internal.map((proxy) => proxy.version),
                 platform,
-            ).to.deep.equal([1, 2, 3, 4, 5]);
+            ).to.deep.equal(expectedVersions);
             expect(
                 external.proxies.map((proxy) => proxy.version),
                 platform,
-            ).to.deep.equal([1, 2, 3, 4, 5]);
+            ).to.deep.equal(expectedVersions);
             expect(
                 internal.find((proxy) => proxy.version === 1),
                 platform,
@@ -352,14 +355,12 @@ describe('Proxy structured producers', function () {
                 internal.find((proxy) => proxy.version === 2),
                 platform,
             ).to.not.have.property('udp');
-            expect(internal.find((proxy) => proxy.version === 4).udp).to.equal(
-                true,
-                platform,
-            );
-            expect(internal.find((proxy) => proxy.version === 5).udp).to.equal(
-                true,
-                platform,
-            );
+            for (const version of expectedVersions.filter((v) => v >= 3)) {
+                expect(
+                    internal.find((proxy) => proxy.version === version).udp,
+                    platform,
+                ).to.equal(true);
+            }
         }
     });
 
