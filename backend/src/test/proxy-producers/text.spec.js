@@ -2673,6 +2673,94 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('round-trips REALITY ML-KEM through URI, V2Ray and Mihomo exports', function () {
+        const cases = [
+            [true, 'true', true],
+            [false, null],
+            ['true', 'true', true],
+            ['false', 'false'],
+            [1, '1', true],
+            [0, null],
+            ['0', '0'],
+            [undefined, null],
+            [null, null],
+            ['', null],
+            ['true&pbk=other', 'true&pbk=other'],
+        ];
+        for (const type of ['vless', 'vmess']) {
+            for (const [mlkem, queryValue, enabled] of cases) {
+                const proxy = {
+                    type,
+                    name: 'ML-KEM # test',
+                    server: '2001:db8::1',
+                    port: 443,
+                    uuid: UUID,
+                    tls: true,
+                    network: 'tcp',
+                    ...(type === 'vmess'
+                        ? { cipher: 'aes-128-gcm', alterId: 0 }
+                        : {}),
+                    'reality-opts': {
+                        'public-key': 'pubkey',
+                        'short-id': '08',
+                        'support-x25519mlkem768': mlkem,
+                    },
+                };
+                const [mihomo] = ProxyUtils.parse(
+                    produceExternal('Mihomo', proxy),
+                );
+                for (const platform of ['URI', 'V2Ray']) {
+                    const output = produceExternal(platform, mihomo);
+                    const uri =
+                        platform === 'V2Ray' ? Base64.decode(output) : output;
+                    expect(uri).to.include(
+                        `${type}://${UUID}@[2001:db8::1]:443?security=reality`,
+                    );
+                    expect(
+                        new URL(uri).searchParams.get('support-x25519mlkem768'),
+                    ).to.equal(queryValue);
+                    const [reparsed] = ProxyUtils.parse(output);
+                    expect(reparsed.name).to.equal(proxy.name);
+                    expect(reparsed.server).to.equal(proxy.server);
+                    expect(reparsed['reality-opts']).to.deep.equal({
+                        'public-key': 'pubkey',
+                        'short-id': '08',
+                        ...(enabled ? { 'support-x25519mlkem768': true } : {}),
+                    });
+                    if (type === 'vmess') {
+                        expect(reparsed.cipher).to.equal('aes-128-gcm');
+                        expect(reparsed.alterId).to.equal(0);
+                    }
+                }
+            }
+        }
+    });
+
+    it('rejects non-AEAD VMess REALITY URI exports without changing authentication', function () {
+        for (const auth of [{ alterId: 64 }, { aead: false }]) {
+            const { result, errors } = captureErrors(() =>
+                ProxyUtils.produce(
+                    [
+                        {
+                            type: 'vmess',
+                            name: 'Legacy VMess REALITY',
+                            server: 'example.com',
+                            port: 443,
+                            uuid: UUID,
+                            'reality-opts': { 'public-key': 'pubkey' },
+                            ...auth,
+                        },
+                    ],
+                    'URI',
+                ),
+            );
+            expect(result).to.equal('');
+            expect(errors.join('\n')).to.include(
+                'VMess REALITY URI requires AEAD',
+            );
+        }
+    });
+
     it('produces URI VLESS reality websocket links', function () {
         const output = produceExternal('URI', {
             type: 'vless',

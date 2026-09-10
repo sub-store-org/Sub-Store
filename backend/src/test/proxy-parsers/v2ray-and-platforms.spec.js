@@ -5,7 +5,86 @@ import { describe, it } from 'mocha';
 import { UUID, expectSubset, parseAll, parseOne } from './helpers';
 
 describe('VMess and VLESS parser coverage', function () {
+    it('keeps only enabled REALITY ML-KEM values in VLESS and VMess AEAD subscriptions', function () {
+        const cases = [
+            ...['1', 't', 'T', 'true', 'TRUE', 'True'].map((value) => [
+                value,
+                true,
+            ]),
+            ...['0', 'f', 'F', 'false', 'FALSE', 'False'].map((value) => [
+                value,
+                undefined,
+            ]),
+            ...[undefined, '', 'invalid', 'TrUe', 'true=bad', 'true%0A'].map(
+                (value) => [value, undefined],
+            ),
+        ];
+        for (const protocol of ['vless', 'vmess']) {
+            for (const [value, expected] of cases) {
+                for (const publicKey of ['pubkey', '']) {
+                    const uri = `${protocol}://${UUID}@example.com:443?security=reality&type=tcp${
+                        publicKey ? `&pbk=${publicKey}&sid=08` : ''
+                    }${
+                        value == null ? '' : `&support-x25519mlkem768=${value}`
+                    }`;
+                    for (const input of [uri, Base64.encode(uri)]) {
+                        const proxy = parseOne(input);
+                        expect(proxy.type).to.equal(protocol);
+                        expect(proxy['reality-opts']).to.deep.equal(
+                            publicKey
+                                ? {
+                                      'public-key': publicKey,
+                                      'short-id': '08',
+                                      ...(expected == null
+                                          ? {}
+                                          : {
+                                                'support-x25519mlkem768':
+                                                    expected,
+                                            }),
+                                  }
+                                : undefined,
+                        );
+                        if (protocol === 'vmess') {
+                            expect(proxy.name).to.equal(
+                                'VMess example.com:443',
+                            );
+                            expect(proxy.cipher).to.equal('auto');
+                            expect(proxy.alterId).to.equal(0);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
     describe('VMess URIs', function () {
+        it('parses VMess AEAD encryption, TLS and gRPC transport fields', function () {
+            const proxy = parseOne(
+                `vmess://${UUID}@[2001:db8::1]:8443?encryption=aes-128-gcm&security=tls&sni=sni.example.com&type=grpc&serviceName=svc&authority=grpc.example.com&mode=multi&allowInsecure=1&flow=xtls-rprx-vision#AEAD%20%23%20test`,
+            );
+
+            expectSubset(proxy, {
+                type: 'vmess',
+                name: 'AEAD # test',
+                server: '2001:db8::1',
+                port: 8443,
+                uuid: UUID,
+                cipher: 'aes-128-gcm',
+                alterId: 0,
+                tls: true,
+                sni: 'sni.example.com',
+                'skip-cert-verify': true,
+                network: 'grpc',
+                'grpc-opts': {
+                    'grpc-service-name': 'svc',
+                    '_grpc-authority': 'grpc.example.com',
+                    '_grpc-type': 'multi',
+                },
+            });
+            expect(proxy).not.to.have.property('encryption');
+            expect(proxy).not.to.have.property('flow');
+        });
+
         it('parses Quantumult VMess shares', function () {
             const share = Base64.encode(
                 `QX VMess = vmess,vmess-qx.example.com,443,auto,"${UUID}",udp-relay=true,fast-open=true,tls-verification=false`,
