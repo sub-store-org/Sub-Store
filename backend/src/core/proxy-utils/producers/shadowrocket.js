@@ -48,6 +48,8 @@ export default function Shadowrocket_Producer() {
                         'gost-relay',
                         'shadowquic',
                         'zerotier',
+                        'masque-surge',
+                        'easytier',
                     ].includes(proxy.type)
                 ) {
                     return false;
