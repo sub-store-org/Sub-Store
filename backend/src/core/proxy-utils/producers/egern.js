@@ -6,6 +6,18 @@ import {
 } from './utils';
 import { normalizeVmessSecurity } from '../vmess-security';
 
+const ipVersions = {
+    dual: 'dual_stack',
+    ipv4: 'v4_only',
+    ipv6: 'v6_only',
+    'v4-only': 'v4_only',
+    'v6-only': 'v6_only',
+    'ipv4-prefer': 'v4_prefer',
+    'ipv6-prefer': 'v6_prefer',
+    'prefer-v4': 'v4_prefer',
+    'prefer-v6': 'v6_prefer',
+};
+
 export default function Egern_Producer() {
     const type = 'ALL';
     const produce = (proxies, type, opts = {}) => {
@@ -630,6 +642,12 @@ export default function Egern_Producer() {
                         original['udp-port'] <= 65535
                     ) {
                         proxy['udp_port'] = original['udp-port'];
+                    }
+
+                    if (original['ip-version']) {
+                        proxy.ip_version =
+                            ipVersions[original['ip-version']] ||
+                            original['ip-version'];
                     }
 
                     delete proxy.subName;

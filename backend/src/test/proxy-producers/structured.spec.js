@@ -2766,6 +2766,57 @@ describe('Proxy structured producers', function () {
         // expect(external.proxies[0]).to.not.have.property('sni');
     });
 
+    it('maps IP version aliases into Egern internal and YAML output', function () {
+        const cases = [
+            ['dual', 'dual_stack'],
+            ['ipv4', 'v4_only'],
+            ['ipv6', 'v6_only'],
+            ['v4-only', 'v4_only'],
+            ['v6-only', 'v6_only'],
+            ['ipv4-prefer', 'v4_prefer'],
+            ['ipv6-prefer', 'v6_prefer'],
+            ['prefer-v4', 'v4_prefer'],
+            ['prefer-v6', 'v6_prefer'],
+            ['dual_stack', 'dual_stack'],
+            ['v4_only', 'v4_only'],
+            ['v6_only', 'v6_only'],
+            ['v4_prefer', 'v4_prefer'],
+            ['v6_prefer', 'v6_prefer'],
+            [undefined, undefined],
+            [null, undefined],
+            ['', undefined],
+        ];
+        const proxies = cases.map(([ipVersion], index) => ({
+            type: 'ss',
+            name: `Egern IP Version ${index}`,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            'ip-version': ipVersion,
+        }));
+
+        for (const output of [
+            produceInternal('Egern', proxies),
+            loadProducedYaml('Egern', proxies).proxies,
+            loadProducedYaml('Egern', proxies, { prettyYaml: true }).proxies,
+        ]) {
+            expect(output).to.have.length(cases.length);
+            output.forEach(({ shadowsocks }, index) => {
+                const expected = cases[index][1];
+                if (expected === undefined) {
+                    expect(shadowsocks).to.not.have.property('ip_version');
+                } else {
+                    expect(shadowsocks).to.have.property(
+                        'ip_version',
+                        expected,
+                    );
+                }
+                expect(shadowsocks).to.not.have.property('ip-version');
+            });
+        }
+    });
+
     it('maps shadowsocks shadow-tls plugin objects into Egern nested structures', function () {
         const proxy = {
             type: 'ss',
