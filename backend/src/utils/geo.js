@@ -1,4 +1,5 @@
 import $ from '@/core/app';
+import getFs from '@/runtime/fs';
 
 const ISOFlags = {
     '🏳️‍🌈': ['EXP', 'BAND'],
@@ -781,7 +782,7 @@ export class MMDB {
     constructor({ country, asn } = {}) {
         if ($.env.isNode) {
             const Reader = eval(`require("@maxmind/geoip2-node")`).Reader;
-            const fs = eval("require('fs')");
+            const fs = getFs();
             const countryFile =
                 country || eval('process.env.SUB_STORE_MMDB_COUNTRY_PATH');
             const asnFile = asn || eval('process.env.SUB_STORE_MMDB_ASN_PATH');

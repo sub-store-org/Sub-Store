@@ -6,7 +6,7 @@ import $ from '@/core/app';
 import PROCESSORS, { ApplyProcessor } from '@/core/proxy-utils/processors';
 import { SETTINGS_KEY } from '@/constants';
 import resourceCache from '@/utils/resource-cache';
-import { parseDnsResolver } from '@/utils/dns';
+import { parseDnsResolver, resolveDns } from '@/utils/dns';
 import { hex_md5 } from '@/vendor/md5';
 
 const ResolveDomainOperator = PROCESSORS['Resolve Domain Operator'];
@@ -115,6 +115,8 @@ describe('Resolve Domain Operator', function () {
     let originalRead;
     let originalHttpGet;
     let originalIsNode;
+    let originalIsLoon;
+    let originalDns;
     let cacheKeys;
 
     beforeEach(function () {
@@ -123,6 +125,8 @@ describe('Resolve Domain Operator', function () {
         originalRead = $.read.bind($);
         originalHttpGet = $.http.get;
         originalIsNode = $.env.isNode;
+        originalIsLoon = $.env.isLoon;
+        originalDns = global.$dns;
         cacheKeys = [];
     });
 
@@ -132,6 +136,9 @@ describe('Resolve Domain Operator', function () {
         $.read = originalRead;
         $.http.get = originalHttpGet;
         $.env.isNode = originalIsNode;
+        $.env.isLoon = originalIsLoon;
+        if (originalDns === undefined) delete global.$dns;
+        else global.$dns = originalDns;
         cacheKeys.forEach((key) => {
             delete resourceCache.resourceCache[key];
         });
@@ -582,14 +589,168 @@ describe('Resolve Domain Operator', function () {
         });
     });
 
-    it('passes skip certificate verification to non-Node Custom DoH requests', async function () {
-        const url = 'https://doh.example/dns-query';
-        const requests = [];
-        cacheKeys.push(
-            hex_md5(`CUSTOM:INSECURE:${url}:doh-insecure.example.com:IPv4`),
-        );
-
+    it('resolves Loon DNS formats and filters native A/AAAA/CNAME answers', async function () {
         $.env.isNode = false;
+        $.env.isLoon = true;
+        $.http.get = async () => {
+            throw new Error('Expected the native Loon DNS API');
+        };
+        const domain = 'loon.example.com';
+        const requests = [];
+        global.$dns = {
+            query(options, callback) {
+                requests.push(options);
+                process.nextTick(() =>
+                    callback(null, {
+                        answers: [
+                            { type: 'CNAME', value: 'alias.example.com' },
+                            { type: 'A', value: '192.0.2.61' },
+                            { type: 'AAAA', value: '2001:db8::61' },
+                        ],
+                    }),
+                );
+            },
+        };
+
+        const resolvers = [
+            ['auto', undefined],
+            ['system', 'system'],
+            ['1.1.1.1', '1.1.1.1'],
+            ['1.1.1.1:5353', '1.1.1.1:5353'],
+            ['udp://1.1.1.1', '1.1.1.1'],
+            ['udp://1.1.1.1:5353', '1.1.1.1:5353'],
+            ['2001:db8::1', '2001:db8::1'],
+            ['[2001:db8::1]', '[2001:db8::1]'],
+            ['[2001:db8::1]:5353', '[2001:db8::1]:5353'],
+            ['udp://[2001:db8::1]', '[2001:db8::1]'],
+            ['udp://[2001:db8::1]:5353', '[2001:db8::1]:5353'],
+            ['h3://dns.example/dns-query', 'h3://dns.example/dns-query'],
+            ['quic://dns.adguard-dns.com', 'quic://dns.adguard-dns.com'],
+            [
+                'quic://dns.adguard-dns.com:8853',
+                'quic://dns.adguard-dns.com:8853',
+            ],
+            ['quic://[2001:db8::1]', 'quic://[2001:db8::1]'],
+            ['quic://[2001:db8::1]:8853', 'quic://[2001:db8::1]:8853'],
+        ];
+        for (const [url, server] of resolvers) {
+            for (const [type, ip] of [
+                ['IPv4', '192.0.2.61'],
+                ['IPv6', '2001:db8::61'],
+            ]) {
+                cacheKeys.push(
+                    hex_md5(`CUSTOM:INSECURE:${url}:${domain}:${type}`),
+                );
+                const output = await ApplyProcessor(
+                    ResolveDomainOperator({
+                        provider: 'Custom',
+                        type,
+                        url: ` ${url} `,
+                        timeout: '2500',
+                        cache: 'disabled',
+                        tlsSkipCertVerify: 'enabled',
+                    }),
+                    [{ name: 'Loon DNS', server: domain }],
+                );
+                expect(output[0].server).to.equal(ip);
+                expect(output[0]._resolved_ips).to.deep.equal([ip]);
+                expect(requests[requests.length - 1]).to.deep.equal(
+                    server === undefined
+                        ? { domain, timeout: 2500 }
+                        : {
+                              domain,
+                              server,
+                              timeout: 2500,
+                          },
+                );
+            }
+        }
+        expect(requests).to.have.length(resolvers.length * 2);
+    });
+
+    it('rejects unsupported DNS formats before opening a transport', async function () {
+        const originalCreateSocket = dgram.createSocket;
+        const transportCalls = [];
+        dgram.createSocket = () => {
+            transportCalls.push('UDP');
+            throw new Error('Unexpected UDP transport');
+        };
+        global.$dns = {
+            query() {
+                transportCalls.push('Loon');
+                throw new Error('Unexpected Loon transport');
+            },
+        };
+        const loonOnlyUrls = [
+            'auto',
+            'AUTO',
+            'system',
+            'h3://dns.example/dns-query',
+            'quic://dns.example:853',
+        ];
+        const nodeOnlyUrls = ['tcp://1.1.1.1', 'tls://1.1.1.1'];
+
+        try {
+            for (const [isNode, isLoon, urls, message] of [
+                [true, false, loonOnlyUrls, '仅支持 Loon'],
+                [false, false, loonOnlyUrls, '仅支持 Loon'],
+                [false, true, nodeOnlyUrls, '仅支持 Node.js'],
+                [false, false, nodeOnlyUrls, '仅支持 Node.js'],
+                [false, false, ['1.1.1.1', 'udp://1.1.1.1'], 'UDP DNS'],
+                [true, false, ['ftp://dns.example'], '不支持 ftp 协议'],
+                [false, true, ['ftp://dns.example'], '不支持 ftp 协议'],
+                [false, false, ['ftp://dns.example'], '不支持 ftp 协议'],
+            ]) {
+                $.env.isNode = isNode;
+                $.env.isLoon = isLoon;
+                for (const url of urls) {
+                    const error = await resolveDns({
+                        url,
+                        domain: 'unsupported.example.com',
+                    }).then(
+                        () => null,
+                        (error) => error,
+                    );
+                    expect(error).to.be.instanceOf(Error);
+                    expect(error.message, url).to.include(message);
+                }
+            }
+            expect(transportCalls).to.deep.equal([]);
+        } finally {
+            dgram.createSocket = originalCreateSocket;
+        }
+    });
+
+    it('reports unavailable Loon DNS APIs and propagates native errors', async function () {
+        $.env.isNode = false;
+        $.env.isLoon = true;
+        const nativeError = { code: 'TIMEOUT', message: 'DNS query timed out' };
+        for (const dns of [
+            undefined,
+            {},
+            {
+                query(options, callback) {
+                    expect(options.timeout).to.equal(8000);
+                    callback(nativeError, null);
+                },
+            },
+        ]) {
+            global.$dns = dns;
+            const error = await resolveDns({
+                url: 'system',
+                domain: 'loon-error.example.com',
+            }).then(
+                () => null,
+                (error) => error,
+            );
+            expect(error).to.be.instanceOf(Error);
+            if (dns?.query) expect(error).to.include(nativeError);
+            else expect(error.message).to.include('Loon Build ≥ 988');
+        }
+    });
+
+    it('uses HTTP DoH with EDNS and certificate options even when Loon DNS API is available', async function () {
+        const requests = [];
         $.http.get = async (options) => {
             requests.push(options);
             const dns = new URL(options.url).searchParams.get('dns');
@@ -599,29 +760,55 @@ describe('Resolve Domain Operator', function () {
                     'base64',
                 ),
             );
+            expect(getEdnsClientSubnet(query)).to.equal('223.6.6.0');
             return {
                 body: createDnsResponse(query, '192.0.2.58'),
             };
         };
 
-        const processor = ResolveDomainOperator({
-            provider: 'Custom',
-            type: 'IPv4',
-            url,
-            cache: 'disabled',
-            tlsSkipCertVerify: 'enabled',
-        });
-        const output = await ApplyProcessor(processor, [
-            {
-                name: 'DoH Insecure Custom',
-                server: 'doh-insecure.example.com',
-                port: 443,
-            },
-        ]);
-
-        expect(output[0].server).to.equal('192.0.2.58');
-        expect(requests).to.have.length(1);
-        expect(requests[0].insecure).to.equal(true);
+        for (const [isNode, isLoon, hasLoonDnsApi] of [
+            [true, false, false],
+            [false, true, false],
+            [false, true, true],
+            [false, false, false],
+        ]) {
+            $.env.isNode = isNode;
+            $.env.isLoon = isLoon;
+            global.$dns = hasLoonDnsApi
+                ? {
+                      query() {
+                          throw new Error('DoH must use the existing HTTP transport');
+                      },
+                  }
+                : undefined;
+            for (const url of [
+                'http://doh.example/dns-query',
+                'https://doh.example/dns-query',
+            ]) {
+                cacheKeys.push(
+                    hex_md5(`CUSTOM:INSECURE:${url}:doh-insecure.example.com:IPv4`),
+                );
+                const processor = ResolveDomainOperator({
+                    provider: 'Custom',
+                    type: 'IPv4',
+                    url,
+                    cache: 'disabled',
+                    tlsSkipCertVerify: 'enabled',
+                });
+                const output = await ApplyProcessor(processor, [
+                    {
+                        name: 'DoH Insecure Custom',
+                        server: 'doh-insecure.example.com',
+                        port: 443,
+                    },
+                ]);
+                expect(output[0].server).to.equal('192.0.2.58');
+            }
+        }
+        expect(requests).to.have.length(8);
+        expect(requests.every((request) => request.insecure === true)).to.equal(
+            true,
+        );
     });
 
     it('uses the first Custom DNS resolver that returns valid answers', async function () {

@@ -566,6 +566,10 @@ function vless(proxy) {
         const publicKey = proxy['reality-opts']?.['public-key'];
         if (publicKey) {
             pbk = `&pbk=${encodeURIComponent(publicKey)}`;
+            const mlkem = proxy['reality-opts']['support-x25519mlkem768'];
+            if (mlkem) {
+                pbk += `&support-x25519mlkem768=${encodeURIComponent(mlkem)}`;
+            }
         }
         const shortId = proxy['reality-opts']?.['short-id'];
         if (shortId) {
@@ -1013,13 +1017,34 @@ export default function URI_Producer() {
                         : ''
                 }${
                     proxy['protocol-param']
-                        ? '&protocolparam=' +
+                        ? '&protoparam=' +
                           Base64.encode(proxy['protocol-param'])
                         : ''
                 }`;
                 result = 'ssr://' + Base64.encode(result);
                 break;
             case 'vmess':
+                if (proxy['reality-opts']) {
+                    if (
+                        proxy.aead === false ||
+                        (proxy.aead !== true &&
+                            Number(proxy.alterId || 0) !== 0)
+                    ) {
+                        throw new Error(
+                            'VMess REALITY URI requires AEAD (alterId=0)',
+                        );
+                    }
+                    result = vless({
+                        ...proxy,
+                        server: isIPv6(proxy.server)
+                            ? `[${proxy.server}]`
+                            : proxy.server,
+                        network: proxy.network || 'tcp',
+                        encryption: normalizeVmessSecurity(proxy.cipher),
+                        flow: undefined,
+                    }).replace(/^vless:\/\//, 'vmess://');
+                    break;
+                }
                 // V2RayN URI format
                 let type = '';
                 let net = proxy.network || 'tcp';

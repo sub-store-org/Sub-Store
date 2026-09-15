@@ -936,6 +936,60 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('emits udp-relay only for applicable Surge policies', function () {
+        // https://manual.nssurge.com/policies/udp.html
+        const proxies = [
+            { type: 'ss', cipher: 'aes-128-gcm' },
+            { type: 'socks5' },
+            { type: 'socks5', tls: true },
+            { type: 'h2-connect' },
+            { type: 'external', exec: '/usr/bin/ssh', 'local-port': 1080 },
+            { type: 'http' },
+            { type: 'http', tls: true },
+            { type: 'trusttunnel' },
+            { type: 'ssh' },
+            { type: 'direct' },
+            { type: 'vmess', uuid: UUID },
+            { type: 'trojan' },
+            { type: 'anytls' },
+            { type: 'masque-surge' },
+            { type: 'tuic', token: 'secret' },
+            { type: 'tuic', uuid: UUID },
+            { type: 'hysteria2' },
+            { type: 'wireguard-surge', 'section-name': 'test' },
+            ...[1, 2, 3, 4, 5, 6].map((version) => ({
+                type: 'snell',
+                psk: 'secret',
+                version,
+            })),
+        ];
+
+        for (const platform of ['Surge', 'SurgeMac']) {
+            for (const proxy of proxies) {
+                if (proxy.type === 'external' && platform === 'Surge') continue;
+                for (const udp of [true, false, undefined]) {
+                    const output = produceExternal(platform, {
+                        name: proxy.type,
+                        server: 'example.com',
+                        port: 443,
+                        password: 'secret',
+                        ...proxy,
+                        udp,
+                    });
+                    const expected =
+                        ['ss', 'socks5', 'h2-connect', 'external'].includes(
+                            proxy.type,
+                        ) && udp != null
+                            ? [`,udp-relay=${udp}`]
+                            : [];
+
+                    expect(output.match(/,udp-relay=[^,\n]+/g) || [], output)
+                        .to.deep.equal(expected);
+                }
+            }
+        }
+    });
+
     it('emits Surge alpn and server-cert-verify-name for TLS protocol outputs', function () {
         const alpn = ['http/1.1', 'h2', 'h3'];
         const nameCertVerify = 'verify.example.com';
@@ -1090,7 +1144,7 @@ describe('Proxy text producers', function () {
             ecn: false,
         });
         expect(produceExternal('Surge', proxy)).to.equal(
-            'Surge MASQUE=masque,masque.example.com,443,username="user",password="secret",port-hopping="8443;8445-8447",port-hopping-interval=30,sni="sni.example.com",alpn="h3",skip-cert-verify=true,udp-relay=false,ecn=false',
+            'Surge MASQUE=masque,masque.example.com,443,username="user",password="secret",port-hopping="8443;8445-8447",port-hopping-interval=30,sni="sni.example.com",alpn="h3",skip-cert-verify=true,ecn=false',
         );
     });
 
@@ -1262,8 +1316,8 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             [
-                'Surge Snell v6=snell,snell.example.com,443,version=6,psk="secret",mode=unsafe-raw,udp-relay=true',
-                'Surge Snell v5 Mode=snell,snell.example.com,443,version=5,psk="secret",udp-relay=true',
+                'Surge Snell v6=snell,snell.example.com,443,version=6,psk="secret",mode=unsafe-raw',
+                'Surge Snell v5 Mode=snell,snell.example.com,443,version=5,psk="secret"',
             ].join('\n'),
         );
         expect(errors).to.deep.equal([
@@ -1523,7 +1577,7 @@ describe('Proxy text producers', function () {
 
         expect(output.split('\n')).to.deep.equal([
             `Surge H2 Round Trip=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com",udp-relay=true`,
-            `Surge Trust Round Trip=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com",udp-relay=true`,
+            `Surge Trust Round Trip=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"`,
         ]);
     });
 
@@ -2268,6 +2322,36 @@ describe('Proxy text producers', function () {
         expect(defaults).to.not.include('ipv6-cidr=');
     });
 
+    it('normalizes SSR protocol parameter aliases and preserves them on URI round-trips', function () {
+        const canonical = Base64.encode('user:pass');
+        const legacy = Base64.encode('legacy:pass');
+
+        for (const [query, expected] of [
+            [`protoparam=${canonical}`, 'user:pass'],
+            [`protocolparam=${legacy}`, 'legacy:pass'],
+            [`protoparam=${canonical}&protocolparam=${legacy}`, 'user:pass'],
+            [`protocolparam=${legacy}&protoparam=${canonical}`, 'user:pass'],
+            [`protoparam=&protocolparam=${legacy}`, 'legacy:pass'],
+        ]) {
+            const input = `ssr://${Base64.encode(
+                `ssr.example.com:8899:auth_aes128_md5:aes-256-cfb:plain:${Base64.encode(
+                    'secret',
+                )}/?remarks=${Base64.encode('SSR')}&${query}`,
+            )}`;
+            const [proxy] = ProxyUtils.parse(input);
+            expect(proxy['protocol-param'], query).to.equal(expected);
+
+            const output = produceExternal('URI', proxy);
+            const decoded = Base64.decode(output.slice(6));
+            expect(decoded, query).to.include(
+                `&protoparam=${Base64.encode(expected)}`,
+            );
+            expect(decoded, query).not.to.include('&protocolparam=');
+            const [reparsed] = ProxyUtils.parse(output);
+            expect(reparsed['protocol-param'], query).to.equal(expected);
+        }
+    });
+
     it('produces URI shadowsocks links with v2ray-plugin mux and tls flags', function () {
         const plugin = encodeURIComponent(
             'v2ray-plugin;obfs=websocket;mode=websocket;obfs-host=cdn.example.com;host=cdn.example.com;path=/socket;tls;sni=sni.example.com;skip-cert-verify=true;mux=0',
@@ -2587,6 +2671,94 @@ describe('Proxy text producers', function () {
                 `ss://${userInfo}@ss.example.com:443/?plugin=${muxOffPlugin}#Clash%20String%20Mux%20Off`,
             ].join('\n'),
         );
+    });
+
+    it('round-trips REALITY ML-KEM through URI, V2Ray and Mihomo exports', function () {
+        const cases = [
+            [true, 'true', true],
+            [false, null],
+            ['true', 'true', true],
+            ['false', 'false'],
+            [1, '1', true],
+            [0, null],
+            ['0', '0'],
+            [undefined, null],
+            [null, null],
+            ['', null],
+            ['true&pbk=other', 'true&pbk=other'],
+        ];
+        for (const type of ['vless', 'vmess']) {
+            for (const [mlkem, queryValue, enabled] of cases) {
+                const proxy = {
+                    type,
+                    name: 'ML-KEM # test',
+                    server: '2001:db8::1',
+                    port: 443,
+                    uuid: UUID,
+                    tls: true,
+                    network: 'tcp',
+                    ...(type === 'vmess'
+                        ? { cipher: 'aes-128-gcm', alterId: 0 }
+                        : {}),
+                    'reality-opts': {
+                        'public-key': 'pubkey',
+                        'short-id': '08',
+                        'support-x25519mlkem768': mlkem,
+                    },
+                };
+                const [mihomo] = ProxyUtils.parse(
+                    produceExternal('Mihomo', proxy),
+                );
+                for (const platform of ['URI', 'V2Ray']) {
+                    const output = produceExternal(platform, mihomo);
+                    const uri =
+                        platform === 'V2Ray' ? Base64.decode(output) : output;
+                    expect(uri).to.include(
+                        `${type}://${UUID}@[2001:db8::1]:443?security=reality`,
+                    );
+                    expect(
+                        new URL(uri).searchParams.get('support-x25519mlkem768'),
+                    ).to.equal(queryValue);
+                    const [reparsed] = ProxyUtils.parse(output);
+                    expect(reparsed.name).to.equal(proxy.name);
+                    expect(reparsed.server).to.equal(proxy.server);
+                    expect(reparsed['reality-opts']).to.deep.equal({
+                        'public-key': 'pubkey',
+                        'short-id': '08',
+                        ...(enabled ? { 'support-x25519mlkem768': true } : {}),
+                    });
+                    if (type === 'vmess') {
+                        expect(reparsed.cipher).to.equal('aes-128-gcm');
+                        expect(reparsed.alterId).to.equal(0);
+                    }
+                }
+            }
+        }
+    });
+
+    it('rejects non-AEAD VMess REALITY URI exports without changing authentication', function () {
+        for (const auth of [{ alterId: 64 }, { aead: false }]) {
+            const { result, errors } = captureErrors(() =>
+                ProxyUtils.produce(
+                    [
+                        {
+                            type: 'vmess',
+                            name: 'Legacy VMess REALITY',
+                            server: 'example.com',
+                            port: 443,
+                            uuid: UUID,
+                            'reality-opts': { 'public-key': 'pubkey' },
+                            ...auth,
+                        },
+                    ],
+                    'URI',
+                ),
+            );
+            expect(result).to.equal('');
+            expect(errors.join('\n')).to.include(
+                'VMess REALITY URI requires AEAD',
+            );
+        }
     });
 
     it('produces URI VLESS reality websocket links', function () {

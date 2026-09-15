@@ -596,7 +596,9 @@ function URI_SSR() {
                 ? Base64.decode(other_params.remarks)
                 : proxy.server,
             'protocol-param': getIfNotBlank(
-                Base64.decode(other_params.protoparam || '').replace(/\s/g, ''),
+                Base64.decode(
+                    other_params.protoparam || other_params.protocolparam || '',
+                ).replace(/\s/g, ''),
             ),
             'obfs-param': getIfNotBlank(
                 Base64.decode(other_params.obfsparam || '').replace(/\s/g, ''),
@@ -618,6 +620,9 @@ function URI_VMess() {
         return /^vmess:\/\//.test(line);
     };
     const parse = (line) => {
+        if (/^vmess:\/\/[^/?#]+@/.test(line)) {
+            return URI_VLESS().parse(line, 'vmess');
+        }
         let { content: lineWithoutFragment, fragment: fragmentName } =
             splitURIFragment(line.split('vmess://')[1]);
         let content = Base64.decode(lineWithoutFragment.replace(/\?.*?$/, ''));
@@ -907,7 +912,7 @@ function URI_VLESS() {
     const test = (line) => {
         return /^vless:\/\//.test(line);
     };
-    const parse = (line) => {
+    const parse = (line, protocol = 'vless') => {
         const mapXmuxToReuseSettings = (xmux) => {
             if (!isPlainObject(xmux)) {
                 return undefined;
@@ -1807,7 +1812,7 @@ function URI_VLESS() {
                 : undefined;
         };
 
-        line = line.split('vless://')[1];
+        line = line.split(`${protocol}://`)[1];
         let isShadowrocket;
         let parsed = /^(.*?)@(.*?):(\d+)\/?(\?(.*?))?(?:#(.*?))?$/.exec(line);
         if (!parsed) {
@@ -1830,7 +1835,7 @@ function URI_VLESS() {
         }
 
         const proxy = {
-            type: 'vless',
+            type: protocol,
             name,
             server,
             port,
@@ -1840,10 +1845,8 @@ function URI_VLESS() {
         const params = {};
         for (const addon of addons.split('&')) {
             if (addon) {
-                const [key, valueRaw] = addon.split('=');
-                let value = valueRaw;
-                value = decodeURIComponent(valueRaw);
-                params[key] = value;
+                const [key, ...value] = addon.split('=');
+                params[key] = decodeURIComponent(value.join('='));
             }
         }
 
@@ -1851,7 +1854,7 @@ function URI_VLESS() {
             name ??
             params.remarks ??
             params.remark ??
-            `VLESS ${server}:${port}`;
+            `${protocol === 'vmess' ? 'VMess' : 'VLESS'} ${server}:${port}`;
 
         proxy.tls = params.security && params.security !== 'none';
         if (params.pbk) {
@@ -1906,6 +1909,10 @@ function URI_VLESS() {
             const opts = {};
             if (params.pbk) {
                 opts['public-key'] = params.pbk;
+                const mlkem = params['support-x25519mlkem768'];
+                if (['1', 't', 'T', 'true', 'TRUE', 'True'].includes(mlkem)) {
+                    opts['support-x25519mlkem768'] = true;
+                }
             }
             if (params.sid) {
                 opts['short-id'] = params.sid;
@@ -2082,7 +2089,11 @@ function URI_VLESS() {
                 proxy._mode = params.mode;
             }
         }
-        if (params.encryption) {
+        if (protocol === 'vmess') {
+            proxy.cipher = normalizeVmessSecurity(params.encryption);
+            proxy.alterId = 0;
+            delete proxy.flow;
+        } else if (params.encryption) {
             proxy.encryption = params.encryption;
         }
         if (params.pqv) {
@@ -2540,12 +2551,14 @@ function Clash_All() {
                 'gost-relay',
                 'openvpn',
                 'tailscale',
+                'easytier',
                 'trusttunnel',
                 'h2-connect',
                 'naive',
                 'anytls',
                 'mieru',
                 'masque',
+                'masque-surge',
                 'sudoku',
                 'juicity',
                 'ss',

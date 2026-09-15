@@ -315,8 +315,8 @@ describe('Proxy structured producers', function () {
         }
     });
 
-    it('keeps Mihomo and Stash Snell versions 1 through 5', function () {
-        const proxies = [1, 2, 3, 4, 5, 6].map((version) => ({
+    it('keeps Mihomo Snell versions 1 through 5 and Stash versions 1 through 6', function () {
+        const proxies = [1, 2, 3, 4, 5, 6, 7].map((version) => ({
             type: 'snell',
             name: `Snell ${version}`,
             server: 'snell.example.com',
@@ -326,7 +326,10 @@ describe('Proxy structured producers', function () {
             udp: true,
         }));
 
-        for (const platform of ['Mihomo', 'Stash']) {
+        for (const [platform, expectedVersions] of [
+            ['Mihomo', [1, 2, 3, 4, 5]],
+            ['Stash', [1, 2, 3, 4, 5, 6]],
+        ]) {
             const internal = produceInternal(
                 platform,
                 proxies.map((proxy) => ({ ...proxy })),
@@ -339,11 +342,11 @@ describe('Proxy structured producers', function () {
             expect(
                 internal.map((proxy) => proxy.version),
                 platform,
-            ).to.deep.equal([1, 2, 3, 4, 5]);
+            ).to.deep.equal(expectedVersions);
             expect(
                 external.proxies.map((proxy) => proxy.version),
                 platform,
-            ).to.deep.equal([1, 2, 3, 4, 5]);
+            ).to.deep.equal(expectedVersions);
             expect(
                 internal.find((proxy) => proxy.version === 1),
                 platform,
@@ -352,14 +355,12 @@ describe('Proxy structured producers', function () {
                 internal.find((proxy) => proxy.version === 2),
                 platform,
             ).to.not.have.property('udp');
-            expect(internal.find((proxy) => proxy.version === 4).udp).to.equal(
-                true,
-                platform,
-            );
-            expect(internal.find((proxy) => proxy.version === 5).udp).to.equal(
-                true,
-                platform,
-            );
+            for (const version of expectedVersions.filter((v) => v >= 3)) {
+                expect(
+                    internal.find((proxy) => proxy.version === version).udp,
+                    platform,
+                ).to.equal(true);
+            }
         }
     });
 
@@ -2765,6 +2766,57 @@ describe('Proxy structured producers', function () {
         // expect(external.proxies[0]).to.not.have.property('sni');
     });
 
+    it('maps IP version aliases into Egern internal and YAML output', function () {
+        const cases = [
+            ['dual', 'dual_stack'],
+            ['ipv4', 'v4_only'],
+            ['ipv6', 'v6_only'],
+            ['v4-only', 'v4_only'],
+            ['v6-only', 'v6_only'],
+            ['ipv4-prefer', 'v4_prefer'],
+            ['ipv6-prefer', 'v6_prefer'],
+            ['prefer-v4', 'v4_prefer'],
+            ['prefer-v6', 'v6_prefer'],
+            ['dual_stack', 'dual_stack'],
+            ['v4_only', 'v4_only'],
+            ['v6_only', 'v6_only'],
+            ['v4_prefer', 'v4_prefer'],
+            ['v6_prefer', 'v6_prefer'],
+            [undefined, undefined],
+            [null, undefined],
+            ['', undefined],
+        ];
+        const proxies = cases.map(([ipVersion], index) => ({
+            type: 'ss',
+            name: `Egern IP Version ${index}`,
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            'ip-version': ipVersion,
+        }));
+
+        for (const output of [
+            produceInternal('Egern', proxies),
+            loadProducedYaml('Egern', proxies).proxies,
+            loadProducedYaml('Egern', proxies, { prettyYaml: true }).proxies,
+        ]) {
+            expect(output).to.have.length(cases.length);
+            output.forEach(({ shadowsocks }, index) => {
+                const expected = cases[index][1];
+                if (expected === undefined) {
+                    expect(shadowsocks).to.not.have.property('ip_version');
+                } else {
+                    expect(shadowsocks).to.have.property(
+                        'ip_version',
+                        expected,
+                    );
+                }
+                expect(shadowsocks).to.not.have.property('ip-version');
+            });
+        }
+    });
+
     it('maps shadowsocks shadow-tls plugin objects into Egern nested structures', function () {
         const proxy = {
             type: 'ss',
@@ -2802,6 +2854,136 @@ describe('Proxy structured producers', function () {
                 name: 'ShadowTLS SS',
             },
         });
+    });
+
+    it('emits Egern shadowsocksr nodes with plugin params and shadow-tls', function () {
+        const proxies = [
+            {
+                type: 'ssr',
+                name: 'Egern SSR Full',
+                server: 'ssr.example.com',
+                port: 8388,
+                cipher: 'AES-128-CFB',
+                password: 'secret',
+                protocol: 'auth_aes128_md5',
+                'protocol-param': '64:Xxxxx',
+                obfs: 'tls1.2_ticket_auth',
+                'obfs-param': 'www.bing.com',
+                udp: true,
+                tfo: true,
+                'block-quic': 'on',
+                'udp-port': 8389,
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    host: 'mask.example.com',
+                    password: 'shadow-pass',
+                    version: 3,
+                },
+            },
+            {
+                type: 'ssr',
+                name: 'Egern SSR Min',
+                server: 'ssr2.example.com',
+                port: 443,
+                cipher: 'plain',
+                password: 'secret',
+            },
+        ];
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        for (const output of [internal, external.proxies]) {
+            expect(output).to.have.length(2);
+            expectSubset(output[0], {
+                shadowsocksr: {
+                    name: 'Egern SSR Full',
+                    server: 'ssr.example.com',
+                    port: 8388,
+                    method: 'aes-128-cfb',
+                    password: 'secret',
+                    protocol: 'auth_aes128_md5',
+                    protocol_param: '64:Xxxxx',
+                    obfs: 'tls1.2_ticket_auth',
+                    obfs_param: 'www.bing.com',
+                    tfo: true,
+                    udp_relay: true,
+                    block_quic: true,
+                    udp_port: 8389,
+                    shadow_tls: {
+                        password: 'shadow-pass',
+                        sni: 'mask.example.com',
+                    },
+                },
+            });
+            // 空加密统一写成 none；protocol / obfs 留空交给 Egern 补 origin / plain
+            expectSubset(output[1], {
+                shadowsocksr: {
+                    name: 'Egern SSR Min',
+                    method: 'none',
+                },
+            });
+        }
+        expect(external.proxies[1].shadowsocksr).to.not.have.property(
+            'protocol',
+        );
+        expect(external.proxies[1].shadowsocksr).to.not.have.property('obfs');
+    });
+
+    it('skips Egern shadowsocksr with unsupported cipher or plugins', function () {
+        const proxies = [
+            {
+                type: 'ssr',
+                name: 'SSR AEAD',
+                server: 'ssr.example.com',
+                port: 8388,
+                cipher: 'aes-128-gcm',
+                password: 'secret',
+            },
+            {
+                type: 'ssr',
+                name: 'SSR Unknown Protocol',
+                server: 'ssr.example.com',
+                port: 8388,
+                cipher: 'aes-128-cfb',
+                password: 'secret',
+                protocol: 'auth_chain_c',
+            },
+            {
+                type: 'ssr',
+                name: 'SSR Unknown Obfs',
+                server: 'ssr.example.com',
+                port: 8388,
+                cipher: 'aes-128-cfb',
+                password: 'secret',
+                obfs: 'tls1.0_session_auth',
+            },
+            {
+                type: 'ssr',
+                name: 'SSR Healthy',
+                server: 'ssr.example.com',
+                port: 8388,
+                cipher: 'chacha20-ietf',
+                password: 'secret',
+                protocol: 'auth_chain_a',
+                obfs: 'http_simple',
+            },
+        ];
+
+        const internal = produceInternal('Egern', proxies);
+        const external = loadProducedYaml('Egern', proxies);
+
+        for (const output of [internal, external.proxies]) {
+            expect(output).to.have.length(1);
+            expectSubset(output[0], {
+                shadowsocksr: {
+                    name: 'SSR Healthy',
+                    method: 'chacha20-ietf',
+                    protocol: 'auth_chain_a',
+                    obfs: 'http_simple',
+                },
+            });
+        }
     });
 
     it('emits Egern SSH nodes with auth, host keys, flags, and shadow-tls', function () {
