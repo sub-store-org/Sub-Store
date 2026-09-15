@@ -2099,6 +2099,16 @@ function URI_VLESS() {
         if (params.pqv) {
             proxy._pqv = params.pqv;
         }
+        if (params.fm) {
+            try {
+                const finalmask = JSON.parse(params.fm);
+                proxy._finalmask = isPlainObject(finalmask)
+                    ? finalmask
+                    : params.fm;
+            } catch (e) {
+                proxy._finalmask = params.fm;
+            }
+        }
 
         return proxy;
     };

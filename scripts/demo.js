@@ -61,6 +61,11 @@ function operator(proxies = [], targetPlatform, context) {
   // 36. sing-box Hysteria 2 支持通过节点的字符串字段 `disable-chrome-parrot` 设置 `disable_chrome_parrot`
   // 37. Surge TrustTunnel 支持使用 Surge 格式写 `h3=true` 作为输入, 或使用节点字段 `network: 'h3'` 设置 `h3=true`
   // 38. QX 输入的 `tls-alpn` 会保留原始十六进制值(支持带或不带冒号), 同时解码为 `alpn` 数组; QX 输出时优先使用 `tls-alpn`, 否则将 `alpn` 编码为 `tls-alpn`
+  // 39. `_finalmask` 对应 Xray-core 的 `streamSettings.finalmask`. URI `fm` 参数解码后会尝试 JSON.parse, 结果为普通对象时保存对象, 解析失败或结果不是对象时保留原字符串
+  //     手动设置支持普通对象或 JSON 字符串, 不要预先 encodeURIComponent. 例如: $server._finalmask = { udp: [{ type: 'salamander', settings: { password: 'example-password' } }] }
+  //     对象可直接修改, 例如 $server._finalmask.udp[0].settings.password = 'new-example-password'; 移除可用 delete $server._finalmask
+  //     输出 URI(包括 V2Ray 订阅)时, 对象会先 JSON.stringify, 字符串原样使用, 再统一 encodeURIComponent 编码为 `fm`; 其他客户端不输出此字段
+  //     VMess 携带此字段时使用 query 分享格式, 该格式只支持 AEAD(alterId=0), 规范: https://github.com/XTLS/Xray-core/discussions/716
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件

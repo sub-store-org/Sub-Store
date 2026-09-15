@@ -2736,7 +2736,7 @@ describe('Proxy text producers', function () {
         }
     });
 
-    it('rejects non-AEAD VMess REALITY URI exports without changing authentication', function () {
+    it('rejects non-AEAD VMess conversion to query URIs for REALITY', function () {
         for (const auth of [{ alterId: 64 }, { aead: false }]) {
             const { result, errors } = captureErrors(() =>
                 ProxyUtils.produce(
@@ -2756,7 +2756,107 @@ describe('Proxy text producers', function () {
             );
             expect(result).to.equal('');
             expect(errors.join('\n')).to.include(
-                'VMess REALITY URI requires AEAD',
+                'VMess query URI format cannot represent non-AEAD authentication',
+            );
+        }
+    });
+
+    it('preserves finalmask as _finalmask through VLESS and VMess AEAD URI round-trips', function () {
+        const fm = JSON.stringify(
+            {
+                udp: [
+                    {
+                        type: 'salamander',
+                        settings: { password: 'a&b=c#d%2F+ /中文' },
+                    },
+                ],
+            },
+            null,
+            2,
+        );
+        for (const type of ['vless', 'vmess']) {
+            for (const security of ['none', 'tls', 'reality']) {
+                const input = `${type}://${UUID}@[2001:db8::1]:443?security=${security}${
+                    security === 'reality' ? '&pbk=pubkey' : ''
+                }&encryption=none&fm=${encodeURIComponent(
+                    fm,
+                )}#Finalmask%20%23%20test`;
+                const [proxy] = ProxyUtils.parse(input);
+                expect(proxy._finalmask).to.deep.equal(JSON.parse(fm));
+                expect(proxy).not.to.have.property('finalmask');
+                proxy._finalmask.udp[0].settings.password += ' edited';
+                for (const platform of ['URI', 'V2Ray']) {
+                    const output = produceExternal(platform, proxy);
+                    const uri =
+                        platform === 'V2Ray' ? Base64.decode(output) : output;
+                    expect(uri).to.include(
+                        `&fm=${encodeURIComponent(
+                            JSON.stringify(proxy._finalmask),
+                        )}`,
+                    );
+                    const [reparsed] = ProxyUtils.parse(output);
+                    expect(reparsed).to.include({
+                        type,
+                        name: 'Finalmask # test',
+                        server: '2001:db8::1',
+                    });
+                    expect(reparsed._finalmask).to.deep.equal(proxy._finalmask);
+                    if (type === 'vmess') {
+                        expect(reparsed.cipher).to.equal('none');
+                        expect(reparsed.alterId).to.equal(0);
+                    }
+                }
+                const mihomo = produceExternal('Mihomo', proxy);
+                expect(mihomo).not.to.include('_finalmask');
+                expect(mihomo).not.to.include('salamander');
+            }
+        }
+    });
+
+    it('preserves finalmask string overrides and falls back to raw text for invalid or non-object JSON', function () {
+        for (const type of ['vless', 'vmess']) {
+            for (const [fm, expected] of [
+                [' { "udp": [] } ', { udp: [] }],
+                ...['{bad', 'null', 'false', '0', '[]', '"raw"'].map(
+                    (value) => [value, value],
+                ),
+            ]) {
+                const uri = produceExternal('URI', {
+                    type,
+                    name: 'Finalmask String',
+                    server: 'example.com',
+                    port: 443,
+                    uuid: UUID,
+                    _finalmask: fm,
+                });
+                expect(new URL(uri).searchParams.get('fm')).to.equal(fm);
+                const [proxy] = ProxyUtils.parse(uri);
+                expect(proxy._finalmask).to.deep.equal(expected);
+            }
+        }
+    });
+
+    it('rejects non-AEAD VMess conversion to query URIs for finalmask', function () {
+        for (const auth of [{ alterId: 64 }, { aead: false }]) {
+            const { result, errors } = captureErrors(() =>
+                ProxyUtils.produce(
+                    [
+                        {
+                            type: 'vmess',
+                            name: 'Legacy VMess Finalmask',
+                            server: 'example.com',
+                            port: 443,
+                            uuid: UUID,
+                            _finalmask: '{}',
+                            ...auth,
+                        },
+                    ],
+                    'URI',
+                ),
+            );
+            expect(result).to.equal('');
+            expect(errors.join('\n')).to.include(
+                'VMess query URI format cannot represent non-AEAD authentication',
             );
         }
     });
