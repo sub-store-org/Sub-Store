@@ -124,13 +124,15 @@ function getLoonAlpn(proxy) {
 
 function getLoonTlsProfile(proxy) {
     const tlsProfile = `${proxy._loon_tls_profile || ''}`.trim();
-    if (['default', 'chrome', 'ios18', 'ios26'].includes(tlsProfile)) {
+    if (
+        ['default', 'chrome', 'chrome147', 'ios18', 'ios26'].includes(tlsProfile)
+    ) {
         return tlsProfile;
     }
 
     switch (`${proxy['client-fingerprint'] || ''}`.trim()) {
         case 'chrome':
-            return 'chrome';
+            return 'chrome147';
         case 'ios':
             return 'ios26';
     }

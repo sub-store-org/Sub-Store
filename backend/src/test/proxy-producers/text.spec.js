@@ -773,7 +773,7 @@ describe('Proxy text producers', function () {
             },
         ]);
 
-        expect(output.match(/tls-profile=chrome/g)).to.have.length(9);
+        expect(output.match(/tls-profile=chrome147(?=,|$)/gm)).to.have.length(9);
         expect(output.match(/alpn="http\/1\.1,h2,h3"/g)).to.have.length(9);
     });
 
@@ -799,6 +799,10 @@ describe('Proxy text producers', function () {
                 _loon_tls_profile: 'chrome',
                 'client-fingerprint': 'ios',
             }),
+            buildTrojan('Loon Source Chrome147', {
+                _loon_tls_profile: 'chrome147',
+                'client-fingerprint': 'ios',
+            }),
             buildTrojan('Loon Fallback Chrome', {
                 'client-fingerprint': 'chrome',
             }),
@@ -810,9 +814,10 @@ describe('Proxy text producers', function () {
         expect(output).to.include('Loon Source IOS18=trojan');
         expect(output).to.include('tls-profile=ios18');
         expect(output).to.include('tls-profile=default');
-        expect(output).to.include('tls-profile=chrome');
+        expect(output).to.match(/tls-profile=chrome(?=,|$)/m);
+        expect(output.match(/tls-profile=chrome147(?=,|$)/gm)).to.have.length(2);
         expect(output).to.include('tls-profile=ios26');
-        expect(output.match(/tls-profile=/g)).to.have.length(5);
+        expect(output.match(/tls-profile=/g)).to.have.length(6);
     });
 
     it('omits invalid Loon tls-profile fallback values', function () {

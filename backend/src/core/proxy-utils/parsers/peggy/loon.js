@@ -63,6 +63,7 @@ const grammars = String.raw`
     function loonClientFingerprint(tlsProfile) {
         switch (String(tlsProfile || "").trim()) {
             case "chrome":
+            case "chrome147":
                 return "chrome";
             case "ios18":
             case "ios26":

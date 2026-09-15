@@ -3378,6 +3378,7 @@ describe('Platform raw-format parser coverage', function () {
             const cases = [
                 ['default'],
                 ['chrome', 'chrome'],
+                ['chrome147', 'chrome'],
                 ['ios18', 'ios'],
                 ['ios26', 'ios'],
             ];

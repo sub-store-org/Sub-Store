@@ -95,16 +95,27 @@ describe('Proxy structured producers', function () {
     });
 
     it('normalizes Loon tls-profile before emitting Mihomo client fingerprints', function () {
-        const [proxy] = ProxyUtils.parse(
-            `Loon IOS26=vmess,loon-ios26.example.com,443,auto,"${UUID}",over-tls=true,tls-profile=ios26,alterId=0`,
-        );
-        const output = loadProducedYaml('Mihomo', proxy);
+        for (const [profile, fingerprint] of [
+            ['ios26', 'ios'],
+            ['chrome147', 'chrome'],
+        ]) {
+            const [proxy] = ProxyUtils.parse(
+                `Loon ${profile}=vmess,loon-${profile}.example.com,443,auto,"${UUID}",over-tls=true,tls-profile=${profile},alterId=0`,
+            );
+            const output = loadProducedYaml('Mihomo', proxy);
+            const internal = produceInternal('Mihomo', proxy);
 
-        expect(proxy._loon_tls_profile).to.equal('ios26');
-        expect(proxy['client-fingerprint']).to.equal('ios');
-        expect(output.proxies[0]['client-fingerprint']).to.equal('ios');
-        expect(output.proxies[0]['client-fingerprint']).to.not.equal('ios26');
-        expect(output.proxies[0]).to.not.have.property('_loon_tls_profile');
+            expect(proxy._loon_tls_profile).to.equal(profile);
+            expect(proxy['client-fingerprint']).to.equal(fingerprint);
+            expect(output.proxies[0]['client-fingerprint']).to.equal(
+                fingerprint,
+            );
+            expect(output.proxies[0]).to.not.have.property('_loon_tls_profile');
+            expect(internal[0]._loon_tls_profile).to.equal(profile);
+            expect(produceExternal('Loon', internal)).to.include(
+                `tls-profile=${profile}`,
+            );
+        }
     });
 
     it('defaults omitted UDP to true while preserving explicit disablement', function () {
