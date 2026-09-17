@@ -507,22 +507,21 @@ function mergeUnsupportedXhttpExtraObject(baseObject, unsupportedObject) {
     return mergedExtra;
 }
 
-function getExplicitExtraOverride(proxy) {
-    if (typeof proxy._extra === 'string') {
-        return proxy._extra;
+function serializeUriJsonValue(value) {
+    if (typeof value === 'string') {
+        return value;
     }
 
-    // `_extra` only accepts JSON-like plain objects here. Broader object checks
-    // would accidentally stringify instances such as Date/Map/class values.
-    if (isPlainObject(proxy._extra)) {
-        return JSON.stringify(proxy._extra);
+    // Only serialize JSON-like plain objects, not Date/Map/class instances.
+    if (isPlainObject(value)) {
+        return JSON.stringify(value);
     }
 
     return undefined;
 }
 
 function buildVlessExtra(proxy) {
-    const explicitExtraOverride = getExplicitExtraOverride(proxy);
+    const explicitExtraOverride = serializeUriJsonValue(proxy._extra);
     if (explicitExtraOverride != null) {
         // `_extra` is an explicit user override for the final URI extra. When
         // present as a string or plain object, we bypass the structured xhttp
@@ -566,6 +565,10 @@ function vless(proxy) {
         const publicKey = proxy['reality-opts']?.['public-key'];
         if (publicKey) {
             pbk = `&pbk=${encodeURIComponent(publicKey)}`;
+            const mlkem = proxy['reality-opts']['support-x25519mlkem768'];
+            if (mlkem) {
+                pbk += `&support-x25519mlkem768=${encodeURIComponent(mlkem)}`;
+            }
         }
         const shortId = proxy['reality-opts']?.['short-id'];
         if (shortId) {
@@ -636,6 +639,11 @@ function vless(proxy) {
     const extraPayload = buildVlessExtra(proxy);
     if (extraPayload) {
         extra = `&extra=${encodeURIComponent(extraPayload)}`;
+    }
+    let fm = '';
+    const finalmaskPayload = serializeUriJsonValue(proxy._finalmask);
+    if (finalmaskPayload) {
+        fm = `&fm=${encodeURIComponent(finalmaskPayload)}`;
     }
     let mode = '';
     if (
@@ -784,7 +792,7 @@ function vless(proxy) {
         proxy.port
     }?security=${encodeURIComponent(
         security,
-    )}${vlessTransport}${packetEncoding}${alpn}${allowInsecure}${pcs}${vcn}${ech}${h2}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}${pqv}${encryption}#${encodeURIComponent(
+    )}${vlessTransport}${packetEncoding}${alpn}${allowInsecure}${pcs}${vcn}${ech}${h2}${sni}${fp}${flow}${sid}${spx}${pbk}${mode}${extra}${fm}${pqv}${encryption}#${encodeURIComponent(
         proxy.name,
     )}`;
 }
@@ -1013,13 +1021,35 @@ export default function URI_Producer() {
                         : ''
                 }${
                     proxy['protocol-param']
-                        ? '&protocolparam=' +
+                        ? '&protoparam=' +
                           Base64.encode(proxy['protocol-param'])
                         : ''
                 }`;
                 result = 'ssr://' + Base64.encode(result);
                 break;
             case 'vmess':
+                if (proxy['reality-opts'] || proxy._finalmask) {
+                    // https://github.com/XTLS/Xray-core/discussions/716 excludes alterId/aid.
+                    if (
+                        proxy.aead === false ||
+                        (proxy.aead !== true &&
+                            Number(proxy.alterId || 0) !== 0)
+                    ) {
+                        throw new Error(
+                            'VMess query URI format cannot represent non-AEAD authentication (alterId must be 0)',
+                        );
+                    }
+                    result = vless({
+                        ...proxy,
+                        server: isIPv6(proxy.server)
+                            ? `[${proxy.server}]`
+                            : proxy.server,
+                        network: proxy.network || 'tcp',
+                        encryption: normalizeVmessSecurity(proxy.cipher),
+                        flow: undefined,
+                    }).replace(/^vless:\/\//, 'vmess://');
+                    break;
+                }
                 // V2RayN URI format
                 let type = '';
                 let net = proxy.network || 'tcp';

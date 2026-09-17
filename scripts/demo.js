@@ -52,7 +52,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 28. sing-box 1.14.0 起才有 `control_http_client` , 暂时可使用 `control-http-client` 字段设置 sing-box 的 `control_http_client`
   //     若 `control-http-client` 非空, 输出 sing-box Tailscale endpoint 时会跳过旧版拨号字段映射, 避免和 `detour`/`dialer-proxy` 等 legacy dialer options 冲突. 需要给控制面设置前置代理时, 请写到 `control-http-client.detour`(1.14.0-alpha.26 又改回去了...)
   // 29. sing-box 支持使用 `ssh-server` 给 tailscale 设置 `ssh_server`, 直接设为 `true` 或 `{ "enabled": true, "disable-pty": true, "disable-sftp": true, "disable-forwarding": true }`
-  // 30. Loon 支持使用 `_loon_tls_profile` 设置 `tls-profile` 字段('default', 'chrome', 'ios18', 'ios26'), 否则则使用 client-fingerprint 自动转换部分对应的值
+  // 30. Loon 支持使用 `_loon_tls_profile` 设置 `tls-profile` 字段('default', 'chrome', 'chrome147', 'ios18', 'ios26'), 优先使用该字段, 否则从 client-fingerprint 自动转换: chrome -> chrome147, ios -> ios26. Loon 输入 chrome147 时, client-fingerprint 转成 chrome, `_loon_tls_profile` 保留原始值 chrome147
   // 31. `shadow-tls-password`/`shadow-tls-sni`/`shadow-tls-version` 这套旧字段已废弃. 请使用 `plugin: 'shadow-tls'` 和 `plugin-opts: { password, host, version }`
   // 32. mihomo 中 Snell shadow-tls 字段与 ss shadow-tls 字段不同, 使用的是 obfs-opts 而不是 plugin+plugin-opts, 不能与 obfs http/tls 共存. Sub-Store 内部有字段转换, 建议直接使用单行 Surge 格式 `1=snell,a.com,443,version=4,psk="1",obfs=http,obfs-host=a.com,shadow-tls-password="1",shadow-tls-sni=a.com,shadow-tls-version=3,alpn="http/1.1,h2",reuse=true` . 若想使用 JSON/JSON5/YAML 单行格式输入, 可使用 `{ "name": "1", "server": "a.com", "port": 443, "psk": "1", "version": 4, "reuse": true, "type": "snell", "obfs-opts": { "mode": "http", "host": "a.com" }, "plugin": "shadow-tls", "plugin-opts": { "host": "a.com", "password": "1", "version": 3, "alpn": [ "http/1.1", "h2" ] } }`
   // 33. sing-box Snell 出站默认允许 version 4/5/6, 其中 version 5 会按 sing-box 行为输出成 version 4. 开启“含不支持的协议”时保留 version 1/2/3/4/5/6, 并支持 version 6 通过节点字段 `quic-proxy-mode` 设置 `quic_proxy_mode`. 节点上的 `_userkey` 会输出为 sing-box 的 `userkey`
@@ -61,6 +61,11 @@ function operator(proxies = [], targetPlatform, context) {
   // 36. sing-box Hysteria 2 支持通过节点的字符串字段 `disable-chrome-parrot` 设置 `disable_chrome_parrot`
   // 37. Surge TrustTunnel 支持使用 Surge 格式写 `h3=true` 作为输入, 或使用节点字段 `network: 'h3'` 设置 `h3=true`
   // 38. QX 输入的 `tls-alpn` 会保留原始十六进制值(支持带或不带冒号), 同时解码为 `alpn` 数组; QX 输出时优先使用 `tls-alpn`, 否则将 `alpn` 编码为 `tls-alpn`
+  // 39. `_finalmask` 对应 Xray-core 的 `streamSettings.finalmask`. URI `fm` 参数解码后会尝试 JSON.parse, 结果为普通对象时保存对象, 解析失败或结果不是对象时保留原字符串
+  //     手动设置支持普通对象或 JSON 字符串, 不要预先 encodeURIComponent. 例如: $server._finalmask = { udp: [{ type: 'salamander', settings: { password: 'example-password' } }] }
+  //     对象可直接修改, 例如 $server._finalmask.udp[0].settings.password = 'new-example-password'; 移除可用 delete $server._finalmask
+  //     输出 URI(包括 V2Ray 订阅)时, 对象会先 JSON.stringify, 字符串原样使用, 再统一 encodeURIComponent 编码为 `fm`; 其他客户端不输出此字段
+  //     VMess 携带此字段时使用 query 分享格式, 该格式只支持 AEAD(alterId=0), 规范: https://github.com/XTLS/Xray-core/discussions/716
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
