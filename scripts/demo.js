@@ -66,6 +66,12 @@ function operator(proxies = [], targetPlatform, context) {
   //     对象可直接修改, 例如 $server._finalmask.udp[0].settings.password = 'new-example-password'; 移除可用 delete $server._finalmask
   //     输出 URI(包括 V2Ray 订阅)时, 对象会先 JSON.stringify, 字符串原样使用, 再统一 encodeURIComponent 编码为 `fm`; 其他客户端不输出此字段
   //     VMess 携带此字段时使用 query 分享格式, 该格式只支持 AEAD(alterId=0), 规范: https://github.com/XTLS/Xray-core/discussions/716
+  // 40. Loon 3.5.2 (996) 起支持 `server-dns`, 用于指定解析节点服务器域名的 DNS, 内部字段同名, 结构为数组. 文档: https://nsloon.app/docs/Node/#节点-dns
+  //     只影响节点服务器域名解析, 不替换全局 DNS; WireGuard 中用于解析 Peer 的 endpoint, 与隧道内的 dns/dnsv6 不同
+  //     支持 system、IPv4/IPv6、IPv4:端口、[IPv6]:端口、https:// (DoH)、quic:// (DoQ)、h3:// (DoH3)
+  //     Loon 文档要求多个 DNS 用双引号包裹; Sub-Store 输入额外兼容不加双引号的列表, 输出始终带双引号
+  //     脚本快捷设置: $server['server-dns'] = ['223.5.5.5', 'https://dns.example.com/dns-query', 'quic://dns.example.com', 'h3://dns.example.com/dns-query']
+  //     移除可用 delete $server['server-dns'], 空数组不输出该字段
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件

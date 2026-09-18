@@ -461,6 +461,97 @@ describe('Proxy text producers', function () {
         expect(output).to.equal(raw);
     });
 
+    it('round-trips quoted and unquoted Loon server-dns for every protocol', function () {
+        const inputs = [
+            'SS=shadowsocks,ss.example.com,8388,aes-128-gcm,"secret"',
+            'SSR=shadowsocksr,ssr.example.com,8388,aes-256-cfb,"secret",protocol=origin,obfs=plain',
+            `VMess=vmess,vmess.example.com,443,auto,"${UUID}"`,
+            `VLESS=vless,vless.example.com,443,"${UUID}"`,
+            'Trojan=trojan,trojan.example.com,443,"secret"',
+            'AnyTLS=anytls,anytls.example.com,443,"secret"',
+            'Hysteria2=hysteria2,hy2.example.com,443,"secret"',
+            'HTTP=http,http.example.com,8080',
+            'HTTPS=https,https.example.com,443',
+            'SOCKS5=socks5,socks.example.com,1080',
+            'WG=wireguard,interface-ip=10.0.0.2,private-key=private-key,peers=[{endpoint=wg.example.com:51820,public-key=public-key,allowed-ips="0.0.0.0/0"}]',
+        ];
+        const serverDns = [
+            'system',
+            '223.5.5.5',
+            '223.5.5.5:53',
+            '2001:4860:4860::8888',
+            '[2001:4860:4860::8888]:53',
+            'https://dns.example.com/dns-query',
+            'quic://dns.example.com',
+            'h3://dns.example.com/dns-query',
+        ];
+
+        for (const input of inputs) {
+            for (const values of [
+                ...serverDns.map((dns) => [dns]),
+                serverDns,
+            ]) {
+                for (const quote of ['', '"']) {
+                    const proxies = ProxyUtils.parse(
+                        `${input},server-dns=${quote}${values.join(
+                            ',',
+                        )}${quote}`,
+                    );
+                    expect(proxies, input).to.have.length(1);
+                    expect(proxies[0]['server-dns'], input).to.deep.equal(
+                        values,
+                    );
+                    const output = produceExternal('Loon', proxies);
+                    expect(output).to.include(
+                        `,server-dns="${values.join(',')}"`,
+                    );
+                    expect(
+                        ProxyUtils.parse(output)[0]['server-dns'],
+                    ).to.deep.equal(values);
+                }
+            }
+        }
+    });
+
+    it('keeps adjacent Loon options outside server-dns and supports script edits', function () {
+        const serverDns = [
+            '223.5.5.5',
+            '2001:db8::53',
+            'https://dns.example.com/dns-query?foo=bar',
+        ];
+
+        for (const quote of ['', '"']) {
+            const value = `${quote} ${serverDns.join(' , , ')} ${quote}`;
+            const [proxy] = ProxyUtils.parse(
+                `DNS=trojan,proxy.example.com,443,"secret",fast-open=true, server-dns = ${value},udp=false,tls-name=sni.example.com`,
+            );
+            expect(proxy['server-dns']).to.deep.equal(serverDns);
+            expect(proxy.tfo).to.equal(true);
+            expect(proxy.udp).to.equal(false);
+            expect(proxy.sni).to.equal('sni.example.com');
+
+            const [wireguard] = ProxyUtils.parse(
+                `WG=wireguard,interface-ip=10.0.0.2,private-key=private-key,server-dns=${value},mtu=1400,peers=[{endpoint=wg.example.com:51820,public-key=public-key}]`,
+            );
+            expect(wireguard['server-dns']).to.deep.equal(serverDns);
+            expect(wireguard.mtu).to.equal(1400);
+            expect(wireguard.server).to.equal('wg.example.com');
+
+            proxy['server-dns'] = ['quic://dns.example.com'];
+            expect(produceExternal('Loon', proxy)).to.include(
+                ',server-dns="quic://dns.example.com"',
+            );
+            proxy['server-dns'] = [];
+            expect(produceExternal('Loon', proxy)).not.to.include(
+                'server-dns=',
+            );
+            delete proxy['server-dns'];
+            expect(produceExternal('Loon', proxy)).not.to.include(
+                'server-dns=',
+            );
+        }
+    });
+
     it('produces Loon VLESS reality websocket lines', function () {
         const output = produceExternal('Loon', {
             type: 'vless',

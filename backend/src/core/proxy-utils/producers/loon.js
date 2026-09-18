@@ -56,7 +56,15 @@ export default function Loon_Producer() {
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
         );
     };
-    return { produce };
+    return {
+        produce: (proxy, type, opts = {}) => {
+            const result = produce(proxy, type, opts);
+            const serverDns = proxy['server-dns'];
+            return Array.isArray(serverDns) && serverDns.length > 0
+                ? `${result},server-dns="${serverDns.join(',')}"`
+                : result;
+        },
+    };
 }
 
 function appendTlsProfile(result, proxy) {
