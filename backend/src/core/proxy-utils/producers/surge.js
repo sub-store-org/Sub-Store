@@ -2,6 +2,7 @@ import { Result, isPresent } from './utils';
 import { isNotBlank, getIfNotBlank } from '@/utils';
 import $ from '@/core/app';
 import { formatSurgeVmessEncryptMethod } from '../vmess-security';
+import { parseSafeIntegerValue } from '../transport-path';
 
 const targetPlatform = 'Surge';
 
@@ -508,6 +509,70 @@ function trusttunnel(proxy) {
     return result.toString();
 }
 function masque_surge(proxy) {
+    // https://manual.nssurge.com/policies/masque.html
+    const unsupportedFields = [
+        'path',
+        'headers',
+        'advertise-routes',
+        'system',
+        '_name',
+        'mtu',
+        '_on_demand',
+        'udp-timeout',
+        '_udp_mapping',
+        '_udp_filtering',
+        '_udp_nat_max',
+        '_idle_timeout',
+        '_keep_alive_period',
+        '_stream_receive_window',
+        '_connection_receive_window',
+        '_max_concurrent_streams',
+        '_initial_packet_size',
+        '_disable_path_mtu_discovery',
+        '_certificate',
+        '_certificate_path',
+        '_certificate_public_key_sha256',
+        '_client_certificate',
+        '_client_certificate_path',
+        '_client_key',
+        '_client_key_path',
+        '_ech',
+        'ech-opts',
+        '_curve_preferences',
+        '_fragment',
+        '_fragment_fallback_delay',
+        '_record_fragment',
+        'reality-opts',
+        '_dns_server',
+        '_domain_resolver',
+        'detour',
+    ].filter((field) => isPresent(proxy, field));
+    if (
+        isPresent(proxy, '_version') &&
+        ![0, 3].includes(parseSafeIntegerValue(proxy._version))
+    ) {
+        unsupportedFields.push('_version (only HTTP/3 is supported)');
+    }
+    if (
+        isPresent(proxy, '_disable_version_fallback') &&
+        proxy._disable_version_fallback !== true
+    ) {
+        unsupportedFields.push('_disable_version_fallback (must be true)');
+    }
+    if (proxy.plugin === 'shadow-tls') unsupportedFields.push('shadow-tls');
+    if (
+        hasNonBlankValue(proxy.ports) &&
+        hasNonBlankValue(proxy['underlying-proxy'])
+    ) {
+        unsupportedFields.push('port-hopping with underlying-proxy');
+    }
+    if (unsupportedFields.length) {
+        throw unsupported(
+            `Platform Surge does not support MASQUE options: ${unsupportedFields.join(
+                ', ',
+            )}. Proxy has been filtered`,
+        );
+    }
     const result = new Result(proxy);
     result.append(`${proxy.name}=masque,${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,username="${proxy.username}"`, 'username');

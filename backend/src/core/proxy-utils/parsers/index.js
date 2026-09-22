@@ -2554,6 +2554,7 @@ function Clash_All() {
         } catch (e) {
             proxy = YAML.parse(line);
         }
+        if (proxy.type === 'masque-sing-box') proxy.type = 'masque-surge';
         if (
             ![
                 'zerotier',

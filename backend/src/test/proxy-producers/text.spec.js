@@ -1244,6 +1244,98 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('filters incompatible MASQUE options for Surge and SurgeMac without logging their values', function () {
+        const [proxy] = ProxyUtils.parse(
+            '{"type":"masque-sing-box","name":"MASQUE","server":"masque.example.com","port":443,"username":"example-user","password":"example-password"}',
+        );
+        expect(proxy.type).to.equal('masque-surge');
+        const unsupportedCases = [
+            ['_version', { _version: 1 }],
+            ['_version', { _version: '2' }],
+            ['_version', { _version: '3x' }],
+            ['_disable_version_fallback', { _disable_version_fallback: false }],
+            ['path', { path: '/private-path' }],
+            ['headers', { headers: { Authorization: 'private-header' } }],
+            ['advertise-routes', { 'advertise-routes': ['10.9.0.0/24'] }],
+            ['system', { system: false }],
+            ['_name', { _name: 'masque0' }],
+            ['mtu', { mtu: 1280 }],
+            ['_on_demand', { _on_demand: false }],
+            ['udp-timeout', { 'udp-timeout': '30s' }],
+            ['_udp_nat_max', { _udp_nat_max: 0 }],
+            ['_keep_alive_period', { _keep_alive_period: '10s' }],
+            [
+                '_disable_path_mtu_discovery',
+                { _disable_path_mtu_discovery: false },
+            ],
+            [
+                '_certificate_public_key_sha256',
+                { _certificate_public_key_sha256: ['private-pin'] },
+            ],
+            ['_client_key', { _client_key: 'private-key-content' }],
+            ['_ech', { _ech: { enabled: true } }],
+            ['_domain_resolver', { _domain_resolver: 'dns-masque' }],
+            [
+                'shadow-tls',
+                {
+                    plugin: 'shadow-tls',
+                    'plugin-opts': { password: 'private-shadow-password' },
+                },
+            ],
+            [
+                'port-hopping with underlying-proxy',
+                { ports: '8443,8445-8447', 'underlying-proxy': 'upstream' },
+            ],
+        ];
+        for (const platform of ['Surge', 'SurgeMac']) {
+            for (const version of [undefined, 0, '0', 3, '3']) {
+                expect(
+                    produceExternal(platform, {
+                        ...proxy,
+                        _version: version,
+                        _disable_version_fallback: true,
+                        'keystore-client-cert': 'client-cert-name',
+                        alpn: ['custom-h3'],
+                    }),
+                ).to.equal(
+                    'MASQUE=masque,masque.example.com,443,username="example-user",password="example-password",alpn="custom-h3",client-cert="client-cert-name"',
+                );
+            }
+            for (const [field, options] of unsupportedCases) {
+                for (const includeUnsupported of [false, true]) {
+                    const { result, errors } = captureErrors(() =>
+                        ProxyUtils.produce(
+                            [{ ...proxy, ...options }],
+                            platform,
+                            'external',
+                            {
+                                'include-unsupported-proxy': includeUnsupported,
+                            },
+                        ),
+                    );
+                    expect(result, `${platform}: ${field}`).to.equal('');
+                    expect(errors).to.have.length(1);
+                    expect(errors[0]).to.include(field).and.include('MASQUE');
+                    expect(errors[0])
+                        .to.not.include('private-')
+                        .and.not.include('example-password');
+                }
+            }
+        }
+        const { result, errors } = captureErrors(() =>
+            ProxyUtils.produce(
+                [{ ...proxy, _version: 2 }],
+                'SurgeMac',
+                'external',
+                { useMihomoExternal: true },
+            ),
+        );
+        expect(result).to.equal('');
+        expect(errors.some((message) => message.includes('_version'))).to.equal(
+            true,
+        );
+    });
+
     it('omits Surge alpn and server-cert-verify-name for non-TLS outputs', function () {
         const output = produceExternal('Surge', [
             {

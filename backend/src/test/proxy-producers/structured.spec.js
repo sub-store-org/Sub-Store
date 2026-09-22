@@ -4450,6 +4450,178 @@ describe('Proxy structured producers', function () {
         );
     });
 
+    it('exports Surge MASQUE as sing-box endpoints with version-specific options', function () {
+        const [proxy] = ProxyUtils.parse(
+            'MASQUE = masque,masque.example.com,443,username=example-user,password=example-password,sni=sni.example.com,skip-cert-verify=true,underlying-proxy=upstream,ip-version=ipv6-prefer,port-hopping="8443;8445-8447",port-hopping-interval=30,udp-relay=false,ecn=false',
+        );
+        const defaults = loadProducedJson('sing-box', proxy);
+        expect(defaults.outbounds).to.deep.equal([]);
+        expect(defaults.endpoints).to.deep.equal([
+            {
+                type: 'masque-client',
+                tag: 'MASQUE',
+                server: 'masque.example.com',
+                server_port: 443,
+                username: 'example-user',
+                password: 'example-password',
+                detour: 'upstream',
+                tls: {
+                    enabled: true,
+                    server_name: 'sni.example.com',
+                    insecure: true,
+                },
+            },
+        ]);
+        expect(
+            JSON.parse(JSON.stringify(produceInternal('sing-box', proxy))),
+        ).to.deep.equal(defaults.endpoints);
+        const [alias] = ProxyUtils.parse(
+            JSON.stringify({ ...proxy, type: 'masque-sing-box' }),
+        );
+        expect(alias.type).to.equal('masque-surge');
+        expect(loadProducedJson('sing-box', alias)).to.deep.equal(defaults);
+
+        for (const version of [0, 1, 2, 3]) {
+            const output = loadProducedJson('sing-box', [
+                {
+                    type: 'http',
+                    name: 'HTTP',
+                    server: 'http.example.com',
+                    port: 8080,
+                },
+                {
+                    ...proxy,
+                    _version: `${version}`,
+                    path: '/masque/{target}/{ipproto}/',
+                    headers: {
+                        'X-Test': ['one', 'two'],
+                        Host: 'masque.example.com',
+                    },
+                    'advertise-routes': ['10.9.0.0/24'],
+                    system: false,
+                    _name: 'masque-test',
+                    mtu: '1280',
+                    _on_demand: false,
+                    _disable_version_fallback: true,
+                    'udp-timeout': '30s',
+                    _udp_mapping: 'address_dependent',
+                    _udp_filtering: 'address_and_port_dependent',
+                    _udp_nat_max: 0,
+                    _idle_timeout: '1m',
+                    _keep_alive_period: '10s',
+                    _stream_receive_window: '64 MB',
+                    _connection_receive_window: '128 MB',
+                    _max_concurrent_streams: '10',
+                    _initial_packet_size: '1350',
+                    _disable_path_mtu_discovery: false,
+                    _dns_server: 'dns-default',
+                    _domain_resolver: 'dns-masque',
+                    'client-fingerprint': 'chrome',
+                    _client_certificate_path: 'client.pem',
+                    _client_key_path: 'client.key',
+                },
+            ]);
+            expect(
+                output.outbounds.map((outbound) => outbound.type),
+            ).to.deep.equal(['http']);
+            expect(output.endpoints).to.have.length(1);
+            const [endpoint] = output.endpoints;
+            expectSubset(endpoint, {
+                ...defaults.endpoints[0],
+                version,
+                path: '/masque/{target}/{ipproto}/',
+                headers: {
+                    'X-Test': ['one', 'two'],
+                    Host: 'masque.example.com',
+                },
+                advertise_routes: ['10.9.0.0/24'],
+                system: false,
+                name: 'masque-test',
+                mtu: 1280,
+                on_demand: false,
+                disable_version_fallback: true,
+                udp_timeout: '30s',
+                udp_mapping: 'address_dependent',
+                udp_filtering: 'address_and_port_dependent',
+                udp_nat_max: 0,
+                domain_resolver: {
+                    server: 'dns-masque',
+                    strategy: 'prefer_ipv6',
+                },
+            });
+            expect(endpoint.tls).to.include({
+                client_certificate_path: 'client.pem',
+                client_key_path: 'client.key',
+            });
+            expect(endpoint).to.not.have.any.keys(
+                'network',
+                'server_ports',
+                'hop_interval',
+                'ecn',
+                '_version',
+            );
+            if (version === 1) {
+                expect(endpoint).to.not.have.any.keys(
+                    'idle_timeout',
+                    'keep_alive_period',
+                    'stream_receive_window',
+                    'connection_receive_window',
+                    'max_concurrent_streams',
+                );
+            } else {
+                expectSubset(endpoint, {
+                    idle_timeout: '1m',
+                    keep_alive_period: '10s',
+                    stream_receive_window: '64 MB',
+                    connection_receive_window: '128 MB',
+                    max_concurrent_streams: 10,
+                });
+            }
+            if (version === 0 || version === 3) {
+                expectSubset(endpoint, {
+                    initial_packet_size: 1350,
+                    disable_path_mtu_discovery: false,
+                });
+                expect(endpoint.tls).to.not.have.property('utls');
+            } else {
+                expect(endpoint).to.not.have.any.keys(
+                    'initial_packet_size',
+                    'disable_path_mtu_discovery',
+                );
+                expect(endpoint.tls.utls).to.deep.equal({
+                    enabled: true,
+                    fingerprint: 'chrome',
+                });
+            }
+        }
+
+        const invalid = loadProducedJson('sing-box', {
+            ...proxy,
+            _on_demand: 'false',
+            _disable_version_fallback: 'true',
+            _udp_mapping: 'invalid',
+            _udp_filtering: 'invalid',
+            _udp_nat_max: 4294967296,
+            _initial_packet_size: 65536,
+            _disable_path_mtu_discovery: 'false',
+            _max_concurrent_streams: '10x',
+            mtu: -1,
+        }).endpoints[0];
+        expect(invalid).to.deep.equal(defaults.endpoints[0]);
+        for (const fields of [
+            { _version: 4 },
+            { _version: '2x' },
+            { port: '443x' },
+            { type: 'masque' },
+        ]) {
+            const { result, errors } = captureErrors(() =>
+                loadProducedJson('sing-box', { ...proxy, ...fields }),
+            );
+            expect(result).to.deep.equal({ outbounds: [], endpoints: [] });
+            expect(errors).to.have.length(1);
+        }
+    });
+
     it('emits Tailscale endpoint fields for sing-box exports', function () {
         const output = loadProducedJson('sing-box', {
             type: 'tailscale',

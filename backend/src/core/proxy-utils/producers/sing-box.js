@@ -77,6 +77,23 @@ const tfoParser = (proxy, parsedProxy) => {
     if (!parsedProxy.tcp_fast_open) delete parsedProxy.tcp_fast_open;
 };
 
+const udpNatParser = (proxy, parsedProxy) => {
+    const udpNatMax = parseSafeIntegerValue(proxy._udp_nat_max);
+    if (udpNatMax != null && udpNatMax <= 4294967295)
+        parsedProxy.udp_nat_max = udpNatMax;
+    for (const field of ['udp_mapping', 'udp_filtering']) {
+        if (
+            [
+                'endpoint_independent',
+                'address_dependent',
+                'address_and_port_dependent',
+            ].includes(proxy[`_${field}`])
+        ) {
+            parsedProxy[field] = proxy[`_${field}`];
+        }
+    }
+};
+
 const smuxParser = (smux, proxy) => {
     if (!smux || !smux.enabled) return;
     proxy.multiplex = { enabled: true };
@@ -1163,6 +1180,80 @@ const anytlsParser = (proxy = {}, includeUnsupportedProxy = false) => {
     domainResolverParser(proxy, parsedProxy);
     return parsedProxy;
 };
+const masqueParser = (proxy = {}) => {
+    const version = parseSafeIntegerValue(proxy._version);
+    if (proxy._version != null && (version == null || version > 3))
+        throw new Error(`Invalid MASQUE HTTP version: ${proxy._version}`);
+    const httpVersion = version || 3;
+    const mtu = parseSafeIntegerValue(proxy.mtu);
+    const parsedProxy = {
+        tag: proxy.name,
+        type: 'masque-client',
+        server: proxy.server,
+        server_port: parseSafeIntegerValue(proxy.port),
+        username: proxy.username,
+        password: proxy.password,
+        path: typeof proxy.path === 'string' ? proxy.path : undefined,
+        version: version ?? undefined,
+        advertise_routes:
+            typeof proxy['advertise-routes'] === 'string' ||
+            Array.isArray(proxy['advertise-routes'])
+                ? proxy['advertise-routes']
+                : undefined,
+        system: typeof proxy.system === 'boolean' ? proxy.system : undefined,
+        name: typeof proxy._name === 'string' ? proxy._name : undefined,
+        mtu: mtu != null && mtu <= 4294967295 ? mtu : undefined,
+        udp_timeout: proxy['udp-timeout'],
+        tls: { enabled: true, server_name: proxy.server, insecure: false },
+    };
+    if (parsedProxy.server_port == null || parsedProxy.server_port > 65535)
+        throw new Error('invalid port');
+    if (isPlainObject(proxy.headers)) {
+        parsedProxy.headers = Object.fromEntries(
+            Object.entries(proxy.headers).map(([key, value]) => [
+                key,
+                Array.isArray(value) ? value.map(String) : String(value),
+            ]),
+        );
+    }
+    for (const field of ['on_demand', 'disable_version_fallback']) {
+        if (typeof proxy[`_${field}`] === 'boolean')
+            parsedProxy[field] = proxy[`_${field}`];
+    }
+    if (httpVersion >= 2) {
+        for (const field of [
+            'idle_timeout',
+            'keep_alive_period',
+            'stream_receive_window',
+            'connection_receive_window',
+        ]) {
+            if (typeof proxy[`_${field}`] === 'string')
+                parsedProxy[field] = proxy[`_${field}`];
+        }
+        parsedProxy.max_concurrent_streams =
+            parseSafeIntegerValue(proxy._max_concurrent_streams) ?? undefined;
+    }
+    if (httpVersion === 3) {
+        const initialPacketSize = parseSafeIntegerValue(
+            proxy._initial_packet_size,
+        );
+        if (initialPacketSize != null && initialPacketSize <= 65535)
+            parsedProxy.initial_packet_size = initialPacketSize;
+        if (typeof proxy._disable_path_mtu_discovery === 'boolean')
+            parsedProxy.disable_path_mtu_discovery =
+                proxy._disable_path_mtu_discovery;
+    }
+    if (proxy['fast-open']) parsedProxy.udp_fragment = true;
+    udpNatParser(proxy, parsedProxy);
+    tfoParser(proxy, parsedProxy);
+    detourParser(proxy, parsedProxy);
+    tlsParser(proxy, parsedProxy);
+    if (httpVersion === 3) delete parsedProxy.tls.utls;
+    ipVersionParser(proxy, parsedProxy);
+    domainResolverParser(proxy, parsedProxy);
+    return parsedProxy;
+};
+
 const tailscaleParser = (proxy = {}) => {
     const useControlHTTPClient = hasControlHTTPClient(proxy);
     const listenPort = parseSafeIntegerValue(proxy._listen_port);
@@ -1237,7 +1328,6 @@ const wireguardParser = (proxy = {}) => {
         .map((family) => getWireGuardAddressWithCIDR(proxy, family))
         .filter((i) => i);
     const listenPort = parseSafeIntegerValue(proxy._listen_port);
-    const udpNatMax = parseSafeIntegerValue(proxy._udp_nat_max);
     const parsedProxy = {
         system: !!proxy.system,
         name: typeof proxy._name === 'string' ? proxy._name : undefined,
@@ -1249,10 +1339,6 @@ const wireguardParser = (proxy = {}) => {
                 : undefined,
         mtu: proxy.mtu ? parseInt(`${proxy.mtu}`, 10) : undefined,
         udp_timeout: proxy['udp-timeout'],
-        udp_nat_max:
-            udpNatMax != null && udpNatMax <= 4294967295
-                ? udpNatMax
-                : undefined,
         workers: proxy['workers']
             ? parseInt(`${proxy['workers']}`, 10)
             : undefined,
@@ -1266,17 +1352,7 @@ const wireguardParser = (proxy = {}) => {
         pre_shared_key: proxy['pre-shared-key'],
         reserved: [],
     };
-    for (const field of ['udp_mapping', 'udp_filtering']) {
-        if (
-            [
-                'endpoint_independent',
-                'address_dependent',
-                'address_and_port_dependent',
-            ].includes(proxy[`_${field}`])
-        ) {
-            parsedProxy[field] = proxy[`_${field}`];
-        }
-    }
+    udpNatParser(proxy, parsedProxy);
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
@@ -1617,6 +1693,9 @@ export default function singbox_Producer() {
                         case 'tailscale':
                             list.push(tailscaleParser(proxy));
                             break;
+                        case 'masque-surge':
+                            list.push(masqueParser(proxy));
+                            break;
                         default:
                             throw new Error(
                                 `Platform sing-box does not support proxy type: ${proxy.type}`,
@@ -1650,7 +1729,11 @@ export default function singbox_Producer() {
 
         const categorized = list.reduce(
             (result, item) => {
-                if (['wireguard', 'tailscale'].includes(item.type)) {
+                if (
+                    ['wireguard', 'tailscale', 'masque-client'].includes(
+                        item.type,
+                    )
+                ) {
                     result.endpoints.push(item);
                 } else {
                     result.outbounds.push(item);
