@@ -72,6 +72,13 @@ function operator(proxies = [], targetPlatform, context) {
   //     Loon 文档要求多个 DNS 用双引号包裹; Sub-Store 输入额外兼容不加双引号的列表, 输出始终带双引号
   //     脚本快捷设置: $server['server-dns'] = ['223.5.5.5', 'https://dns.example.com/dns-query', 'quic://dns.example.com', 'h3://dns.example.com/dns-query']
   //     移除可用 delete $server['server-dns'], 空数组不输出该字段
+  // 41. sing-box WireGuard/Tailscale 支持 `_on_demand` 设置 `on_demand`, 值为布尔值 `true`/`false`, 允许 endpoint 在需要时断开连接; sing-box 1.15.0 起支持. 例如: $server._on_demand = true
+  // 42. sing-box WireGuard/Tailscale 支持 `_listen_port` 设置本地 UDP 监听端口 `listen_port`, 接受 0–65535 的整数或整数字符串, `0` 表示自动选择; Tailscale 需要 sing-box 1.14.0+. WireGuard 的非零 `listen_port` 不能与 `detour`/`dialer-proxy` 同时使用. 例如: $server._listen_port = 51820
+  // 43. sing-box WireGuard 支持 `_name` 设置系统接口名称 `name`, 配合 `system: true` 使用; 节点的 `name` 仍用于输出 `tag`. 例如: $server._name = 'wg0'
+  // 44. sing-box WireGuard 支持 `_udp_mapping` 设置 `udp_mapping`, 可选 `endpoint_independent`(默认)、`address_dependent`、`address_and_port_dependent`; 控制 UDP NAT 映射复用方式, sing-box 1.14.0 起支持. 例如: $server._udp_mapping = 'endpoint_independent'
+  // 45. sing-box WireGuard 支持 `_udp_filtering` 设置 `udp_filtering`, 可选 `endpoint_independent`(默认)、`address_dependent`、`address_and_port_dependent`; 控制 UDP NAT 接受哪些远端回包, sing-box 1.14.0 起支持. 例如: $server._udp_filtering = 'address_and_port_dependent'
+  // 46. sing-box WireGuard 支持 `_udp_nat_max` 设置 `udp_nat_max`, 接受 0–4294967295 的整数或整数字符串, 限制 UDP NAT 会话数; `0` 使用 sing-box 的平台默认值, sing-box 1.14.0 起支持. 例如: $server._udp_nat_max = 8192
+  // 47. sing-box Tailscale 支持 `_taildrop_directory` 设置接收 Taildrop 文件的目录 `taildrop_directory`, 值为字符串; 相对路径基于 sing-box 工作目录, 默认 `Taildrop`, sing-box 1.14.0 起支持. 例如: $server._taildrop_directory = './taildrop'
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
