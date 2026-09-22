@@ -1165,9 +1165,20 @@ const anytlsParser = (proxy = {}, includeUnsupportedProxy = false) => {
 };
 const tailscaleParser = (proxy = {}) => {
     const useControlHTTPClient = hasControlHTTPClient(proxy);
+    const listenPort = parseSafeIntegerValue(proxy._listen_port);
     const parsedProxy = {
         tag: proxy.name,
         type: 'tailscale',
+        listen_port:
+            listenPort != null && listenPort <= 65535 ? listenPort : undefined,
+        taildrop_directory:
+            typeof proxy._taildrop_directory === 'string'
+                ? proxy._taildrop_directory
+                : undefined,
+        on_demand:
+            typeof proxy._on_demand === 'boolean'
+                ? proxy._on_demand
+                : undefined,
         control_http_client: proxy['control-http-client'],
         udp_timeout: proxy['udp-timeout'],
         state_directory: proxy['state-dir'] || proxy['state-directory'],
@@ -1225,10 +1236,23 @@ const wireguardParser = (proxy = {}) => {
     const address = ['ipv4', 'ipv6']
         .map((family) => getWireGuardAddressWithCIDR(proxy, family))
         .filter((i) => i);
+    const listenPort = parseSafeIntegerValue(proxy._listen_port);
+    const udpNatMax = parseSafeIntegerValue(proxy._udp_nat_max);
     const parsedProxy = {
         system: !!proxy.system,
+        name: typeof proxy._name === 'string' ? proxy._name : undefined,
+        listen_port:
+            listenPort != null && listenPort <= 65535 ? listenPort : undefined,
+        on_demand:
+            typeof proxy._on_demand === 'boolean'
+                ? proxy._on_demand
+                : undefined,
         mtu: proxy.mtu ? parseInt(`${proxy.mtu}`, 10) : undefined,
         udp_timeout: proxy['udp-timeout'],
+        udp_nat_max:
+            udpNatMax != null && udpNatMax <= 4294967295
+                ? udpNatMax
+                : undefined,
         workers: proxy['workers']
             ? parseInt(`${proxy['workers']}`, 10)
             : undefined,
@@ -1242,6 +1266,17 @@ const wireguardParser = (proxy = {}) => {
         pre_shared_key: proxy['pre-shared-key'],
         reserved: [],
     };
+    for (const field of ['udp_mapping', 'udp_filtering']) {
+        if (
+            [
+                'endpoint_independent',
+                'address_dependent',
+                'address_and_port_dependent',
+            ].includes(proxy[`_${field}`])
+        ) {
+            parsedProxy[field] = proxy[`_${field}`];
+        }
+    }
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
