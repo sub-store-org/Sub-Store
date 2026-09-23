@@ -5,9 +5,11 @@ compat_arguments:
   # ability: http-client-policy
   cronexp: 55 23 * * *
   sync: "Sub-Store Sync"
+  sync_disabled: false
   # timeout: 900
   # engine: auto
-  produce: "# Sub-Store Produce"
+  produce: "Sub-Store Produce"
+  produce_disabled: true
   produce_cronexp: 50 */6 * * *
   sync_success_notify: true
   produce_sub: "sub1,sub2"
@@ -31,19 +33,20 @@ compat_arguments_desc: |
 
   定时任务指定时将订阅/文件上传到私有 Gist. 在前端, 叫做 "同步" 或 "同步配置"
 
-  3️⃣ sync
+  3️⃣ sync / sync_disabled
 
   自定义定时任务名
   便于在脚本编辑器中选择
-  若设为 # 可取消定时任务
+  sync 仅设置任务名, 设为 # 不会禁用任务
+  sync_disabled 默认为 false; 设为 true 可禁用同步配置定时任务
 
-  4️⃣ produce
+  4️⃣ produce / produce_disabled
 
   自定义处理订阅的定时任务名
   一般用于定时处理耗时较长的订阅, 以更新缓存
-  这样 Surge 中拉取的时候就能用到缓存, 不至于总是超时
-  若设为 # 可取消此定时任务
-  默认不开启
+  这样客户端拉取的时候就能用到缓存, 不至于总是超时
+  produce 仅设置任务名, 设为 # 不会禁用任务
+  produce_disabled 默认为 true (禁用); 设为 false 可开启此定时任务
 
   5️⃣ produce_cronexp
 
@@ -92,6 +95,7 @@ scriptings:
         _compat.$argument: "cors={{{cors}}}"
   - schedule:
       name: "{{{sync}}}"
+      disabled: {{{sync_disabled}}}
       cron: "{{{cronexp}}}"
       script_url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
       timeout: 900
@@ -99,6 +103,7 @@ scriptings:
         _compat.$argument: "sync_success_notify={{{sync_success_notify}}}"
   - schedule:
       name: "{{{produce}}}"
+      disabled: {{{produce_disabled}}}
       cron: "{{{produce_cronexp}}}"
       script_url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
       timeout: 900
