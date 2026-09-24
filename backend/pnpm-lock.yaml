@@ -77,6 +77,9 @@ importers:
       semver:
         specifier: ^7.6.3
         version: 7.8.0
+      shoutrrr-ts:
+        specifier: https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.1.0/shoutrrr-ts-0.1.0.tgz
+        version: https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.1.0/shoutrrr-ts-0.1.0.tgz
       undici:
         specifier: ^8.8.0
         version: 8.8.0
@@ -2395,6 +2398,11 @@ packages:
   shebang-regex@3.0.0:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
+
+  shoutrrr-ts@https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.1.0/shoutrrr-ts-0.1.0.tgz:
+    resolution: {integrity: sha512-3YZEbgYk0qi8jEcCi97+r1E6VLMMaKX2nY7XI2uRStkKBEZtDYbgGvTkwkHS5JpUTdMEII5jTUE4AdyqxWR9Zw==, tarball: https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.1.0/shoutrrr-ts-0.1.0.tgz}
+    version: 0.1.0
+    engines: {node: ^22.0.0 || ^24.0.0}
 
   side-channel-list@1.0.1:
     resolution: {integrity: sha512-mjn/0bi/oUURjc5Xl7IaWi/OJJJumuoJFQJfDDyO46+hBWsfaVM65TBHq2eoZBhzl9EchxOijpkbRC8SVBQU0w==}
@@ -5271,6 +5279,8 @@ snapshots:
       shebang-regex: 3.0.0
 
   shebang-regex@3.0.0: {}
+
+  shoutrrr-ts@https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.1.0/shoutrrr-ts-0.1.0.tgz: {}
 
   side-channel-list@1.0.1:
     dependencies:

@@ -1,6 +1,5 @@
 /* eslint-disable no-undef */
 import { installConsoleLogCapture } from '@/utils/debug-logs';
-import getChildProcess from '@/runtime/child-process';
 import getFs from '@/runtime/fs';
 
 const isQX = typeof $task !== 'undefined';
@@ -334,33 +333,26 @@ export class OpenAPI {
                             );
                         });
                 } else {
-                    const { execFile } = getChildProcess();
-                    execFile(
-                        'shoutrrr',
-                        [
-                            'send',
-                            '--url',
-                            push,
-                            '--message',
-                            `${title}\n${subtitle}\n${content_}`,
-                        ],
-                        (error, stdout, stderr) => {
-                            if (error) {
-                                console.log(
-                                    `[Push Service] URL: ${push}\nERROR: ${error}`,
-                                );
-                                return;
-                            }
-                            if (stderr) {
-                                console.log(
-                                    `[Push Service] URL: ${push}\nstderr: ${stderr}`,
-                                );
-                            }
+                    // Keep the ESM package out of browser artifacts; the Node bundle
+                    // replaces this evaluated import with a bundled dynamic import.
+                    eval('import("shoutrrr-ts")')
+                        .then(({ send }) =>
+                            send(
+                                push,
+                                `${title}\n${subtitle}\n${content_}`,
+                            ).then(
+                                () => console.log('[Push Service] RES: sent'),
+                                (error) =>
+                                    console.log(
+                                        `[Push Service] ERROR: ${error.message}`,
+                                    ),
+                            ),
+                        )
+                        .catch(() =>
                             console.log(
-                                `[Push Service] URL: ${push}\nstdout: ${stdout}`,
-                            );
-                        },
-                    );
+                                '[Push Service] ERROR: notification delivery failed',
+                            ),
+                        );
                 }
             }
         }

@@ -3,6 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawnSync } from 'child_process';
+import { describe, it } from 'mocha';
 
 const backendPath = path.resolve(__dirname, '../../..');
 
@@ -74,6 +75,16 @@ describe('runtime manifest bundle', function () {
 
             expect(result.status).to.equal(0);
             expect(manifest.npm).not.to.include('iconv-lite');
+            expect(manifest.npm).not.to.include('shoutrrr-ts');
+            expect(manifest.externalBinary).to.deep.equal([]);
+            const nodeBundle = fs.readFileSync(
+                path.join(fixturePath, 'dist/sub-store.bundle.js'),
+                'utf8',
+            );
+            expect(nodeBundle).to.include(
+                'service is not supported by shoutrrr-ts',
+            );
+            expect(nodeBundle).not.to.include('import("shoutrrr-ts")');
         } finally {
             fs.rmSync(root, { recursive: true, force: true });
         }
