@@ -2478,6 +2478,38 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('serializes explicit shadowsocks UDP flags as numeric URI values', function () {
+        const enabled = produceExternal('URI', {
+            type: 'ss',
+            name: 'SS UDP On',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            udp: true,
+        });
+        const disabled = produceExternal('URI', {
+            type: 'ss',
+            name: 'SS UDP Off',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            udp: false,
+        });
+
+        expect(enabled).to.equal(
+            `ss://${Base64.encode(
+                'aes-128-gcm:secret',
+            )}@ss.example.com:8388?udp=1#SS%20UDP%20On`,
+        );
+        expect(disabled).to.equal(
+            `ss://${Base64.encode(
+                'aes-128-gcm:secret',
+            )}@ss.example.com:8388?udp=0#SS%20UDP%20Off`,
+        );
+    });
+
     it('produces URI shadowsocks httpupgrade links with early data metadata', function () {
         const output = produceExternal('URI', {
             type: 'ss',
@@ -2717,8 +2749,8 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             [
-                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOnPlugin}#Clash%20Boolean%20Mux%20On`,
-                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOffPlugin}#Clash%20Boolean%20Mux%20Off`,
+                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOnPlugin}&udp=1#Clash%20Boolean%20Mux%20On`,
+                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOffPlugin}&udp=1#Clash%20Boolean%20Mux%20Off`,
             ].join('\n'),
         );
     });
@@ -2763,8 +2795,8 @@ describe('Proxy text producers', function () {
 
         expect(output).to.equal(
             [
-                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOnPlugin}#Clash%20String%20Mux%20On`,
-                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOffPlugin}#Clash%20String%20Mux%20Off`,
+                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOnPlugin}&udp=1#Clash%20String%20Mux%20On`,
+                `ss://${userInfo}@ss.example.com:443/?plugin=${muxOffPlugin}&udp=1#Clash%20String%20Mux%20Off`,
             ].join('\n'),
         );
     });

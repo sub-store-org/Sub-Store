@@ -401,7 +401,11 @@ function URI_SS() {
             }
         }
 
-        proxy.udp = !!params['udp'];
+        proxy.udp = ![false, 0, '0', 'false', 'off'].includes(
+            typeof params['udp'] === 'string'
+                ? params['udp'].toLowerCase()
+                : params['udp'],
+        );
 
         const serverAndPort = serverAndPortArray[1];
         const portIdx = serverAndPort.lastIndexOf(':');

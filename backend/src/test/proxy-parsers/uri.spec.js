@@ -92,6 +92,7 @@ describe('Proxy URI parser coverage', function () {
                 port: 8388,
                 cipher: 'aes-128-gcm',
                 password: 'secret',
+                udp: true,
                 plugin: 'obfs',
                 'plugin-opts': {
                     mode: 'http',
@@ -117,6 +118,23 @@ describe('Proxy URI parser coverage', function () {
                 cipher: 'aes-128-gcm',
                 password: 'aa>',
             });
+        });
+
+        it('disables shadowsocks UDP for explicit false query values', function () {
+            const userInfo = encodeURIComponent(
+                Base64.encode('aes-128-gcm:secret'),
+            );
+
+            expect(
+                parseOne(
+                    `ss://${userInfo}@ss.example.com:8388?udp=0#SS%20UDP%200`,
+                ).udp,
+            ).to.equal(false);
+            expect(
+                parseOne(
+                    `ss://${userInfo}@ss.example.com:8388?udp=false#SS%20UDP%20False`,
+                ).udp,
+            ).to.equal(false);
         });
 
         it('parses SIP002 plain shadowsocks userinfo with percent-encoded credentials', function () {

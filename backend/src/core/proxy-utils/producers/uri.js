@@ -893,6 +893,7 @@ export default function URI_Producer() {
                 if (proxy.tfo) {
                     query += '&tfo=1';
                 }
+                query += `&udp=${proxy.udp ? 1 : 0}`;
                 let ssTransport = '';
                 if (proxy.network) {
                     let ssType = proxy.network;
