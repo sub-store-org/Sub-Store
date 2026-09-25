@@ -75,6 +75,74 @@ describe('Node push notifications', function () {
         expect(logs.join('\n')).not.to.include('shoutrrr:');
     });
 
+    it('sends Generic GET bodies through the host HTTP client', async function () {
+        let received;
+        const host = await listen(async (request, response) => {
+            const chunks = [];
+            for await (const chunk of request) chunks.push(chunk);
+            received = {
+                method: request.method,
+                body: Buffer.concat(chunks).toString(),
+            };
+            response.end('ok');
+        });
+        process.env.SUB_STORE_PUSH_SERVICE = `generic://${host}/notify?disabletls=yes&method=GET`;
+        captureLogs();
+        OpenAPI.prototype.notify('Title', '', 'Body');
+        await waitForLog('[Push Service]');
+        expect(received).to.deep.equal({
+            method: 'GET',
+            body: 'Title\n\nBody',
+        });
+    });
+
+    it('delivers Generic methods without an HTTP convenience helper', async function () {
+        let received;
+        const host = await listen(async (request, response) => {
+            let body = '';
+            for await (const chunk of request) body += chunk;
+            received = { method: request.method, body };
+            response.end('ok');
+        });
+        process.env.SUB_STORE_PUSH_SERVICE = `generic://${host}/notify?disabletls=yes&method=PROPFIND`;
+        captureLogs();
+        OpenAPI.prototype.notify('Title', '', 'Body');
+        await waitForLog('[Push Service]');
+        expect(received).to.deep.equal({
+            method: 'PROPFIND',
+            body: 'Title\n\nBody',
+        });
+        expect(logs.join('\n')).to.include('RES: sent');
+    });
+
+    it('does not forward Generic authorization to a redirected host', async function () {
+        let forwarded;
+        const destination = http.createServer((request, response) => {
+            forwarded = request.headers.authorization;
+            response.end('ok');
+        });
+        await new Promise((resolve) =>
+            destination.listen(0, '127.0.0.1', resolve),
+        );
+        try {
+            const host = await listen((_request, response) => {
+                response.writeHead(307, {
+                    location: `http://localhost:${
+                        destination.address().port
+                    }/final`,
+                });
+                response.end();
+            });
+            process.env.SUB_STORE_PUSH_SERVICE = `generic://${host}/notify?disabletls=yes&@authorization=synthetic-secret`;
+            captureLogs();
+            OpenAPI.prototype.notify('Title', '', 'Body');
+            await waitForLog('RES: sent');
+            expect(forwarded).to.equal(undefined);
+        } finally {
+            await new Promise((resolve) => destination.close(resolve));
+        }
+    });
+
     it('does not send anything without push configuration', async function () {
         delete process.env.SUB_STORE_PUSH_SERVICE;
         captureLogs();
