@@ -337,10 +337,9 @@ export class OpenAPI {
                     // replaces this evaluated import with a bundled dynamic import.
                     eval('import("shoutrrr-ts")')
                         .then(({ send }) =>
-                            send(
-                                push,
-                                `${title}\n${subtitle}\n${content_}`,
-                            ).then(
+                            send(push, `${title}\n${subtitle}\n${content_}`, {
+                                transport: createNotificationTransport(HTTP()),
+                            }).then(
                                 () => console.log('[Push Service] RES: sent'),
                                 (error) =>
                                     console.log(
@@ -406,6 +405,42 @@ export function ENV() {
         isEgern,
         isLanceX,
         isGUIforCores,
+    };
+}
+
+// Keep notification requests on the same proxy/timeout policy as other Node HTTP calls.
+// HTTP() follows redirects with Undici's redirect interceptor, which strips
+// authorization/cookie headers on cross-origin redirects. Its timeout bounds
+// the observed outcome but does not prove the underlying request was aborted.
+function createNotificationTransport(client) {
+    return async (url, init = {}) => {
+        const body = init.body;
+        if (
+            body != null &&
+            typeof body !== 'string' &&
+            !(body instanceof Uint8Array) &&
+            !(body instanceof ArrayBuffer)
+        ) {
+            throw new Error('unsupported notification request body');
+        }
+        const headers = Object.fromEntries(new Headers(init.headers).entries());
+        const method = init.method?.toLowerCase() || 'get';
+        if (typeof client[method] !== 'function') {
+            throw new Error('unsupported notification request method');
+        }
+        const response = await client[method]({
+            url,
+            headers,
+            body: body instanceof ArrayBuffer ? new Uint8Array(body) : body,
+            encoding: null,
+            timeout: 8000,
+        });
+        return new Response(
+            [204, 205, 304].includes(response.statusCode)
+                ? null
+                : response.body,
+            { status: response.statusCode },
+        );
     };
 }
 

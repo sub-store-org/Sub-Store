@@ -45,7 +45,7 @@
     "ms": "^2.1.3",
     "nanoid": "^3.3.3",
     "semver": "^7.6.3",
-    "shoutrrr-ts": "https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.1.0/shoutrrr-ts-0.1.0.tgz",
+    "shoutrrr-ts": "https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.2.0/shoutrrr-ts-0.2.0.tgz",
     "undici": "^8.8.0",
     "yaml": "^2.9.0"
   },
