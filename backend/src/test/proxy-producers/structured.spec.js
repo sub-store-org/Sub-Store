@@ -4029,6 +4029,60 @@ describe('Proxy structured producers', function () {
         expect(errors).to.have.length(0);
     });
 
+    it('distinguishes sing-box SSH private key content from paths', function () {
+        const privateKey =
+            '-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key-data\n-----END OPENSSH PRIVATE KEY-----';
+        const encryptedKey =
+            '-----BEGIN ENCRYPTED PRIVATE KEY-----\ntest-key-data\n-----END ENCRYPTED PRIVATE KEY-----';
+        for (const [options, expected] of [
+            [{ 'private-key': privateKey }, { private_key: privateKey }],
+            [{ 'private-key': encryptedKey }, { private_key: encryptedKey }],
+            [{ 'private-key': './id_rsa' }, { private_key_path: './id_rsa' }],
+            [
+                { 'private-key': '/keys/id_ed25519' },
+                { private_key_path: '/keys/id_ed25519' },
+            ],
+            [{ privateKey }, { private_key: privateKey }],
+            [{ privateKey: './id_rsa' }, { private_key_path: './id_rsa' }],
+            [
+                { 'private-key': privateKey, privateKey: './id_rsa' },
+                { private_key: privateKey },
+            ],
+            [
+                { 'private-key': './id_rsa', privateKey },
+                { private_key_path: './id_rsa' },
+            ],
+            [
+                { 'private-key': '', privateKey: './id_rsa' },
+                { private_key_path: './id_rsa' },
+            ],
+            [{ 'private-key': '' }, {}],
+            [{}, {}],
+        ]) {
+            const output = loadProducedJson('sing-box', {
+                type: 'ssh',
+                name: 'SSH',
+                server: 'ssh.example.com',
+                port: 22,
+                username: 'user',
+                'private-key-passphrase': 'test-passphrase',
+                ...options,
+            });
+
+            expect(output.outbounds).to.deep.equal([
+                {
+                    type: 'ssh',
+                    tag: 'SSH',
+                    server: 'ssh.example.com',
+                    server_port: 22,
+                    user: 'user',
+                    private_key_passphrase: 'test-passphrase',
+                    ...expected,
+                },
+            ]);
+        }
+    });
+
     it('preserves supported HTTP root headers for sing-box and JSON outputs', function () {
         const buildProxy = (name) => ({
             type: 'http',
