@@ -431,9 +431,15 @@ const sshParser = (proxy = {}) => {
     if (proxy.password) parsedProxy.password = proxy.password;
     // https://wiki.metacubex.one/config/proxies/ssh
     // https://sing-box.sagernet.org/zh/configuration/outbound/ssh
-    if (proxy['privateKey']) parsedProxy.private_key_path = proxy['privateKey'];
-    if (proxy['private-key'])
-        parsedProxy.private_key_path = proxy['private-key'];
+    const privateKey = proxy['private-key'] || proxy.privateKey;
+    if (privateKey) {
+        // 不严谨 但是跟 mihomo 判断逻辑一致
+        parsedProxy[
+            privateKey.includes('PRIVATE KEY')
+                ? 'private_key'
+                : 'private_key_path'
+        ] = privateKey;
+    }
     if (proxy['private-key-passphrase'])
         parsedProxy.private_key_passphrase = proxy['private-key-passphrase'];
     if (proxy['server-fingerprint']) {
