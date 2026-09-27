@@ -4,7 +4,13 @@ import {
     ResourceNotFoundError,
     RequestInvalidError,
 } from './errors';
-import { deleteByName, findByName, updateByName } from '@/utils/database';
+import {
+    deleteByName,
+    findByName,
+    insertByPosition,
+    updateByName,
+} from '@/utils/database';
+import { getCreateItemPosition } from '@/utils/create-item-position';
 import {
     SUBS_KEY,
     COLLECTIONS_KEY,
@@ -16,9 +22,12 @@ import {
     parseFlowHeaders,
     getRmainingDays,
 } from '@/utils/flow';
+import { archiveSubscription } from '@/utils/archive';
 import { success, failed } from './response';
 import $ from '@/core/app';
 import { formatDateTime } from '@/utils';
+import { maskAgeSecretInUrl, normalizeAgePublicKeyConfig } from '@/utils/age';
+import { normalizeEditorLanguageConfig } from '@/utils/editor-language';
 
 if (!$.read(SUBS_KEY)) $.write({}, SUBS_KEY);
 
@@ -41,7 +50,7 @@ async function getFlowInfo(req, res) {
     let { name } = req.params;
     let { url } = req.query;
     if (url) {
-        $.info(`指定远程订阅 URL: ${url}`);
+        $.info(`指定远程订阅 URL: ${maskAgeSecretInUrl(url)}`);
     }
     const allSubs = $.read(SUBS_KEY);
     const sub = findByName(allSubs, name);
@@ -53,6 +62,18 @@ async function getFlowInfo(req, res) {
                 `Subscription ${name} does not exist!`,
             ),
             404,
+        );
+        return;
+    }
+    if (req.query.noFlow || sub.noFlow) {
+        failed(
+            res,
+            new RequestInvalidError(
+                'NO_FLOW_INFO',
+                'N/A',
+                `Subscription ${name}: noFlow`,
+            ),
+            400,
         );
         return;
     }
@@ -155,6 +176,7 @@ async function getFlowInfo(req, res) {
             undefined,
             sub.proxy,
             $arguments.flowUrl,
+            $arguments.flowHeaders,
         );
         if (!flowHeaders && !sub.subUserinfo) {
             failed(
@@ -229,33 +251,12 @@ async function getFlowInfo(req, res) {
 }
 
 function createSubscription(req, res) {
-    const sub = req.body;
-    delete sub.subscriptions;
-    $.info(`正在创建订阅： ${sub.name}`);
-    if (/\//.test(sub.name)) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'INVALID_NAME',
-                `Subscription ${sub.name} is invalid`,
-            ),
-        );
-        return;
+    try {
+        const sub = createSubscriptionItem(req.body);
+        success(res, sub, 201);
+    } catch (error) {
+        failed(res, error);
     }
-    const allSubs = $.read(SUBS_KEY);
-    if (findByName(allSubs, sub.name)) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'DUPLICATE_KEY',
-                `Subscription ${sub.name} already exists.`,
-            ),
-        );
-        return;
-    }
-    allSubs.push(sub);
-    $.write(allSubs, SUBS_KEY);
-    success(res, sub, 201);
 }
 
 function getSubscription(req, res) {
@@ -267,6 +268,7 @@ function getSubscription(req, res) {
     if (sub) {
         if (raw) {
             res.set('content-type', 'application/json')
+                .set('access-control-expose-headers', 'content-disposition')
                 .set(
                     'content-disposition',
                     `attachment; filename="${encodeURIComponent(
@@ -303,6 +305,8 @@ function updateSubscription(req, res) {
             ...oldSub,
             ...sub,
         };
+        normalizeAgePublicKeyConfig(newSub);
+        normalizeEditorLanguageConfig(newSub);
         $.info(`正在更新订阅： ${name}`);
         // allow users to update the subscription name
         if (name !== sub.name) {
@@ -356,21 +360,17 @@ function updateSubscription(req, res) {
 }
 
 function deleteSubscription(req, res) {
-    let { name } = req.params;
-    $.info(`删除订阅：${name}...`);
-    // delete from subscriptions
-    let allSubs = $.read(SUBS_KEY);
-    deleteByName(allSubs, name);
-    $.write(allSubs, SUBS_KEY);
-    // delete from collections
-    const allCols = $.read(COLLECTIONS_KEY);
-    for (const collection of allCols) {
-        collection.subscriptions = collection.subscriptions.filter(
-            (s) => s !== name,
-        );
+    try {
+        const { name } = req.params;
+        $.info(`删除订阅：${name}...`);
+        if (shouldArchiveDeletion(req.query.mode)) {
+            archiveSubscription(name);
+        }
+        deleteSubscriptionItem(name);
+        success(res);
+    } catch (error) {
+        failed(res, error);
     }
-    $.write(allCols, COLLECTIONS_KEY);
-    success(res);
 }
 
 function getAllSubscriptions(req, res) {
@@ -379,7 +379,78 @@ function getAllSubscriptions(req, res) {
 }
 
 function replaceSubscriptions(req, res) {
-    const allSubs = req.body;
-    $.write(allSubs, SUBS_KEY);
-    success(res);
+    try {
+        const allSubs = req.body;
+        allSubs.forEach((sub) => {
+            normalizeAgePublicKeyConfig(sub);
+            normalizeEditorLanguageConfig(sub);
+        });
+        $.write(allSubs, SUBS_KEY);
+        success(res);
+    } catch (error) {
+        failed(res, error);
+    }
 }
+
+function createSubscriptionItem(rawSub) {
+    const sub = {
+        ...rawSub,
+    };
+    normalizeAgePublicKeyConfig(sub);
+    normalizeEditorLanguageConfig(sub);
+    delete sub.subscriptions;
+    $.info(`正在创建订阅： ${sub.name}`);
+    if (/\//.test(sub.name)) {
+        throw new RequestInvalidError(
+            'INVALID_NAME',
+            `Subscription ${sub.name} is invalid`,
+        );
+    }
+    const allSubs = $.read(SUBS_KEY);
+    if (findByName(allSubs, sub.name)) {
+        throw new RequestInvalidError(
+            'DUPLICATE_KEY',
+            `Subscription ${sub.name} already exists.`,
+        );
+    }
+    insertByPosition(allSubs, sub, getCreateItemPosition());
+    $.write(allSubs, SUBS_KEY);
+    return sub;
+}
+
+function deleteSubscriptionItem(name) {
+    const allSubs = $.read(SUBS_KEY);
+    const sub = findByName(allSubs, name);
+    if (!sub) {
+        throw new ResourceNotFoundError(
+            'RESOURCE_NOT_FOUND',
+            `Subscription ${name} does not exist!`,
+        );
+    }
+    deleteByName(allSubs, name);
+    $.write(allSubs, SUBS_KEY);
+
+    const allCols = $.read(COLLECTIONS_KEY) || [];
+    for (const collection of allCols) {
+        collection.subscriptions = collection.subscriptions.filter(
+            (subscriptionName) => subscriptionName !== name,
+        );
+    }
+    $.write(allCols, COLLECTIONS_KEY);
+    return sub;
+}
+
+function shouldArchiveDeletion(mode) {
+    if (mode == null || mode === '' || mode === 'permanent') {
+        return false;
+    }
+    if (mode === 'archive') {
+        return true;
+    }
+    throw new RequestInvalidError(
+        'INVALID_DELETE_MODE',
+        `Unsupported delete mode: ${mode}`,
+    );
+}
+
+export { createSubscriptionItem, deleteSubscriptionItem };

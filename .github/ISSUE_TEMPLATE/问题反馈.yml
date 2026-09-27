@@ -1,0 +1,104 @@
+name: 问题反馈
+description: 先读完排查方法再反馈
+title: "[BUG] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **先读我**
+
+        [排查方法](https://telegram.me/zhetengsha/218)
+  - type: checkboxes
+    id: read-troubleshooting
+    attributes:
+      label: 阅读确认
+      options:
+        - label: 我已阅读上方排查方法
+          required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: 运行环境
+      description: 请选择主要出现问题的运行环境。⚠️ 非官方支持的版本, 请在对应版本的作者那里反馈. 比如 Cloudflare Workers 版, 请勿在此反馈
+      multiple: false
+      options:
+        - Node.js
+        - Android
+        - Docker
+        - 自部署
+        - Surge
+        - Loon
+        - Quantumult X
+        - Stash
+        - Shadowrocket
+        - 其他
+    validations:
+      required: true
+  - type: dropdown
+    id: affected-areas
+    attributes:
+      label: 影响范围
+      description: 可多选，请选择和问题相关的部分。
+      multiple: true
+      options:
+        - 后端
+        - 前端
+        - 订阅转换
+        - 节点/策略组
+        - 同步/缓存
+        - 配置/环境变量
+        - 代理 App
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: runtime-version
+    attributes:
+      label: 上述运行环境版本/App 版本
+      description: 例如 Node.js 版本、Android 版本、Docker 镜像版本或代理 App 版本。
+    validations:
+      required: true
+  - type: input
+    id: backend-version
+    attributes:
+      label: 后端版本
+      description: 填写当前使用的后端版本。
+    validations:
+      required: true
+  - type: input
+    id: frontend-version
+    attributes:
+      label: 前端版本
+      description: 填写当前使用的前端版本。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现方式
+      description: 请按步骤说明如何复现。
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 期望表现
+      description: 描述你认为应该发生什么。
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: 实际表现
+      description: 描述实际发生了什么。
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他信息
+      description: 例如截图、日志、配置片段或相关链接。

@@ -1,14 +1,15 @@
 import resourceCache from '@/utils/resource-cache';
 import scriptResourceCache from '@/utils/script-resource-cache';
-import { isIPv4, isIPv6, ipAddress } from '@/utils';
+import { isIPv4, isIPv6, ipAddress, isPlainObject } from '@/utils';
 import { FULL } from '@/utils/logical';
 import { getFlag, removeFlag } from '@/utils/geo';
-import { doh } from '@/utils/dns';
+import { resolveDns } from '@/utils/dns';
 import lodash from 'lodash';
 import $ from '@/core/app';
 import { hex_md5 } from '@/vendor/md5';
 import { ProxyUtils } from '@/core/proxy-utils';
 import { produceArtifact } from '@/restful/sync';
+import { isMihomoConfigFile } from '@/utils/file-type';
 import { SETTINGS_KEY } from '@/constants';
 import YAML from '@/utils/yaml';
 
@@ -23,9 +24,12 @@ import {
     normalizeFlowHeader,
 } from '@/utils/flow';
 
-function isObject(item) {
-    return item && typeof item === 'object' && !Array.isArray(item);
+export const RESPONSE_TRANSFORMER = 'Response Transformer';
+
+export function isResponseTransformerType(type) {
+    return type === RESPONSE_TRANSFORMER;
 }
+
 function trimWrap(str) {
     if (str.startsWith('<') && str.endsWith('>')) {
         return str.slice(1, -1);
@@ -35,7 +39,10 @@ function trimWrap(str) {
 function deepMerge(target, _other) {
     const other = typeof _other === 'string' ? JSON.parse(_other) : _other;
     for (const key in other) {
-        if (isObject(other[key])) {
+        // Only recurse into JSON-like patch objects. YAML can surface non-plain
+        // objects (for example timestamps), and those should be assigned as
+        // values instead of being treated as nested config maps.
+        if (isPlainObject(other[key])) {
             if (key.endsWith('!')) {
                 const k = trimWrap(key.slice(0, -1));
                 target[k] = other[key];
@@ -148,6 +155,20 @@ function QuickSettingOperator(args) {
                 if (proxy.type === 'vmess') {
                     proxy.aead = get(args['vmess aead'], proxy.aead);
                 }
+                if (['snell', 'anytls', 'trusttunnel'].includes(proxy.type)) {
+                    proxy.reuse = get(args.reuse, proxy.reuse);
+                }
+                if (['tuic', 'hysteria2'].includes(proxy.type)) {
+                    proxy.ecn = get(args.ecn, proxy.ecn);
+                }
+                proxy['block-quic'] = getBlockQuic(
+                    args['block-quic'],
+                    proxy['block-quic'],
+                );
+                proxy['ip-version'] = getValue(
+                    args['ip-version'],
+                    proxy['ip-version'],
+                );
                 return proxy;
             });
         },
@@ -161,6 +182,29 @@ function QuickSettingOperator(args) {
                 return false;
             default:
                 return defaultValue;
+        }
+    }
+
+    function getBlockQuic(value, defaultValue) {
+        switch (value) {
+            case 'auto':
+            case 'on':
+            case 'off':
+                return value;
+            default:
+                return defaultValue;
+        }
+    }
+
+    function getValue(value, defaultValue) {
+        switch (value) {
+            case undefined:
+            case null:
+            case '':
+            case 'DEFAULT':
+                return defaultValue;
+            default:
+                return value;
         }
     }
 }
@@ -391,7 +435,7 @@ function ScriptOperator(
         name: 'Script Operator',
         func: async (proxies) => {
             let output = proxies;
-            if (output?.$file?.type === 'mihomoProfile') {
+            if (isMihomoConfigFile(output?.$file)) {
                 try {
                     let patch = YAML.safeLoad(script);
                     let config;
@@ -406,25 +450,7 @@ function ScriptOperator(
                     if (typeof patch !== 'object')
                         throw new Error('patch is not an object');
                     output.$content = ProxyUtils.yaml.safeDump(
-                        deepMerge(
-                            config ||
-                                (output?.$file?.sourceType === 'none'
-                                    ? {}
-                                    : {
-                                          proxies: await produceArtifact({
-                                              type:
-                                                  output?.$file?.sourceType ||
-                                                  'collection',
-                                              name: output?.$file?.sourceName,
-                                              platform: 'mihomo',
-                                              produceType: 'internal',
-                                              produceOpts: {
-                                                  'delete-underscore-fields': true,
-                                              },
-                                          }),
-                                      }),
-                            patch,
-                        ),
+                        deepMerge(config || {}, patch),
                     );
                     return output;
                 } catch (e) {
@@ -450,7 +476,7 @@ function ScriptOperator(
                     `async function operator(input = [], targetPlatform, context) {
                         if (input && (input.$files || input.$content)) {
                             let { $content, $files, $options, $file } = input
-                            if($file.type === 'mihomoProfile') {
+                            if (['mihomoConfig', 'mihomoProfile'].includes($file?.type)) {
                                 ${script}
                                 if(typeof main === 'function') {
                                     let config;
@@ -461,17 +487,7 @@ function ScriptOperator(
                                             console.log(e.message ?? e);
                                         }
                                     }
-                                    $content = ProxyUtils.yaml.safeDump(await main(config || ($file.sourceType === 'none' ? {} : {
-                                        proxies: await produceArtifact({
-                                            type: $file.sourceType || 'collection',
-                                            name: $file.sourceName,
-                                            platform: 'mihomo',
-                                            produceType: 'internal',
-                                            produceOpts: {
-                                                'delete-underscore-fields': true
-                                            }
-                                        }),
-                                    })))
+                                    $content = ProxyUtils.yaml.safeDump(await main(config || {}))
                                 }
                             } else {
                                 ${script}
@@ -494,6 +510,70 @@ function ScriptOperator(
             })();
             return output;
         },
+    };
+}
+
+const ADD_PROXIES_FROM_SUBSCRIPTION_OPERATOR =
+    'Add Proxies From Subscription Operator';
+
+function normalizeMihomoConfig(content) {
+    if (!content) return {};
+
+    const config = YAML.safeLoad(content);
+    return isPlainObject(config) ? config : {};
+}
+
+function getMihomoProfileProxies(config) {
+    return Array.isArray(config?.proxies) ? config.proxies : [];
+}
+
+function AddProxiesFromSubscriptionOperator(
+    {
+        sourceType = 'subscription',
+        sourceName,
+        includeUnsupportedProxy,
+        position = 'replace',
+    } = {},
+    executionContext = {},
+) {
+    const apply = async (input) => {
+        if (!isMihomoConfigFile(input?.$file)) return input;
+
+        const config = normalizeMihomoConfig(input.$content);
+        const currentProxies = getMihomoProfileProxies(config);
+        const proxies = await produceArtifact({
+            type: sourceType,
+            name: sourceName,
+            platform: 'mihomo',
+            produceType: 'internal',
+            produceOpts: {
+                'delete-underscore-fields': true,
+                'include-unsupported-proxy': includeUnsupportedProxy,
+            },
+            noFlow: executionContext.noFlow,
+        });
+
+        switch (position) {
+            case 'front':
+                config.proxies = [...proxies, ...currentProxies];
+                break;
+            case 'back':
+                config.proxies = [...currentProxies, ...proxies];
+                break;
+            case 'replace':
+            default:
+                config.proxies = proxies;
+                break;
+        }
+
+        input.$content = ProxyUtils.yaml.safeDump(config);
+        return input;
+    };
+
+    return {
+        name: ADD_PROXIES_FROM_SUBSCRIPTION_OPERATOR,
+        func: apply,
+        nodeFunc: apply,
     };
 }
 
@@ -524,40 +604,354 @@ function parseIP4P(IP4P) {
     return { server, port };
 }
 
+const DEFAULT_RESOLVE_DOMAIN_CONCURRENCY = 10;
+const DEFAULT_RESOLVE_DOMAIN_CUSTOM_DNS_CONCURRENCY = 2;
+const RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD = 20;
+
+function normalizeResolveDomainConcurrency(concurrency) {
+    if (
+        typeof concurrency === 'undefined' ||
+        concurrency === null ||
+        (typeof concurrency === 'string' && concurrency.trim() === '')
+    ) {
+        return DEFAULT_RESOLVE_DOMAIN_CONCURRENCY;
+    }
+
+    const parsed = Number(concurrency);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error('域名解析并发数应为大于 0 的整数');
+    }
+
+    return parsed;
+}
+
+function normalizeResolveDomainCustomDnsConcurrency(concurrency) {
+    if (
+        typeof concurrency === 'undefined' ||
+        concurrency === null ||
+        (typeof concurrency === 'string' && concurrency.trim() === '')
+    ) {
+        return DEFAULT_RESOLVE_DOMAIN_CUSTOM_DNS_CONCURRENCY;
+    }
+
+    const parsed = Number(concurrency);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error('多 DNS 并发数应为大于 0 的整数');
+    }
+
+    return parsed;
+}
+
+function normalizeResolveDomainTimeout(timeout, defaultTimeout) {
+    const hasExplicitTimeout = !(
+        typeof timeout === 'undefined' ||
+        timeout === null ||
+        (typeof timeout === 'string' && timeout.trim() === '')
+    );
+
+    if (hasExplicitTimeout) {
+        const parsed = Number(timeout);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+            throw new Error('DNS 超时应为大于 0 的整数');
+        }
+        return parsed;
+    }
+
+    if (
+        typeof defaultTimeout === 'undefined' ||
+        defaultTimeout === null ||
+        (typeof defaultTimeout === 'string' &&
+            defaultTimeout.trim() === '')
+    ) {
+        return 8000;
+    }
+
+    const parsedDefaultTimeout = Number(defaultTimeout);
+    if (!isFinite(parsedDefaultTimeout) || parsedDefaultTimeout <= 0) {
+        return 8000;
+    }
+
+    return parsedDefaultTimeout;
+}
+
+function normalizeResolveDomainCacheTtl(cacheTtl) {
+    if (
+        typeof cacheTtl === 'undefined' ||
+        cacheTtl === null ||
+        (typeof cacheTtl === 'string' && cacheTtl.trim() === '')
+    ) {
+        return undefined;
+    }
+
+    const parsed = Number(cacheTtl);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error('域名解析缓存时长应为大于 0 的整数');
+    }
+
+    return parsed * 1000;
+}
+
+function parseCustomDnsUrls(url) {
+    const urls = `${url || ''}`
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter((item) => item);
+    if (urls.length === 0) throw new Error('自定义 DNS 不能为空');
+    return urls;
+}
+
+function normalizeCustomDnsUrlList(url) {
+    return parseCustomDnsUrls(url).join('\n');
+}
+
+async function resolveDomainsWithConcurrency(
+    domains,
+    concurrency,
+    resolveDomain,
+) {
+    let nextIndex = 0;
+    const workerCount = Math.min(concurrency, domains.length);
+    const workers = Array.from({ length: workerCount }, async () => {
+        while (nextIndex < domains.length) {
+            const domain = domains[nextIndex];
+            nextIndex += 1;
+            await resolveDomain(domain);
+        }
+    });
+
+    await Promise.all(workers);
+}
+
+async function resolveWithCustomDnsConcurrency(urls, concurrency, resolveUrl) {
+    return new Promise((resolve, reject) => {
+        let nextIndex = 0;
+        let activeCount = 0;
+        let finishedCount = 0;
+        let settled = false;
+        const errors = [];
+        const workerCount = Math.min(concurrency, urls.length);
+
+        function maybeReject() {
+            if (!settled && finishedCount === urls.length) {
+                reject(
+                    new Error(
+                        errors.length > 0 ? errors.join('; ') : 'No answers',
+                    ),
+                );
+            }
+        }
+
+        function startNext() {
+            if (settled) return;
+            while (activeCount < workerCount && nextIndex < urls.length) {
+                const resolverUrl = urls[nextIndex];
+                nextIndex += 1;
+                activeCount += 1;
+                Promise.resolve()
+                    .then(() => resolveUrl(resolverUrl))
+                    .then((result) => {
+                        activeCount -= 1;
+                        finishedCount += 1;
+                        if (settled) return;
+                        settled = true;
+                        resolve({ result, resolverUrl });
+                    })
+                    .catch((err) => {
+                        activeCount -= 1;
+                        finishedCount += 1;
+                        errors.push(`${resolverUrl}: ${err}`);
+                        startNext();
+                        maybeReject();
+                    });
+            }
+            maybeReject();
+        }
+
+        startNext();
+    });
+}
+
+function getDomainResolverCacheId(
+    provider,
+    domain,
+    type,
+    url,
+    tlsSkipCertVerify,
+) {
+    switch (provider) {
+        case 'Custom':
+            return hex_md5(
+                `CUSTOM:${
+                    tlsSkipCertVerify ? 'INSECURE:' : ''
+                }${url}:${domain}:${type}`,
+            );
+        case 'Google':
+            return hex_md5(`GOOGLE:${domain}:${type}`);
+        case 'IP-API':
+            return hex_md5(`IP-API:${domain}`);
+        case 'Cloudflare':
+            return hex_md5(`CLOUDFLARE:${domain}:${type}`);
+        case 'Ali':
+            return hex_md5(`ALI:${domain}:${type}`);
+        case 'Tencent':
+            return hex_md5(`TENCENT:${domain}:${type}`);
+    }
+}
+
+function getCachedDomainResolverResult(
+    provider,
+    domain,
+    type,
+    cache,
+    url,
+    tlsSkipCertVerify,
+) {
+    if (cache === 'disabled') return null;
+    const id = getDomainResolverCacheId(
+        provider,
+        domain,
+        type,
+        url,
+        tlsSkipCertVerify,
+    );
+    const cached = id ? resourceCache.get(id) : null;
+    return provider === 'Custom'
+        ? unpackCustomDnsCachedResult(cached)
+        : cached;
+}
+
+function formatResolverUrlLog(provider, resolverUrl) {
+    if (provider !== 'Custom' || !resolverUrl) return '';
+    const urls = `${resolverUrl}`
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter((item) => item);
+    if (urls.length <= 1) return ` via ${resolverUrl}`;
+    return ` via ${urls.length} custom DNS`;
+}
+
+function formatResolverUrlInfo(provider, resolverUrl) {
+    if (provider !== 'Custom' || !resolverUrl) return resolverUrl || '';
+    const urls = `${resolverUrl}`
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter((item) => item);
+    if (urls.length <= 1) return resolverUrl;
+    return `${urls.length} custom DNS`;
+}
+
+function annotateCustomDnsResult(result, resolverUrl) {
+    if (result && typeof result === 'object') {
+        Object.defineProperty(result, '_resolverUrl', {
+            value: resolverUrl,
+            enumerable: false,
+            configurable: true,
+        });
+    }
+    return result;
+}
+
+function packCustomDnsCachedResult(result, resolverUrl) {
+    return {
+        result,
+        resolverUrl,
+    };
+}
+
+function unpackCustomDnsCachedResult(cached) {
+    if (
+        cached &&
+        typeof cached === 'object' &&
+        !Array.isArray(cached) &&
+        Array.isArray(cached.result)
+    ) {
+        return annotateCustomDnsResult(cached.result, cached.resolverUrl);
+    }
+    return cached;
+}
+
+function getCustomDnsResultResolverUrl(result) {
+    return result && typeof result === 'object' ? result._resolverUrl : null;
+}
+
 const DOMAIN_RESOLVERS = {
-    Custom: async function (domain, type, noCache, timeout, edns, url) {
-        const id = hex_md5(`CUSTOM:${url}:${domain}:${type}`);
-        const cached = resourceCache.get(id);
+    Custom: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
+        const urls = parseCustomDnsUrls(url);
+        const normalizedUrl = urls.join('\n');
+        const customDnsConcurrency =
+            normalizeResolveDomainCustomDnsConcurrency(dnsConcurrency);
+        const id = hex_md5(
+            `CUSTOM:${
+                tlsSkipCertVerify ? 'INSECURE:' : ''
+            }${normalizedUrl}:${domain}:${type}`,
+        );
+        const cached = unpackCustomDnsCachedResult(resourceCache.get(id));
         if (!noCache && cached) return cached;
         const answerType = type === 'IPv6' ? 'AAAA' : 'A';
-        const res = await doh({
-            url,
-            domain,
-            type: answerType,
-            timeout,
-            edns,
-        });
+        const resolveUrl = async (resolverUrl) => {
+            const res = await resolveDns({
+                url: resolverUrl,
+                domain,
+                type: answerType,
+                timeout,
+                edns,
+                skipCertVerify: tlsSkipCertVerify,
+            });
 
-        const { answers } = res;
-        if (!Array.isArray(answers) || answers.length === 0) {
-            throw new Error('No answers');
-        }
-        const result = answers
-            .filter((i) => i?.type === answerType)
-            .map((i) => i?.data)
-            .filter((i) => i);
-        if (result.length === 0) {
-            throw new Error('No answers');
-        }
-        resourceCache.set(id, result);
-        return result;
+            const { answers } = res;
+            if (!Array.isArray(answers) || answers.length === 0) {
+                throw new Error('No answers');
+            }
+            const result = answers
+                .filter((i) => i?.type === answerType)
+                .map((i) => i?.data)
+                .filter((i) => i);
+            if (result.length === 0) {
+                throw new Error('No answers');
+            }
+            return result;
+        };
+        const { result, resolverUrl } =
+            urls.length === 1
+                ? { result: await resolveUrl(urls[0]), resolverUrl: urls[0] }
+                : await resolveWithCustomDnsConcurrency(
+                      urls,
+                      customDnsConcurrency,
+                      resolveUrl,
+                  );
+        resourceCache.set(
+            id,
+            packCustomDnsCachedResult(result, resolverUrl),
+            cacheTtl,
+        );
+        return annotateCustomDnsResult(result, resolverUrl);
     },
-    Google: async function (domain, type, noCache, timeout, edns) {
+    Google: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         const id = hex_md5(`GOOGLE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const answerType = type === 'IPv6' ? 'AAAA' : 'A';
-        const res = await doh({
+        const res = await resolveDns({
             url: 'https://8.8.4.4/dns-query',
             domain,
             type: answerType,
@@ -576,10 +970,20 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
-    'IP-API': async function (domain, type, noCache, timeout) {
+    'IP-API': async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         if (['IPv6'].includes(type)) {
             throw new Error(`域名解析服务提供方 IP-API 不支持 ${type}`);
         }
@@ -603,15 +1007,25 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
-    Cloudflare: async function (domain, type, noCache, timeout, edns) {
+    Cloudflare: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         const id = hex_md5(`CLOUDFLARE:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
         const answerType = type === 'IPv6' ? 'AAAA' : 'A';
-        const res = await doh({
+        const res = await resolveDns({
             url: 'https://1.0.0.1/dns-query',
             domain,
             type: answerType,
@@ -630,10 +1044,20 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
-    Ali: async function (domain, type, noCache, timeout, edns) {
+    Ali: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         const id = hex_md5(`ALI:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -656,10 +1080,20 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
-    Tencent: async function (domain, type, noCache, timeout, edns) {
+    Tencent: async function (
+        domain,
+        type,
+        noCache,
+        timeout,
+        edns,
+        url,
+        tlsSkipCertVerify,
+        dnsConcurrency,
+        cacheTtl,
+    ) {
         const id = hex_md5(`TENCENT:${domain}:${type}`);
         const cached = resourceCache.get(id);
         if (!noCache && cached) return cached;
@@ -680,7 +1114,7 @@ const DOMAIN_RESOLVERS = {
         if (result.length === 0) {
             throw new Error('No answers');
         }
-        resourceCache.set(id, result);
+        resourceCache.set(id, result, cacheTtl);
         return result;
     },
 };
@@ -691,14 +1125,22 @@ function ResolveDomainOperator({
     filter,
     cache,
     url,
+    tlsSkipCertVerify,
     timeout,
+    cacheTtl,
     edns: _edns,
+    concurrency: _concurrency,
+    dnsConcurrency: _dnsConcurrency,
 }) {
     if (['IPv6', 'IP4P'].includes(_type) && ['IP-API'].includes(provider)) {
         throw new Error(`域名解析服务提供方 ${provider} 不支持 ${_type}`);
     }
-    const { defaultTimeout } = $.read(SETTINGS_KEY);
-    const requestTimeout = timeout || defaultTimeout || 8000;
+    const { defaultTimeout } = $.read(SETTINGS_KEY) || {};
+    const requestTimeout = normalizeResolveDomainTimeout(
+        timeout,
+        defaultTimeout,
+    );
+    const domainResolverCacheTtl = normalizeResolveDomainCacheTtl(cacheTtl);
     let type = ['IPv6', 'IP4P'].includes(_type) ? 'IPv6' : 'IPv4';
 
     const resolver = DOMAIN_RESOLVERS[provider];
@@ -707,8 +1149,35 @@ function ResolveDomainOperator({
     }
     let edns = _edns || '223.6.6.6';
     if (!isIP(edns)) throw new Error(`域名解析 EDNS 应为 IP`);
+    const concurrency = normalizeResolveDomainConcurrency(_concurrency);
+    const customDnsUrl =
+        provider === 'Custom' ? normalizeCustomDnsUrlList(url) : url;
+    const customDnsCount =
+        provider === 'Custom' ? parseCustomDnsUrls(customDnsUrl).length : 1;
+    const customDnsConcurrency =
+        provider === 'Custom'
+            ? normalizeResolveDomainCustomDnsConcurrency(_dnsConcurrency)
+            : 1;
+    const totalConcurrency =
+        concurrency * Math.min(customDnsConcurrency, customDnsCount);
+    const customDnsTlsSkipCertVerify =
+        provider === 'Custom' &&
+        (tlsSkipCertVerify === true || tlsSkipCertVerify === 'enabled');
+    if (totalConcurrency > RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD) {
+        $.warn(
+            `域名解析总并发数上限 ${totalConcurrency} 超过建议值 ${RESOLVE_DOMAIN_CONCURRENCY_WARN_THRESHOLD}, 可能导致代理 App TCP 连接数激增`,
+        );
+    }
     $.info(
-        `Domain Resolver: [${_type}] ${provider} ${edns || ''} ${url || ''}`,
+        `Domain Resolver: [${_type}] ${provider} ${edns || ''} ${
+            formatResolverUrlInfo(provider, customDnsUrl)
+        }${
+            customDnsTlsSkipCertVerify ? ' tlsSkipCertVerify=enabled' : ''
+        } concurrency=${concurrency}${
+            provider === 'Custom'
+                ? ` dnsConcurrency=${customDnsConcurrency}`
+                : ''
+        }`,
     );
     return {
         name: 'Resolve Domain Operator',
@@ -719,53 +1188,103 @@ function ResolveDomainOperator({
                 }
             });
             const results = {};
-            const limit = 15; // more than 20 concurrency may result in surge TCP connection shortage.
-            const totalDomain = [
-                ...new Set(
+            const domains = [
+                ...new Map(
                     proxies
                         .filter((p) => !isIP(p.server) && !p['_no-resolve'])
-                        .map((c) => c.server),
-                ),
+                        .map((p) => {
+                            const id = getDomainResolverCacheId(
+                                provider,
+                                p.server,
+                                type,
+                                customDnsUrl,
+                                customDnsTlsSkipCertVerify,
+                            );
+                            return [id, { id, domain: p.server }];
+                        }),
+                ).values(),
             ];
-            const totalBatch = Math.ceil(totalDomain.length / limit);
-            for (let i = 0; i < totalBatch; i++) {
-                const currentBatch = [];
-                for (let domain of totalDomain.splice(0, limit)) {
-                    currentBatch.push(
-                        resolver(
+            const domainsToResolve = [];
+            domains.forEach(({ id, domain }) => {
+                const cached = getCachedDomainResolverResult(
+                    provider,
+                    domain,
+                    type,
+                    cache,
+                    customDnsUrl,
+                    customDnsTlsSkipCertVerify,
+                );
+                if (cached) {
+                    results[id] = cached;
+                    const resolverUrl =
+                        provider === 'Custom'
+                            ? getCustomDnsResultResolverUrl(cached) ||
+                              customDnsUrl
+                            : customDnsUrl;
+                    $.info(
+                        `Using cached resolved domain: ${domain}${formatResolverUrlLog(
+                            provider,
+                            resolverUrl,
+                        )} ➟ ${cached}`,
+                    );
+                } else {
+                    domainsToResolve.push({ id, domain });
+                }
+            });
+            await resolveDomainsWithConcurrency(
+                domainsToResolve,
+                concurrency,
+                async ({ id, domain }) => {
+                    try {
+                        const ip = await resolver(
                             domain,
                             type,
                             cache === 'disabled',
                             requestTimeout,
                             edns,
-                            url,
-                        )
-                            .then((ip) => {
-                                results[domain] = ip;
-                                $.info(
-                                    `Successfully resolved domain: ${domain} ➟ ${ip}`,
-                                );
-                            })
-                            .catch((err) => {
-                                $.error(
-                                    `Failed to resolve domain: ${domain} with resolver [${provider}]: ${err}`,
-                                );
-                            }),
-                    );
-                }
-                await Promise.all(currentBatch);
-            }
+                            customDnsUrl,
+                            customDnsTlsSkipCertVerify,
+                            customDnsConcurrency,
+                            domainResolverCacheTtl,
+                        );
+                        results[id] = ip;
+                        const resolverUrl =
+                            provider === 'Custom'
+                                ? getCustomDnsResultResolverUrl(ip) ||
+                                  customDnsUrl
+                                : customDnsUrl;
+                        $.info(
+                            `Successfully resolved domain: ${domain}${formatResolverUrlLog(
+                                provider,
+                                resolverUrl,
+                            )} ➟ ${ip}`,
+                        );
+                    } catch (err) {
+                        $.error(
+                            `Failed to resolve domain: ${domain}${formatResolverUrlLog(
+                                provider,
+                                customDnsUrl,
+                            )} with resolver [${provider}]: ${err}`,
+                        );
+                    }
+                },
+            );
             proxies.forEach((p) => {
                 if (!p['_no-resolve']) {
-                    if (results[p.server]) {
-                        p._resolved_ips = results[p.server];
-                        let ip = Array.isArray(results[p.server])
-                            ? results[p.server][
-                                  Math.floor(
-                                      Math.random() * results[p.server].length,
-                                  )
+                    const id = getDomainResolverCacheId(
+                        provider,
+                        p.server,
+                        type,
+                        customDnsUrl,
+                        customDnsTlsSkipCertVerify,
+                    );
+                    if (id && results[id]) {
+                        p._resolved_ips = results[id];
+                        let ip = Array.isArray(results[id])
+                            ? results[id][
+                                  Math.floor(Math.random() * results[id].length)
                               ]
-                            : results[p.server];
+                            : results[id];
                         if (type === 'IPv6' && isIPv6(ip)) {
                             try {
                                 ip = new ipAddress.Address6(ip).correctForm();
@@ -1015,6 +1534,51 @@ function ScriptFilter(
     };
 }
 
+function ResponseTransformer(
+    script,
+    targetPlatform,
+    $arguments,
+    source,
+    $options,
+    context,
+) {
+    context.source = source;
+    context.env = env;
+    return {
+        name: RESPONSE_TRANSFORMER,
+        func: async (res) => {
+            let output = res;
+            await (async function () {
+                const transformFunction = createDynamicFunction(
+                    'transformFunction',
+                    script,
+                    $arguments,
+                    $options,
+                );
+                output = transformFunction(res, context);
+            })();
+            return output;
+        },
+        shortcutFunc: async (res) => {
+            let output = res;
+            await (async function () {
+                const transformFunction = createDynamicFunction(
+                    'transformFunction',
+                    `async function transformFunction(res = {}, context) {
+                        let $res = res
+                        ${script}
+                        return $res
+                      }`,
+                    $arguments,
+                    $options,
+                );
+                output = transformFunction(res, context);
+            })();
+            return output;
+        },
+    };
+}
+
 export default {
     'Useless Filter': UselessFilter,
     'Region Filter': RegionFilter,
@@ -1030,9 +1594,47 @@ export default {
     'Regex Rename Operator': RegexRenameOperator,
     'Regex Delete Operator': RegexDeleteOperator,
     'Script Operator': ScriptOperator,
+    [ADD_PROXIES_FROM_SUBSCRIPTION_OPERATOR]:
+        AddProxiesFromSubscriptionOperator,
+    [RESPONSE_TRANSFORMER]: ResponseTransformer,
     'Handle Duplicate Operator': HandleDuplicateOperator,
     'Resolve Domain Operator': ResolveDomainOperator,
 };
+
+export async function ApplyResponseTransformer(transformer, res) {
+    let output = res;
+    try {
+        const output_ = await transformer.func(output);
+        if (output_) output = output_;
+    } catch (err) {
+        let funcErr = '';
+        const funcErrMsg = `${err.message ?? err}`;
+        if (!funcErrMsg.includes('$res is not defined')) {
+            $.error(
+                `Cannot apply ${transformer.name}(function transformFunction)! Reason: ${err}`,
+            );
+            funcErr = `执行 function transformFunction 失败 ${funcErrMsg}; `;
+        }
+        try {
+            const output_ = await transformer.shortcutFunc(output);
+            if (output_) output = output_;
+        } catch (shortcutErr) {
+            $.error(
+                `Cannot apply ${transformer.name}(shortcut script)! Reason: ${shortcutErr}`,
+            );
+            let shortcutErrText = '';
+            const shortcutErrMsg = `${shortcutErr.message ?? shortcutErr}`;
+            if (funcErr && shortcutErrMsg === funcErrMsg) {
+                shortcutErrText = '';
+                funcErr = `执行失败 ${funcErrMsg}`;
+            } else {
+                shortcutErrText = `执行快捷脚本失败 ${shortcutErrMsg}`;
+            }
+            throw new Error(`响应修改 ${funcErr}${shortcutErrText}`);
+        }
+    }
+    return output;
+}
 
 async function ApplyFilter(filter, objs) {
     // select proxies
@@ -1171,6 +1773,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
             'Buffer',
             'b64d',
             'b64e',
+            'DOMAIN_RESOLVERS',
             'scriptResourceCache',
             'flowUtils',
             'produceArtifact',
@@ -1192,6 +1795,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
             ProxyUtils.Buffer,
             ProxyUtils.Base64.decode,
             ProxyUtils.Base64.encode,
+            DOMAIN_RESOLVERS,
             scriptResourceCache,
             flowUtils,
             produceArtifact,
@@ -1208,6 +1812,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
             'Buffer',
             'b64d',
             'b64e',
+            'DOMAIN_RESOLVERS',
             'scriptResourceCache',
             'flowUtils',
             'produceArtifact',
@@ -1223,6 +1828,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
             ProxyUtils.Buffer,
             ProxyUtils.Base64.decode,
             ProxyUtils.Base64.encode,
+            DOMAIN_RESOLVERS,
             scriptResourceCache,
             flowUtils,
             produceArtifact,

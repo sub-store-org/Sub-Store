@@ -13,13 +13,7 @@ export default function V2Ray_Producer() {
             try {
                 result.push(URI.produce(proxy));
             } catch (err) {
-                $.error(
-                    `Cannot produce proxy: ${JSON.stringify(
-                        proxy,
-                        null,
-                        2,
-                    )}\nReason: ${err}`,
-                );
+                $.error(`Cannot produce proxy: ${proxy.name}\nReason: ${err}`);
             }
         });
 

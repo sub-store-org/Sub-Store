@@ -3,7 +3,7 @@ import _ from 'lodash';
 import $ from '@/core/app';
 import { ENV } from '@/vendor/open-api';
 import { failed, success } from '@/restful/response';
-import { updateArtifactStore, updateAvatar } from '@/restful/settings';
+import { updateArtifactStore } from '@/restful/settings';
 import resourceCache from '@/utils/resource-cache';
 import scriptResourceCache from '@/utils/script-resource-cache';
 import headersResourceCache from '@/utils/headers-resource-cache';
@@ -17,6 +17,16 @@ import Gist from '@/utils/gist';
 import migrate from '@/utils/migration';
 import env from '@/utils/env';
 import { formatDateTime } from '@/utils';
+import {
+    AGE_SECRET_KEY,
+    decryptArmorIfPresent,
+    derivePublicKey,
+    encryptArmor,
+    isAgeArmor,
+} from '@/utils/age';
+
+const GIST_TOKEN_PATH = 'settings.gistToken';
+const GIST_DOWNLOAD_TOKEN_STRATEGY_PATH = 'settings.gistDownloadTokenStrategy';
 
 export default function register($app) {
     // utils
@@ -28,6 +38,7 @@ export default function register($app) {
     $app.route('/api/storage')
         .get((req, res) => {
             res.set('content-type', 'application/json')
+                .set('access-control-expose-headers', 'content-disposition')
                 .set(
                     'content-disposition',
                     `attachment; filename="${encodeURIComponent(
@@ -41,34 +52,50 @@ export default function register($app) {
                 );
         })
         .post((req, res) => {
-            let { content } = req.body;
             try {
-                content = JSON.parse(Base64.decode(content));
-                if (!(Object.keys(content.settings).length >= 0)) {
-                    throw new Error('备份文件应该至少包含 settings 字段');
-                }
-            } catch (err) {
+                let { content } = req.body;
                 try {
-                    content = JSON.parse(content);
+                    content = JSON.parse(Base64.decode(content));
                     if (!(Object.keys(content.settings).length >= 0)) {
                         throw new Error('备份文件应该至少包含 settings 字段');
                     }
                 } catch (err) {
-                    $.error(
-                        `备份文件校验失败, 无法还原\nReason: ${
-                            err.message ?? err
-                        }`,
-                    );
-                    throw new Error('备份文件校验失败, 无法还原');
+                    try {
+                        content = JSON.parse(content);
+                        if (!(Object.keys(content.settings).length >= 0)) {
+                            throw new Error(
+                                '备份文件应该至少包含 settings 字段',
+                            );
+                        }
+                    } catch (err) {
+                        $.error(
+                            `备份文件校验失败, 无法还原\nReason: ${
+                                err.message ?? err
+                            }`,
+                        );
+                        throw new Error('备份文件校验失败, 无法还原');
+                    }
                 }
+                $.write(JSON.stringify(content, null, `  `), '#sub-store');
+                if ($.env.isNode) {
+                    $.cache = content;
+                    $.persistCache();
+                }
+                migrate();
+                success(res);
+            } catch (e) {
+                $.error(
+                    `Failed to restore backup data.\nReason: ${e.message ?? e}`,
+                );
+                failed(
+                    res,
+                    new RequestInvalidError(
+                        'INVALID_BACKUP_DATA',
+                        'Invalid backup data, failed to restore!',
+                        `Reason: ${e.message ?? e}`,
+                    ),
+                );
             }
-            $.write(JSON.stringify(content, null, `  `), '#sub-store');
-            if ($.env.isNode) {
-                $.cache = content;
-                $.persistCache();
-            }
-            migrate();
-            success(res);
         });
 
     if (ENV().isNode) {
@@ -96,6 +123,8 @@ export default function register($app) {
 }
 
 function getEnv(req, res) {
+    env.feature = env.feature || {};
+    env.feature.archive = true;
     if (req.query.share) {
         env.feature.share = true;
     }
@@ -104,7 +133,7 @@ function getEnv(req, res) {
             {
                 status: 'success',
                 data: {
-                    guide: '⚠️⚠️⚠️ 您当前看到的是后端的响应. 若想配合前端使用, 可访问官方前端 https://sub-store.vercel.app 后自行配置后端地址, 或一键配置后端 https://sub-store.vercel.app?api=https://a.com/xxx (假设 https://a.com 是你后端的域名, /xxx 是自定义路径). 需注意 HTTPS 前端无法请求非本地的 HTTP 后端(部分浏览器上也无法访问本地 HTTP 后端). 请配置反代或在局域网自建 HTTP 前端. 如果还有问题, 可查看此排查说明: https://t.me/zhetengsha/1068',
+                    guide: '⚠️⚠️⚠️ 您当前看到的是后端的响应. 若想配合前端使用, 可访问官方前端 https://sub-store.vercel.app 后自行配置后端地址, 或一键配置后端 https://sub-store.vercel.app?api=https://a.com/xxx (假设 https://a.com 是你后端的域名, /xxx 是自定义路径). 需注意 HTTPS 前端无法请求非本地的 HTTP 后端(部分浏览器上也无法访问本地 HTTP 后端). 请配置反代或在局域网自建 HTTP 前端. 如果还有问题, 可查看此排查说明: https://telegram.me/zhetengsha/1068',
                     ...env,
                 },
             },
@@ -115,8 +144,8 @@ function getEnv(req, res) {
 }
 
 async function refresh(_, res) {
-    // 1. get GitHub avatar and artifact store
-    await updateAvatar();
+    // 1. get artifact store
+    // await updateAvatar();
     await updateArtifactStore();
 
     // 2. clear resource cache
@@ -126,9 +155,91 @@ async function refresh(_, res) {
     success(res);
 }
 
-async function gistBackupAction(action, keep, encode) {
-    // read token
-    const { gistToken, syncPlatform } = $.read(SETTINGS_KEY);
+function readCurrentBackupContent() {
+    let content = $.read('#sub-store');
+    content = content ? JSON.parse(content) : {};
+    if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
+    return content;
+}
+
+function serializeGistBackupContent(content, encoding, options = {}) {
+    const backup = JSON.parse(JSON.stringify(content || {}));
+    if (!options.keepAgeSecretKey && backup.settings?.[AGE_SECRET_KEY]) {
+        delete backup.settings[AGE_SECRET_KEY];
+    }
+    if (encoding === 'plaintext') {
+        backup.settings = backup.settings || {};
+        backup.settings.gistToken = '恢复后请重新设置 GitHub Token';
+        return JSON.stringify(backup, null, `  `);
+    }
+
+    return Base64.encode(JSON.stringify(backup, null, `  `));
+}
+
+function normalizeGistBackupEncoding(encoding) {
+    return ['base64', 'plaintext', 'age'].includes(encoding)
+        ? encoding
+        : 'base64';
+}
+
+function getGistBackupPayloadEncoding(encoding) {
+    return encoding === 'plaintext' ? 'plaintext' : 'base64';
+}
+
+function isAgeGistBackupEncoding(encoding) {
+    return encoding === 'age';
+}
+
+async function encryptGistBackupContent(content, settings, encoding) {
+    if (!isAgeGistBackupEncoding(encoding)) return content;
+
+    const ageSecretKey = settings?.[AGE_SECRET_KEY];
+    if (!ageSecretKey) {
+        throw new Error('age 加密模式需要配置 age 解密私钥');
+    }
+
+    $.info(`使用 age 加密 Gist 备份内容`);
+    return encryptArmor(content, await derivePublicKey(ageSecretKey));
+}
+
+async function decryptGistBackupContent(content, settings, encoding) {
+    if (!isAgeGistBackupEncoding(encoding)) return content;
+
+    const ageSecretKey = settings?.[AGE_SECRET_KEY];
+    if (!ageSecretKey) {
+        throw new Error('age 加密模式需要配置 age 解密私钥');
+    }
+
+    $.info(`尝试使用 age 解密 Gist 备份内容`);
+    return decryptArmorIfPresent(content, ageSecretKey);
+}
+
+function resolveGistDownloadTokenStrategy(storedStrategy, queryStrategy, keep) {
+    if (queryStrategy !== undefined) {
+        if (queryStrategy !== 'overwrite' && queryStrategy !== 'keep') {
+            throw new RequestInvalidError(
+                'INVALID_GIST_DOWNLOAD_TOKEN_STRATEGY',
+                'Token 处理方式仅支持 overwrite 或 keep',
+            );
+        }
+        return queryStrategy;
+    }
+
+    if (keep !== undefined) {
+        return String(keep).split(',').includes(GIST_TOKEN_PATH)
+            ? 'keep'
+            : 'overwrite';
+    }
+
+    return storedStrategy === 'keep' ? 'keep' : 'overwrite';
+}
+
+async function gistBackupAction(
+    action,
+    { keep, encode, tokenStrategy: queryTokenStrategy } = {},
+) {
+    const settings = $.read(SETTINGS_KEY) || {};
+    const { gistToken, syncPlatform } = settings;
     if (!gistToken) throw new Error('GitHub Token is required for backup!');
 
     const gist = new Gist({
@@ -136,38 +247,53 @@ async function gistBackupAction(action, keep, encode) {
         key: GIST_BACKUP_KEY,
         syncPlatform,
     });
-    let currentContent = $.read('#sub-store');
-    currentContent = currentContent ? JSON.parse(currentContent) : {};
-    if ($.env.isNode) currentContent = JSON.parse(JSON.stringify($.cache));
+    let currentContent = readCurrentBackupContent();
     let content;
-    const settings = $.read(SETTINGS_KEY);
     const updated = settings.syncTime;
 
-    const encoding = encode || settings.gistUpload || 'base64';
+    const encoding = normalizeGistBackupEncoding(
+        encode || settings.gistUpload || 'base64',
+    );
+    const tokenStrategy =
+        action === 'download'
+            ? resolveGistDownloadTokenStrategy(
+                  settings.gistDownloadTokenStrategy,
+                  queryTokenStrategy,
+                  keep,
+              )
+            : undefined;
     $.info(
-        `Gist backup action: ${action}, keep: ${keep}, encode: ${encode}, settings encode: ${settings.gistUpload}, final encoding: ${encoding}`,
+        `Gist backup action: ${action}, keep: ${keep}, token strategy: ${queryTokenStrategy}, settings token strategy: ${settings.gistDownloadTokenStrategy}, final token strategy: ${tokenStrategy}, encode: ${encode}, settings encode: ${settings.gistUpload}, final encoding: ${encoding}`,
     );
     switch (action) {
         case 'upload':
+            let backupContent;
             try {
-                content = $.read('#sub-store');
-                content = content ? JSON.parse(content) : {};
-                if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
-                if (encoding === 'plaintext') {
-                    content.settings.gistToken =
-                        '恢复后请重新设置 GitHub Token';
-                    content = JSON.stringify(content, null, `  `);
-                } else {
-                    content = Base64.encode(
-                        JSON.stringify(content, null, `  `),
-                    );
-                }
+                const keepAgeSecretKey = isAgeGistBackupEncoding(encoding);
+
+                backupContent = serializeGistBackupContent(
+                    readCurrentBackupContent(),
+                    getGistBackupPayloadEncoding(encoding),
+                    { keepAgeSecretKey },
+                );
 
                 $.info(`下载备份, 与本地内容对比...`);
-                const onlineContent = await gist.download(
+
+                const downloadedContent = await gist.download(
                     GIST_BACKUP_FILE_NAME,
                 );
-                if (onlineContent === content) {
+
+                const onlineContent = await decryptGistBackupContent(
+                    downloadedContent,
+                    settings,
+                    encoding,
+                );
+
+                const canReuseOnlineContent =
+                    !isAgeGistBackupEncoding(encoding) ||
+                    isAgeArmor(downloadedContent);
+
+                if (canReuseOnlineContent && onlineContent === backupContent) {
                     $.info(`内容一致, 无需上传备份`);
                     return;
                 }
@@ -178,31 +304,92 @@ async function gistBackupAction(action, keep, encode) {
             // update syncTime
             settings.syncTime = new Date().getTime();
             $.write(settings, SETTINGS_KEY);
-            content = $.read('#sub-store');
-            content = content ? JSON.parse(content) : {};
-            if ($.env.isNode) content = JSON.parse(JSON.stringify($.cache));
-            if (encoding === 'plaintext') {
-                content.settings.gistToken = '恢复后请重新设置 GitHub Token';
-                content = JSON.stringify(content, null, `  `);
-            } else {
-                content = Base64.encode(JSON.stringify(content, null, `  `));
-            }
+
+            // 重新生成，避免前面的逻辑改变了状态
+            backupContent = serializeGistBackupContent(
+                readCurrentBackupContent(),
+                getGistBackupPayloadEncoding(encoding),
+                {
+                    keepAgeSecretKey: isAgeGistBackupEncoding(encoding),
+                },
+            );
+
+            const uploadContent = await encryptGistBackupContent(
+                backupContent,
+                settings,
+                encoding,
+            );
+
             $.info(`上传备份中...`);
+            await $.wait(100);
             try {
-                await gist.upload({
-                    [GIST_BACKUP_FILE_NAME]: { content },
-                });
+                await gist.upload(
+                    {
+                        [GIST_BACKUP_FILE_NAME]: {
+                            content: uploadContent,
+                        },
+                    }
+                );
+
                 $.info(`上传备份完成`);
             } catch (err) {
-                // restore syncTime if upload failed
+                $.error(`上传请求异常: ${err?.message ?? err}`);
+
+                /*
+                 * PATCH 可能已经成功，
+                 * 只是没有收到 callback。
+                 *
+                 * 因此先重新 GET 确认。
+                 */
+                try {
+                    $.info(`重新获取备份, 确认上传结果...`);
+                    await $.wait(500);
+                    const downloadedContent = await gist.download(
+                        GIST_BACKUP_FILE_NAME,
+                        gists,
+                    );
+
+                    const onlineContent = await decryptGistBackupContent(
+                        downloadedContent,
+                        settings,
+                        encoding,
+                    );
+
+                    const canReuseOnlineContent =
+                        !isAgeGistBackupEncoding(encoding) ||
+                        isAgeArmor(downloadedContent);
+
+                    if (
+                        canReuseOnlineContent &&
+                        onlineContent === backupContent
+                    ) {
+                        $.info(`线上内容与本次上传内容一致, 上传实际已成功`);
+
+                        break;
+                    }
+
+                    $.error(`线上内容与本次上传内容不一致, 上传确认失败`);
+                } catch (verifyError) {
+                    $.error(
+                        `上传结果确认失败: ${
+                            verifyError?.message ?? verifyError
+                        }`,
+                    );
+                }
+
                 settings.syncTime = updated;
                 $.write(settings, SETTINGS_KEY);
                 throw err;
             }
             break;
-        case 'download':
+        case 'download': {
             $.info(`还原备份中...`);
             content = await gist.download(GIST_BACKUP_FILE_NAME);
+            content = await decryptGistBackupContent(
+                content,
+                settings,
+                encoding,
+            );
             try {
                 content = JSON.parse(Base64.decode(content));
                 if (!(Object.keys(content.settings).length >= 0)) {
@@ -223,12 +410,29 @@ async function gistBackupAction(action, keep, encode) {
                     throw new Error('Gist 备份文件校验失败, 无法还原');
                 }
             }
-            if (keep) {
-                $.info(`保留原有设置 ${keep}`);
-                keep.split(',').forEach((path) => {
-                    _.set(content, path, _.get(currentContent, path));
-                });
+            const keepPaths = keep
+                ? String(keep)
+                      .split(',')
+                      .map((path) => path.trim())
+                      .filter(Boolean)
+                : [];
+            const tokenPathIndex = keepPaths.indexOf(GIST_TOKEN_PATH);
+            if (tokenStrategy === 'keep' && tokenPathIndex === -1) {
+                keepPaths.push(GIST_TOKEN_PATH);
+            } else if (tokenStrategy === 'overwrite' && tokenPathIndex !== -1) {
+                keepPaths.splice(tokenPathIndex, 1);
             }
+            if (!keepPaths.includes(GIST_DOWNLOAD_TOKEN_STRATEGY_PATH)) {
+                keepPaths.push(GIST_DOWNLOAD_TOKEN_STRATEGY_PATH);
+            }
+            $.info(`保留原有设置 ${keepPaths}`);
+            keepPaths.forEach((path) => {
+                if (_.has(currentContent, path)) {
+                    _.set(content, path, _.get(currentContent, path));
+                } else {
+                    _.unset(content, path);
+                }
+            });
             // restore settings
             $.write(JSON.stringify(content, null, `  `), '#sub-store');
             if ($.env.isNode) {
@@ -240,12 +444,13 @@ async function gistBackupAction(action, keep, encode) {
             $.info(`migration completed`);
             $.info(`还原备份完成`);
             break;
+        }
     }
 }
 async function gistBackup(req, res) {
-    const { action, keep, encode } = req.query;
+    const { action, keep, encode, tokenStrategy } = req.query;
     // read token
-    const { gistToken } = $.read(SETTINGS_KEY);
+    const { gistToken } = $.read(SETTINGS_KEY) || {};
     if (!gistToken) {
         failed(
             res,
@@ -256,7 +461,11 @@ async function gistBackup(req, res) {
         );
     } else {
         try {
-            await gistBackupAction(action, keep, encode);
+            await gistBackupAction(action, {
+                keep,
+                encode,
+                tokenStrategy,
+            });
             success(res);
         } catch (err) {
             $.error(
@@ -264,11 +473,13 @@ async function gistBackup(req, res) {
             );
             failed(
                 res,
-                new InternalServerError(
-                    'BACKUP_FAILED',
-                    `Failed to ${action} gist data!`,
-                    `Reason: ${err.message ?? err}`,
-                ),
+                err instanceof RequestInvalidError
+                    ? err
+                    : new InternalServerError(
+                          'BACKUP_FAILED',
+                          `Failed to ${action} gist data!`,
+                          `Reason: ${err.message ?? err}`,
+                      ),
             );
         }
     }

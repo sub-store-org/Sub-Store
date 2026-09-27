@@ -1,0 +1,20 @@
+#!name=Loon 订阅解析器
+#!desc=专门用于解析订阅节点的插件, 需 Loon 3.5.0(969)及以上版本. 若需要完整版 Sub-Store, 请使用 Sub-Store Loon 插件 https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Loon.plugin
+#!tag=解析器,Sub-Store
+#!system=
+#!system_version=
+#!loon_version=3.5.0(969)
+#!author=Peng-YM
+#!homepage=https://github.com/sub-store-org/Sub-Store
+#!icon=https://raw.githubusercontent.com/58xinian/icon/master/Sub-Store1.png
+#!type=parser
+
+[Argument]
+resourceUrlOnly = switch,true,tag=仅使用远程资源 忽略 Loon 自身解析数据,desc=忽略 Loon 自身解析数据
+ua = input,"",tag=拉取订阅的 User-Agent,desc=拉取订阅的 User-Agent
+timeout = input,8000,tag=拉取订阅时使用的超时时间,desc=拉取订阅时使用的超时时间
+noCache = switch,false,tag=禁用缓存,desc=禁用缓存
+age-secret-key = input,"",tag=age 解密私钥,desc=age 解密私钥 可查看 https://telegram.me/zhetengsha/5876
+
+[Script]
+generic script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-parser.loon.min.js,tag=Sub-Store Parser,timeout=900,argument=[{ua},{resourceUrlOnly},{noCache},{timeout},{age-secret-key}]

@@ -15,12 +15,116 @@ import { findByName } from '@/utils/database';
 import { produceArtifact } from '@/restful/sync';
 import PROXY_PREPROCESSORS from '@/core/proxy-utils/preprocessors';
 import { ProxyUtils } from '@/core/proxy-utils';
+import { runBackendRequestTask } from '@/utils/request-concurrency';
+import getFs from '@/runtime/fs';
+import getStreamPromises from '@/runtime/stream-promises';
+import {
+    AGE_SECRET_KEY,
+    decryptArmorIfPresent,
+    maskAgeSecretInUrl,
+} from '@/utils/age';
 
 const clashPreprocessor = PROXY_PREPROCESSORS.find(
     (processor) => processor.name === 'Clash Pre-processor',
 );
 
 const tasks = new Map();
+
+function buildDownloadRegex(pattern = '') {
+    const trimmed = `${pattern}`.trim();
+    if (!trimmed) return null;
+    return new RegExp(trimmed, 'i');
+}
+
+function maybePrefixGithubProxyUrl(url, githubProxy, githubProxyRegex) {
+    if (!githubProxy || !githubProxyRegex || typeof url !== 'string') {
+        return url;
+    }
+
+    if (!/^https?:\/\//i.test(url)) {
+        return url;
+    }
+
+    const prefix = `${githubProxy}/`;
+    if (url.startsWith(prefix)) {
+        return url;
+    }
+
+    let regex;
+    try {
+        regex = buildDownloadRegex(githubProxyRegex);
+    } catch (e) {
+        $.error(`GitHub 加速代理匹配正则无效: ${e.message ?? e}`);
+        return url;
+    }
+
+    if (!regex?.test(url)) {
+        return url;
+    }
+
+    $.info(`GitHub 加速代理命中下载链接: ${url}`);
+    return `${githubProxy}/${url}`;
+}
+
+function maskDownloadUrl(url) {
+    return maskAgeSecretInUrl(url);
+}
+
+async function finalizeDownloadedBody(body, { ageSecretKey, preprocess, url }) {
+    let result = ageSecretKey
+        ? await decryptArmorIfPresent(body, ageSecretKey)
+        : body;
+    const raw = result;
+
+    if (preprocess) {
+        try {
+            if (clashPreprocessor.test(result)) {
+                result = clashPreprocessor.parse(result, true);
+            }
+        } catch (e) {
+            $.error(`Clash Pre-processor error: ${e}`);
+        }
+    }
+
+    if (preprocess) {
+        try {
+            const proxies = ProxyUtils.parse(result);
+            if (!Array.isArray(proxies) || proxies.length === 0) {
+                return {
+                    result,
+                    raw,
+                    shouldCache: false,
+                    cacheReason: `URL ${url} 不包含有效节点, 不缓存`,
+                };
+            }
+        } catch (e) {
+            return {
+                result,
+                raw,
+                shouldCache: false,
+                cacheReason: `URL ${url} 尝试解析节点失败 ${
+                    e.message ?? e
+                }, 不缓存`,
+            };
+        }
+    }
+
+    return {
+        result,
+        raw,
+        shouldCache: true,
+    };
+}
+
+function formatDownloadResult(finalized, returnRaw) {
+    return returnRaw
+        ? { result: finalized.result, raw: finalized.raw }
+        : finalized.result;
+}
+
+function formatPlainDownloadResult(result, returnRaw) {
+    return returnRaw ? { result, raw: result } : result;
+}
 
 export default async function download(
     rawUrl = '',
@@ -31,6 +135,7 @@ export default async function download(
     awaitCustomCache,
     noCache,
     preprocess,
+    options = {},
 ) {
     let $arguments = {};
     let url = rawUrl.replace(/#noFlow$/, '');
@@ -52,19 +157,28 @@ export default async function download(
             }
         }
     }
+    const explicitAgeSecretKey =
+        options && typeof options === 'object'
+            ? options?.[AGE_SECRET_KEY] || options?.ageSecretKey
+            : undefined;
+    const returnRaw =
+        options && typeof options === 'object' && options.returnRaw;
+    const ageSecretKey = explicitAgeSecretKey || $arguments?.[AGE_SECRET_KEY];
     const { isNode, isStash, isLoon, isShadowRocket, isQX } = ENV();
     const {
+        githubProxy,
+        githubProxyRegex,
         defaultProxy,
         defaultUserAgent,
         defaultTimeout,
         cacheThreshold: defaultCacheThreshold,
-    } = $.read(SETTINGS_KEY);
+    } = $.read(SETTINGS_KEY) || {};
     const cacheThreshold = defaultCacheThreshold || 1024;
     let proxy = customProxy || defaultProxy;
     if ($.env.isNode) {
         proxy = proxy || eval('process.env.SUB_STORE_BACKEND_DEFAULT_PROXY');
     }
-    const userAgent = ua || defaultUserAgent || 'clash.meta';
+    const userAgent = ua || defaultUserAgent || 'clash.meta/v1.19.23';
     let customHeaders;
     if ($arguments?.headers) {
         try {
@@ -87,6 +201,8 @@ export default async function download(
     }
 
     const requestTimeout = timeout || defaultTimeout || 8000;
+    url = maybePrefixGithubProxyUrl(url, githubProxy, githubProxyRegex);
+    const safeUrl = maskDownloadUrl(url);
     const id = hex_md5(
         `${customHeaders ? JSON.stringify(customHeaders) : userAgent}${url}`,
     );
@@ -105,13 +221,20 @@ export default async function download(
         const cached = resourceCache.get(id);
         if (!noCache && !$arguments?.noCache && cached) {
             $.info(
-                `乐观缓存: URL ${url}\n存在有效的常规缓存\n使用常规缓存以避免重复请求`,
+                `乐观缓存: URL ${safeUrl}\n存在有效的常规缓存\n使用常规缓存以避免重复请求`,
             );
-            return cached;
+            return formatDownloadResult(
+                await finalizeDownloadedBody(cached, {
+                    ageSecretKey,
+                    preprocess,
+                    url: safeUrl,
+                }),
+                returnRaw,
+            );
         }
         if (customCached) {
             if (awaitCustomCache) {
-                $.info(`乐观缓存: URL ${url}\n本次进行请求 尝试更新缓存`);
+                $.info(`乐观缓存: URL ${safeUrl}\n本次进行请求 尝试更新缓存`);
                 try {
                     await download(
                         rawUrl.replace(/(\?|&)cacheKey=.*?(&|$)/, ''),
@@ -122,10 +245,11 @@ export default async function download(
                         undefined,
                         undefined,
                         preprocess,
+                        options,
                     );
                 } catch (e) {
                     $.error(
-                        `乐观缓存: URL ${url} 更新缓存发生错误 ${
+                        `乐观缓存: URL ${safeUrl} 更新缓存发生错误 ${
                             e.message ?? e
                         }`,
                     );
@@ -134,7 +258,7 @@ export default async function download(
                 }
             } else {
                 $.info(
-                    `乐观缓存: URL ${url}\n本次返回自定义缓存 ${$arguments?.cacheKey}\n并进行请求 尝试异步更新缓存`,
+                    `乐观缓存: URL ${safeUrl}\n本次返回自定义缓存 ${$arguments?.cacheKey}\n并进行请求 尝试异步更新缓存`,
                 );
                 download(
                     rawUrl.replace(/(\?|&)cacheKey=.*?(&|$)/, ''),
@@ -145,15 +269,23 @@ export default async function download(
                     undefined,
                     undefined,
                     preprocess,
+                    options,
                 ).catch((e) => {
                     $.error(
-                        `乐观缓存: URL ${url} 异步更新缓存发生错误 ${
+                        `乐观缓存: URL ${safeUrl} 异步更新缓存发生错误 ${
                             e.message ?? e
                         }`,
                     );
                 });
             }
-            return customCached;
+            return formatDownloadResult(
+                await finalizeDownloadedBody(customCached, {
+                    ageSecretKey,
+                    preprocess,
+                    url: safeUrl,
+                }),
+                returnRaw,
+            );
         }
     }
 
@@ -176,12 +308,16 @@ export default async function download(
             }
 
             if (type === 'module') {
-                return item.content;
+                return formatPlainDownloadResult(item.content, returnRaw);
             } else {
-                return await produceArtifact({
-                    type: 'file',
-                    name,
-                });
+                return formatPlainDownloadResult(
+                    await produceArtifact({
+                        type: 'file',
+                        name,
+                        noFlow: options?.noFlow,
+                    }),
+                    returnRaw,
+                );
             }
         } catch (err) {
             $.error(
@@ -193,8 +329,11 @@ export default async function download(
         }
     } else if (url?.startsWith('/')) {
         try {
-            const fs = eval(`require("fs")`);
-            return fs.readFileSync(url.split('#')[0], 'utf8');
+            const fs = getFs();
+            return formatPlainDownloadResult(
+                fs.readFileSync(url.split('#')[0], 'utf8'),
+                returnRaw,
+            );
         } catch (err) {
             $.error(
                 `Error when reading local file: ${
@@ -206,7 +345,14 @@ export default async function download(
     }
 
     if (!isNode && tasks.has(id)) {
-        return tasks.get(id);
+        return formatDownloadResult(
+            await finalizeDownloadedBody(await tasks.get(id), {
+                ageSecretKey,
+                preprocess,
+                url: safeUrl,
+            }),
+            returnRaw,
+        );
     }
 
     const http = HTTP({
@@ -221,18 +367,24 @@ export default async function download(
     });
 
     let result;
+    let rawResult;
 
     // try to find in app cache
     const cached = resourceCache.get(id);
     if (!noCache && !$arguments?.noCache && cached) {
         $.info(
-            `使用缓存: ${url}, ${
+            `使用缓存: ${safeUrl}, ${
                 customHeaders ? JSON.stringify(customHeaders) : userAgent
             }`,
         );
-        result = cached;
+        rawResult = cached;
+        result = await finalizeDownloadedBody(cached, {
+            ageSecretKey,
+            preprocess,
+            url: safeUrl,
+        });
         if (customCacheKey) {
-            $.info(`URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`);
+            $.info(`URL ${safeUrl}\n写入自定义缓存 ${$arguments?.cacheKey}`);
             $.write(cached, customCacheKey);
         }
     } else {
@@ -246,17 +398,21 @@ export default async function download(
                 customHeaders
                     ? JSON.stringify(customHeaders)
                     : `User-Agent: ${userAgent}`
-            }\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nPreprocess: ${preprocess}\nURL: ${url}`,
+            }\nTimeout: ${requestTimeout}\nProxy: ${proxy}\nInsecure: ${!!insecure}\nPreprocess: ${preprocess}\nURL: ${safeUrl}`,
         );
         try {
-            let { body, headers, statusCode } = await http.get({
-                url,
-                ...(proxy ? { proxy } : {}),
-                ...(isLoon && proxy ? { node: proxy } : {}),
-                ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
-                ...(proxy ? getPolicyDescriptor(proxy) : {}),
-                ...(insecure ? insecure : {}),
-            });
+            let { body, headers, statusCode } = await runBackendRequestTask(
+                () =>
+                    http.get({
+                        url,
+                        ...(proxy ? { proxy } : {}),
+                        ...(isLoon && proxy ? { node: proxy } : {}),
+                        ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
+                        ...(proxy ? getPolicyDescriptor(proxy) : {}),
+                        ...(insecure ? insecure : {}),
+                    }),
+                'download',
+            );
             $.info(`statusCode: ${statusCode}`);
             if (statusCode < 200 || statusCode >= 400) {
                 throw new Error(`statusCode: ${statusCode}`);
@@ -265,20 +421,22 @@ export default async function download(
             if (headers) {
                 const flowInfo = getFlowField(headers);
                 if (flowInfo) {
-                    headersResourceCache.set(id, flowInfo);
+                    headersResourceCache.set(
+                        id,
+                        flowInfo,
+                        $arguments?.headersCacheTtl
+                            ? $arguments?.headersCacheTtl * 1000
+                            : undefined,
+                    );
                 }
             }
             if (body.replace(/\s/g, '').length === 0)
                 throw new Error(new Error('远程资源内容为空'));
-            if (preprocess) {
-                try {
-                    if (clashPreprocessor.test(body)) {
-                        body = clashPreprocessor.parse(body, true);
-                    }
-                } catch (e) {
-                    $.error(`Clash Pre-processor error: ${e}`);
-                }
-            }
+            result = await finalizeDownloadedBody(body, {
+                ageSecretKey,
+                preprocess,
+                url: safeUrl,
+            });
             let shouldCache = true;
             if (cacheThreshold) {
                 const size = body.length / 1024;
@@ -291,50 +449,55 @@ export default async function download(
                     shouldCache = false;
                 }
             }
-            if (preprocess) {
-                try {
-                    const proxies = ProxyUtils.parse(body);
-                    if (!Array.isArray(proxies) || proxies.length === 0) {
-                        $.error(`URL ${url} 不包含有效节点, 不缓存`);
-                        shouldCache = false;
-                    }
-                } catch (e) {
-                    $.error(
-                        `URL ${url} 尝试解析节点失败 ${e.message ?? e}, 不缓存`,
-                    );
-                    shouldCache = false;
-                }
+            if (!result.shouldCache) {
+                $.error(result.cacheReason);
+                shouldCache = false;
             }
             if (shouldCache) {
-                resourceCache.set(id, body);
+                resourceCache.set(
+                    id,
+                    body,
+                    $arguments?.cacheTtl
+                        ? $arguments?.cacheTtl * 1000
+                        : undefined,
+                );
                 if (customCacheKey) {
                     $.info(
-                        `URL ${url}\n写入自定义缓存 ${$arguments?.cacheKey}`,
+                        `URL ${safeUrl}\n写入自定义缓存 ${$arguments?.cacheKey}`,
                     );
                     $.write(body, customCacheKey);
                 }
             }
 
-            result = body;
+            rawResult = body;
         } catch (e) {
             if (customCacheKey) {
                 const cached = $.read(customCacheKey);
                 if (cached) {
                     $.info(
-                        `无法下载 URL ${url}: ${
+                        `无法下载 URL ${safeUrl}: ${
                             e.message ?? e
                         }\n使用自定义缓存 ${$arguments?.cacheKey}`,
                     );
-                    return cached;
+                    return formatDownloadResult(
+                        await finalizeDownloadedBody(cached, {
+                            ageSecretKey,
+                            preprocess,
+                            url: safeUrl,
+                        }),
+                        returnRaw,
+                    );
                 }
             }
-            throw new Error(`无法下载 URL ${url}: ${e.message ?? e}`);
+            const message = `无法下载 URL ${safeUrl}: ${e.message ?? e}`;
+            $.error(message);
+            throw new Error(message);
         }
     }
 
     // 检查订阅有效性
 
-    if ($arguments?.validCheck) {
+    if ($arguments?.validCheck && !$arguments?.noFlow && !options?.noFlow) {
         await validCheck(
             parseFlowHeaders(
                 await getFlowHeaders(
@@ -343,28 +506,29 @@ export default async function download(
                     undefined,
                     proxy,
                     $arguments.flowUrl,
+                    $arguments.flowHeaders,
                 ),
             ),
         );
     }
 
     if (!isNode) {
-        tasks.set(id, result);
+        tasks.set(id, rawResult);
     }
-    return result;
+    return formatDownloadResult(result, returnRaw);
 }
 
 export async function downloadFile(url, file) {
     const undici = eval("require('undici')");
-    const fs = eval("require('fs')");
-    const { pipeline } = eval("require('stream/promises')");
+    const fs = getFs();
+    const { pipeline } = getStreamPromises();
     const { Agent, interceptors, request } = undici;
     $.info(`Downloading file...\nURL: ${url}\nFile: ${file}`);
     const { body, statusCode } = await request(url, {
         dispatcher: new Agent().compose(
             interceptors.redirect({
                 maxRedirections: 3,
-                throwOnRedirect: true,
+                throwOnMaxRedirect: true,
             }),
         ),
     });

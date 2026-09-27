@@ -2,6 +2,41 @@ import { safeLoad } from '@/utils/yaml';
 import { Base64 } from 'js-base64';
 import $ from '@/core/app';
 
+export function normalizeClashYaml(raw) {
+    if (
+        typeof raw !== 'string' ||
+        !raw.includes('proxies:') ||
+        !raw.includes('short-id:')
+    ) {
+        return raw;
+    }
+
+    try {
+        const content = safeLoad(raw);
+        if (!Array.isArray(content.proxies) || content.proxies.length === 0)
+            return raw;
+    } catch (e) {
+        return raw;
+    }
+    // 防止 VLESS 节点 reality-opts 里的 short-id 被 YAML 标量推断成数字
+    // 例如 08 / 0088 在部分内核重新解析时会触发 invalid REALITY short ID
+    return raw.replace(/short-id:([ \t]*[^#\n,}]*)/g, (matched, value) => {
+        const afterTrim = value.trim();
+
+        if (!afterTrim || afterTrim === '') {
+            return 'short-id: ""';
+        }
+
+        if (/^(['"]).*\1$/.test(afterTrim)) {
+            return `short-id: ${afterTrim}`;
+        } else if (['null'].includes(afterTrim)) {
+            return `short-id: ${afterTrim}`;
+        } else {
+            return `short-id: "${afterTrim}"`;
+        }
+    });
+}
+
 function HTML() {
     const name = 'HTML';
     const test = (raw) => /^<!DOCTYPE html>/.test(raw);
@@ -32,6 +67,7 @@ function Base64Encoded() {
 
     const test = function (raw) {
         return (
+            Base64.isValid(raw) &&
             !/^\w+:\/\/\w+/im.test(raw) &&
             keys.some((k) => raw.indexOf(k) !== -1)
         );
@@ -54,7 +90,7 @@ function fallbackBase64Encoded() {
     const name = 'Fallback Base64 Pre-processor';
 
     const test = function (raw) {
-        return true;
+        return Base64.isValid(raw);
     };
     const parse = function (raw) {
         const decoded = Base64.decode(raw);
@@ -75,49 +111,21 @@ function Clash() {
     const test = function (raw) {
         if (!/proxies/.test(raw)) return false;
         const content = safeLoad(raw);
-        return content.proxies && Array.isArray(content.proxies);
+        return (
+            Array.isArray(content.proxies) ||
+            Array.isArray(content['proxy-groups'])
+        );
     };
     const parse = function (raw, includeProxies) {
         // Clash YAML format
 
-        // 防止 VLESS节点 reality-opts 选项中的 short-id 被解析成 Infinity
-        // 匹配 short-id 冒号后面的值(包含空格和引号)
-        const afterReplace = raw.replace(
-            /short-id:([ \t]*[^#\n,}]*)/g,
-            (matched, value) => {
-                const afterTrim = value.trim();
+        const afterReplace = normalizeClashYaml(raw);
 
-                // 为空
-                if (!afterTrim || afterTrim === '') {
-                    return 'short-id: ""';
-                }
-
-                // 是否被引号包裹
-                if (/^(['"]).*\1$/.test(afterTrim)) {
-                    return `short-id: ${afterTrim}`;
-                } else if (['null'].includes(afterTrim)) {
-                    return `short-id: ${afterTrim}`;
-                } else {
-                    return `short-id: "${afterTrim}"`;
-                }
-            },
-        );
-
-        const {
-            proxies,
-            'global-client-fingerprint': globalClientFingerprint,
-        } = safeLoad(afterReplace);
+        const { proxies } = safeLoad(afterReplace);
         return (
             (includeProxies ? 'proxies:\n' : '') +
-            proxies
+            (Array.isArray(proxies) ? proxies : [])
                 .map((p) => {
-                    if (
-                        globalClientFingerprint &&
-                        ['trojan', 'vmess', 'vless'].includes(p.type) &&
-                        !p['client-fingerprint']
-                    ) {
-                        p['client-fingerprint'] = globalClientFingerprint;
-                    }
                     return `${includeProxies ? '  - ' : ''}${JSON.stringify(
                         p,
                     )}\n`;

@@ -1,4 +1,12 @@
-import { isPresent } from '@/core/proxy-utils/producers/utils';
+import {
+    isPresent,
+    produceProxyListOutput,
+} from '@/core/proxy-utils/producers/utils';
+import { normalizeClashVmessSecurity } from '../vmess-security';
+import {
+    deleteHttpUpgradeEarlyDataMetadata,
+    normalizeWebSocketEarlyDataPath,
+} from '../transport-path';
 import $ from '@/core/app';
 
 export default function Clash_Producer() {
@@ -74,17 +82,7 @@ export default function Clash_Producer() {
                         delete proxy.sni;
                     }
                     // https://dreamacro.github.io/clash/configuration/outbound.html#vmess
-                    if (
-                        isPresent(proxy, 'cipher') &&
-                        ![
-                            'auto',
-                            'aes-128-gcm',
-                            'chacha20-poly1305',
-                            'none',
-                        ].includes(proxy.cipher)
-                    ) {
-                        proxy.cipher = 'auto';
-                    }
+                    proxy.cipher = normalizeClashVmessSecurity(proxy.cipher);
                 } else if (proxy.type === 'wireguard') {
                     proxy.keepalive =
                         proxy.keepalive ?? proxy['persistent-keepalive'];
@@ -131,38 +129,42 @@ export default function Clash_Producer() {
                     ) {
                         proxy['h2-opts'].path = path[0];
                     }
-                    let host = proxy['h2-opts']?.headers?.host;
+                    let host =
+                        proxy['h2-opts']?.host ??
+                        proxy['h2-opts']?.headers?.host ??
+                        proxy['h2-opts']?.headers?.Host;
                     if (
-                        isPresent(proxy, 'h2-opts.headers.Host') &&
-                        !Array.isArray(host)
+                        (isPresent(proxy, 'h2-opts.host') ||
+                            isPresent(proxy, 'h2-opts.headers.host') ||
+                            isPresent(proxy, 'h2-opts.headers.Host'))
                     ) {
-                        proxy['h2-opts'].headers.host = [host];
+                        proxy['h2-opts'].host = Array.isArray(host)
+                            ? host
+                            : [host];
+                    }
+                    if (proxy['h2-opts']?.headers) {
+                        delete proxy['h2-opts'].headers.host;
+                        delete proxy['h2-opts'].headers.Host;
+                        if (
+                            Object.keys(proxy['h2-opts'].headers).length === 0
+                        ) {
+                            delete proxy['h2-opts'].headers;
+                        }
                     }
                 }
                 if (['ws'].includes(proxy.network)) {
-                    const networkPath = proxy[`${proxy.network}-opts`]?.path;
-                    if (networkPath) {
-                        const reg = /^(.*?)(?:\?ed=(\d+))?$/;
-                        // eslint-disable-next-line no-unused-vars
-                        const [_, path = '', ed = ''] = reg.exec(networkPath);
-                        proxy[`${proxy.network}-opts`].path = path;
-                        if (ed !== '') {
-                            proxy['ws-opts']['early-data-header-name'] =
-                                'Sec-WebSocket-Protocol';
-                            proxy['ws-opts']['max-early-data'] = parseInt(
-                                ed,
-                                10,
-                            );
-                        }
-                    } else {
-                        proxy[`${proxy.network}-opts`] =
-                            proxy[`${proxy.network}-opts`] || {};
-                        proxy[`${proxy.network}-opts`].path = '/';
+                    const networkOptsKey = `${proxy.network}-opts`;
+                    proxy[networkOptsKey] = proxy[networkOptsKey] || {};
+                    if (!proxy[networkOptsKey].path) {
+                        proxy[networkOptsKey].path = '/';
                     }
+                    normalizeWebSocketEarlyDataPath(proxy[networkOptsKey]);
                 }
+
                 if (proxy['plugin-opts']?.tls) {
                     if (isPresent(proxy, 'skip-cert-verify')) {
                         proxy['plugin-opts']['skip-cert-verify'] =
+                            proxy['plugin-opts']['skip-cert-verify'] ||
                             proxy['skip-cert-verify'];
                     }
                 }
@@ -174,7 +176,7 @@ export default function Clash_Producer() {
                         'hysteria2',
                         'juicity',
                         'anytls',
-                        'trust-tunnel',
+                        'trusttunnel',
                         'naive',
                     ].includes(proxy.type)
                 ) {
@@ -195,12 +197,17 @@ export default function Clash_Producer() {
                 delete proxy.id;
                 delete proxy.resolved;
                 delete proxy['no-resolve'];
+                delete proxy['ip-cidr'];
+                delete proxy['ipv6-cidr'];
                 if (type !== 'internal') {
                     for (const key in proxy) {
                         if (proxy[key] == null || /^_/i.test(key)) {
                             delete proxy[key];
                         }
                     }
+                    deleteHttpUpgradeEarlyDataMetadata(
+                        proxy[`${proxy.network}-opts`],
+                    );
                 }
                 if (
                     ['grpc'].includes(proxy.network) &&
@@ -211,12 +218,7 @@ export default function Clash_Producer() {
                 }
                 return proxy;
             });
-        return type === 'internal'
-            ? list
-            : 'proxies:\n' +
-                  list
-                      .map((proxy) => '  - ' + JSON.stringify(proxy) + '\n')
-                      .join('');
+        return produceProxyListOutput(list, type, opts);
     };
     return { type, produce };
 }

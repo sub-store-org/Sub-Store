@@ -1,4 +1,13 @@
-import { isPresent } from '@/core/proxy-utils/producers/utils';
+import {
+    isPresent,
+    produceProxyListOutput,
+    supportsShadowsocksV2rayPluginMode,
+} from '@/core/proxy-utils/producers/utils';
+import { normalizeClashVmessSecurity } from '../vmess-security';
+import {
+    deleteHttpUpgradeEarlyDataMetadata,
+    normalizeWebSocketEarlyDataPath,
+} from '../transport-path';
 import $ from '@/core/app';
 
 export default function Stash_Producer() {
@@ -7,6 +16,7 @@ export default function Stash_Producer() {
         // https://stash.wiki/proxy-protocols/proxy-types#shadowsocks
         const list = proxies
             .filter((proxy) => {
+                if (opts['include-unsupported-proxy']) return true;
                 if (
                     ![
                         'ss',
@@ -24,6 +34,10 @@ export default function Stash_Producer() {
                         'ssh',
                         'juicity',
                         'anytls',
+                        'tailscale',
+                        'trusttunnel',
+                        'masque',
+                        'mieru',
                     ].includes(proxy.type) ||
                     (proxy.type === 'ss' &&
                         ![
@@ -44,10 +58,18 @@ export default function Stash_Producer() {
                             '2022-blake3-aes-128-gcm',
                             '2022-blake3-aes-256-gcm',
                         ].includes(proxy.cipher)) ||
-                    (proxy.type === 'snell' && proxy.version >= 4) ||
-                    (proxy.type === 'vless' &&
-                        proxy['reality-opts'] &&
-                        !['xtls-rprx-vision'].includes(proxy.flow))
+                    (proxy.type === 'snell' && proxy.version > 6)
+                ) {
+                    return false;
+                } else if (
+                    !supportsShadowsocksV2rayPluginMode(proxy, ['websocket'])
+                ) {
+                    return false;
+                } else if (
+                    ['vless'].includes(proxy.type) &&
+                    proxy['reality-opts'] &&
+                    proxy.network &&
+                    !['tcp'].includes(proxy.network)
                 ) {
                     return false;
                 } else if (
@@ -58,12 +80,9 @@ export default function Stash_Producer() {
                             proxy['reality-opts']))
                 ) {
                     return false;
-                } else if (['xhttp'].includes(proxy.network)) {
-                    return false;
                 } else if (
-                    proxy.encryption &&
-                    proxy.encryption !== 'none' &&
-                    ['vless'].includes(proxy.type)
+                    !['vless'].includes(proxy.type) &&
+                    ['xhttp'].includes(proxy.network)
                 ) {
                     return false;
                 } else if (
@@ -89,17 +108,7 @@ export default function Stash_Producer() {
                     }
                     // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L400
                     // https://stash.wiki/proxy-protocols/proxy-types#vmess
-                    if (
-                        isPresent(proxy, 'cipher') &&
-                        ![
-                            'auto',
-                            'aes-128-gcm',
-                            'chacha20-poly1305',
-                            'none',
-                        ].includes(proxy.cipher)
-                    ) {
-                        proxy.cipher = 'auto';
-                    }
+                    proxy.cipher = normalizeClashVmessSecurity(proxy.cipher);
                 } else if (proxy.type === 'tuic') {
                     if (isPresent(proxy, 'alpn')) {
                         proxy.alpn = Array.isArray(proxy.alpn)
@@ -247,38 +256,42 @@ export default function Stash_Producer() {
                     ) {
                         proxy['h2-opts'].path = path[0];
                     }
-                    let host = proxy['h2-opts']?.headers?.host;
+                    let host =
+                        proxy['h2-opts']?.host ??
+                        proxy['h2-opts']?.headers?.host ??
+                        proxy['h2-opts']?.headers?.Host;
                     if (
-                        isPresent(proxy, 'h2-opts.headers.Host') &&
-                        !Array.isArray(host)
+                        isPresent(proxy, 'h2-opts.host') ||
+                        isPresent(proxy, 'h2-opts.headers.host') ||
+                        isPresent(proxy, 'h2-opts.headers.Host')
                     ) {
-                        proxy['h2-opts'].headers.host = [host];
+                        proxy['h2-opts'].host = Array.isArray(host)
+                            ? host
+                            : [host];
+                    }
+                    if (proxy['h2-opts']?.headers) {
+                        delete proxy['h2-opts'].headers.host;
+                        delete proxy['h2-opts'].headers.Host;
+                        if (
+                            Object.keys(proxy['h2-opts'].headers).length === 0
+                        ) {
+                            delete proxy['h2-opts'].headers;
+                        }
                     }
                 }
                 if (['ws'].includes(proxy.network)) {
-                    const networkPath = proxy[`${proxy.network}-opts`]?.path;
-                    if (networkPath) {
-                        const reg = /^(.*?)(?:\?ed=(\d+))?$/;
-                        // eslint-disable-next-line no-unused-vars
-                        const [_, path = '', ed = ''] = reg.exec(networkPath);
-                        proxy[`${proxy.network}-opts`].path = path;
-                        if (ed !== '') {
-                            proxy['ws-opts']['early-data-header-name'] =
-                                'Sec-WebSocket-Protocol';
-                            proxy['ws-opts']['max-early-data'] = parseInt(
-                                ed,
-                                10,
-                            );
-                        }
-                    } else {
-                        proxy[`${proxy.network}-opts`] =
-                            proxy[`${proxy.network}-opts`] || {};
-                        proxy[`${proxy.network}-opts`].path = '/';
+                    const networkOptsKey = `${proxy.network}-opts`;
+                    proxy[networkOptsKey] = proxy[networkOptsKey] || {};
+                    if (!proxy[networkOptsKey].path) {
+                        proxy[networkOptsKey].path = '/';
                     }
+                    normalizeWebSocketEarlyDataPath(proxy[networkOptsKey]);
                 }
+
                 if (proxy['plugin-opts']?.tls) {
                     if (isPresent(proxy, 'skip-cert-verify')) {
                         proxy['plugin-opts']['skip-cert-verify'] =
+                            proxy['plugin-opts']['skip-cert-verify'] ||
                             proxy['skip-cert-verify'];
                     }
                 }
@@ -290,7 +303,7 @@ export default function Stash_Producer() {
                         'hysteria2',
                         'juicity',
                         'anytls',
-                        'trust-tunnel',
+                        'trusttunnel',
                         'naive',
                     ].includes(proxy.type)
                 ) {
@@ -324,12 +337,17 @@ export default function Stash_Producer() {
                 delete proxy.id;
                 delete proxy.resolved;
                 delete proxy['no-resolve'];
+                delete proxy['ip-cidr'];
+                delete proxy['ipv6-cidr'];
                 if (type !== 'internal') {
                     for (const key in proxy) {
                         if (proxy[key] == null || /^_/i.test(key)) {
                             delete proxy[key];
                         }
                     }
+                    deleteHttpUpgradeEarlyDataMetadata(
+                        proxy[`${proxy.network}-opts`],
+                    );
                 }
                 if (
                     ['grpc'].includes(proxy.network) &&
@@ -340,12 +358,7 @@ export default function Stash_Producer() {
                 }
                 return proxy;
             });
-        return type === 'internal'
-            ? list
-            : 'proxies:\n' +
-                  list
-                      .map((proxy) => '  - ' + JSON.stringify(proxy) + '\n')
-                      .join('');
+        return produceProxyListOutput(list, type, opts);
     };
     return { type, produce };
 }

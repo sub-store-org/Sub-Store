@@ -1,4 +1,6 @@
 name: build
+permissions:
+  contents: write
 on:
   workflow_dispatch:
   push:
@@ -6,31 +8,60 @@ on:
       - master
     paths:
       - "backend/package.json"
-  pull_request:
-    branches:
-      - master
-    paths:
-      - "backend/package.json"
+concurrency:
+  group: build
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
         with:
           ref: "master"
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version-file: ".node-version"
       - name: Install dependencies
         run: |
-          npm install -g pnpm
+          corepack enable
           cd backend && pnpm i --no-frozen-lockfile
-      # - name: Test
-      #   run: |
-      #     cd backend
-      #     pnpm test
+      - name: Sync latest mihomo version
+        run: |
+          MIHOMO_VERSION="$(curl -fsSL https://github.com/MetaCubeX/mihomo/releases/latest/download/version.txt | tr -d '\r\n')"
+          test -n "$MIHOMO_VERSION"
+          echo "Using mihomo version: $MIHOMO_VERSION"
+          cd backend
+          MIHOMO_VERSION="$MIHOMO_VERSION" node <<'NODE'
+          const fs = require('fs');
+
+          const files = ['src/utils/download.js', 'src/utils/flow.js'];
+          const version = process.env.MIHOMO_VERSION;
+          let replacements = 0;
+
+          for (const file of files) {
+              const source = fs.readFileSync(file, 'utf8');
+              const next = source.replace(/clash\.meta\/[^"']+/g, () => {
+                  replacements += 1;
+                  return `clash.meta/${version}`;
+              });
+
+              if (next !== source) {
+                  fs.writeFileSync(file, next);
+              }
+          }
+
+          if (replacements === 0) {
+              throw new Error('No clash.meta version strings were updated.');
+          }
+
+          console.log(`Updated ${replacements} clash.meta version string(s).`);
+          NODE
+      - name: Test
+        run: |
+          cd backend
+          pnpm test
       # - name: Build
       #   run: |
       #     cd backend
@@ -51,7 +82,7 @@ jobs:
           pnpm i -D conventional-changelog-cli
           pnpm run changelog
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: ${{ success() }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -65,7 +96,9 @@ jobs:
             ./backend/dist/sub-store-1.min.js
             ./backend/dist/sub-store-parser.loon.min.js
             ./backend/dist/cron-sync-artifacts.min.js
+            ./backend/dist/proxy-utils.esm.mjs
             ./backend/dist/sub-store.bundle.js
+            ./backend/dist/runtime-manifest.json
       - name: Git push assets to "release" branch
         run: |
           cd backend/dist || exit 1

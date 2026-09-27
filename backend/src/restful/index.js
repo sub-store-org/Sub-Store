@@ -4,15 +4,22 @@ import express from '@/vendor/express';
 import $ from '@/core/app';
 import migrate from '@/utils/migration';
 import download, { downloadFile } from '@/utils/download';
-import { syncArtifacts, produceArtifact } from '@/restful/sync';
+import {
+    syncArtifacts,
+    produceArtifact,
+    syncArtifactItem,
+} from '@/restful/sync';
 import { gistBackupAction } from '@/restful/miscs';
-import { TOKENS_KEY, SETTINGS_KEY } from '@/constants';
+import { SETTINGS_KEY } from '@/constants';
+import { startArtifactCronJobs } from '@/utils/artifact-cron';
+import { createFrontendStaticMiddleware } from '@/utils/frontend-static';
 
 import registerSubscriptionRoutes from './subscriptions';
 import registerCollectionRoutes from './collections';
 import registerArtifactRoutes from './artifacts';
 import registerFileRoutes from './file';
 import registerTokenRoutes from './token';
+import registerArchiveRoutes from './archives';
 import registerModuleRoutes from './module';
 import registerSyncRoutes from './sync';
 import registerDownloadRoutes from './download';
@@ -22,6 +29,24 @@ import registerSortingRoutes from './sort';
 import registerMiscRoutes from './miscs';
 import registerNodeInfoRoutes from './node-info';
 import registerParserRoutes from './parser';
+import registerLogRoutes from './logs';
+import registerAgeRoutes from './age';
+import { consumeShareToken } from './token';
+import { AGE_PUBLIC_KEY } from '@/utils/age';
+import getFs from '@/runtime/fs';
+import getPath from '@/runtime/path';
+
+export function stripBackendPath(url, backendPath) {
+    return (backendPath === '/' ? url : url.replace(backendPath, '')) || '/';
+}
+
+export function matchesBackendPath(path, backendPath, merge) {
+    if (backendPath !== '/') return path.startsWith(backendPath);
+    return (
+        /^\/(api|download|share)(\/|$)/.test(path) &&
+        (!merge || !path.startsWith('/share/'))
+    );
+}
 
 export default function serve() {
     let port;
@@ -36,20 +61,28 @@ export default function serve() {
         const be_prefix = eval('process.env.SUB_STORE_BACKEND_PREFIX');
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
         const fe_path = eval('process.env.SUB_STORE_FRONTEND_PATH');
+        const mergedFrontend =
+            be_merge && fe_path
+                ? createFrontendStaticMiddleware(fe_path, '/index.html')
+                : null;
         if (be_prefix || be_merge) {
-            if (!fe_be_path.startsWith('/')) {
+            if (!fe_be_path?.startsWith('/')) {
                 throw new Error(
-                    'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
+                    'SUB_STORE_FRONTEND_BACKEND_PATH must be set and start with "/" when SUB_STORE_BACKEND_PREFIX or SUB_STORE_BACKEND_MERGE is enabled',
                 );
             }
             if (be_merge) {
                 $.info(`[BACKEND] MERGE mode is [ON].`);
                 $.info(`[BACKEND && FRONTEND] ${host}:${port}`);
             }
-            $.info(`[BACKEND PREFIX] ${host}:${port}${fe_be_path}`);
+            $.info(
+                `[BACKEND PREFIX] ${host}:${port}${
+                    fe_be_path === '/' ? '' : fe_be_path
+                }`,
+            );
             $app.use((req, res, next) => {
-                if (req.path.startsWith(fe_be_path)) {
-                    req.url = req.url.replace(fe_be_path, '') || '/';
+                if (matchesBackendPath(req.path, fe_be_path, be_merge)) {
+                    req.url = stripBackendPath(req.url, fe_be_path);
                     if (be_merge && req.url.startsWith('/api/')) {
                         req.query['share'] = 'true';
                     }
@@ -67,21 +100,16 @@ export default function serve() {
                         res.status(405).send('Method not allowed');
                         return;
                     }
-                    const tokens = $.read(TOKENS_KEY) || [];
-                    const token = tokens.find(
-                        (t) =>
-                            t.token === req.query.token &&
-                            (`/share/${t.type}/${t.name}` === pathname ||
-                                pathname.startsWith(
-                                    `/share/${t.type}/${t.name}/`,
-                                )) &&
-                            (t.exp == null || t.exp > Date.now()),
-                    );
+                    const token = consumeShareToken({
+                        token: req.query.token,
+                        pathname,
+                    });
                     if (token) {
+                        req.subStoreShareToken = token;
                         next();
                         return;
                     } else {
-                        const settings = $.read(SETTINGS_KEY);
+                        const settings = $.read(SETTINGS_KEY) || {};
                         if (settings?.appearanceSetting?.invalidShareFakeNode) {
                             req.query._fakeNode = true;
                             req.url = req.url.replace(
@@ -93,28 +121,9 @@ export default function serve() {
                         }
                     }
                 }
-                const isBackendRoute = /^\/(api|download|share)(\/|$)/.test(
-                    req.path,
-                );
-                if (be_merge && fe_path && !isBackendRoute) {
-                    const express_ = eval(`require("express")`);
-                    const mime_ = eval(`require("mime-types")`);
-                    const path_ = eval(`require("path")`);
-                    const fs_ = eval(`require("fs")`);
-                    // 检查请求的文件是否真实存在，不存在则返回 index.html（SPA 路由）
-                    const filePath = path_.join(fe_path, req.path);
-                    if (!fs_.existsSync(filePath)) {
-                        req.url = '/index.html';
-                    }
-                    const staticFileMiddleware = express_.static(fe_path, {
-                        setHeaders: (res, path) => {
-                            const type = mime_.contentType(path_.extname(path));
-                            if (type) {
-                                res.set('Content-Type', type);
-                            }
-                        },
-                    });
-                    staticFileMiddleware(req, res, next);
+                const isBackendRoute = matchesBackendPath(req.path, '/', false);
+                if (mergedFrontend && !isBackendRoute) {
+                    mergedFrontend(req, res, next);
                     return;
                 }
                 res.status(404).end();
@@ -132,15 +141,20 @@ export default function serve() {
     registerArtifactRoutes($app);
     registerFileRoutes($app);
     registerTokenRoutes($app);
+    registerArchiveRoutes($app);
     registerModuleRoutes($app);
     registerSyncRoutes($app);
     registerNodeInfoRoutes($app);
     registerMiscRoutes($app);
     registerParserRoutes($app);
+    registerLogRoutes($app);
+    registerAgeRoutes($app);
 
     $app.start();
 
     if ($.env.isNode) {
+        startArtifactCronJobs(syncArtifactItem);
+
         // Deprecated: SUB_STORE_BACKEND_CRON, SUB_STORE_CRON
         const backend_sync_cron = eval(
             'process.env.SUB_STORE_BACKEND_SYNC_CRON',
@@ -154,7 +168,7 @@ export default function serve() {
                 async function () {
                     try {
                         $.info(`[SYNC CRON] ${backend_sync_cron} started`);
-                        await syncArtifacts();
+                        await syncArtifacts({ skipCronArtifacts: true });
                         $.info(`[SYNC CRON] ${backend_sync_cron} finished`);
                     } catch (e) {
                         $.error(
@@ -328,8 +342,8 @@ export default function serve() {
                 // 'Asia/Shanghai' // timeZone
             );
         }
-        const path = eval(`require("path")`);
-        const fs = eval(`require("fs")`);
+        const path = getPath();
+        const fs = getFs();
         const data_url = eval('process.env.SUB_STORE_DATA_URL');
         const data_url_post = eval('process.env.SUB_STORE_DATA_URL_POST');
         const fe_be_path = eval('process.env.SUB_STORE_FRONTEND_BACKEND_PATH');
@@ -358,7 +372,8 @@ export default function serve() {
 
             const app = express_();
 
-            const staticFileMiddleware = express_.static(fe_path);
+            const staticFileMiddleware =
+                createFrontendStaticMiddleware(fe_path);
 
             let be_api = '/api/';
             let be_download = '/download/';
@@ -372,7 +387,7 @@ export default function serve() {
             if (fe_be_path) {
                 if (!fe_be_path.startsWith('/')) {
                     throw new Error(
-                        'SUB_STORE_FRONTEND_BACKEND_PATH should start with /',
+                        'SUB_STORE_FRONTEND_BACKEND_PATH must start with "/"',
                     );
                 }
                 be_api_rewrite = `${
@@ -390,16 +405,13 @@ export default function serve() {
                         pathRewrite: async (path, req) => {
                             if (req.method.toLowerCase() !== 'get')
                                 throw new Error('Method not allowed');
-                            const tokens = $.read(TOKENS_KEY) || [];
-                            const token = tokens.find(
-                                (t) =>
-                                    t.token === req.query.token &&
-                                    t.type === req.params.type &&
-                                    t.name === req.params.name &&
-                                    (t.exp == null || t.exp > Date.now()),
-                            );
+                            const token = consumeShareToken({
+                                token: req.query.token,
+                                type: req.params.type,
+                                name: req.params.name,
+                            });
                             if (!token) {
-                                const settings = $.read(SETTINGS_KEY);
+                                const settings = $.read(SETTINGS_KEY) || {};
                                 if (
                                     settings?.appearanceSetting
                                         ?.invalidShareFakeNode
@@ -413,6 +425,11 @@ export default function serve() {
                                 } else {
                                     return '/404';
                                 }
+                            }
+                            if (token?.[AGE_PUBLIC_KEY]) {
+                                req.headers[
+                                    'x-sub-store-share-age-public-key'
+                                ] = token[AGE_PUBLIC_KEY];
                             }
                             return req.originalUrl;
                         },

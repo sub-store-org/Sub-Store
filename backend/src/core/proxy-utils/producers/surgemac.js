@@ -1,6 +1,6 @@
 import { Base64 } from 'js-base64';
 import { Result, isPresent } from './utils';
-import Surge_Producer from './surge';
+import Surge_Producer, { SurgeUnsupportedProxyError } from './surge';
 import ClashMeta_Producer from './clashmeta';
 import { isIPv4, isIPv6 } from '@/utils';
 import $ from '@/core/app';
@@ -17,19 +17,33 @@ export default function SurgeMac_Producer() {
             // case 'ssr':
             //     return shadowsocksr(proxy);
             default: {
+                if (opts.mihomoExternal || proxy._mihomoExternal) {
+                    return mihomo(proxy, type, opts) || '';
+                }
                 try {
                     return surge_Producer.produce(proxy, type, opts);
                 } catch (e) {
-                    if (opts.useMihomoExternal) {
+                    if (
+                        opts.useMihomoExternal &&
+                        e instanceof SurgeUnsupportedProxyError
+                    ) {
+                        const output = mihomo(proxy, type, opts) || '';
+                        if (!output) {
+                            throw e;
+                        }
                         $.log(
-                            `${proxy.name} is not supported on ${targetPlatform}, try to use Mihomo(SurgeMac - External Proxy Program) instead`,
+                            `${proxy.name} is not supported on ${targetPlatform}, try to use mihomo(SurgeMac - External Proxy Program) instead`,
                         );
-                        return mihomo(proxy, type, opts);
-                    } else {
+                        return output;
+                    }
+
+                    if (e instanceof SurgeUnsupportedProxyError) {
                         throw new Error(
-                            `Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议`,
+                            `${e.message}. Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议`,
                         );
                     }
+
+                    throw e;
                 }
             }
         }
@@ -125,69 +139,131 @@ function shadowsocksr(proxy) {
 function mihomo(proxy, type, opts) {
     const clashProxy = ClashMeta_Producer().produce([proxy], 'internal')?.[0];
     if (clashProxy) {
-        const localPort = opts?.localPort || proxy._localPort || 65535;
+        let localPort = opts?.localPort || proxy._localPort || 65535;
         const ipv6 = ['ipv4', 'v4-only'].includes(proxy['ip-version'])
             ? false
             : true;
-        const external_proxy = {
-            name: proxy.name,
-            type: 'external',
-            udp: true,
-            exec: proxy._exec || '/usr/local/bin/mihomo',
-            'local-port': localPort,
-            args: [
-                '-config',
-                Base64.encode(
-                    JSON.stringify({
-                        'mixed-port': localPort,
-                        ipv6,
-                        mode: 'global',
-                        dns: {
-                            enable: true,
-                            ipv6,
-                            'default-nameserver': opts?.defaultNameserver ||
-                                proxy._defaultNameserver || [
-                                    '180.76.76.76',
-                                    '52.80.52.52',
-                                    '119.28.28.28',
-                                    '223.6.6.6',
-                                ],
-                            nameserver: opts?.nameserver ||
-                                proxy._nameserver || [
-                                    'https://doh.pub/dns-query',
-                                    'https://dns.alidns.com/dns-query',
-                                    'https://doh-pure.onedns.net/dns-query',
-                                ],
-                        },
-                        proxies: [
-                            {
-                                ...clashProxy,
-                                name: 'proxy',
-                            },
-                        ],
-                        'proxy-groups': [
-                            {
-                                name: 'GLOBAL',
-                                type: 'select',
-                                proxies: ['proxy'],
-                            },
-                        ],
-                    }),
-                ),
-            ],
-            addresses: [],
+        const dns = {
+            enable: true,
+            ipv6,
+            'default-nameserver': opts?.defaultNameserver ||
+                proxy._defaultNameserver || [
+                    '180.76.76.76',
+                    '52.80.52.52',
+                    '119.28.28.28',
+                    '223.6.6.6',
+                ],
+            nameserver: opts?.nameserver ||
+                proxy._nameserver || [
+                    'https://doh.pub/dns-query',
+                    'https://dns.alidns.com/dns-query',
+                    'https://doh-pure.onedns.net/dns-query',
+                ],
         };
+        const merge = opts?.merge || proxy._merge;
+        let result;
+        if (merge) {
+            const socks5 = {
+                name: proxy.name,
+                type: 'socks5',
+                server: '127.0.0.1',
+                port: localPort,
+                udp: true,
+            };
+            result = surge_Producer.produce(socks5, 'socks5', opts);
 
-        // https://manual.nssurge.com/policy/external-proxy.html
-        if (isIP(proxy.server)) {
-            external_proxy.addresses.push(proxy.server);
+            opts._merged = opts._merged || {
+                name: opts?.mergeName || proxy._mergeName || 'mihomo merged',
+                exec: opts?.exec || proxy._exec || '/usr/local/bin/mihomo',
+                config: {
+                    // 最后输出的时候加
+                    // 'mixed-port':,
+                    ipv6,
+                    mode: 'global',
+                    dns,
+                    proxies: [],
+                    'proxy-groups': [
+                        {
+                            name: 'GLOBAL',
+                            type: 'fallback',
+                            proxies: [],
+                        },
+                    ],
+                    listeners: [],
+                },
+            };
+            const proxyName = `${localPort}`;
+            opts._merged.config.listeners.push({
+                name: `socks5-${localPort}`,
+                type: 'socks',
+                port: localPort,
+                listen: '127.0.0.1',
+                udp: true,
+                proxy: proxyName,
+            });
+            opts._merged.config['proxy-groups'][0].proxies.push(proxyName);
+            opts._merged.config.proxies.push({
+                ...clashProxy,
+                name: proxyName,
+            });
+            // 只记录覆盖层, 在所有节点都并入后由 index.js 统一合并一次.
+            // 若在这里就合并, 覆盖层里的 proxy-groups 会成为后续节点
+            // `proxy-groups[0].proxies.push()` 的目标, 使 GLOBAL 出现重复项.
+            const configOverride = opts?.config || proxy._config;
+            if (configOverride) {
+                opts._merged.configOverride = {
+                    ...(opts._merged.configOverride || {}),
+                    ...configOverride,
+                };
+            }
         } else {
-            $.log(
-                `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}`,
-            );
+            const external_proxy = {
+                name: proxy.name,
+                type: 'external',
+                udp: true,
+                exec: opts?.exec || proxy._exec || '/usr/local/bin/mihomo',
+                'local-port': localPort,
+                args: [
+                    '-config',
+                    Base64.encode(
+                        JSON.stringify({
+                            'mixed-port': localPort,
+                            ipv6,
+                            mode: 'global',
+                            dns,
+                            proxies: [
+                                {
+                                    ...clashProxy,
+                                    name: 'proxy',
+                                },
+                            ],
+                            'proxy-groups': [
+                                {
+                                    name: 'GLOBAL',
+                                    type: 'select',
+                                    proxies: ['proxy'],
+                                },
+                            ],
+                            ...(opts?.config || proxy._config || {}),
+                        }),
+                    ),
+                ],
+                addresses: [],
+            };
+
+            // https://manual.nssurge.com/policy/external-proxy.html
+            if (isIP(proxy.server)) {
+                external_proxy.addresses.push(proxy.server);
+            } else {
+                $.warn(
+                    `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}`,
+                );
+            }
+
+            result = external(external_proxy);
         }
         opts.localPort = localPort - 1;
-        return external(external_proxy);
+        return result;
     }
 }
 

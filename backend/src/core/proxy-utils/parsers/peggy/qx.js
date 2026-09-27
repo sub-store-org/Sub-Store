@@ -1,4 +1,22 @@
-import * as peggy from 'peggy';
+import { Buffer } from 'buffer';
+import peggy from 'peggy';
+
+function decodeQxAlpn(raw) {
+    if (typeof raw !== 'string') return undefined;
+    const hex = raw.trim().replace(/:/g, '');
+    if (!hex || hex.length % 2 || /[^0-9a-f]/i.test(hex)) return undefined;
+
+    const bytes = Buffer.from(hex, 'hex');
+    const alpn = [];
+    for (let offset = 0; offset < bytes.length; ) {
+        const length = bytes[offset++];
+        if (!length || offset + length > bytes.length) return undefined;
+        alpn.push(bytes.subarray(offset, offset + length).toString('utf8'));
+        offset += length;
+    }
+    return alpn;
+}
+
 const grammars = String.raw`
 // global initializer
 {{
@@ -20,6 +38,15 @@ const grammars = String.raw`
     const obfs = {};
     const $ = {};
 
+    function setQxHttpObfs(type) {
+        // Preserve the original QX http-obfs token for round-trip output,
+        // including the upstream "vemss-http" typo that appears in QX
+        // examples.
+        proxy._qx_obfs_http = type;
+        obfs.type = "http";
+        return type;
+    }
+
     function handleObfs() {
         if (obfs.type === "ws" || obfs.type === "wss") {
             proxy.network = "ws";
@@ -30,6 +57,12 @@ const grammars = String.raw`
             $set(proxy, "ws-opts.headers.Host", obfs.host);
         } else if (obfs.type === "over-tls") {
             proxy.tls = true;
+            // Some QX share links use obfs-host as the TLS server name for
+            // plain over-tls TCP nodes instead of the explicit tls-host field.
+            // Accept it as a compatibility alias, but do not override tls-host.
+            if (obfs.host && !proxy.sni) {
+                proxy.sni = obfs.host;
+            }
         } else if (obfs.type === "http") {
             proxy.network = "http";
             $set(proxy, "http-opts.path", obfs.path);
@@ -38,7 +71,7 @@ const grammars = String.raw`
     }
 }
 
-start = (trojan/shadowsocks/vmess/vless/http/socks5) {
+start = (trojan/shadowsocks/vmess/vless/anytls/http/socks5) {
     return proxy
 }
 
@@ -73,9 +106,12 @@ shadowsocks = "shadowsocks" equals address
                 $set(proxy, "plugin-opts.tls", true);
             }
         } else if (obfs.type === 'over-tls') {
-            throw new Error('ss over-tls is not supported');
+            proxy.tls = true;
+            if (obfs.host) {
+                proxy.sni = obfs.host;
+            }
         }
-        if (obfs.type) {
+        if (obfs.type && obfs.type !== 'over-tls') {
             $set(proxy, "plugin-opts.host", obfs.host);
             $set(proxy, "plugin-opts.path", obfs.path);
         }
@@ -83,7 +119,7 @@ shadowsocks = "shadowsocks" equals address
 }
 
 vmess = "vmess" equals address
-    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)* {
+    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs_vmess/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "none";
     if (proxy.aead === false) {
@@ -95,10 +131,16 @@ vmess = "vmess" equals address
 }
 
 vless = "vless" equals address
-    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/vless_flow/others)* {
+    (uuid/method/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/obfs_vless/obfs_host/obfs_uri/udp_relay/udp_over_tcp/fast_open/aead/server_check_url/reality_base64_pubkey/reality_hex_shortid/vless_flow/others)* {
     proxy.type = "vless";
     proxy.cipher = proxy.cipher || "none";
     handleObfs();
+}
+
+anytls = "anytls" equals address
+    (password/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/udp_relay/fast_open/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)* {
+    proxy.type = "anytls";
+    proxy.tls = true;
 }
 
 http = "http" equals address 
@@ -146,7 +188,8 @@ port = digits:[0-9]+ {
 }
 
 username = comma "username" equals username:[^,]+ { proxy.username = username.join("").trim(); }
-password = comma "password" equals password:[^,]+ { proxy.password = password.join("").trim(); }
+password = comma "password" equals password:$((!next_parameter .)+) { proxy.password = password.trim(); }
+next_parameter = "," _ [^=,]+ equals
 uuid = comma "password" equals uuid:[^,]+ { proxy.uuid = uuid.join("").trim(); }
 
 method = comma "method" equals cipher:cipher { 
@@ -162,9 +205,14 @@ udp_over_tcp_new = comma "udp-over-tcp" equals param:$[^=,]+ { if (param === "sp
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 
 over_tls = comma "over-tls" equals flag:bool { proxy.tls = flag; }
-tls_host = comma "tls-host" equals sni:domain { proxy.sni = sni; }
-tls_verification = comma "tls-verification" equals flag:bool { 
-    proxy["skip-cert-verify"] = !flag;
+tls_host = comma sni:("tls-host") equals match:[^,]+ { proxy.sni = match.join("").replace(/^"(.*)"$/, '$1'); }
+tls_verification = comma "tls-verification" equals raw:$[^,]+ {
+    const value = raw.trim();
+    if (value === "true" || value === "false") {
+        proxy["skip-cert-verify"] = value !== "true";
+    } else {
+        proxy["name-cert-verify"] = value;
+    }
 }
 tls_fingerprint = comma "tls-cert-sha256" equals tls_fingerprint:$[^,]+ { proxy["tls-fingerprint"] = tls_fingerprint.trim(); }
 tls_pubkey_sha256 = comma "tls-pubkey-sha256" equals param:$[^=,]+ { proxy["tls-pubkey-sha256"] = param; }
@@ -176,11 +224,34 @@ tls_no_session_reuse = comma "tls-no-session-reuse" equals flag:bool {
     proxy["tls-no-session-reuse"] = flag;
 }
 
-obfs_ss = comma "obfs" equals type:("http"/"tls"/"wss"/"ws"/"over-tls") { obfs.type = type; return type; }
+obfs_ss = comma "obfs" equals (
+    type:("tls"/"wss"/"ws"/"over-tls") { obfs.type = type; return type; }
+  / type:("http"/"vmess-http"/"vemss-http"/"shadowsocks-http") {
+        // QX accepts multiple http-obfs spellings for ss/vmess/vless; keep
+        // the original token so QX output can round-trip it unchanged.
+        return setQxHttpObfs(type);
+    }
+)
 obfs_ssr = comma "obfs" equals type:("plain"/"http_simple"/"http_post"/"random_head"/"tls1.2_ticket_auth"/"tls1.2_ticket_fastauth") { proxy.type = "ssr"; obfs.type = type; return type; }
 obfs = comma "obfs" equals type:("wss"/"ws"/"over-tls"/"http") { obfs.type = type; return type; };
+obfs_vmess = comma "obfs" equals (
+    type:("wss"/"ws"/"over-tls") { obfs.type = type; return type; }
+  / type:("http"/"vmess-http"/"vemss-http"/"shadowsocks-http") {
+        // QX accepts multiple http-obfs spellings for ss/vmess/vless; keep
+        // the original token so QX output can round-trip it unchanged.
+        return setQxHttpObfs(type);
+    }
+);
+obfs_vless = comma "obfs" equals (
+    type:("wss"/"ws"/"over-tls") { obfs.type = type; return type; }
+  / type:("http"/"vmess-http"/"vemss-http"/"shadowsocks-http") {
+        // QX accepts multiple http-obfs spellings for ss/vmess/vless; keep
+        // the original token so QX output can round-trip it unchanged.
+        return setQxHttpObfs(type);
+    }
+);
 
-obfs_host = comma "obfs-host" equals host:domain { obfs.host = host; }
+obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").replace(/^"(.*)"$/, '$1'); }
 obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = uri; }
 
 ssr_protocol = comma "ssr-protocol" equals protocol:("origin"/"auth_sha1_v4"/"auth_aes128_md5"/"auth_aes128_sha1"/"auth_chain_a"/"auth_chain_b") { proxy.protocol = protocol; return protocol; }
@@ -208,7 +279,15 @@ bool = b:("true"/"false") { return b === "true" }
 let parser;
 export default function getParser() {
     if (!parser) {
-        parser = peggy.generate(grammars);
+        const generated = peggy.generate(grammars);
+        parser = {
+            parse(input, options) {
+                const proxy = generated.parse(input, options);
+                const alpn = decodeQxAlpn(proxy['tls-alpn']);
+                if (alpn) proxy.alpn = alpn;
+                return proxy;
+            },
+        };
     }
     return parser;
 }

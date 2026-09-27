@@ -1,0 +1,74 @@
+name: 功能建议
+description: 改进或新功能等
+title: "[FR] "
+body:
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: 建议类型
+      description: 请选择最接近的类型。
+      multiple: false
+      options:
+        - 新功能
+        - 现有功能改进
+        - UI/交互优化
+        - 文档/示例改进
+        - 其他
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: 运行环境
+      description: 请选择这个建议涉及的运行环境。
+      multiple: false
+      options:
+        - Node.js
+        - Android
+        - Docker
+        - 自部署
+        - Surge
+        - Loon
+        - Quantumult X
+        - Stash
+        - Shadowrocket
+        - 其他
+    validations:
+      required: true
+  - type: dropdown
+    id: affected-areas
+    attributes:
+      label: 影响范围
+      description: 可多选，请选择这个建议涉及的部分。
+      multiple: true
+      options:
+        - 后端
+        - 前端
+        - 订阅转换
+        - 节点/策略组
+        - 同步/缓存
+        - 配置/部署
+        - 代理 App 兼容
+        - 文档
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: requirement
+    attributes:
+      label: 需求描述
+      description: 建议把需求讲清楚，不要一下子跳到一个解决方案。
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: 解决方案
+      description: 建议先把上面的需求讲清楚，然后根据需求提解决方案。
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他信息
+      description: 例如参考链接、截图、替代方案或额外背景。

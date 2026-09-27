@@ -3,17 +3,66 @@ import { getPolicyDescriptor } from '@/utils';
 import $ from '@/core/app';
 import { SETTINGS_KEY } from '@/constants';
 
+const DEFAULT_GITHUB_API_URL = 'https://api.github.com';
+
+function describeGistApiErrorResponse(resp) {
+    let body;
+    try {
+        body = JSON.parse(resp.body);
+    } catch (e) {
+        //
+    }
+    const message =
+        body?.message?.error ??
+        body?.error ??
+        body?.message ??
+        resp.body ??
+        'Unknown error';
+    return `ERROR: HTTP ${resp.statusCode}: ${message}`;
+}
+
+function normalizeApiUrl(url, fallback = DEFAULT_GITHUB_API_URL) {
+    const normalizedUrl = String(url ?? '').trim() || fallback;
+
+    return normalizedUrl.replace(/\/+$/, '');
+}
+
+export function getGithubGistBaseURL({ githubApiUrl, githubProxy } = {}) {
+    const normalizedGithubApiUrl = normalizeApiUrl(githubApiUrl);
+    const isCustomGithubApiUrl =
+        normalizedGithubApiUrl !== DEFAULT_GITHUB_API_URL;
+    const normalizedGithubProxy = String(githubProxy || '')
+        .trim()
+        .replace(/\/+$/, '');
+
+    if (isCustomGithubApiUrl) {
+        return normalizedGithubApiUrl;
+    }
+
+    return `${
+        normalizedGithubProxy ? `${normalizedGithubProxy}/` : ''
+    }${DEFAULT_GITHUB_API_URL}`;
+}
+
+export function hasGistSyncCredentials(settings = {}) {
+    return Boolean(settings?.gistToken);
+}
+
+export { describeGistApiErrorResponse };
+
 /**
  * Gist backup
  */
 export default class Gist {
     constructor({ token, key, syncPlatform }) {
         const { isStash, isLoon, isShadowRocket, isQX } = ENV();
-        const {
-            defaultProxy,
-            defaultTimeout: timeout,
+        const { defaultProxy, githubApiTimeout, githubProxy, githubApiUrl } =
+            $.read(SETTINGS_KEY) || {};
+        const githubApiRequestTimeout = githubApiTimeout || 10000;
+        const githubGistBaseURL = getGithubGistBaseURL({
+            githubApiUrl,
             githubProxy,
-        } = $.read(SETTINGS_KEY);
+        });
         let proxy = defaultProxy;
         if ($.env.isNode) {
             proxy =
@@ -45,14 +94,13 @@ export default class Gist {
                 ...(isLoon && proxy ? { node: proxy } : {}),
                 ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
                 ...(proxy ? getPolicyDescriptor(proxy) : {}),
-                timeout: timeout || 8000,
+                timeout: githubApiRequestTimeout,
 
                 events: {
                     onResponse: (resp) => {
                         if (/^[45]/.test(String(resp.statusCode))) {
-                            const body = JSON.parse(resp.body);
                             return Promise.reject(
-                                `ERROR: ${body.message?.error ?? body.message}`,
+                                describeGistApiErrorResponse(resp),
                             );
                         } else {
                             return resp;
@@ -67,9 +115,7 @@ export default class Gist {
                     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36',
             };
             this.http = HTTP({
-                baseURL: `${
-                    githubProxy ? `${githubProxy}/` : ''
-                }https://api.github.com`,
+                baseURL: githubGistBaseURL,
                 headers: {
                     ...this.headers,
                     ...(isStash && proxy
@@ -87,13 +133,13 @@ export default class Gist {
                 ...(isLoon && proxy ? { node: proxy } : {}),
                 ...(isQX && proxy ? { opts: { policy: proxy } } : {}),
                 ...(proxy ? getPolicyDescriptor(proxy) : {}),
-                timeout: timeout || 8000,
+                timeout: githubApiRequestTimeout,
 
                 events: {
                     onResponse: (resp) => {
                         if (/^[45]/.test(String(resp.statusCode))) {
                             return Promise.reject(
-                                `ERROR: ${JSON.parse(resp.body).message}`,
+                                describeGistApiErrorResponse(resp),
                             );
                         } else {
                             return resp;
@@ -105,6 +151,24 @@ export default class Gist {
 
         this.key = key;
         this.syncPlatform = syncPlatform;
+
+        // 串行请求队列锁 防止响应串扰
+        this._requestQueue = Promise.resolve();
+        const queuedMethods = ['get', 'post', 'put', 'patch', 'delete'];
+        for (const method of queuedMethods) {
+            const original = this.http[method];
+            if (typeof original === 'function') {
+                this.http[method] = (...args) => {
+                    return new Promise((resolve, reject) => {
+                        this._requestQueue = this._requestQueue.then(() =>
+                            original
+                                .apply(this.http, args)
+                                .then(resolve, reject),
+                        );
+                    });
+                };
+            }
+        }
     }
 
     async locate() {
@@ -135,7 +199,7 @@ export default class Gist {
         }
     }
 
-    async upload(input) {
+    async upload(input, options = {}) {
         if (Object.keys(input).length === 0) {
             return Promise.reject('未提供需上传的文件');
         }
@@ -143,6 +207,65 @@ export default class Gist {
         const gist = await this.locate();
 
         let files = input;
+        const emptyFileFallback = options.emptyFileFallback;
+        const hasEmptyFileFallback = Boolean(emptyFileFallback?.filename);
+        const uploadMeta = {};
+
+        const attachUploadMeta = async (request) => {
+            const response = await request;
+            if (Object.keys(uploadMeta).length > 0) {
+                response.subStoreUploadMeta = uploadMeta;
+            }
+            return response;
+        };
+
+        const applyEmptyFileFallback = ({ actions, existingFiles, result }) => {
+            if (!hasEmptyFileFallback) return;
+
+            const filename = emptyFileFallback.filename;
+            const content = emptyFileFallback.content ?? '';
+            const realFileKeys = Object.keys(result).filter(
+                (key) => key !== filename,
+            );
+
+            if (Object.keys(result).length === 0) {
+                result[filename] = { content };
+                uploadMeta.emptyFileFallback = {
+                    status: 'created',
+                    filename,
+                };
+
+                if (this.syncPlatform === 'gitlab') {
+                    actions.push({
+                        action: existingFiles[filename] ? 'update' : 'create',
+                        file_path: filename,
+                        content,
+                    });
+                } else {
+                    files[filename] = { content };
+                }
+            } else if (result[filename] && realFileKeys.length > 0) {
+                delete result[filename];
+                uploadMeta.emptyFileFallback = {
+                    status: 'removed',
+                    filename,
+                };
+
+                if (this.syncPlatform === 'gitlab') {
+                    actions.push({
+                        action: 'delete',
+                        file_path: filename,
+                    });
+                } else {
+                    files[filename] = null;
+                }
+            } else if (result[filename] && realFileKeys.length === 0) {
+                uploadMeta.emptyFileFallback = {
+                    status: 'retained',
+                    filename,
+                };
+            }
+        };
 
         if (gist?.id) {
             if (this.syncPlatform === 'gitlab') {
@@ -162,6 +285,7 @@ export default class Gist {
                         files[key].content === ''
                     ) {
                         delete result[key];
+                        files[key] = null;
                         actions.push({
                             action: 'delete',
                             file_path: key,
@@ -195,6 +319,12 @@ export default class Gist {
             // console.log(`files`, files);
             // console.log(`actions`, actions);
 
+            applyEmptyFileFallback({
+                actions,
+                existingFiles: gist.files,
+                result,
+            });
+
             if (this.syncPlatform === 'gitlab') {
                 if (Object.keys(result).length === 0) {
                     return Promise.reject(
@@ -207,24 +337,32 @@ export default class Gist {
                     );
                 }
                 files = actions;
-                return this.http.put({
-                    headers: {
-                        ...this.headers,
-                        'Content-Type': 'application/json',
-                    },
-                    url: `/snippets/${gist.id}`,
-                    body: JSON.stringify({ files }),
-                });
+                return attachUploadMeta(
+                    this.http.put({
+                        headers: {
+                            ...this.headers,
+                            'Content-Type': 'application/json',
+                        },
+                        url: `/snippets/${gist.id}`,
+                        body: JSON.stringify({ files }),
+                    }),
+                );
             } else {
                 if (Object.keys(result).length === 0) {
                     return Promise.reject(
                         '本次操作将导致所有文件的内容都为空, 无法更新 gist',
                     );
                 }
-                return this.http.patch({
-                    url: `/gists/${gist.id}`,
-                    body: JSON.stringify({ files }),
-                });
+                return attachUploadMeta(
+                    this.http.patch({
+                        url: `/gists/${gist.id}`,
+                        headers: {
+                            ...this.headers,
+                            'Accept-Encoding': 'gzip, deflate, br',
+                        },
+                        body: JSON.stringify({ files }),
+                    }),
+                );
             }
         } else {
             files = Object.entries(files).reduce((acc, [key, file]) => {
@@ -243,32 +381,36 @@ export default class Gist {
                     file_path: key,
                     content: files[key].content,
                 }));
-                return this.http.post({
-                    headers: {
-                        ...this.headers,
-                        'Content-Type': 'application/json',
-                    },
-                    url: '/snippets',
-                    body: JSON.stringify({
-                        title: this.key,
-                        visibility: 'private',
-                        files,
+                return attachUploadMeta(
+                    this.http.post({
+                        headers: {
+                            ...this.headers,
+                            'Content-Type': 'application/json',
+                        },
+                        url: '/snippets',
+                        body: JSON.stringify({
+                            title: this.key,
+                            visibility: 'private',
+                            files,
+                        }),
                     }),
-                });
+                );
             } else {
                 if (Object.keys(files).length === 0) {
                     return Promise.reject(
                         '所有文件的内容都为空, 无法创建 gist',
                     );
                 }
-                return this.http.post({
-                    url: '/gists',
-                    body: JSON.stringify({
-                        description: this.key,
-                        public: false,
-                        files,
+                return attachUploadMeta(
+                    this.http.post({
+                        url: '/gists',
+                        body: JSON.stringify({
+                            description: this.key,
+                            public: false,
+                            files,
+                        }),
                     }),
-                });
+                );
             }
         }
     }

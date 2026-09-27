@@ -1,9 +1,18 @@
-import { deleteByName, findByName, updateByName } from '@/utils/database';
+import {
+    deleteByName,
+    findByName,
+    insertByPosition,
+    updateByName,
+} from '@/utils/database';
+import { getCreateItemPosition } from '@/utils/create-item-position';
 import { COLLECTIONS_KEY, ARTIFACTS_KEY, FILES_KEY } from '@/constants';
+import { archiveCollection } from '@/utils/archive';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
 import { RequestInvalidError, ResourceNotFoundError } from '@/restful/errors';
 import { formatDateTime } from '@/utils';
+import { normalizeAgePublicKeyConfig } from '@/utils/age';
+import { normalizeEditorLanguageConfig } from '@/utils/editor-language';
 
 export default function register($app) {
     if (!$.read(COLLECTIONS_KEY)) $.write({}, COLLECTIONS_KEY);
@@ -21,32 +30,12 @@ export default function register($app) {
 
 // collection API
 function createCollection(req, res) {
-    const collection = req.body;
-    $.info(`正在创建组合订阅：${collection.name}`);
-    if (/\//.test(collection.name)) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'INVALID_NAME',
-                `Collection ${collection.name} is invalid`,
-            ),
-        );
-        return;
+    try {
+        const collection = createCollectionItem(req.body);
+        success(res, collection, 201);
+    } catch (error) {
+        failed(res, error);
     }
-    const allCols = $.read(COLLECTIONS_KEY);
-    if (findByName(allCols, collection.name)) {
-        failed(
-            res,
-            new RequestInvalidError(
-                'DUPLICATE_KEY',
-                `Collection ${collection.name} already exists.`,
-            ),
-        );
-        return;
-    }
-    allCols.push(collection);
-    $.write(allCols, COLLECTIONS_KEY);
-    success(res, collection, 201);
 }
 
 function getCollection(req, res) {
@@ -57,6 +46,7 @@ function getCollection(req, res) {
     if (collection) {
         if (raw) {
             res.set('content-type', 'application/json')
+                .set('access-control-expose-headers', 'content-disposition')
                 .set(
                     'content-disposition',
                     `attachment; filename="${encodeURIComponent(
@@ -92,6 +82,8 @@ function updateCollection(req, res) {
             ...oldCol,
             ...collection,
         };
+        normalizeAgePublicKeyConfig(newCol);
+        normalizeEditorLanguageConfig(newCol);
         $.info(`正在更新组合订阅：${name}...`);
 
         if (name !== newCol.name) {
@@ -135,12 +127,17 @@ function updateCollection(req, res) {
 }
 
 function deleteCollection(req, res) {
-    let { name } = req.params;
-    $.info(`正在删除组合订阅：${name}`);
-    let allCols = $.read(COLLECTIONS_KEY);
-    deleteByName(allCols, name);
-    $.write(allCols, COLLECTIONS_KEY);
-    success(res);
+    try {
+        let { name } = req.params;
+        $.info(`正在删除组合订阅：${name}`);
+        if (shouldArchiveDeletion(req.query.mode)) {
+            archiveCollection(name);
+        }
+        deleteCollectionItem(name);
+        success(res);
+    } catch (error) {
+        failed(res, error);
+    }
 }
 
 function getAllCollections(req, res) {
@@ -149,7 +146,66 @@ function getAllCollections(req, res) {
 }
 
 function replaceCollection(req, res) {
-    const allCols = req.body;
-    $.write(allCols, COLLECTIONS_KEY);
-    success(res);
+    try {
+        const allCols = req.body;
+        allCols.forEach((collection) => {
+            normalizeAgePublicKeyConfig(collection);
+            normalizeEditorLanguageConfig(collection);
+        });
+        $.write(allCols, COLLECTIONS_KEY);
+        success(res);
+    } catch (error) {
+        failed(res, error);
+    }
 }
+
+function createCollectionItem(collection) {
+    normalizeAgePublicKeyConfig(collection);
+    normalizeEditorLanguageConfig(collection);
+    $.info(`正在创建组合订阅：${collection.name}`);
+    if (/\//.test(collection.name)) {
+        throw new RequestInvalidError(
+            'INVALID_NAME',
+            `Collection ${collection.name} is invalid`,
+        );
+    }
+    const allCols = $.read(COLLECTIONS_KEY);
+    if (findByName(allCols, collection.name)) {
+        throw new RequestInvalidError(
+            'DUPLICATE_KEY',
+            `Collection ${collection.name} already exists.`,
+        );
+    }
+    insertByPosition(allCols, collection, getCreateItemPosition());
+    $.write(allCols, COLLECTIONS_KEY);
+    return collection;
+}
+
+function deleteCollectionItem(name) {
+    const allCols = $.read(COLLECTIONS_KEY);
+    const collection = findByName(allCols, name);
+    if (!collection) {
+        throw new ResourceNotFoundError(
+            'RESOURCE_NOT_FOUND',
+            `Collection ${name} does not exist!`,
+        );
+    }
+    deleteByName(allCols, name);
+    $.write(allCols, COLLECTIONS_KEY);
+    return collection;
+}
+
+function shouldArchiveDeletion(mode) {
+    if (mode == null || mode === '' || mode === 'permanent') {
+        return false;
+    }
+    if (mode === 'archive') {
+        return true;
+    }
+    throw new RequestInvalidError(
+        'INVALID_DELETE_MODE',
+        `Unsupported delete mode: ${mode}`,
+    );
+}
+
+export { createCollectionItem, deleteCollectionItem };
