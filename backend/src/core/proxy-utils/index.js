@@ -781,6 +781,15 @@ function lastParse(proxy) {
         }
         normalizeOpts(proxy[normalizedKey]);
     }
+    if (
+        proxy['reality-opts']?.['public-key'] &&
+        !hasOwn(proxy['reality-opts'], 'support-x25519mlkem768') &&
+        ['safari-ios-26', 'chrome147'].includes(
+            `${proxy._loon_tls_profile || ''}`.trim(),
+        )
+    ) {
+        proxy['reality-opts']['support-x25519mlkem768'] = true;
+    }
     proxy.udp = ![false, 0, '0', 'false', 'off'].includes(
         typeof proxy.udp === 'string' ? proxy.udp.toLowerCase() : proxy.udp,
     );

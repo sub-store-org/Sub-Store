@@ -3013,7 +3013,7 @@ describe('Platform raw-format parser coverage', function () {
             },
             {
                 title: 'parses shadowsocks shadow-tls tls-profile into internal loon fields',
-                input: 'Loon ShadowTLS TLS Profile=shadowsocks,loon-st.example.com,8388,aes-128-gcm,"secret",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3,tls-profile=ios26',
+                input: 'Loon ShadowTLS TLS Profile=shadowsocks,loon-st.example.com,8388,aes-128-gcm,"secret",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3,tls-profile=safari-ios-26',
                 expected: {
                     type: 'ss',
                     name: 'Loon ShadowTLS TLS Profile',
@@ -3023,7 +3023,7 @@ describe('Platform raw-format parser coverage', function () {
                         password: 'shadow-pass',
                         version: 3,
                     },
-                    _loon_tls_profile: 'ios26',
+                    _loon_tls_profile: 'safari-ios-26',
                     'client-fingerprint': 'ios',
                 },
             },
@@ -3374,25 +3374,40 @@ describe('Platform raw-format parser coverage', function () {
             },
         ]);
 
-        it('normalizes Loon tls-profile values into client fingerprints', function () {
+        it('normalizes Loon tls-profile values without overriding explicit REALITY ML-KEM settings', function () {
             const cases = [
+                ['global'],
                 ['default'],
                 ['chrome', 'chrome'],
-                ['chrome147', 'chrome'],
-                ['ios18', 'ios'],
-                ['ios26', 'ios'],
+                ['chrome147', 'chrome', true],
+                ['safari-ios18', 'ios'],
+                ['safari-ios-26', 'ios', true],
             ];
 
-            for (const [profile, fingerprint] of cases) {
-                const proxy = parseOne(
-                    `Loon ${profile}=vmess,loon-${profile}.example.com,443,auto,"${UUID}",over-tls=true,tls-profile=${profile},alterId=0`,
-                );
+            for (const [profile, fingerprint, mlkem] of cases) {
+                const input = `Loon ${profile}=vmess,loon-${profile}.example.com,443,auto,"${UUID}",over-tls=true,tls-profile=${profile},alterId=0`;
+                const proxy = parseOne(input);
 
                 expect(proxy._loon_tls_profile).to.equal(profile);
+                expect(proxy).to.not.have.property('reality-opts');
                 if (fingerprint) {
                     expect(proxy['client-fingerprint']).to.equal(fingerprint);
                 } else {
                     expect(proxy).to.not.have.property('client-fingerprint');
+                }
+
+                const realityProxy = parseOne(`${input},public-key=pubkey`);
+                expect(
+                    realityProxy['reality-opts']['support-x25519mlkem768'],
+                ).to.equal(mlkem);
+
+                for (const value of [true, false]) {
+                    realityProxy['reality-opts']['support-x25519mlkem768'] =
+                        value;
+                    const reparsed = parseOne(JSON.stringify(realityProxy));
+                    expect(
+                        reparsed['reality-opts']['support-x25519mlkem768'],
+                    ).to.equal(value);
                 }
             }
         });

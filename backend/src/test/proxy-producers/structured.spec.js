@@ -96,7 +96,8 @@ describe('Proxy structured producers', function () {
 
     it('normalizes Loon tls-profile before emitting Mihomo client fingerprints', function () {
         for (const [profile, fingerprint] of [
-            ['ios26', 'ios'],
+            ['safari-ios18', 'ios'],
+            ['safari-ios-26', 'ios'],
             ['chrome147', 'chrome'],
         ]) {
             const [proxy] = ProxyUtils.parse(

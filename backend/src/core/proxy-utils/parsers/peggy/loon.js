@@ -65,8 +65,8 @@ const grammars = String.raw`
             case "chrome":
             case "chrome147":
                 return "chrome";
-            case "ios18":
-            case "ios26":
+            case "safari-ios18":
+            case "safari-ios-26":
                 return "ios";
         }
     }

@@ -750,7 +750,7 @@ describe('Proxy text producers', function () {
             cipher: 'chacha20-ietf-poly1305',
             password: 'ss-pass',
             plugin: 'shadow-tls',
-            _loon_tls_profile: 'ios26',
+            _loon_tls_profile: 'safari-ios-26',
             'plugin-opts': {
                 password: 'shadow-pass',
                 host: 'mask.example.com',
@@ -759,7 +759,7 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            'Loon ShadowTLS TLS Profile=shadowsocks,ss.example.com,8388,chacha20-ietf-poly1305,"ss-pass",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3,tls-profile=ios26',
+            'Loon ShadowTLS TLS Profile=shadowsocks,ss.example.com,8388,chacha20-ietf-poly1305,"ss-pass",shadow-tls-password=shadow-pass,shadow-tls-sni=mask.example.com,shadow-tls-version=3,tls-profile=safari-ios-26',
         );
     });
 
@@ -864,55 +864,79 @@ describe('Proxy text producers', function () {
             },
         ]);
 
-        expect(output.match(/tls-profile=chrome147(?=,|$)/gm)).to.have.length(
-            9,
-        );
+        expect(output.match(/tls-profile=chrome(?=,|$)/gm)).to.have.length(9);
         expect(output.match(/alpn="http\/1\.1,h2,h3"/g)).to.have.length(9);
     });
 
     it('selects Loon tls-profile before client fingerprint fallback', function () {
-        const buildTrojan = (name, fields) => ({
-            type: 'trojan',
-            name,
-            server: `${name.toLowerCase().replace(/\s+/g, '-')}.example.com`,
-            port: 443,
-            password: 'secret',
-            ...fields,
-        });
-        const output = produceExternal('Loon', [
-            buildTrojan('Loon Source IOS18', {
-                _loon_tls_profile: 'ios18',
-                'client-fingerprint': 'ios',
-            }),
-            buildTrojan('Loon Source Default', {
-                _loon_tls_profile: 'default',
-                'client-fingerprint': 'chrome',
-            }),
-            buildTrojan('Loon Source Chrome', {
-                _loon_tls_profile: 'chrome',
-                'client-fingerprint': 'ios',
-            }),
-            buildTrojan('Loon Source Chrome147', {
-                _loon_tls_profile: 'chrome147',
-                'client-fingerprint': 'ios',
-            }),
-            buildTrojan('Loon Fallback Chrome', {
-                'client-fingerprint': 'chrome',
-            }),
-            buildTrojan('Loon Fallback IOS', {
-                'client-fingerprint': 'ios',
-            }),
-        ]);
+        for (const profile of [
+            'global',
+            'default',
+            'safari-ios18',
+            'safari-ios-26',
+            'chrome',
+            'chrome147',
+        ]) {
+            for (const mlkem of [true, false, undefined]) {
+                const output = produceExternal('Loon', {
+                    type: 'trojan',
+                    name: 'Loon TLS Profile',
+                    server: 'example.com',
+                    port: 443,
+                    password: 'secret',
+                    _loon_tls_profile: ` ${profile} `,
+                    'client-fingerprint': 'ios',
+                    'reality-opts': {
+                        'public-key': 'pubkey',
+                        'support-x25519mlkem768': mlkem,
+                    },
+                });
+                expect(output.match(/,tls-profile=([^,]+)/)?.[1]).to.equal(
+                    profile,
+                );
+            }
+        }
+    });
 
-        expect(output).to.include('Loon Source IOS18=trojan');
-        expect(output).to.include('tls-profile=ios18');
-        expect(output).to.include('tls-profile=default');
-        expect(output).to.match(/tls-profile=chrome(?=,|$)/m);
-        expect(output.match(/tls-profile=chrome147(?=,|$)/gm)).to.have.length(
-            2,
-        );
-        expect(output).to.include('tls-profile=ios26');
-        expect(output.match(/tls-profile=/g)).to.have.length(6);
+    it('maps Loon REALITY ML-KEM fingerprints and preserves their profiles on re-export', function () {
+        const cases = [
+            ['safari', 'true', 'safari-ios-26'],
+            ['ios', '1', 'safari-ios-26'],
+            ['chrome', 'true', 'chrome147'],
+            ['safari', 'false', 'safari-ios18'],
+            ['ios', 'false', 'safari-ios18'],
+            ['chrome', 'false', 'chrome'],
+            ['safari', undefined, 'safari-ios18'],
+            ['ios', undefined, 'safari-ios18'],
+            ['chrome', undefined, 'chrome'],
+            ['firefox', 'true', 'chrome147'],
+            ['random', 'true', 'chrome147'],
+            ['global', 'true', 'chrome147'],
+            ['default', 'true', 'chrome147'],
+            ['safari-ios18', 'true', 'chrome147'],
+            ['', 'true', 'chrome147'],
+            ['firefox', 'false', undefined],
+            ['', undefined, undefined],
+        ];
+        for (const type of ['vless', 'vmess']) {
+            for (const [fingerprint, mlkem, expected] of cases) {
+                const proxies = ProxyUtils.parse(
+                    `${type}://${UUID}@example.com:443?security=reality&pbk=pubkey&fp=${fingerprint}${
+                        mlkem == null ? '' : `&support-x25519mlkem768=${mlkem}`
+                    }`,
+                );
+                const output = produceExternal('Loon', proxies);
+                const reexported = produceExternal(
+                    'Loon',
+                    ProxyUtils.parse(output),
+                );
+                for (const result of [output, reexported]) {
+                    expect(result.match(/,tls-profile=([^,]+)/)?.[1]).to.equal(
+                        expected,
+                    );
+                }
+            }
+        }
     });
 
     it('omits invalid Loon tls-profile fallback values', function () {
