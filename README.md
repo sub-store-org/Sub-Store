@@ -60,6 +60,14 @@ Sub-Store also supports a configurable browser CORS allowlist for the backend AP
 - Proxy App modules use the `cors` module argument; the default is `https://sub-store.vercel.app,http://substore.stash,https://substore.stash`.
 - Multiple origins can be separated by commas. Origins are matched exactly by scheme, host, and port. Set the value to `*` only when you accept the risk of any website reading the local backend through browser CORS.
 
+## Node push notifications
+
+For Node deployments, `SUB_STORE_PUSH_SERVICE` accepts a Shoutrrr URL or an existing HTTP/HTTPS URL template. Shoutrrr URLs are sent in-process with [shoutrrr-ts](https://github.com/Delusions6515/shoutrrr-ts); a separate `shoutrrr` executable is no longer used or required. HTTP/HTTPS URL templates still use the existing request path and `[推送标题]` / `[推送内容]` placeholders.
+
+The supported Shoutrrr URL families are Generic Webhook (`generic://`, `generic+https://`, `generic+http://`), Bark, Discord, Gotify, Google Chat (`hangouts://` alias), IFTTT, Join, Mattermost, ntfy, OpsGenie, Pushover, Pushbullet, Rocket.Chat, Slack, Microsoft Teams, Telegram, and Zulip. **Matrix (`matrix://`) and SMTP (`smtp://`) are not supported, and there is no fallback to the old executable.** Check existing configurations before upgrading; unsupported URLs produce a notification error instead of sending. See [upstream compatibility details](https://github.com/Delusions6515/shoutrrr-ts/blob/main/COMPATIBILITY.md) for URL options and caveats. Upstream checks use local Go-compatibility fixtures, not verified live delivery to every provider. The backend's tested Node version is in `.node-version`; check the upstream package for its current Node support.
+
+Push URLs may contain secrets: treat `SUB_STORE_PUSH_SERVICE` as privileged configuration. Diagnostics from the Shoutrrr path do not print the configured URL. This change does not alter the HTTP/HTTPS URL template path or its existing logging behavior.
+
 ## Core functionalities:
 
 1. Conversion among various formats.

@@ -77,7 +77,7 @@ function createRuntimeManifest({ metafiles, content }) {
         requiresProcessGlobal: /\bprocess\b/.test(content),
         workerThreads: builtins.has('worker_threads'),
         childProcess: builtins.has('child_process'),
-        externalBinary: ['shoutrrr'],
+        externalBinary: [],
         testedNode: fs
             .readFileSync(path.join(__dirname, '..', '.node-version'), 'utf8')
             .trim(),
@@ -99,9 +99,16 @@ const nodeBuiltinExternalPlugin = {
 };
 
 !(async () => {
-    const version = JSON.parse(
-        fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'),
-    ).version.trim();
+    let version;
+    try {
+        version = JSON.parse(
+            fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'),
+        ).version.trim();
+    } catch (error) {
+        throw new Error('cannot read backend package version', {
+            cause: error,
+        });
+    }
 
     const artifacts = [
         { src: 'src/main.js', dest: 'sub-store.min.js' },
@@ -164,6 +171,13 @@ const nodeBuiltinExternalPlugin = {
         /eval\(('|")(require\(('|").*?('|")\))('|")\)/g,
         '$2',
     );
+    // Browser builds retain an inert import; the Node pass resolves and bundles
+    // the ESM package into its standalone CommonJS artifact.
+    const shoutrrrImport = `eval('import("shoutrrr-ts")')`;
+    if (!content.includes(shoutrrrImport)) {
+        throw new Error('missing Shoutrrr import boundary in browser artifact');
+    }
+    content = content.replace(shoutrrrImport, 'import("shoutrrr-ts")');
     fs.writeFileSync(
         path.join(__dirname, 'dist/sub-store.no-bundle.js'),
         content,
