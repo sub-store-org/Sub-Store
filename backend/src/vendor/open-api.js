@@ -534,9 +534,9 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                             opts.headers = {
                                 ...(opts.headers || {}),
                                 Authorization: `Basic ${Buffer.from(
-                                    `${url.username || ''}:${
-                                        url.password || ''
-                                    }`,
+                                    `${decodeURIComponent(
+                                        url.username,
+                                    )}:${decodeURIComponent(url.password)}`,
                                 ).toString('base64')}`,
                             };
                         }

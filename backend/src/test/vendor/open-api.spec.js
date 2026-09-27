@@ -209,6 +209,21 @@ describe('open-api HTTP adapter', function () {
         });
     });
 
+    it('decodes URL credentials once before creating Basic authentication', async function () {
+        for (const [userinfo, credentials] of [
+            ['user%40name:p%40ss%3A%2520', 'user@name:p@ss:%20'],
+            ['user:pass', 'user:pass'],
+            ['user%40name', 'user@name:'],
+            [':p%40ss', ':p@ss'],
+        ]) {
+            await HTTP().get(`https://${userinfo}@example.test/subscription`);
+
+            expect(requestOptions.headers.authorization).to.equal(
+                `Basic ${Buffer.from(credentials).toString('base64')}`,
+            );
+        }
+    });
+
     it('keeps an explicit Accept header in Node.js', async function () {
         await HTTP({
             headers: {
