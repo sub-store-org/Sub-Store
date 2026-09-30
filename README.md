@@ -14,6 +14,10 @@
 <table>
 <tbody>
 <tr>
+<td width="180"><a href="https://www.thordata.com/?ls=tg&lk=substore"><img src="./assets/banners/Thordata.png" alt="Thordata" width="150"></a></td>
+<td><a href="https://www.thordata.com/?ls=tg&lk=substore">Thordata</a> ｜面向开发者与出海用户的代理服务，提供<b>住宅、ISP、移动及数据中心代理</b>。支持国家/城市定位、轮换会话与粘性会话，适用于公开网页采集、SEO 监控、接口调试和地区内容测试。新用户 <a href="https://www.thordata.com/?ls=tg&lk=substore">注册</a> 即送 <b>100MB 免费住宅代理</b>，首购使用优惠码<b>【SubStore10】</b>享 9 折优惠。</td>
+</tr>
+<tr>
 <td width="180"><a href="https://api.muteki.site/register?aff=XREAM&promo=XREAM"><img src="./assets/banners/MaruCode.jpg" alt="MaruCode" width="150"></a></td>
 <td><a href="https://api.muteki.site/register?aff=XREAM&promo=XREAM">MaruCode</a> 是一家偶尔做做慈善的小破站 API，自营号池，不搞充值营销套路，主要提供 Codex、Claude Code、GPT Image-2 等主流模型，支持 WebSocket 协议，明码标价(Codex 0.3x, CC 1.5x)，透明汇率(1:1)，<a href="https://api.muteki.site/register?aff=XREAM&promo=XREAM">新用户注册</a> 送 2 刀 💰 <a href="https://images-2.muteki.site">生图工作台 🖼</a></td>
 </tr>
