@@ -24,7 +24,7 @@
 </tbody>
 </table>
 
-[📚 文档/DOC](https://github.com/sub-store-org/Sub-Store/wiki)
+📚 [文档/Doc](https://sub-store-org.github.io/doc) 🆕, [Wiki](https://github.com/sub-store-org/Sub-Store/wiki)
 
 ## sub.store Domain Safety Notice
 
