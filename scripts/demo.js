@@ -11,7 +11,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 4. 域名解析后会有`_IPv4`, `_IPv6`, `_IP`(若有多个步骤, 只取第一次成功的 v4 或 v6 数据), `_IP4P`(若解析类型为 IPv6 且符合 IP4P 类型, 将自动转换), `_domain` 字段, `_resolved_ips` 为解析出的所有 IP
   // 5. `_subName` 为单条订阅名, `_subDisplayName` 为单条订阅显示名
   // 6. `_collectionName` 为组合订阅名, `_collectionDisplayName` 为组合订阅显示名
-  // 7. `tls-fingerprint` 为 tls 指纹
+  // 7. `tls-fingerprint` 为服务器证书的 SHA-256 指纹, hex 格式, 支持大小写及冒号分隔
   // 8. `underlying-proxy` 为前置代理, 不同平台会自动转换
   //    例如 $server['underlying-proxy'] = '名称'
   //    只给 mihomo 输出的话, `dialer-proxy` 也行
@@ -34,7 +34,11 @@ function operator(proxies = [], targetPlatform, context) {
   //    注意: mihomo 风格的 `udp: true` 表示节点支持 UDP, 不会转换成 sing-box 的 `network: "udp"`; sing-box 默认就是 TCP+UDP. `udp: false` 会转换成 `network: "tcp"`. `_network` 是显式覆盖, 优先级高于 `udp`.
   // 17. `block-quic` 支持 `auto`, `on`, `off`. 不同的平台不一定都支持, 会自动转换
   // 18. `sing-box` 支持 `_fragment`, `_fragment_fallback_delay`, `_record_fragment` 设置 `tls` 的 `fragment`, `fragment_fallback_delay`, `record_fragment`
-  // 19. `sing-box` 支持 `_certificate`, `_certificate_path`, `_certificate_public_key_sha256`, `_client_certificate`, `_client_certificate_path`, `_client_key`, `_client_key_path` 设置 `tls` 的 `certificate`, `certificate_path`, `certificate_public_key_sha256`, `client_certificate`, `client_certificate_path`, `client_key`, `client_key_path`
+  // 19. `sing-box` 支持 `_certificate`, `_certificate_path`, `_certificate_sha256`, `_certificate_public_key_sha256`, `_client_certificate`, `_client_certificate_path`, `_client_key`, `_client_key_path` 设置 `tls` 的 `certificate`, `certificate_path`, `certificate_sha256`, `certificate_public_key_sha256`, `client_certificate`, `client_certificate_path`, `client_key`, `client_key_path`
+  //     sing-box 1.15.0 起支持 `certificate_sha256`: 自动将 `tls-fingerprint` 的 hex 解码后转成 Base64 数组; 手动设置 `_certificate_sha256` 时优先原样使用, 例如 $server._certificate_sha256 = ['47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=']
+  //     普通 TLS 和 ShadowTLS 使用相同的服务器证书配置逻辑; 已配置非空的 certificate、certificate_path 或 certificate_public_key_sha256 时不自动转换, certificate/certificate_public_key_sha256 的空数组不阻止转换; 手动设置 `_certificate_sha256: []` 仍优先使用; 自动转换遇到非法 SHA-256 hex 时会报错并过滤该节点
+  //     Reality 不使用证书/公钥 hash 校验, 不自动转换; 手动设置非空的 `_certificate_sha256` 或 `_certificate_public_key_sha256` 时会忽略并输出 warn 日志
+  //     非空 certificate/certificate_path 不能与非空 certificate_sha256/certificate_public_key_sha256 共存, 冲突时会报错并过滤该节点; certificate_sha256 与 certificate_public_key_sha256 可共存, 匹配任一即可
   // 20. `sing-box` 支持使用完整的 `_ech` 结构设置 `tls` 的 `ech`. 避免冲突, URI 里的原始 `ech` 参数会保存在 `_echConfigList`
   // 21. 2.21.59 开始, `sing-box` 支持使用 `ech-opts` 结构设置 `tls` 的 `ech`. 参考 https://github.com/sub-store-org/Sub-Store/pull/563/changes 基本沿用 mihomo 风格, mihomo 部分字段自动转换. URI `ech` 与 mihomo `ech-opts` 会互转: base64 ECHConfigList 使用 `ech-opts.config`; Xray 的 DNS server 写法(如 `https://1.1.1.1/dns-query` 或 `example.com+https://1.1.1.1/dns-query`)会把 DNS server 放到 `ech-opts._dns`, 显式查询域名放到 `ech-opts.query-server-name`. mihomo 不支持在 ech-opts 中配置 ECH DNS. 如需跟节点 ECH 配置一致, 请在 mihomo 配置文件里设置, 可参考: `dns["nameserver-policy"]["cloudflare-ech.com"] = ["https://dns.alidns.com/dns-query"]` . 反向输出 URI 时, 可设置 `ech-opts._dns` 来拼回 `ech`; 如果只设置 `query-server-name` 且未设置 `_dns`, 默认使用 `https://dns.alidns.com/dns-query` 并输出 warn 日志, 自定义 root DNS 请设置 `ech-opts._dns`. XHTTP `download-settings` 里嵌套的 TLS ECH 同样支持, 其中 `echForceQuery`/`echSockopt` 分别对应 `ech-opts._force-query`/`ech-opts._sockopt`, 嵌套 DNS 可设置 `xhttp-opts.download-settings.ech-opts._dns`
   // 22. `sing-box` 支持使用完整的 `_curve_preferences` 结构设置 `tls` 的 `curve_preferences`

@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import ClashMeta_Producer from './clashmeta';
 import $ from '@/core/app';
 import { isPlainObject } from '@/utils';
@@ -317,6 +318,56 @@ const getSingBoxUtlsFingerprint = (value) => {
     if (singBoxUtlsFingerprints.includes(fingerprint)) return fingerprint;
 };
 
+const tlsCertificateParser = (proxy, parsedProxy) => {
+    const tls = parsedProxy.tls;
+    if (proxy.ca) tls.certificate_path = `${proxy.ca}`;
+    if (proxy.ca_str) tls.certificate = [proxy.ca_str];
+    if (proxy['ca-str']) tls.certificate = [proxy['ca-str']];
+    if (proxy._certificate) tls.certificate = proxy._certificate;
+    if (proxy._certificate_path) tls.certificate_path = proxy._certificate_path;
+    if (tls.reality?.enabled) {
+        if (
+            proxy._certificate_sha256?.length ||
+            proxy._certificate_public_key_sha256?.length
+        ) {
+            $.warn(
+                `Platform sing-box: certificate_sha256 and certificate_public_key_sha256 are ignored by Reality for proxy ${proxy.name}`,
+            );
+        }
+        return;
+    }
+    if (proxy._certificate_public_key_sha256)
+        tls.certificate_public_key_sha256 =
+            proxy._certificate_public_key_sha256;
+    const hasCertificate = tls.certificate?.length || tls.certificate_path;
+    if (proxy._certificate_sha256 != null) {
+        tls.certificate_sha256 = proxy._certificate_sha256;
+    } else if (
+        (proxy.fingerprint || proxy['tls-fingerprint']) &&
+        !hasCertificate &&
+        !tls.certificate_public_key_sha256?.length
+    ) {
+        const hex = `${proxy.fingerprint || proxy['tls-fingerprint']}`
+            .trim()
+            .replace(/:/g, '');
+        if (!/^[0-9a-f]{64}$/i.test(hex)) {
+            throw new Error(
+                `Platform sing-box: invalid SHA-256 certificate fingerprint for proxy ${proxy.name}`,
+            );
+        }
+        tls.certificate_sha256 = [Buffer.from(hex, 'hex').toString('base64')];
+    }
+    if (
+        hasCertificate &&
+        (tls.certificate_sha256?.length ||
+            tls.certificate_public_key_sha256?.length)
+    ) {
+        throw new Error(
+            `Platform sing-box: certificate_sha256 or certificate_public_key_sha256 conflicts with certificate or certificate_path for proxy ${proxy.name}`,
+        );
+    }
+};
+
 const tlsParser = (proxy, parsedProxy) => {
     if (proxy.tls) parsedProxy.tls.enabled = true;
     if (proxy.servername && proxy.servername !== '')
@@ -330,9 +381,6 @@ const tlsParser = (proxy, parsedProxy) => {
     if (typeof proxy.alpn === 'string') {
         parsedProxy.tls.alpn = [proxy.alpn];
     } else if (Array.isArray(proxy.alpn)) parsedProxy.tls.alpn = proxy.alpn;
-    if (proxy.ca) parsedProxy.tls.certificate_path = `${proxy.ca}`;
-    if (proxy.ca_str) parsedProxy.tls.certificate = [proxy.ca_str];
-    if (proxy['ca-str']) parsedProxy.tls.certificate = [proxy['ca-str']];
     if (proxy['reality-opts']) {
         parsedProxy.tls.reality = { enabled: true };
         if (proxy['reality-opts']['public-key'])
@@ -386,13 +434,6 @@ const tlsParser = (proxy, parsedProxy) => {
             proxy['_fragment_fallback_delay'];
     if (proxy['_record_fragment'])
         parsedProxy.tls.record_fragment = !!proxy['_record_fragment'];
-    if (proxy['_certificate'])
-        parsedProxy.tls.certificate = proxy['_certificate'];
-    if (proxy['_certificate_path'])
-        parsedProxy.tls.certificate_path = proxy['_certificate_path'];
-    if (proxy['_certificate_public_key_sha256'])
-        parsedProxy.tls.certificate_public_key_sha256 =
-            proxy['_certificate_public_key_sha256'];
     if (proxy['_client_certificate'])
         parsedProxy.tls.client_certificate = proxy['_client_certificate'];
     if (proxy['_client_certificate_path'])
@@ -403,19 +444,7 @@ const tlsParser = (proxy, parsedProxy) => {
         parsedProxy.tls.client_key_path = proxy['_client_key_path'];
     if (!parsedProxy.tls.enabled) {
         delete parsedProxy.tls;
-    } else if (
-        (proxy.fingerprint || proxy['tls-fingerprint']) &&
-        !parsedProxy.tls.reality &&
-        !parsedProxy.tls.certificate &&
-        !parsedProxy.tls.certificate_path &&
-        !parsedProxy.tls.certificate_public_key_sha256
-    ) {
-        // sing-box can only pin the SHA-256 of the certificate public key
-        // https://sing-box.sagernet.org/configuration/shared/tls/#certificate_public_key_sha256
-        $.warn(
-            `Platform sing-box does not support certificate fingerprint pinning, it is dropped for proxy ${proxy.name}. Set _certificate_public_key_sha256 to pin the certificate public key instead`,
-        );
-    }
+    } else tlsCertificateParser(proxy, parsedProxy);
 };
 
 const sshParser = (proxy = {}) => {
@@ -607,6 +636,7 @@ const shadowTLSOutboundParser = (proxy = {}, pluginOpts) => {
         throw '端口值非法';
     const alpn = normalizeALPN(pluginOpts.alpn) ?? normalizeALPN(proxy.alpn);
     if (alpn) stPart.tls.alpn = alpn;
+    tlsCertificateParser(proxy, stPart);
     if (proxy['fast-open'] === true) stPart.udp_fragment = true;
     tfoParser(proxy, stPart);
     detourParser(proxy, stPart);

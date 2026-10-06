@@ -4839,68 +4839,329 @@ describe('Proxy structured producers', function () {
         });
     });
 
-    it('warns about the dropped certificate fingerprint for sing-box', function () {
+    it('converts certificate fingerprints to Base64 for sing-box TLS outbounds', function () {
         const fingerprint =
             'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-        const publicKeySha256 = '428F7quaQJvBhEr5TclcjPpsl1ryyNQo7oLBGhhC3UU=';
+        const sha256 = '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=';
+        const colonFingerprint = fingerprint.match(/.{2}/g).join(':');
+        const proxies = [
+            'http',
+            'vmess',
+            'vless',
+            'trojan',
+            'naive',
+            'hysteria',
+            'hysteria2',
+            'tuic',
+            'anytls',
+        ].map((type, index) => ({
+            type,
+            name: `${type} Pinned`,
+            server: 'proxy.example.com',
+            port: 443,
+            password: 'secret',
+            uuid: UUID,
+            cipher: 'auto',
+            alterId: 0,
+            tls: true,
+            'tls-fingerprint': [
+                fingerprint,
+                fingerprint.toUpperCase(),
+                `  ${colonFingerprint.toUpperCase()}  `,
+            ][index % 3],
+        }));
+        proxies.push({
+            type: 'ss',
+            name: 'ShadowTLS Pinned',
+            server: 'ss.example.com',
+            port: 443,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            plugin: 'shadow-tls',
+            'plugin-opts': {
+                host: 'mask.example.com',
+                password: 'shadow-secret',
+                version: 3,
+            },
+            fingerprint: colonFingerprint,
+        });
         const { result, warnings } = captureWarns(() =>
-            produceInternal('sing-box', [
-                {
-                    type: 'trojan',
-                    name: 'Trojan Pinned',
-                    server: 'trojan.example.com',
-                    port: 443,
-                    password: 'secret',
-                    tls: true,
-                    'tls-fingerprint': fingerprint,
+            produceInternal('sing-box', proxies),
+        );
+
+        expect(warnings).to.be.empty;
+        for (const output of [
+            result,
+            loadProducedJson('sing-box', proxies).outbounds,
+        ]) {
+            expect(output).to.have.length(proxies.length + 1);
+            for (const outbound of output) {
+                if (outbound.type === 'shadowsocks') continue;
+                expect(outbound.tls.certificate_sha256).to.deep.equal([sha256]);
+                expect(outbound.tls).to.not.have.property(
+                    'certificate_public_key_sha256',
+                );
+            }
+        }
+    });
+
+    it('prefers explicit certificate hashes and preserves existing TLS verification for sing-box', function () {
+        const sha256 = '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=';
+        const proxy = {
+            type: 'vless',
+            name: 'VLESS Pinned',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            'tls-fingerprint': 'invalid',
+        };
+
+        for (const override of [
+            [sha256],
+            [sha256, 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='],
+            sha256,
+            [],
+        ]) {
+            const output = loadProducedJson('sing-box', {
+                ...proxy,
+                _certificate_sha256: override,
+            });
+            expect(output.outbounds).to.have.length(1);
+            expect(output.outbounds[0].tls.certificate_sha256).to.deep.equal(
+                override,
+            );
+        }
+
+        for (const options of [
+            { _certificate: ['certificate'] },
+            { _certificate_path: 'certificate.pem' },
+            { _certificate_public_key_sha256: [sha256] },
+            { 'reality-opts': { 'public-key': 'pubkey', 'short-id': '08' } },
+            { tls: false },
+        ]) {
+            const [output] = produceInternal('sing-box', {
+                ...proxy,
+                ...options,
+            });
+            expect(output).to.be.an('object');
+            expect(output.tls || {}).to.not.have.property('certificate_sha256');
+        }
+    });
+
+    it('shares certificate settings and empty-array handling between sing-box TLS and ShadowTLS', function () {
+        const sha256 = '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=';
+        const base = {
+            name: 'Shared Certificate Settings',
+            server: 'proxy.example.com',
+            port: 443,
+            password: 'secret',
+            'skip-cert-verify': true,
+            'tls-fingerprint':
+                'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        };
+        for (const protocol of [
+            { type: 'trojan' },
+            {
+                type: 'ss',
+                cipher: 'aes-128-gcm',
+                plugin: 'shadow-tls',
+                'plugin-opts': {
+                    host: 'mask.example.com',
+                    password: 'shadow-secret',
+                    version: 3,
                 },
+            },
+        ]) {
+            for (const [options, expected] of [
+                [
+                    { _certificate: [] },
+                    { certificate: [], certificate_sha256: [sha256] },
+                ],
+                [
+                    { _certificate_public_key_sha256: [] },
+                    {
+                        certificate_public_key_sha256: [],
+                        certificate_sha256: [sha256],
+                    },
+                ],
+                [{ ca: 'ca.pem' }, { certificate_path: 'ca.pem' }],
+                [{ ca_str: 'certificate' }, { certificate: ['certificate'] }],
+                [{ 'ca-str': 'certificate' }, { certificate: ['certificate'] }],
+                [
+                    { _certificate: ['certificate'] },
+                    { certificate: ['certificate'] },
+                ],
+                [
+                    { _certificate_path: 'ca.pem' },
+                    { certificate_path: 'ca.pem' },
+                ],
+                [
+                    { _certificate_public_key_sha256: [sha256] },
+                    { certificate_public_key_sha256: [sha256] },
+                ],
+                [
+                    {
+                        'ca-str': 'default certificate',
+                        _certificate: ['override certificate'],
+                    },
+                    { certificate: ['override certificate'] },
+                ],
+                [
+                    { ca: 'default.pem', _certificate_path: 'override.pem' },
+                    { certificate_path: 'override.pem' },
+                ],
+                [{ _certificate_sha256: [] }, { certificate_sha256: [] }],
+                [
+                    {
+                        _certificate_sha256:
+                            'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+                    },
+                    {
+                        certificate_sha256:
+                            'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+                    },
+                ],
+                [
+                    {
+                        _certificate_sha256: [sha256],
+                        _certificate_public_key_sha256: [sha256],
+                    },
+                    {
+                        certificate_sha256: [sha256],
+                        certificate_public_key_sha256: [sha256],
+                    },
+                ],
+            ]) {
+                const { outbounds } = loadProducedJson('sing-box', {
+                    ...base,
+                    ...protocol,
+                    ...options,
+                });
+                expect(outbounds).to.have.length(
+                    protocol.type === 'ss' ? 2 : 1,
+                );
+                const tls = outbounds[outbounds.length - 1].tls;
+                expectSubset(tls, { insecure: true, ...expected });
+                if (expected.certificate_sha256 === undefined) {
+                    expect(tls).to.not.have.property('certificate_sha256');
+                }
+            }
+        }
+    });
+
+    it('omits certificate hashes ignored by sing-box Reality and warns about manual pins', function () {
+        const sha256 = '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=';
+        for (const [options, warningCount] of [
+            [{ _certificate_sha256: [sha256] }, 1],
+            [{ _certificate_public_key_sha256: [sha256] }, 1],
+            [
                 {
-                    type: 'hysteria2',
-                    name: 'Hysteria2 Public Key Pinned',
-                    server: 'hy2.example.com',
-                    port: 443,
-                    password: 'secret',
-                    'tls-fingerprint': fingerprint,
-                    _certificate_public_key_sha256: [publicKeySha256],
+                    _certificate_sha256: sha256,
+                    _certificate_public_key_sha256: [sha256],
                 },
-                {
+                1,
+            ],
+            [
+                { _certificate_sha256: [], _certificate_public_key_sha256: [] },
+                0,
+            ],
+        ]) {
+            const { result, warnings } = captureWarns(() =>
+                loadProducedJson('sing-box', {
                     type: 'vless',
-                    name: 'VLESS Reality Pinned',
+                    name: 'Reality Manual Pin',
                     server: 'vless.example.com',
                     port: 443,
                     uuid: UUID,
                     tls: true,
-                    'tls-fingerprint': fingerprint,
+                    'tls-fingerprint': 'invalid',
                     'reality-opts': {
                         'public-key': 'pubkey',
                         'short-id': '08',
                     },
-                },
-            ]),
+                    ...options,
+                }),
+            );
+            expect(result.outbounds).to.have.length(1);
+            expect(result.outbounds[0].tls.reality.enabled).to.equal(true);
+            expect(result.outbounds[0].tls).to.not.have.property(
+                'certificate_sha256',
+            );
+            expect(result.outbounds[0].tls).to.not.have.property(
+                'certificate_public_key_sha256',
+            );
+            expect(warnings).to.have.length(warningCount);
+            if (warningCount)
+                expect(warnings[0]).to.include('ignored by Reality');
+        }
+    });
+
+    it('filters conflicting CA and certificate hashes for sing-box TLS and ShadowTLS', function () {
+        const sha256 = '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=';
+        for (const type of ['trojan', 'ss']) {
+            for (const certificate of [
+                { _certificate: ['certificate'] },
+                { _certificate_path: 'ca.pem' },
+            ]) {
+                for (const hash of [
+                    { _certificate_sha256: [sha256] },
+                    { _certificate_public_key_sha256: [sha256] },
+                ]) {
+                    const { result, errors } = captureErrors(() =>
+                        loadProducedJson('sing-box', {
+                            type,
+                            name: 'Conflicting Certificate Settings',
+                            server: 'proxy.example.com',
+                            port: 443,
+                            password: 'secret',
+                            cipher: 'aes-128-gcm',
+                            ...(type === 'ss'
+                                ? {
+                                      plugin: 'shadow-tls',
+                                      'plugin-opts': {
+                                          host: 'mask.example.com',
+                                          password: 'shadow-secret',
+                                          version: 3,
+                                      },
+                                  }
+                                : {}),
+                            ...certificate,
+                            ...hash,
+                        }),
+                    );
+                    expect(result.outbounds).to.be.empty;
+                    expect(errors).to.have.length(1);
+                    expect(errors[0]).to.include(
+                        'conflicts with certificate or certificate_path',
+                    );
+                }
+            }
+        }
+    });
+
+    it('filters invalid certificate fingerprints instead of exporting unpinned sing-box proxies', function () {
+        const invalid = ['a'.repeat(63), 'a'.repeat(65), 'g'.repeat(64), '   '];
+        const { result, errors } = captureErrors(() =>
+            produceInternal(
+                'sing-box',
+                invalid.map((fingerprint, index) => ({
+                    type: 'trojan',
+                    name: `Invalid Fingerprint ${index}`,
+                    server: 'trojan.example.com',
+                    port: 443,
+                    password: 'secret',
+                    'skip-cert-verify': true,
+                    'tls-fingerprint': fingerprint,
+                })),
+            ),
         );
 
-        expect(warnings).to.have.length(1);
-        expect(warnings[0]).to.include('Trojan Pinned');
-        expect(warnings[0]).to.include('_certificate_public_key_sha256');
-        expect(result[0].tls).to.not.have.property(
-            'certificate_public_key_sha256',
-        );
-        expectSubset(result[1], {
-            tls: {
-                enabled: true,
-                certificate_public_key_sha256: [publicKeySha256],
-            },
-        });
-        expectSubset(result[2], {
-            tls: {
-                enabled: true,
-                reality: {
-                    enabled: true,
-                    public_key: 'pubkey',
-                    short_id: '08',
-                },
-            },
-        });
+        expect(result).to.be.empty;
+        expect(errors).to.have.length(invalid.length);
+        for (const error of errors) {
+            expect(error).to.include('invalid SHA-256 certificate fingerprint');
+        }
     });
 
     it('emits WireGuard interface CIDR suffixes for Egern exports', function () {
