@@ -396,6 +396,17 @@ function operator(proxies = [], targetPlatform, context) {
   //    如果某个子订阅处理失败并启用失败静默/失败通知, 会保留该 key, value 为 undefined
   //    如果启用静默兜底/通知兜底, 会保留该 key, value 为 []
 
+  // produceArtifact 可通过 includeRaw: true 同时返回处理结果和 context.raw 对应的原始内容
+  // includeRaw 只控制返回值, 不改变传给处理器的原始内容
+  // 适用于 type: 'subscription' / 'sub' / 'collection' / 'col', 不传时仍直接返回处理结果
+  // const { result, raw } = await produceArtifact({
+  //   type: 'subscription', // 使用 collection 时, raw 为按单条订阅 name 分组的对象
+  //   name: 'sub',
+  //   platform: 'ClashMeta',
+  //   produceType: 'internal', // result 为节点数组; 不传 produceType 时为输出字符串
+  //   includeRaw: true,
+  // })
+
   // 其中 source 为 订阅和组合订阅的数据, 有三种情况, 按需判断 (若只需要取订阅/组合订阅名称 直接用 `_subName` `_subDisplayName` `_collectionName` `_collectionDisplayName` 即可)
 
   // 若存在 `source._collection` 且 `source._collection.subscriptions` 中的 key 在 `source` 上也存在, 说明输出结果为组合订阅, 但是脚本设置在单条订阅上
