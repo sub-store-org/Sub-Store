@@ -180,6 +180,30 @@ const DURATION_INPUT_UNIT_MS = {
     year: 365 * 24 * 60 * 60 * 1000,
 };
 
+// 长期有效: 不设置 exp, 直到分享被删除前始终有效
+const LIFETIME_DURATION_UNIT = 'lifetime';
+
+function isLifetimeDuration(options = {}) {
+    const rawExpiresUnit = options?.expiresUnit;
+    return (
+        typeof rawExpiresUnit === 'string' &&
+        rawExpiresUnit.trim() === LIFETIME_DURATION_UNIT
+    );
+}
+
+function resolveLifetimeDuration(options = {}) {
+    const rawExpiresIn = options?.expiresIn;
+    if (rawExpiresIn != null && rawExpiresIn !== '') {
+        throw new RequestInvalidError(
+            'INVALID_DURATION_INPUT',
+            `expiresIn option is not allowed for lifetime duration: ${rawExpiresIn}`,
+        );
+    }
+    return {
+        expiresUnit: LIFETIME_DURATION_UNIT,
+    };
+}
+
 function resolveDurationInput(options = {}, durationExpiration) {
     const rawExpiresValue = options?.expiresValue;
     const rawExpiresUnit = options?.expiresUnit;
@@ -329,12 +353,15 @@ function createTokenItem(payload, options = {}) {
         inferLegacyExpirationMode(options);
     let durationExpiration = null;
     let durationInput = null;
+    let lifetimeDuration = null;
     let exp;
     let countExpiration = null;
     if (expirationMode === 'datetime') {
         exp = resolveExactExpiration(options);
     } else if (expirationMode === 'count') {
         countExpiration = resolveCountExpiration(options);
+    } else if (expirationMode === 'duration' && isLifetimeDuration(options)) {
+        lifetimeDuration = resolveLifetimeDuration(options);
     } else {
         durationExpiration = resolveDurationExpiration(options, {
             required: expirationMode === 'duration',
@@ -364,7 +391,7 @@ function createTokenItem(payload, options = {}) {
             ? 'datetime'
             : expirationMode === 'count'
               ? 'count'
-            : durationExpiration
+            : durationExpiration || lifetimeDuration
               ? 'duration'
               : undefined;
     const safePayload = { ...payload };
@@ -388,6 +415,8 @@ function createTokenItem(payload, options = {}) {
                     count: countExpiration.count,
                     usedCount: countExpiration.usedCount,
                 }
+            : lifetimeDuration
+              ? { ...lifetimeDuration }
             : durationExpiration
               ? {
                     expiresIn: durationExpiration.rawExpiresIn,
