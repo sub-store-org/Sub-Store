@@ -280,6 +280,63 @@ describe('token routes', function () {
         expect(state[TOKENS_KEY][0].expiresUnit).to.equal('season');
     });
 
+    it('stores lifetime duration shares without expiration', function () {
+        const token = createTokenItem(
+            {
+                type: 'sub',
+                name: 'shared-sub',
+                token: 'duration-lifetime',
+            },
+            {
+                mode: 'duration',
+                expiresValue: '35',
+                expiresUnit: 'lifetime',
+            },
+        );
+
+        expect(token.mode).to.equal('duration');
+        expect(token.expiresUnit).to.equal('lifetime');
+        expect(token).to.not.have.property('exp');
+        expect(token).to.not.have.property('expiresIn');
+        expect(token).to.not.have.property('expiresValue');
+        expect(state[TOKENS_KEY][0].expiresUnit).to.equal('lifetime');
+        expect(state[TOKENS_KEY][0]).to.not.have.property('exp');
+
+        const found = findShareToken({
+            token: 'duration-lifetime',
+            type: 'sub',
+            name: 'shared-sub',
+        });
+        expect(found.token).to.equal('duration-lifetime');
+    });
+
+    it('rejects lifetime duration shares with expiresIn', function () {
+        let capturedError;
+
+        try {
+            createTokenItem(
+                {
+                    type: 'sub',
+                    name: 'shared-sub',
+                    token: 'duration-lifetime-conflict',
+                },
+                {
+                    mode: 'duration',
+                    expiresIn: '1d',
+                    expiresUnit: 'lifetime',
+                },
+            );
+        } catch (error) {
+            capturedError = error;
+        }
+
+        expect(capturedError).to.include({
+            type: 'RequestInvalidError',
+            code: 'INVALID_DURATION_INPUT',
+        });
+        expect(state[TOKENS_KEY]).to.deep.equal([]);
+    });
+
     it('rejects invalid duration input metadata', function () {
         for (const options of [
             {

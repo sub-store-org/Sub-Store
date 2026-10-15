@@ -448,6 +448,73 @@ describe('archive routes', function () {
         expect(state[ARCHIVES_KEY]).to.deep.equal([]);
     });
 
+    it('preserves lifetime duration shares on restore', async function () {
+        state[SUBS_KEY] = [
+            {
+                name: 'shared-sub',
+                source: 'remote',
+                process: [],
+            },
+        ];
+        state[TOKENS_KEY] = [
+            {
+                token: 'duration-lifetime',
+                type: 'sub',
+                name: 'shared-sub',
+                displayName: 'Lifetime Share',
+                mode: 'duration',
+                expiresUnit: 'lifetime',
+            },
+        ];
+
+        const deleteHandler = getHandler(
+            registerTokenRoutes,
+            'DELETE',
+            '/api/token/:token',
+        );
+        const deleteRes = createResponse('/api/token/:token');
+
+        deleteHandler(
+            {
+                params: { token: 'duration-lifetime' },
+                query: {
+                    mode: 'archive',
+                    type: 'sub',
+                    name: 'shared-sub',
+                },
+            },
+            deleteRes,
+        );
+
+        expect(deleteRes.body.status).to.equal('success');
+        expect(state[TOKENS_KEY]).to.deep.equal([]);
+        expect(state[ARCHIVES_KEY]).to.have.length(1);
+
+        const restoreHandler = getHandler(
+            registerArchiveRoutes,
+            'POST',
+            '/api/archives/:id/restore',
+        );
+        const restoreRes = createResponse('/api/archives/:id/restore');
+
+        restoreHandler(
+            {
+                params: { id: state[ARCHIVES_KEY][0].id },
+                query: {},
+            },
+            restoreRes,
+        );
+
+        expect(restoreRes.body.status).to.equal('success');
+        expect(state[TOKENS_KEY]).to.have.length(1);
+        expect(state[TOKENS_KEY][0].token).to.equal('duration-lifetime');
+        expect(state[TOKENS_KEY][0].mode).to.equal('duration');
+        expect(state[TOKENS_KEY][0].expiresUnit).to.equal('lifetime');
+        expect(state[TOKENS_KEY][0]).to.not.have.property('expiresIn');
+        expect(state[TOKENS_KEY][0]).to.not.have.property('exp');
+        expect(state[ARCHIVES_KEY]).to.deep.equal([]);
+    });
+
     it('restores legacy exp-only share tokens as exact-datetime shares', async function () {
         state[SUBS_KEY] = [
             {
