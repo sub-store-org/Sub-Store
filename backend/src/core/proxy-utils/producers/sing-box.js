@@ -1338,6 +1338,20 @@ const wireguardParser = (proxy = {}) => {
                 address = parsedProxy.server;
                 port = parseInt(`${parsedProxy.server_port}`, 10);
             }
+            let allowedIps =
+                p['allowed-ips'] ||
+                p.allowed_ips ||
+                proxy['allowed-ips'] ||
+                proxy.allowed_ips;
+            if (typeof allowedIps === 'string') {
+                allowedIps = allowedIps
+                    .split(',')
+                    .map((i) => i.trim())
+                    .filter(Boolean);
+            }
+            if (!Array.isArray(allowedIps) || allowedIps.length === 0) {
+                allowedIps = ['0.0.0.0/0', ...(proxy.ipv6 ? ['::/0'] : [])];
+            }
             const peer = {
                 address,
                 port,
@@ -1354,11 +1368,7 @@ const wireguardParser = (proxy = {}) => {
                     p['pre-shared-key'] ||
                     p['pre_shared_key'] ||
                     parsedProxy.pre_shared_key,
-                allowed_ips: p['allowed-ips'] ||
-                    p.allowed_ips || [
-                        '0.0.0.0/0',
-                        ...(proxy.ipv6 ? ['::/0'] : []),
-                    ],
+                allowed_ips: allowedIps,
                 reserved: [],
             };
             if (typeof p.reserved === 'string') {

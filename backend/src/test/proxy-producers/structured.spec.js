@@ -4505,6 +4505,61 @@ describe('Proxy structured producers', function () {
         );
     });
 
+    it('keeps top-level WireGuard allowed-ips in sing-box peers', function () {
+        const output = loadProducedJson('sing-box', [
+            {
+                type: 'wireguard',
+                name: 'Sing-box WG Short Allowed IPs',
+                server: 'wg-short.example.com',
+                port: 51820,
+                'private-key': 'private-key-1',
+                'public-key': 'public-key-1',
+                ip: '10.0.0.2',
+                'allowed-ips': ['10.0.0.0/24'],
+            },
+            {
+                type: 'wireguard',
+                name: 'Sing-box WG String Allowed IPs',
+                server: 'wg-string.example.com',
+                port: 51820,
+                'private-key': 'private-key-2',
+                'public-key': 'public-key-2',
+                ip: '10.0.0.3',
+                'allowed-ips': '10.0.0.0/24, 192.168.1.0/24',
+            },
+            {
+                type: 'wireguard',
+                name: 'Sing-box WG Peer Allowed IPs',
+                server: 'wg-peer.example.com',
+                port: 51820,
+                'private-key': 'private-key-3',
+                ip: '10.0.0.4',
+                'allowed-ips': ['10.0.0.0/24'],
+                peers: [
+                    {
+                        server: 'wg-peer.example.com',
+                        port: 51820,
+                        'public-key': 'public-key-3',
+                        'allowed-ips': ['172.16.0.0/16'],
+                    },
+                ],
+            },
+        ]);
+
+        const byTag = (tag) =>
+            output.endpoints.find((endpoint) => endpoint.tag === tag);
+
+        expect(
+            byTag('Sing-box WG Short Allowed IPs').peers[0].allowed_ips,
+        ).to.deep.equal(['10.0.0.0/24']);
+        expect(
+            byTag('Sing-box WG String Allowed IPs').peers[0].allowed_ips,
+        ).to.deep.equal(['10.0.0.0/24', '192.168.1.0/24']);
+        expect(
+            byTag('Sing-box WG Peer Allowed IPs').peers[0].allowed_ips,
+        ).to.deep.equal(['172.16.0.0/16']);
+    });
+
     it('emits Tailscale endpoint fields for sing-box exports', function () {
         const output = loadProducedJson('sing-box', {
             type: 'tailscale',
