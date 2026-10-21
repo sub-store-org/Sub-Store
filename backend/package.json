@@ -1,6 +1,6 @@
 {
   "name": "sub-store",
-  "version": "2.42.6",
+  "version": "2.43.0",
   "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and Shadowrocket.",
   "main": "src/main.js",
   "packageManager": "pnpm@11.0.9",
@@ -46,7 +46,7 @@
     "nanoid": "^3.3.3",
     "semver": "^7.6.3",
     "shoutrrr-ts": "https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.2.0/shoutrrr-ts-0.2.0.tgz",
-    "undici": "^8.8.0",
+    "undici": "^8.12.3",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
