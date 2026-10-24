@@ -5797,6 +5797,26 @@ describe('Proxy text producers', function () {
         expect(parsed.password).to.equal('p@ss:w/rd#1?');
     });
 
+    it('percent-encodes the URI AnyTLS password', function () {
+        const output = produceExternal('URI', {
+            type: 'anytls',
+            name: 'URI AnyTLS Password',
+            server: 'anytls.example.com',
+            port: 443,
+            password: 'p@ss:w/rd#1?',
+            sni: 'anytls.example.com',
+        });
+
+        expect(
+            output.startsWith(
+                'anytls://p%40ss%3Aw%2Frd%231%3F@anytls.example.com:443?',
+            ),
+        ).to.equal(true);
+        const [parsed] = ProxyUtils.parse(output);
+        expect(parsed.server).to.equal('anytls.example.com');
+        expect(parsed.password).to.equal('p@ss:w/rd#1?');
+    });
+
     it('produces URI Trojan links with vcn from the sidecar', function () {
         const output = produceExternal('URI', {
             type: 'trojan',

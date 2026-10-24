@@ -1468,7 +1468,8 @@ export default function URI_Producer() {
             case 'anytls':
                 result = vless({
                     ...proxy,
-                    uuid: proxy.password,
+                    // vless() writes the uuid as is; a password may contain @, :, # etc.
+                    uuid: encodeURIComponent(proxy.password),
                     network: proxy.network || 'tcp',
                 }).replace('vless', 'anytls');
                 // 偷个懒
