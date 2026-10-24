@@ -699,6 +699,37 @@ describe('Proxy URI parser coverage', function () {
             );
         });
 
+        it('keeps the trojan name when there is no query string', function () {
+            expectSubset(
+                parseOne(
+                    'trojan://trojan-pass@trojan.example.com:8443#My%20Node',
+                ),
+                {
+                    server: 'trojan.example.com',
+                    port: 8443,
+                    name: 'My Node',
+                },
+            );
+            expectSubset(
+                parseOne(
+                    'trojan://trojan-pass@trojan.example.com#Default%20Port',
+                ),
+                {
+                    server: 'trojan.example.com',
+                    port: 443,
+                    name: 'Default Port',
+                },
+            );
+            expectSubset(
+                parseOne('trojan://trojan-pass@[2001:db8::2]#IPv6%20Name'),
+                {
+                    server: '2001:db8::2',
+                    port: 443,
+                    name: 'IPv6 Name',
+                },
+            );
+        });
+
         it('does not double-decode Trojan path query values before extracting early data', function () {
             const proxy = parseOne(
                 `trojan://trojan-pass@trojan-ws.example.com?type=ws&host=ws.example.com&path=${encodeURIComponent(
