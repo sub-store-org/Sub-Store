@@ -1139,8 +1139,12 @@ export default function URI_Producer() {
                             result.path = vmessTransportPath;
                         }
                         if (vmessTransportHost) {
+                            // h2 takes a comma-separated host list, which the
+                            // VMess URI parser splits into h2-opts.host
                             result.host = Array.isArray(vmessTransportHost)
-                                ? vmessTransportHost[0]
+                                ? proxy.network === 'h2'
+                                    ? vmessTransportHost.join(',')
+                                    : vmessTransportHost[0]
                                 : vmessTransportHost;
                         }
                     }
