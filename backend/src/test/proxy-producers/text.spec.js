@@ -5777,6 +5777,26 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('percent-encodes the URI Trojan password', function () {
+        const proxy = {
+            type: 'trojan',
+            name: 'URI Trojan Password',
+            server: 'trojan.example.com',
+            port: 443,
+            password: 'p@ss:w/rd#1?',
+            tls: true,
+            sni: 'trojan.example.com',
+        };
+        const output = produceExternal('URI', proxy);
+
+        expect(output).to.equal(
+            'trojan://p%40ss%3Aw%2Frd%231%3F@trojan.example.com:443?sni=trojan.example.com#URI%20Trojan%20Password',
+        );
+        const [parsed] = ProxyUtils.parse(output);
+        expect(parsed.server).to.equal('trojan.example.com');
+        expect(parsed.password).to.equal('p@ss:w/rd#1?');
+    });
+
     it('produces URI Trojan links with vcn from the sidecar', function () {
         const output = produceExternal('URI', {
             type: 'trojan',
