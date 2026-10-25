@@ -5,3 +5,7 @@ allowBuilds:
 
 patchedDependencies:
   http-proxy@1.18.1: patches/http-proxy@1.18.1.patch
+
+overrides:
+  brace-expansion@1: ^1.1.21
+  js-yaml@4: ^4.3.2
