@@ -8,6 +8,7 @@ import registerSettingsRoutes, {
     shouldRefreshArtifactStoreForSettingsPatch,
 } from '@/restful/settings';
 import { AGE_SECRET_KEY, generateKeyPair } from '@/utils/age';
+import Gist from '@/utils/gist';
 
 function createRouteApp() {
     const handlers = new Map();
@@ -119,10 +120,12 @@ describe('settings routes', function () {
     describe('validated settings', function () {
         const originalRead = $.read.bind($);
         const originalWrite = $.write.bind($);
+        const originalLocate = Gist.prototype.locate;
 
         afterEach(function () {
             $.read = originalRead;
             $.write = originalWrite;
+            Gist.prototype.locate = originalLocate;
         });
 
         async function patchSettings(initialSettings, body) {
@@ -147,6 +150,57 @@ describe('settings routes', function () {
                 settings: state[SETTINGS_KEY],
             };
         }
+
+        it('trims GitHub credentials before saving and refreshing the artifact store', async function () {
+            let authorization;
+            Gist.prototype.locate = async function () {
+                authorization = this.headers.Authorization;
+                return { html_url: 'https://gist.example.com/artifacts' };
+            };
+
+            const { res, settings } = await patchSettings(
+                {},
+                {
+                    githubUser: ' \t\nexample-user\u3000 ',
+                    gistToken: ' \r\nexample-token\t\u00a0',
+                },
+            );
+
+            expect(res.body.status).to.equal('success');
+            expect(settings.githubUser).to.equal('example-user');
+            expect(settings.gistToken).to.equal('example-token');
+            expect(res.body.data.githubUser).to.equal('example-user');
+            expect(res.body.data.gistToken).to.equal('example-token');
+            expect(authorization).to.equal('token example-token');
+        });
+
+        it('saves whitespace-only GitHub credentials as empty without a Gist request', async function () {
+            let locateCalls = 0;
+            Gist.prototype.locate = async () => {
+                locateCalls++;
+            };
+
+            const { res, settings } = await patchSettings(
+                { githubUser: 'old-user', gistToken: 'old-token' },
+                { githubUser: ' \t\n\u3000', gistToken: '\r\n \u00a0' },
+            );
+
+            expect(res.body.status).to.equal('success');
+            expect(settings.githubUser).to.equal('');
+            expect(settings.gistToken).to.equal('');
+            expect(locateCalls).to.equal(0);
+        });
+
+        it('does not add omitted GitHub credentials on unrelated patches', async function () {
+            const { res, settings } = await patchSettings(
+                {},
+                { logsMaxCount: 2 },
+            );
+
+            expect(res.body.status).to.equal('success');
+            expect(settings).not.to.have.property('githubUser');
+            expect(settings).not.to.have.property('gistToken');
+        });
 
         it('does not validate existing age-secret-key on unrelated patches', async function () {
             const { res, settings } = await patchSettings(

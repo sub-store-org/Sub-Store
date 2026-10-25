@@ -105,6 +105,11 @@ async function updateSettings(req, res) {
             ...settings,
             ...req.body,
         };
+        for (const key of ['githubUser', 'gistToken']) {
+            if (typeof newSettings[key] === 'string') {
+                newSettings[key] = newSettings[key].trim();
+            }
+        }
         if (isPlainObject(req.body?.appearanceSetting)) {
             newSettings.appearanceSetting = {
                 ...(isPlainObject(settings?.appearanceSetting)

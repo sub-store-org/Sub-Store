@@ -119,6 +119,74 @@ describe('Gist backup age encryption', function () {
         expect(backup.settings.syncTime).to.be.a('number');
     });
 
+    for (const encoding of ['base64', 'plaintext', 'age']) {
+        it(`accepts ${encoding} backups when upload fails but verification matches`, async function () {
+            const pair = await generateKeyPair();
+            let uploadedContent;
+            const downloadedFiles = [];
+
+            installState({
+                settings: {
+                    gistToken: 'token',
+                    gistUpload: encoding,
+                    syncTime: 123,
+                    [AGE_SECRET_KEY]: pair[AGE_SECRET_KEY],
+                },
+                subs: [],
+            });
+
+            Gist.prototype.download = async (filename) => {
+                downloadedFiles.push(filename);
+                return uploadedContent ?? 'old backup';
+            };
+            Gist.prototype.upload = async (files) => {
+                uploadedContent = files[GIST_BACKUP_FILE_NAME].content;
+                throw new Error('Upload response lost');
+            };
+
+            await gistBackupAction('upload');
+
+            expect(uploadedContent).to.be.a('string');
+            expect(downloadedFiles).to.deep.equal([
+                GIST_BACKUP_FILE_NAME,
+                GIST_BACKUP_FILE_NAME,
+            ]);
+            expect($.cache.settings.syncTime).to.be.greaterThan(123);
+        });
+    }
+
+    it('restores syncTime and rejects the upload error when verification differs', async function () {
+        const uploadError = new Error('Upload failed');
+        let downloadCount = 0;
+
+        installState({
+            settings: {
+                gistToken: 'token',
+                syncTime: 123,
+            },
+            subs: [],
+        });
+
+        Gist.prototype.download = async () => {
+            downloadCount++;
+            return 'old backup';
+        };
+        Gist.prototype.upload = async () => {
+            throw uploadError;
+        };
+
+        let error;
+        try {
+            await gistBackupAction('upload');
+        } catch (caught) {
+            error = caught;
+        }
+
+        expect(error).to.equal(uploadError);
+        expect(downloadCount).to.equal(2);
+        expect($.cache.settings.syncTime).to.equal(123);
+    });
+
     it('replaces matching unencrypted online backups in age mode', async function () {
         const pair = await generateKeyPair();
         const initialContent = {
