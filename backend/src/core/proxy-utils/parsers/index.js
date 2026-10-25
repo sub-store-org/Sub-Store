@@ -2130,7 +2130,6 @@ function URI_AnyTLS() {
         // eslint-disable-next-line no-unused-vars
         let [__, password, server, port, addons = '', name] =
             /^(.*?)@(.*?)(?::(\d+))?\/?(?:\?(.*?))?(?:#(.*?))?$/.exec(line);
-        password = decodeURIComponent(password);
         port = parseInt(`${port}`, 10);
         if (isNaN(port)) {
             port = 443;
