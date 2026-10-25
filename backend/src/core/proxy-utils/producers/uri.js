@@ -1275,9 +1275,11 @@ export default function URI_Producer() {
                         trojanMode = `&mode=${encodeURIComponent(proxy._mode)}`;
                     }
                 }
-                result = `trojan://${proxy.password}@${proxy.server}:${
-                    proxy.port
-                }?sni=${encodeURIComponent(proxy.sni || proxy.server)}${
+                result = `trojan://${encodeURIComponent(proxy.password)}@${
+                    proxy.server
+                }:${proxy.port}?sni=${encodeURIComponent(
+                    proxy.sni || proxy.server,
+                )}${
                     proxy['skip-cert-verify'] ? '&allowInsecure=1' : ''
                 }${trojanTransport}${trojanAlpn}${trojanFp}${trojanPcs}${trojanVcn}${trojanSecurity}${trojanSid}${trojanPbk}${trojanSpx}${trojanMode}${trojanExtra}#${encodeURIComponent(
                     proxy.name,
@@ -1466,7 +1468,8 @@ export default function URI_Producer() {
             case 'anytls':
                 result = vless({
                     ...proxy,
-                    uuid: proxy.password,
+                    // vless() writes the uuid as is; a password may contain @, :, # etc.
+                    uuid: encodeURIComponent(proxy.password),
                     network: proxy.network || 'tcp',
                 }).replace('vless', 'anytls');
                 // 偷个懒
