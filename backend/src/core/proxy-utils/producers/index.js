@@ -28,6 +28,7 @@ export default {
     SurgeMac: SurgeMac_Producer(),
     Loon: Loon_Producer(),
     Clash: Clash_Producer(),
+    clash: Clash_Producer(),
     meta: ClashMeta_Producer(),
     clashmeta: ClashMeta_Producer(),
     'clash.meta': ClashMeta_Producer(),
