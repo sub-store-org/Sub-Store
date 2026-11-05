@@ -9,3 +9,5 @@ patchedDependencies:
 overrides:
   brace-expansion@1: ^1.1.21
   js-yaml@4: ^4.3.2
+  minimatch@10: ^11.0.4
+  mocha@12>glob@13: ^14.0.3
