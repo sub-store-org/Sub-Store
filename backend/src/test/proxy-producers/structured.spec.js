@@ -327,21 +327,19 @@ describe('Proxy structured producers', function () {
         }
     });
 
-    it('keeps Mihomo Snell versions 1 through 5 and Stash versions 1 through 6', function () {
+    it('keeps Snell versions 1 through 6 for Mihomo and Stash', function () {
         const proxies = [1, 2, 3, 4, 5, 6, 7].map((version) => ({
             type: 'snell',
             name: `Snell ${version}`,
             server: 'snell.example.com',
             port: 44046,
-            psk: 'secret',
+            psk: 'snell-test-psk',
             version,
             udp: true,
         }));
 
-        for (const [platform, expectedVersions] of [
-            ['Mihomo', [1, 2, 3, 4, 5]],
-            ['Stash', [1, 2, 3, 4, 5, 6]],
-        ]) {
+        const expectedVersions = [1, 2, 3, 4, 5, 6];
+        for (const platform of ['Mihomo', 'Stash']) {
             const internal = produceInternal(
                 platform,
                 proxies.map((proxy) => ({ ...proxy })),
@@ -374,6 +372,127 @@ describe('Proxy structured producers', function () {
                 ).to.equal(true);
             }
         }
+    });
+
+    it('round-trips Mihomo Snell v6 modes and obfs options', function () {
+        const configs = [
+            {},
+            {
+                mode: 'default',
+                'obfs-opts': {
+                    mode: 'shadow-tls',
+                    host: 'mask.example.com',
+                    password: 'shadow-pass',
+                    version: 3,
+                    alpn: [],
+                    'name-cert-verify': 'cert.example.com',
+                    'skip-cert-verify': false,
+                },
+            },
+            {
+                mode: 'unshaped',
+                'obfs-opts': {
+                    mode: 'restls',
+                    host: 'mask.example.com',
+                    password: 'restls-pass',
+                    'version-hint': 'tls13',
+                },
+            },
+            {
+                mode: 'unsafe-raw',
+                'obfs-opts': {
+                    mode: 'jls',
+                    host: 'mask.example.com',
+                    username: 'test-user',
+                    password: 'jls-pass',
+                },
+            },
+        ].map((config, index) => ({
+            type: 'snell',
+            name: `Snell v6 ${index}`,
+            server: 'snell.example.com',
+            port: 44046,
+            version: 6,
+            psk: '测试密码',
+            udp: index % 2 === 0,
+            reuse: index % 2 !== 0,
+            ...config,
+        }));
+        const proxies = ProxyUtils.parse(
+            ProxyUtils.yaml.safeDump({ proxies: configs }),
+        );
+
+        expect(loadProducedYaml('Mihomo', proxies).proxies).to.deep.equal(
+            configs,
+        );
+    });
+
+    it('filters invalid Mihomo Snell v6 settings and removes mode from older versions', function () {
+        const proxies = [
+            { mode: 'unknown' },
+            { 'obfs-opts': { mode: 'http' } },
+            { 'obfs-opts': { mode: 'tls' } },
+            { psk: 'x'.repeat(11) },
+            { psk: 'x'.repeat(256) },
+            { psk: 'x'.repeat(255) },
+            { version: 5 },
+        ].map((config, index) => ({
+            type: 'snell',
+            name: `Snell ${index}`,
+            server: 'snell.example.com',
+            port: 44046,
+            version: '6',
+            mode: 'unshaped',
+            psk: 'snell-test-psk',
+            ...config,
+        }));
+        const { result } = captureErrors(() =>
+            produceInternal('Mihomo', proxies),
+        );
+
+        expect(
+            result.map(({ name, version, mode }) => [name, version, mode]),
+        ).to.deep.equal([
+            ['Snell 5', 6, 'unshaped'],
+            ['Snell 6', 5, undefined],
+        ]);
+    });
+
+    it('validates legacy Mihomo Snell options and handles the default version', function () {
+        const proxies = [
+            { name: 'default', 'obfs-opts': { mode: 'http' } },
+            { name: 'zero', version: 0, 'obfs-opts': { mode: 'tls' } },
+            { name: 'v5', version: ' 5 ', 'obfs-opts': { mode: 'http' } },
+            {
+                name: 'invalid obfs',
+                version: 5,
+                'obfs-opts': { mode: 'unknown' },
+            },
+            { name: 'invalid obfs options', version: 4, 'obfs-opts': 'http' },
+            { name: 'missing PSK', version: 3, psk: undefined },
+        ].map((config) => ({
+            type: 'snell',
+            server: 'snell.example.com',
+            port: 44046,
+            psk: 'short',
+            udp: true,
+            ...config,
+        }));
+
+        const { result } = captureErrors(() =>
+            loadProducedYaml('Mihomo', proxies),
+        );
+        expect(
+            result.proxies.map(({ name, version, udp }) => [
+                name,
+                version,
+                udp,
+            ]),
+        ).to.deep.equal([
+            ['default', undefined, undefined],
+            ['zero', 0, undefined],
+            ['v5', 5, true],
+        ]);
     });
 
     it('keeps supported Snell in sing-box by default', function () {

@@ -870,12 +870,8 @@ function lastParse(proxy) {
         !proxy.plugin
     ) {
         proxy.plugin = 'shadow-tls';
-        proxy['plugin-opts'] = {
-            host: proxy['obfs-opts'].host,
-            password: proxy['obfs-opts'].password,
-            version: proxy['obfs-opts'].version,
-            alpn: proxy['obfs-opts'].alpn,
-        };
+        proxy['plugin-opts'] = { ...proxy['obfs-opts'] };
+        delete proxy['plugin-opts'].mode;
         delete proxy['obfs-opts'];
     }
     if (proxy.plugin === 'shadow-tls' && proxy['plugin-opts']) {
