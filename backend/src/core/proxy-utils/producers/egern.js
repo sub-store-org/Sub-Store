@@ -508,7 +508,9 @@ export default function Egern_Producer() {
                             port: proxy.port,
                             private_key: proxy['private-key'],
                             peer_public_key: proxy['public-key'],
-                            preshared_key: proxy['preshared-key'],
+                            preshared_key:
+                                proxy['preshared-key'] ??
+                                proxy['pre-shared-key'],
                             reserved: proxy.reserved
                                 ? Array.isArray(proxy.reserved)
                                     ? proxy.reserved
