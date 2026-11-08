@@ -1,40 +1,99 @@
 import { safeLoad } from '@/utils/yaml';
 import { Base64 } from 'js-base64';
+import { isAlias, isScalar, isSeq, parseDocument, visit } from 'yaml';
 import $ from '@/core/app';
 
 export function normalizeClashYaml(raw) {
-    if (
-        typeof raw !== 'string' ||
-        !raw.includes('proxies:') ||
-        !raw.includes('short-id:')
-    ) {
+    if (typeof raw !== 'string' || !raw.includes('short-id')) {
         return raw;
     }
 
+    let document;
     try {
-        const content = safeLoad(raw);
-        if (!Array.isArray(content.proxies) || content.proxies.length === 0)
+        document = parseDocument(raw, {
+            merge: true,
+            logLevel: 'error',
+        });
+        // legacy !<str> 可由 safeLoad 恢复；AST 仅用于定位原文。
+        const content =
+            document.errors.length > 0 ? safeLoad(raw) : document.toJS();
+        if (
+            ![content.proxies, content.listeners].some(
+                (items) => Array.isArray(items) && items.length > 0,
+            )
+        )
             return raw;
     } catch (e) {
         return raw;
     }
-    // 防止 VLESS 节点 reality-opts 里的 short-id 被 YAML 标量推断成数字
-    // 例如 08 / 0088 在部分内核重新解析时会触发 invalid REALITY short ID
-    return raw.replace(/short-id:([ \t]*[^#\n,}]*)/g, (matched, value) => {
-        const afterTrim = value.trim();
-
-        if (!afterTrim || afterTrim === '') {
-            return 'short-id: ""';
-        }
-
-        if (/^(['"]).*\1$/.test(afterTrim)) {
-            return `short-id: ${afterTrim}`;
-        } else if (['null'].includes(afterTrim)) {
-            return `short-id: ${afterTrim}`;
-        } else {
-            return `short-id: "${afterTrim}"`;
-        }
+    const anchors = new Map();
+    const aliases = new Map();
+    visit(document, {
+        Node(_, node) {
+            if (isAlias(node)) {
+                aliases.set(node.range[0], anchors.get(node.source));
+            } else if (node.anchor) {
+                anchors.set(node.anchor, node);
+            }
+        },
     });
+    const resolveAlias = (node) =>
+        isAlias(node) ? aliases.get(node.range[0]) : node;
+    const needsQuotes = (node) =>
+        isScalar(node) &&
+        typeof node.value !== 'string' &&
+        node.value !== null &&
+        !node.tag &&
+        node.source;
+    const realityConfigs = new Set();
+    visit(document, {
+        Pair(_, { key, value }) {
+            const name = resolveAlias(key)?.value;
+            if (['reality-opts', 'reality-config'].includes(name)) {
+                realityConfigs.add(value);
+            }
+        },
+    });
+    // alias 和 merge 引用的节点也属于 REALITY 上下文。
+    for (const config of realityConfigs) {
+        visit(config, {
+            Alias(_, alias) {
+                realityConfigs.add(resolveAlias(alias));
+            },
+        });
+    }
+
+    const shortIds = new Set();
+    visit(document, {
+        Pair(_, { key, value }, path) {
+            if (
+                resolveAlias(key)?.value === 'short-id' &&
+                path.some((node) => realityConfigs.has(node))
+            ) {
+                shortIds.add(value);
+            }
+        },
+    });
+    const replacements = new Map();
+    // shortcut: 直接修改 anchor；跨字段共享时若需保留原类型，再隔离引用。
+    for (const value of shortIds) {
+        const node = resolveAlias(value);
+        if (isSeq(node)) {
+            for (const item of node.items) shortIds.add(item);
+        } else if (needsQuotes(node)) {
+            replacements.set(node, JSON.stringify(node.source));
+        }
+    }
+
+    const chunks = [];
+    let offset = 0;
+    for (const [node, content] of [...replacements].sort(
+        ([left], [right]) => left.range[0] - right.range[0],
+    )) {
+        chunks.push(raw.slice(offset, node.range[0]), content);
+        offset = node.range[1];
+    }
+    return chunks.join('') + raw.slice(offset);
 }
 
 function HTML() {

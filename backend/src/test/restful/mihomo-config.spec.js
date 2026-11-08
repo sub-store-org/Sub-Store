@@ -5,6 +5,7 @@ import path from 'path';
 import { after, afterEach, before, beforeEach, describe, it } from 'mocha';
 
 import { FILES_KEY, SUBS_KEY } from '@/constants';
+import { safeLoad } from '@/utils/yaml';
 
 let $;
 let registerFileRoutes;
@@ -300,6 +301,138 @@ describe('mihomo config file routes', function () {
         expect(res.sent.data.original).to.include('name: Supported');
         expect(res.sent.data.original).to.not.include('name: Unsupported');
         expect(res.sent.data.processed).to.include('name: Supported');
+    });
+
+    it('preserves listener short-id lists added by scripts in downloads and previews', async function () {
+        const file = {
+            name: 'reality-config-file',
+            type: 'mihomoConfig',
+            sourceType: 'local',
+            content: 'proxies:\n  - {name: Direct, type: direct}\n',
+            process: [
+                {
+                    type: 'Script Operator',
+                    args: {
+                        mode: 'script',
+                        content: `
+const yaml = ProxyUtils.yaml.safeLoad($content);
+yaml.listeners = [{
+    type: 'vless',
+    'reality-config': { 'short-id': ['6a0f0e0ede903cad', 11111111111] },
+}];
+$content = ProxyUtils.yaml.dump(yaml);
+`,
+                    },
+                },
+            ],
+        };
+        state[FILES_KEY] = [file];
+
+        const downloaded = await requestFile(file.name);
+        const previewed = await previewFile(file);
+
+        expect(downloaded.statusCode).to.equal(200);
+        expect(previewed.sent.status).to.equal('success');
+        for (const output of [downloaded.sent, previewed.sent.data.processed]) {
+            const content = safeLoad(output);
+            expect(
+                content.listeners[0]['reality-config']['short-id'],
+            ).to.deep.equal(['6a0f0e0ede903cad', '11111111111']);
+        }
+    });
+
+    it('quotes numeric listener short-id items in downloads and previews without proxies', async function () {
+        const file = {
+            name: 'listener-only-file',
+            type: 'mihomoConfig',
+            sourceType: 'local',
+            content: `listeners:
+  - name: relay-proxy
+    type: vless
+    port: 4443
+    listen: 0.0.0.0
+    users:
+      - username: u
+        uuid: xxxx
+        flow: xtls-rprx-vision
+    reality-config:
+      dest: 127.0.0.1:443
+      server-names:
+        - example.com
+      private-key: xxxx
+      short-id:
+        - 11111111111
+`,
+            process: [],
+        };
+        state[FILES_KEY] = [file];
+
+        const downloaded = await requestFile(file.name);
+        const previewed = await previewFile(file);
+
+        expect(downloaded.statusCode).to.equal(200);
+        expect(previewed.sent.status).to.equal('success');
+        for (const output of [downloaded.sent, previewed.sent.data.processed]) {
+            expect(output).to.equal(
+                file.content.replace('11111111111', '"11111111111"'),
+            );
+            expect(
+                safeLoad(output).listeners[0]['reality-config']['short-id'],
+            ).to.deep.equal(['11111111111']);
+        }
+    });
+
+    it('keeps commented short-id aliases valid in file downloads and previews', async function () {
+        const file = {
+            name: 'commented-alias-file',
+            type: 'mihomoConfig',
+            sourceType: 'local',
+            content:
+                'ids: &ids 0011 # keep\nlisteners: [{reality-config: {short-id: [*ids]}}]\n',
+            process: [],
+        };
+        state[FILES_KEY] = [file];
+
+        const downloaded = await requestFile(file.name);
+        const previewed = await previewFile(file);
+
+        expect(downloaded.statusCode).to.equal(200);
+        expect(previewed.sent.status).to.equal('success');
+        for (const output of [downloaded.sent, previewed.sent.data.processed]) {
+            expect(output.startsWith('ids: &ids "0011" # keep\n')).to.equal(
+                true,
+            );
+            expect(
+                safeLoad(output).listeners[0]['reality-config']['short-id'],
+            ).to.deep.equal(['0011']);
+        }
+    });
+
+    it('normalizes listeners from an aliased merge sequence in downloads and previews', async function () {
+        const file = {
+            name: 'merge-sequence-file',
+            type: 'mihomoConfig',
+            sourceType: 'local',
+            content: `profile: &profile {listeners: [{reality-config: {short-id: [0011]}}]}
+profiles: &profiles [*profile]
+<<: *profiles
+`,
+            process: [],
+        };
+        state[FILES_KEY] = [file];
+
+        const downloaded = await requestFile(file.name);
+        const previewed = await previewFile(file);
+
+        expect(downloaded.statusCode).to.equal(200);
+        expect(previewed.sent.status).to.equal('success');
+        for (const output of [downloaded.sent, previewed.sent.data.processed]) {
+            const content = safeLoad(output);
+            expect(
+                content.listeners[0]['reality-config']['short-id'],
+            ).to.deep.equal(['0011']);
+            expect(output).to.equal(file.content.replace('0011', '"0011"'));
+        }
     });
 
     it('keeps unsupported proxies for YAML mihomoConfig overrides when enabled', async function () {
