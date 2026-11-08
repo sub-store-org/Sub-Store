@@ -1,9 +1,17 @@
+const FORBIDDEN_FIELDS = ['__proto__', 'constructor', 'prototype'];
+
+function isSafeField(field) {
+    return typeof field === 'string' && !FORBIDDEN_FIELDS.includes(field);
+}
+
 export function findByName(list, name, field = 'name') {
-    return list.find((item) => item[field] === name);
+    if (!isSafeField(field)) return undefined;
+    return list.find((item) => Object.prototype.hasOwnProperty.call(item, field) && item[field] === name);
 }
 
 export function findIndexByName(list, name, field = 'name') {
-    return list.findIndex((item) => item[field] === name);
+    if (!isSafeField(field)) return -1;
+    return list.findIndex((item) => Object.prototype.hasOwnProperty.call(item, field) && item[field] === name);
 }
 
 export function deleteByName(list, name, field = 'name') {
