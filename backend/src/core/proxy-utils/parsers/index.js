@@ -392,12 +392,15 @@ function URI_SS() {
                 if (params.mode) {
                     proxy._mode = params.mode;
                 }
-                if (params.extra) {
-                    proxy._extra = params.extra;
-                }
                 if (Object.keys(opts).length > 0) {
                     _.set(proxy, params.security + '-opts', opts);
                 }
+            }
+            if (
+                params.extra &&
+                (proxy.network === 'xhttp' || params.security === 'reality')
+            ) {
+                proxy._extra = params.extra;
             }
         }
 

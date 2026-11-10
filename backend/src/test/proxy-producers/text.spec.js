@@ -2540,6 +2540,23 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('preserves XHTTP extra on shadowsocks URI round-trips', function () {
+        const userInfo = Base64.encode('aes-128-gcm:example-password');
+        const extra = JSON.stringify({
+            xmux: { maxConcurrency: 8, cMaxReuseTimes: 32 },
+            headers: { 'X-Test': 'a+b=c&d#e' },
+        });
+        const input = `ss://${userInfo}@ss.example.com:443?type=xhttp&security=tls&path=%2Fxhttp&extra=${encodeURIComponent(
+            extra,
+        )}#SS%20XHTTP`;
+        const [proxy] = ProxyUtils.parse(input);
+        expect(proxy._extra).to.equal(extra);
+
+        const output = produceExternal('URI', proxy);
+        expect(new URL(output).searchParams.get('extra')).to.equal(extra);
+        expect(Base64.decode(produceExternal('V2Ray', proxy))).to.equal(output);
+    });
+
     it('produces URI shadowsocks httpupgrade links with early data metadata', function () {
         const output = produceExternal('URI', {
             type: 'ss',

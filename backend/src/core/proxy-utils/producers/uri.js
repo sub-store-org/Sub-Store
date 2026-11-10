@@ -980,7 +980,10 @@ export default function URI_Producer() {
                 let ssSpx = '';
                 let ssSecurity = proxy.tls ? '&security=tls' : '';
                 let ssMode = '';
-                let ssExtra = '';
+                const ssExtra =
+                    proxy._extra && (ssIsReality || proxy.network === 'xhttp')
+                        ? `&extra=${encodeURIComponent(proxy._extra)}`
+                        : '';
                 if (ssIsReality) {
                     ssSecurity = `&security=reality`;
                     const publicKey = proxy['reality-opts']?.['public-key'];
@@ -994,9 +997,6 @@ export default function URI_Producer() {
                     const spiderX = proxy['reality-opts']?.['_spider-x'];
                     if (spiderX) {
                         ssSpx = `&spx=${encodeURIComponent(spiderX)}`;
-                    }
-                    if (proxy._extra) {
-                        ssExtra = `&extra=${encodeURIComponent(proxy._extra)}`;
                     }
                     if (proxy._mode) {
                         ssMode = `&mode=${encodeURIComponent(proxy._mode)}`;
