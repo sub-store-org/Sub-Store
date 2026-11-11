@@ -41,9 +41,10 @@ export function stripBackendPath(url, backendPath) {
 
 export function matchesBackendPath(path, backendPath, merge) {
     if (backendPath !== '/') return path.startsWith(backendPath);
+    const isSharePath = /^\/share(\/|$)/i.test(path);
     return (
-        /^\/(api|download|share)(\/|$)/.test(path) &&
-        (!merge || !path.startsWith('/share/'))
+        /^\/(api|download|share)(\/|$)/i.test(path) &&
+        (!merge || !isSharePath)
     );
 }
 
@@ -92,7 +93,7 @@ export default function serve() {
                     decodeURIComponent(req._parsedUrl.pathname) || '/';
                 if (
                     be_merge &&
-                    req.path.startsWith('/share/') &&
+                    req.path.toLowerCase().startsWith('/share/') &&
                     req.query.token
                 ) {
                     if (req.method.toLowerCase() !== 'get') {

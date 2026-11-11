@@ -57,8 +57,8 @@ describe('token routes', function () {
             state[key] = data;
             return true;
         };
-        $.info = () => {};
-        $.error = () => {};
+        $.info = () => { };
+        $.error = () => { };
     });
 
     it('stores exact datetime shares without converting them to expiresIn', function () {
@@ -284,7 +284,7 @@ describe('token routes', function () {
         expect(state[TOKENS_KEY]).to.deep.equal([]);
     });
 
-    it('reports when secure randomness is unavailable for automatic tokens', function () {
+    it('uses the Node random source when Web Crypto is unavailable', function () {
         const originalCrypto = Object.getOwnPropertyDescriptor(
             globalThis,
             'crypto',
@@ -294,23 +294,22 @@ describe('token routes', function () {
             value: undefined,
         });
 
-        let capturedError;
+        let token;
         try {
-            createTokenItem({
+            token = createTokenItem({
                 type: 'sub',
                 name: 'shared-sub',
             });
-        } catch (error) {
-            capturedError = error;
         } finally {
-            Object.defineProperty(globalThis, 'crypto', originalCrypto);
+            if (originalCrypto) {
+                Object.defineProperty(globalThis, 'crypto', originalCrypto);
+            } else {
+                delete globalThis.crypto;
+            }
         }
 
-        expect(capturedError).to.include({
-            type: 'RequestInvalidError',
-            code: 'SECURE_RANDOM_UNAVAILABLE',
-        });
-        expect(state[TOKENS_KEY]).to.deep.equal([]);
+        expect(token.token).to.be.a('string').with.length(21);
+        expect(state[TOKENS_KEY][0].token).to.equal(token.token);
     });
 
     it('keeps legacy duration behavior when mode is omitted', function () {

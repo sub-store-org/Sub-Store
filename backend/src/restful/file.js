@@ -63,7 +63,9 @@ function createFile(req, res) {
 async function getFile(req, res) {
     let { name } = req.params;
     const reqUA = req.headers['user-agent'] || req.headers['User-Agent'];
-    const isShareRoute = req.path?.startsWith('/share/');
+    const isShareRoute = String(req.route?.path ?? req.path ?? '')
+        .toLowerCase()
+        .startsWith('/share/');
     if (isShareRoute && !consumeShareTokenForRequest(req, 'file')) {
         failed(
             res,

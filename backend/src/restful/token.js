@@ -1,3 +1,4 @@
+import { ENV } from '@/vendor/open-api';
 import { TOKENS_KEY, SUBS_KEY, FILES_KEY, COLLECTIONS_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
@@ -26,6 +27,11 @@ export default function register($app) {
 const generateNanoId = customAlphabet(urlAlphabet);
 
 function generateShareToken() {
+    if (ENV().isNode) {
+        const nanoid = eval(`require("nanoid")`);
+        return nanoid.customAlphabet(nanoid.urlAlphabet)();
+    }
+
     if (
         typeof globalThis.crypto === 'undefined' ||
         typeof globalThis.crypto.getRandomValues !== 'function'
@@ -467,15 +473,19 @@ function deleteTokenItem(token, type, name) {
 }
 
 function matchesShareToken(item, { token, type, name, pathname }) {
+    const normalizedPathname = pathname?.toLowerCase();
     return (
         typeof token === 'string' &&
         token.length > 0 &&
         item.token === token &&
         (type ? item.type === type : true) &&
         (name ? item.name === name : true) &&
-        (pathname
-            ? `/share/${item.type}/${item.name}` === pathname ||
-            pathname.startsWith(`/share/${item.type}/${item.name}/`)
+        (normalizedPathname
+            ? `/share/${item.type}/${item.name}`.toLowerCase() ===
+            normalizedPathname ||
+            normalizedPathname.startsWith(
+                `/share/${item.type}/${item.name}/`.toLowerCase(),
+            )
             : true)
     );
 }
