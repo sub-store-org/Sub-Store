@@ -15,7 +15,10 @@ import {
     applyAgeOutputEncryption,
     resolveShareAgeConfig,
 } from '@/restful/age-output';
-import { findShareToken } from '@/restful/token';
+import {
+    consumeShareTokenForRequest,
+    findShareToken,
+} from '@/restful/token';
 import { maskAgeSecretInUrl } from '@/utils/age';
 
 function getMihomoExternalOptions(query) {
@@ -85,6 +88,21 @@ export default function register($app) {
 async function downloadSubscription(req, res) {
     const { name } = req.params;
     const isShareRoute = req.path?.startsWith('/share/');
+    if (
+        isShareRoute &&
+        !req.query?._fakeNode &&
+        !consumeShareTokenForRequest(req, 'sub')
+    ) {
+        failed(
+            res,
+            new RequestInvalidError(
+                'INVALID_SHARE_TOKEN',
+                '分享令牌错误、已过期或已用尽',
+            ),
+            404,
+        );
+        return;
+    }
 
     const {
         useMihomoExternal,
@@ -491,6 +509,20 @@ async function downloadSubscription(req, res) {
 
 async function downloadCollection(req, res) {
     const { name } = req.params;
+    if (
+        req.path?.startsWith('/share/') &&
+        !consumeShareTokenForRequest(req, 'col')
+    ) {
+        failed(
+            res,
+            new RequestInvalidError(
+                'INVALID_SHARE_TOKEN',
+                '分享令牌错误、已过期或已用尽',
+            ),
+            404,
+        );
+        return;
+    }
 
     const {
         useMihomoExternal,

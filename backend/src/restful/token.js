@@ -1,4 +1,3 @@
-import { ENV } from '@/vendor/open-api';
 import { TOKENS_KEY, SUBS_KEY, FILES_KEY, COLLECTIONS_KEY } from '@/constants';
 import { failed, success } from '@/restful/response';
 import $ from '@/core/app';
@@ -11,6 +10,8 @@ import { insertByPosition } from '@/utils/database';
 import { getCreateItemPosition } from '@/utils/create-item-position';
 import { archiveShare } from '@/utils/archive';
 import { normalizeAgePublicKeyConfig } from '@/utils/age';
+import ms from 'ms';
+import { customAlphabet, urlAlphabet } from 'nanoid';
 
 export default function register($app) {
     if (!$.read(TOKENS_KEY)) $.write([], TOKENS_KEY);
@@ -22,34 +23,19 @@ export default function register($app) {
     $app.route('/api/tokens').get(getAllTokens);
 }
 
-function parseMs(val) {
-    if (typeof val === 'number') return val;
-    if (typeof val !== 'string') return NaN;
-    const match = val.match(/^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i);
-    if (!match) return NaN;
-    const n = parseFloat(match[1]);
-    const type = (match[2] || 'ms').toLowerCase();
-    switch (type) {
-        case 'years': case 'year': case 'yrs': case 'yr': case 'y': return n * 31557600000;
-        case 'weeks': case 'week': case 'w': return n * 604800000;
-        case 'days': case 'day': case 'd': return n * 86400000;
-        case 'hours': case 'hour': case 'hrs': case 'hr': case 'h': return n * 3600000;
-        case 'minutes': case 'minute': case 'mins': case 'min': case 'm': return n * 60000;
-        case 'seconds': case 'second': case 'secs': case 'sec': case 's': return n * 1000;
-        case 'milliseconds': case 'millisecond': case 'msecs': case 'msec': case 'ms': return n;
-        default: return NaN;
-    }
-}
+const generateNanoId = customAlphabet(urlAlphabet);
 
-function generateNanoId(size = 21) {
-    const alphabet = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
-    let id = '';
-    const bytes = new Uint8Array(size);
-    crypto.getRandomValues(bytes);
-    for (let i = 0; i < size; i++) {
-        id += alphabet[bytes[i] % alphabet.length];
+function generateShareToken() {
+    if (
+        typeof globalThis.crypto === 'undefined' ||
+        typeof globalThis.crypto.getRandomValues !== 'function'
+    ) {
+        throw new RequestInvalidError(
+            'SECURE_RANDOM_UNAVAILABLE',
+            '无法自动签发分享令牌：当前运行环境不支持安全随机数',
+        );
     }
-    return id;
+    return generateNanoId();
 }
 
 function deleteToken(req, res) {
@@ -178,8 +164,20 @@ function resolveDurationExpiration(options = {}, { required = false } = {}) {
         return null;
     }
 
-    const expiresIn = parseMs(rawExpiresIn);
-    if (isNaN(expiresIn) || expiresIn <= 0) {
+    const expiresIn = ms(rawExpiresIn);
+    if (
+        expiresIn == null ||
+        !Number.isFinite(expiresIn) ||
+        expiresIn <= 0
+    ) {
+        throw new RequestInvalidError(
+            'INVALID_EXPIRES_IN',
+            `Invalid expiresIn option: ${rawExpiresIn}`,
+        );
+    }
+
+    const exp = Date.now() + expiresIn;
+    if (!Number.isFinite(exp) || exp > Number.MAX_SAFE_INTEGER) {
         throw new RequestInvalidError(
             'INVALID_EXPIRES_IN',
             `Invalid expiresIn option: ${rawExpiresIn}`,
@@ -189,7 +187,7 @@ function resolveDurationExpiration(options = {}, { required = false } = {}) {
     return {
         rawExpiresIn,
         expiresIn,
-        exp: Date.now() + expiresIn,
+        exp,
     };
 }
 
@@ -395,7 +393,7 @@ function createTokenItem(payload, options = {}) {
     const tokens = $.read(TOKENS_KEY) || [];
     if (!token) {
         do {
-            token = generateNanoId();
+            token = generateShareToken();
         } while (
             tokens.find(
                 (item) =>
@@ -470,6 +468,8 @@ function deleteTokenItem(token, type, name) {
 
 function matchesShareToken(item, { token, type, name, pathname }) {
     return (
+        typeof token === 'string' &&
+        token.length > 0 &&
         item.token === token &&
         (type ? item.type === type : true) &&
         (name ? item.name === name : true) &&
@@ -481,8 +481,18 @@ function matchesShareToken(item, { token, type, name, pathname }) {
 }
 
 function isShareTokenUsable(item) {
-    if (item.exp != null && item.exp <= Date.now()) {
-        return false;
+    if (item.exp == null) {
+        if (
+            item.mode === 'datetime' ||
+            (item.mode === 'duration' && item.expiresUnit !== LIFETIME_DURATION_UNIT)
+        ) {
+            return false;
+        }
+    } else {
+        const exp = Number(item.exp);
+        if (!Number.isFinite(exp) || exp <= Date.now()) {
+            return false;
+        }
     }
 
     if (item.mode === 'count') {
@@ -523,6 +533,28 @@ function consumeShareToken(query) {
     return nextToken;
 }
 
+function consumeShareTokenForRequest(req, type) {
+    const query = {
+        token: req.query?.token,
+        type,
+        name: req.params?.name,
+    };
+    if (
+        req.subStoreShareToken &&
+        req.subStoreShareToken.token === query.token &&
+        req.subStoreShareToken.type === type &&
+        req.subStoreShareToken.name === query.name
+    ) {
+        return req.subStoreShareToken;
+    }
+
+    const token = consumeShareToken(query);
+    if (token) {
+        req.subStoreShareToken = token;
+    }
+    return token;
+}
+
 function findShareToken(query) {
     const allTokens = $.read(TOKENS_KEY) || [];
     return (
@@ -545,4 +577,10 @@ function shouldArchiveDeletion(mode) {
     );
 }
 
-export { createTokenItem, deleteTokenItem, consumeShareToken, findShareToken };
+export {
+    createTokenItem,
+    deleteTokenItem,
+    consumeShareToken,
+    consumeShareTokenForRequest,
+    findShareToken,
+};

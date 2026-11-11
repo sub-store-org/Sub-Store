@@ -22,7 +22,10 @@ import {
     applyAgeOutputEncryption,
     resolveShareAgeConfig,
 } from '@/restful/age-output';
-import { findShareToken } from '@/restful/token';
+import {
+    consumeShareTokenForRequest,
+    findShareToken,
+} from '@/restful/token';
 import { maskAgeSecretInUrl, normalizeAgePublicKeyConfig } from '@/utils/age';
 import { normalizeEditorLanguageConfig } from '@/utils/editor-language';
 import {
@@ -57,10 +60,21 @@ function createFile(req, res) {
     }
 }
 
-async function getFile(req, res, next) {
+async function getFile(req, res) {
     let { name } = req.params;
     const reqUA = req.headers['user-agent'] || req.headers['User-Agent'];
     const isShareRoute = req.path?.startsWith('/share/');
+    if (isShareRoute && !consumeShareTokenForRequest(req, 'file')) {
+        failed(
+            res,
+            new RequestInvalidError(
+                'INVALID_SHARE_TOKEN',
+                '分享令牌错误、已过期或已用尽',
+            ),
+            404,
+        );
+        return;
+    }
     $.info(`正在下载文件：${name}\n请求 User-Agent: ${reqUA}`);
     let {
         url,

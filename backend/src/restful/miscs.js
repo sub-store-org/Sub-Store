@@ -122,12 +122,10 @@ export default function register($app) {
     });
 }
 
-function getEnv(req, res) {
+function getEnv(_req, res) {
     env.feature = env.feature || {};
     env.feature.archive = true;
-    if (req.query.share) {
-        env.feature.share = true;
-    }
+    env.feature.share = true;
     res.set('Content-Type', 'application/json;charset=UTF-8').send(
         JSON.stringify(
             {

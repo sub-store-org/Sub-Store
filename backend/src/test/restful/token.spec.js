@@ -10,6 +10,7 @@ import {
 let $;
 let createTokenItem;
 let consumeShareToken;
+let consumeShareTokenForRequest;
 let findShareToken;
 let state;
 let originalRead;
@@ -21,9 +22,12 @@ let ageUtils;
 describe('token routes', function () {
     before(async function () {
         ({ default: $ } = require('@/core/app'));
-        ({ createTokenItem, consumeShareToken, findShareToken } = require(
-            '@/restful/token'
-        ));
+        ({
+            createTokenItem,
+            consumeShareToken,
+            consumeShareTokenForRequest,
+            findShareToken,
+        } = require('@/restful/token'));
         ageUtils = require('@/utils/age');
 
         originalRead = $.read.bind($);
@@ -162,6 +166,42 @@ describe('token routes', function () {
         expect(state[TOKENS_KEY]).to.deep.equal([]);
     });
 
+    it('rejects duration tokens whose expiration overflowed during persistence', function () {
+        state[TOKENS_KEY] = [
+            {
+                type: 'sub',
+                name: 'shared-sub',
+                token: 'overflowed-expiration',
+                mode: 'duration',
+                exp: null,
+            },
+        ];
+
+        expect(
+            findShareToken({
+                token: 'overflowed-expiration',
+                type: 'sub',
+                name: 'shared-sub',
+            }),
+        ).to.equal(null);
+    });
+
+    it('does not match missing token values to malformed stored entries', function () {
+        state[TOKENS_KEY] = [
+            {
+                type: 'sub',
+                name: 'shared-sub',
+            },
+        ];
+
+        expect(
+            findShareToken({
+                type: 'sub',
+                name: 'shared-sub',
+            }),
+        ).to.equal(null);
+    });
+
     it('rejects empty exact datetime shares', function () {
         for (const invalidExp of [null, '', '   ']) {
             let capturedError;
@@ -212,6 +252,63 @@ describe('token routes', function () {
         expect(capturedError).to.include({
             type: 'RequestInvalidError',
             code: 'INVALID_EXPIRES_IN',
+        });
+        expect(state[TOKENS_KEY]).to.deep.equal([]);
+    });
+
+    it('rejects overflowing duration shares instead of storing an unbounded token', function () {
+        for (const expiresIn of ['9'.repeat(101), '9'.repeat(100)]) {
+            let capturedError;
+            try {
+                createTokenItem(
+                    {
+                        type: 'sub',
+                        name: 'shared-sub',
+                        token: `overflow-${expiresIn.length}`,
+                    },
+                    {
+                        mode: 'duration',
+                        expiresIn,
+                    },
+                );
+            } catch (error) {
+                capturedError = error;
+            }
+
+            expect(capturedError).to.include({
+                type: 'RequestInvalidError',
+                code: 'INVALID_EXPIRES_IN',
+            });
+        }
+
+        expect(state[TOKENS_KEY]).to.deep.equal([]);
+    });
+
+    it('reports when secure randomness is unavailable for automatic tokens', function () {
+        const originalCrypto = Object.getOwnPropertyDescriptor(
+            globalThis,
+            'crypto',
+        );
+        Object.defineProperty(globalThis, 'crypto', {
+            configurable: true,
+            value: undefined,
+        });
+
+        let capturedError;
+        try {
+            createTokenItem({
+                type: 'sub',
+                name: 'shared-sub',
+            });
+        } catch (error) {
+            capturedError = error;
+        } finally {
+            Object.defineProperty(globalThis, 'crypto', originalCrypto);
+        }
+
+        expect(capturedError).to.include({
+            type: 'RequestInvalidError',
+            code: 'SECURE_RANDOM_UNAVAILABLE',
         });
         expect(state[TOKENS_KEY]).to.deep.equal([]);
     });
@@ -473,6 +570,14 @@ describe('token routes', function () {
             type: 'sub',
             name: 'shared-sub',
         });
+        const routed = consumeShareTokenForRequest(
+            {
+                params: { name: 'shared-sub' },
+                query: { token: 'count-age-token' },
+                subStoreShareToken: consumed,
+            },
+            'sub',
+        );
         const found = findShareToken({
             token: 'count-age-token',
             type: 'sub',
@@ -481,6 +586,7 @@ describe('token routes', function () {
 
         expect(consumed.usedCount).to.equal(1);
         expect(consumed['age-public-key']).to.equal(pair['age-public-key']);
+        expect(routed).to.equal(consumed);
         expect(found.usedCount).to.equal(1);
         expect(state[TOKENS_KEY][0].usedCount).to.equal(1);
     });

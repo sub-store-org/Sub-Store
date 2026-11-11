@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { after, before, beforeEach, describe, it } from 'mocha';
 
-import { FILES_KEY } from '@/constants';
+import { FILES_KEY, TOKENS_KEY } from '@/constants';
 
 let $;
 let openApi;
@@ -159,8 +159,11 @@ async function requestShareFile({ query = {}, shareToken } = {}) {
             method: 'GET',
             params: { name: 'local-file' },
             path: '/share/file/local-file',
-            query,
-            subStoreShareToken: shareToken,
+            query: { token: 'test-file-token', ...query },
+            subStoreShareToken: shareToken && {
+                token: 'test-file-token',
+                ...shareToken,
+            },
             url: '/share/file/local-file',
         },
         res,
@@ -218,6 +221,13 @@ describe('file routes', function () {
                     source: 'local',
                     content: 'base',
                     process: [],
+                },
+            ],
+            [TOKENS_KEY]: [
+                {
+                    type: 'file',
+                    name: 'local-file',
+                    token: 'test-file-token',
                 },
             ],
         };
@@ -424,6 +434,41 @@ describe('file routes', function () {
         expect(res.sent.status).to.equal('failed');
         expect(res.sent.error.code).to.equal('UNSUPPORTED_SHARE_FAKE_FILE');
         expect(res.sent.error.type).to.equal('RequestInvalidError');
+    });
+
+    it('rejects missing and invalid file share tokens', async function () {
+        const missing = await requestShareFile({ query: { token: undefined } });
+        const invalid = await requestShareFile({ query: { token: 'invalid' } });
+
+        expect(missing.statusCode).to.equal(404);
+        expect(missing.sent.error.code).to.equal('INVALID_SHARE_TOKEN');
+        expect(invalid.statusCode).to.equal(404);
+        expect(invalid.sent.error.code).to.equal('INVALID_SHARE_TOKEN');
+    });
+
+    it('consumes a count-limited file share token once', async function () {
+        state[TOKENS_KEY].push({
+            type: 'file',
+            name: 'local-file',
+            token: 'one-use-file-token',
+            mode: 'count',
+            count: 1,
+            usedCount: 0,
+        });
+
+        const first = await requestShareFile({
+            query: { token: 'one-use-file-token' },
+        });
+        const second = await requestShareFile({
+            query: { token: 'one-use-file-token' },
+        });
+        const token = state[TOKENS_KEY].find(
+            (item) => item.token === 'one-use-file-token',
+        );
+
+        expect(first.statusCode).to.equal(200);
+        expect(second.statusCode).to.equal(404);
+        expect(token.usedCount).to.equal(1);
     });
 
     it('rejects url on share routes', async function () {

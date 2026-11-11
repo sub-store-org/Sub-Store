@@ -1,7 +1,12 @@
 import { expect } from 'chai';
 import { after, before, beforeEach, describe, it } from 'mocha';
 
-import { COLLECTIONS_KEY, FILES_KEY, SUBS_KEY } from '@/constants';
+import {
+    COLLECTIONS_KEY,
+    FILES_KEY,
+    SUBS_KEY,
+    TOKENS_KEY,
+} from '@/constants';
 
 const UUID = '11111111-1111-4111-8111-111111111111';
 const VLESS_WS = `vless://${UUID}@1.1.1.1:443?security=tls&type=ws&host=cdn.example.com&path=%2Fws&sni=sni.example.com#VLESS%20WS`;
@@ -195,9 +200,36 @@ async function requestShareSubscription({ query = {}, shareToken } = {}) {
             method: 'GET',
             params: { name: 'local-vless' },
             path: '/share/sub/local-vless',
-            query,
-            subStoreShareToken: shareToken,
+            query: { token: 'test-sub-token', ...query },
+            subStoreShareToken: shareToken && {
+                token: 'test-sub-token',
+                ...shareToken,
+            },
             url: '/share/sub/local-vless',
+        },
+        res,
+    );
+
+    return res;
+}
+
+async function requestShareCollection({ query = {}, shareToken } = {}) {
+    const handler = getHandler('/share/col/:name');
+    const res = createResponse('/share/col/:name');
+
+    await handler(
+        {
+            body: {},
+            headers: {},
+            method: 'GET',
+            params: { name: 'local-col' },
+            path: '/share/col/local-col',
+            query: { token: 'test-col-token', ...query },
+            subStoreShareToken: shareToken && {
+                token: 'test-col-token',
+                ...shareToken,
+            },
+            url: '/share/col/local-col',
         },
         res,
     );
@@ -259,6 +291,18 @@ describe('download routes', function () {
                     name: 'local-col',
                     subscriptions: ['local-vless'],
                     firstSubFlow: false,
+                },
+            ],
+            [TOKENS_KEY]: [
+                {
+                    type: 'sub',
+                    name: 'local-vless',
+                    token: 'test-sub-token',
+                },
+                {
+                    type: 'col',
+                    name: 'local-col',
+                    token: 'test-col-token',
                 },
             ],
         };
@@ -911,6 +955,34 @@ describe('download routes', function () {
         expect(res.statusCode).to.equal(200);
         expect(res.sent).to.be.a('string');
         expect(res.sent).to.include('fakeNodeInfo');
+    });
+
+    it('rejects missing and invalid subscription share tokens', async function () {
+        const missing = await requestShareSubscription({
+            query: { token: undefined },
+        });
+        const invalid = await requestShareSubscription({
+            query: { token: 'invalid' },
+        });
+
+        expect(missing.statusCode).to.equal(404);
+        expect(missing.sent.error.code).to.equal('INVALID_SHARE_TOKEN');
+        expect(invalid.statusCode).to.equal(404);
+        expect(invalid.sent.error.code).to.equal('INVALID_SHARE_TOKEN');
+    });
+
+    it('rejects missing and invalid collection share tokens', async function () {
+        const missing = await requestShareCollection({
+            query: { token: undefined },
+        });
+        const invalid = await requestShareCollection({
+            query: { token: 'invalid' },
+        });
+
+        expect(missing.statusCode).to.equal(404);
+        expect(missing.sent.error.code).to.equal('INVALID_SHARE_TOKEN');
+        expect(invalid.statusCode).to.equal(404);
+        expect(invalid.sent.error.code).to.equal('INVALID_SHARE_TOKEN');
     });
 
     it('rejects url on share routes', async function () {
