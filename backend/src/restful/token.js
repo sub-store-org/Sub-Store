@@ -22,6 +22,36 @@ export default function register($app) {
     $app.route('/api/tokens').get(getAllTokens);
 }
 
+function parseMs(val) {
+    if (typeof val === 'number') return val;
+    if (typeof val !== 'string') return NaN;
+    const match = val.match(/^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i);
+    if (!match) return NaN;
+    const n = parseFloat(match[1]);
+    const type = (match[2] || 'ms').toLowerCase();
+    switch (type) {
+        case 'years': case 'year': case 'yrs': case 'yr': case 'y': return n * 31557600000;
+        case 'weeks': case 'week': case 'w': return n * 604800000;
+        case 'days': case 'day': case 'd': return n * 86400000;
+        case 'hours': case 'hour': case 'hrs': case 'hr': case 'h': return n * 3600000;
+        case 'minutes': case 'minute': case 'mins': case 'min': case 'm': return n * 60000;
+        case 'seconds': case 'second': case 'secs': case 'sec': case 's': return n * 1000;
+        case 'milliseconds': case 'millisecond': case 'msecs': case 'msec': case 'ms': return n;
+        default: return NaN;
+    }
+}
+
+function generateNanoId(size = 21) {
+    const alphabet = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
+    let id = '';
+    const bytes = new Uint8Array(size);
+    crypto.getRandomValues(bytes);
+    for (let i = 0; i < size; i++) {
+        id += alphabet[bytes[i] % alphabet.length];
+    }
+    return id;
+}
+
 function deleteToken(req, res) {
     try {
         let { token } = req.params;
@@ -50,24 +80,15 @@ function getAllTokens(req, res) {
         res,
         type || name
             ? allTokens.filter(
-                  (item) =>
-                      (type ? item.type === type : true) &&
-                      (name ? item.name === name : true),
-              )
+                (item) =>
+                    (type ? item.type === type : true) &&
+                    (name ? item.name === name : true),
+            )
             : allTokens,
     );
 }
 
 async function signToken(req, res) {
-    if (!ENV().isNode) {
-        return failed(
-            res,
-            new RequestInvalidError(
-                'INVALID_ENV',
-                `This endpoint is only available in Node.js environment`,
-            ),
-        );
-    }
     try {
         const tokenData = createTokenItem(req.body.payload, req.body.options);
         return success(res, {
@@ -80,10 +101,10 @@ async function signToken(req, res) {
             e instanceof RequestInvalidError
                 ? e
                 : new InternalServerError(
-                      'TOKEN_SIGN_FAILED',
-                      `Failed to sign token`,
-                      `Reason: ${e.message ?? e}`,
-                  ),
+                    'TOKEN_SIGN_FAILED',
+                    `Failed to sign token`,
+                    `Reason: ${e.message ?? e}`,
+                ),
         );
     }
 }
@@ -157,9 +178,8 @@ function resolveDurationExpiration(options = {}, { required = false } = {}) {
         return null;
     }
 
-    const ms = eval(`require("ms")`);
-    const expiresIn = ms(rawExpiresIn);
-    if (expiresIn == null || isNaN(expiresIn) || expiresIn <= 0) {
+    const expiresIn = parseMs(rawExpiresIn);
+    if (isNaN(expiresIn) || expiresIn <= 0) {
         throw new RequestInvalidError(
             'INVALID_EXPIRES_IN',
             `Invalid expiresIn option: ${rawExpiresIn}`,
@@ -372,11 +392,10 @@ function createTokenItem(payload, options = {}) {
         exp = durationExpiration?.exp;
     }
 
-    const nanoid = eval(`require("nanoid")`);
     const tokens = $.read(TOKENS_KEY) || [];
     if (!token) {
         do {
-            token = nanoid.customAlphabet(nanoid.urlAlphabet)();
+            token = generateNanoId();
         } while (
             tokens.find(
                 (item) =>
@@ -390,10 +409,10 @@ function createTokenItem(payload, options = {}) {
         expirationMode === 'datetime'
             ? 'datetime'
             : expirationMode === 'count'
-              ? 'count'
-            : durationExpiration || lifetimeDuration
-              ? 'duration'
-              : undefined;
+                ? 'count'
+                : durationExpiration || lifetimeDuration
+                    ? 'duration'
+                    : undefined;
     const safePayload = { ...payload };
     delete safePayload.mode;
     delete safePayload.exp;
@@ -411,19 +430,19 @@ function createTokenItem(payload, options = {}) {
         ...(normalizedMode === 'datetime'
             ? { exp }
             : normalizedMode === 'count'
-              ? {
+                ? {
                     count: countExpiration.count,
                     usedCount: countExpiration.usedCount,
                 }
-            : lifetimeDuration
-              ? { ...lifetimeDuration }
-            : durationExpiration
-              ? {
-                    expiresIn: durationExpiration.rawExpiresIn,
-                    ...(durationInput || {}),
-                    exp,
-                }
-              : {}),
+                : lifetimeDuration
+                    ? { ...lifetimeDuration }
+                    : durationExpiration
+                        ? {
+                            expiresIn: durationExpiration.rawExpiresIn,
+                            ...(durationInput || {}),
+                            exp,
+                        }
+                        : {}),
     };
     insertByPosition(tokens, tokenData, getCreateItemPosition());
     $.write(tokens, TOKENS_KEY);
@@ -456,7 +475,7 @@ function matchesShareToken(item, { token, type, name, pathname }) {
         (name ? item.name === name : true) &&
         (pathname
             ? `/share/${item.type}/${item.name}` === pathname ||
-              pathname.startsWith(`/share/${item.type}/${item.name}/`)
+            pathname.startsWith(`/share/${item.type}/${item.name}/`)
             : true)
     );
 }
