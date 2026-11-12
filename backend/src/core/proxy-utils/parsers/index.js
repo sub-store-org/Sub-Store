@@ -1986,9 +1986,6 @@ function URI_VLESS() {
             }
             if (params.serviceName) {
                 opts[`${proxy.network}-service-name`] = params.serviceName;
-                if (['grpc'].includes(proxy.network) && params.authority) {
-                    opts['_grpc-authority'] = params.authority;
-                }
             } else if (isShadowrocket && params.path) {
                 if (!['ws', 'http', 'h2'].includes(proxy.network)) {
                     opts[`${proxy.network}-service-name`] = params.path;
@@ -2012,6 +2009,9 @@ function URI_VLESS() {
             // https://github.com/XTLS/Xray-core/issues/91
             if (['grpc'].includes(proxy.network)) {
                 opts['_grpc-type'] = params.mode || 'gun';
+                if (params.authority) {
+                    opts['_grpc-authority'] = params.authority;
+                }
             }
             if (httpupgrade) {
                 opts['v2ray-http-upgrade'] = true;
@@ -2995,6 +2995,15 @@ function Surge_VMess() {
     return { name, test, parse };
 }
 
+function Surge_VLESS() {
+    const name = 'Surge VLESS Parser';
+    const test = (line) =>
+        /^.*=\s*vless\s*$/.test(line.split(',')[0]) &&
+        /,\s*username\s*=/.test(line);
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
+
 function Surge_Trojan() {
     const name = 'Surge Trojan Parser';
     const test = (line) => {
@@ -3175,6 +3184,7 @@ export default [
     Surge_SSH(),
     Surge_SS(),
     Surge_VMess(),
+    Surge_VLESS(),
     Surge_Trojan(),
     Surge_Http(),
     Surge_Snell(),

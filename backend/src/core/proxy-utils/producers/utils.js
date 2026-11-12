@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import $ from '@/core/app';
 import YAML from '@/utils/yaml';
 import { isIPv4, isIPv6 } from '@/utils';
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
@@ -30,6 +31,22 @@ export class Result {
 export function isPresent(obj, attr) {
     const data = _.get(obj, attr);
     return typeof data !== 'undefined' && data !== null;
+}
+
+export function supportsTrustTunnelClientRandomAuth(proxy, targetPlatform) {
+    if (
+        proxy.type !== 'trusttunnel' ||
+        !isPresent(proxy, 'client-random-auth-key') ||
+        ['surge', 'surgemac', 'json'].includes(targetPlatform.toLowerCase())
+    ) {
+        return true;
+    }
+    $.error(
+        `Target platform ${targetPlatform} does not support client-random-auth-key for TrustTunnel proxy ${
+            proxy.name || `${proxy.server}:${proxy.port}`
+        }. Proxy has been filtered.`,
+    );
+    return false;
 }
 
 export function isShadowsocksOverTls(proxy) {

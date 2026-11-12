@@ -369,7 +369,7 @@ const grammars = String.raw`
     }
 }
 
-start = (masque/anytls/shadowsocks/vmess/trojan/h2_connect/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard/hysteria2/ssh/trust_tunnel/direct) {
+start = (masque/anytls/shadowsocks/vmess/vless/trojan/h2_connect/https/http/snell/socks5/socks5_tls/tuic/tuic_v5/wireguard/hysteria2/ssh/trust_tunnel/direct) {
     return proxy;
 }
 
@@ -393,6 +393,13 @@ vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/
     } else {
         proxy.alterId = 1;
     }
+    handleWebsocket();
+    handleShadowTLS();
+}
+vless = tag equals "vless" address (vless_username/vless_option/reality_option/ws/ws_path/ws_headers/grpc/grpc_service_name/grpc_mode/grpc_authority/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/tls_verification/client_cert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+    proxy.type = "vless";
+    proxy["packet-encoding"] = "xudp";
+    if (proxy["reality-opts"] && proxy["reality-opts"]["public-key"]) proxy.tls = true;
     handleWebsocket();
     handleShadowTLS();
 }
@@ -459,7 +466,7 @@ anytls = tag equals "anytls" address (passwordk/reuse/ip_version/underlying_prox
     proxy.type = "anytls";
     proxy.tls = true;
 }
-trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/headers/max_streams/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/h3/fast_open/tfo/block_quic/others)* {
+trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/client_random_auth_key/headers/max_streams/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/h3/fast_open/tfo/block_quic/others)* {
     proxy.type = "trusttunnel";
     proxy.tls = true;
 }
@@ -558,6 +565,11 @@ usernamek = comma "username" equals match:[^,]+ { proxy.username = match.join(""
 passwordk = comma "password" equals match:[^,]+ { proxy.password = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 vmess_uuid = comma "username" equals match:[^,]+ { proxy.uuid = match.join(""); }
 vmess_aead = comma "vmess-aead" equals flag:bool { proxy.aead = flag; }
+// shortcut: keep text IDs as given, convert them to UUIDv5 when a target requires it.
+vless_username = comma "username" equals value:quoted_value { proxy.uuid = value.trim(); }
+vless_option = comma key:("flow"/"encryption") equals value:quoted_value { proxy[key] = value.trim(); }
+reality_option = comma "reality-" key:("public-key"/"short-id") equals value:quoted_value { $set(proxy, "reality-opts." + key, value.trim()); }
+client_random_auth_key = comma "client-random-auth-key" equals value:$[^,]* { proxy["client-random-auth-key"] = stripQuotes(value); }
 
 method = comma "encrypt-method" equals cipher:cipher {
     proxy.cipher = cipher;
@@ -567,7 +579,7 @@ vmess_method = comma "encrypt-method" equals cipher:$[^,]+ {
 }
 cipher = ("aes-128-cfb"/"aes-128-ctr"/"aes-128-gcm"/"aes-192-cfb"/"aes-192-ctr"/"aes-192-gcm"/"aes-256-cfb"/"aes-256-ctr"/"aes-256-gcm"/"bf-cfb"/"camellia-128-cfb"/"camellia-192-cfb"/"camellia-256-cfb"/"cast5-cfb"/"chacha20-ietf-poly1305"/"chacha20-ietf"/"chacha20-poly1305"/"chacha20"/"des-cfb"/"idea-cfb"/"none"/"rc2-cfb"/"rc4-md5"/"rc4"/"salsa20"/"seed-cfb"/"xchacha20-ietf-poly1305"/"2022-blake3-aes-128-gcm"/"2022-blake3-aes-256-gcm");
 
-ws = comma "ws" equals flag:bool { obfs.type = "ws"; }
+ws = comma "ws" equals flag:bool { if (flag) obfs.type = "ws"; }
 ws_headers = comma "ws-headers" equals & {
     const start = peg$currPos;
     const index = readHeadersEnd(input, start, "|");
@@ -577,6 +589,10 @@ ws_headers = comma "ws-headers" equals & {
     return $.headers.trim().length > 0;
 } { obfs["ws-headers"] = parseHeaders($.headers, "|"); }
 ws_path = comma "ws-path" equals path:uri { obfs.path = path.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
+grpc = comma "grpc" equals flag:bool { if (flag) proxy.network = "grpc"; }
+grpc_service_name = comma "grpc-service-name" equals value:quoted_value { $set(proxy, "grpc-opts.grpc-service-name", value.trim()); }
+grpc_mode = comma "grpc-mode" equals value:quoted_value { $set(proxy, "grpc-opts._grpc-type", value.trim()); }
+grpc_authority = comma "grpc-authority" equals value:quoted_value { $set(proxy, "grpc-opts._grpc-authority", value.trim()); }
 headers = comma "headers" equals & {
     const start = peg$currPos;
     const index = readHeadersEnd(input, start, ";");

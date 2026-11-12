@@ -6,6 +6,7 @@ import {
     produceProxyListOutput,
     restoreShadowTLSProxyOpts,
     supportsShadowsocksV2rayPluginMode,
+    supportsTrustTunnelClientRandomAuth,
 } from '@/core/proxy-utils/producers/utils';
 import { isNotBlank, isPlainObject } from '@/utils';
 import {
@@ -55,6 +56,9 @@ export default function ClashMeta_Producer() {
     const produce = (proxies, type, opts = {}) => {
         const list = proxies
             .filter((proxy) => {
+                if (!supportsTrustTunnelClientRandomAuth(proxy, 'Mihomo')) {
+                    return false;
+                }
                 if (opts['include-unsupported-proxy']) return true;
 
                 if (proxy.type === 'h2-connect') {

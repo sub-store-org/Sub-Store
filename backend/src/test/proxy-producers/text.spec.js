@@ -5,7 +5,12 @@ import { describe, it } from 'mocha';
 import $ from '@/core/app';
 import { ProxyUtils } from '@/core/proxy-utils';
 import QX_Producer from '@/core/proxy-utils/producers/qx';
-import { produceExternal, UUID } from './helpers';
+import {
+    expectSubset,
+    produceExternal,
+    produceInternal,
+    UUID,
+} from './helpers';
 
 function captureWarns(fn) {
     const originalWarn = $.warn;
@@ -1653,6 +1658,64 @@ describe('Proxy text producers', function () {
         ]);
     });
 
+    it('round-trips TrustTunnel client-random-auth-key in Surge and preserves it in JSON', function () {
+        const key = '00112233445566778899aabbccddeeff';
+        const [proxy] = ProxyUtils.parse(
+            `Keyed TrustTunnel=trust-tunnel,trust.example.com,443,username=user,password=pass,client-random-auth-key='${key}',h3=true`,
+        );
+        expect(proxy['client-random-auth-key']).to.equal(key);
+        for (const target of ['Surge', 'SurgeMac']) {
+            const output = produceExternal(target, proxy, {
+                useMihomoExternal: true,
+            });
+            expect(output).to.include(`,client-random-auth-key=${key},h3=true`);
+            expect(
+                ProxyUtils.parse(output)[0]['client-random-auth-key'],
+            ).to.equal(key);
+        }
+        expect(
+            produceInternal('JSON', proxy)[0]['client-random-auth-key'],
+        ).to.equal(key);
+    });
+
+    it('filters keyed TrustTunnel nodes from unsupported targets, including SurgeMac Mihomo external mode', function () {
+        const plain = {
+            type: 'trusttunnel',
+            name: 'Plain TrustTunnel',
+            server: 'trust.example.com',
+            port: 443,
+            username: 'user',
+            password: 'pass',
+        };
+        const key = '00112233445566778899aabbccddeeff';
+        const keyed = {
+            ...plain,
+            name: 'Keyed TrustTunnel',
+            'client-random-auth-key': key,
+        };
+        const opts = { 'include-unsupported-proxy': true };
+        for (const target of ['Mihomo', 'Shadowrocket', 'SurgeMac']) {
+            const { result, errors } = captureErrors(() =>
+                produceInternal(target, [keyed, plain], {
+                    ...opts,
+                    mihomoExternal: target === 'SurgeMac',
+                }),
+            );
+            expect(result).to.have.length(1);
+            if (target === 'SurgeMac') {
+                expect(result[0]).to.include(`${plain.name}=external,`);
+            } else {
+                expect(result[0].name).to.equal(plain.name);
+            }
+            expect(errors).to.have.length(1);
+            expect(errors[0])
+                .to.include(target === 'SurgeMac' ? 'Mihomo' : target)
+                .and.to.include('client-random-auth-key')
+                .and.to.include(keyed.name)
+                .and.not.to.include(key);
+        }
+    });
+
     it('warns when Surge max-streams is greater than 3', function () {
         const { result: output, warnings } = captureWarns(() =>
             ProxyUtils.produce(
@@ -2272,7 +2335,92 @@ describe('Proxy text producers', function () {
         );
     });
 
-    it('wraps unsupported SurgeMac protocols with Mihomo external mode when requested', function () {
+    it('round-trips Surge VLESS with RAW, WebSocket, gRPC and REALITY', function () {
+        const cases = [
+            [
+                'ws=false,tls=true,flow=xtls-rprx-vision-udp443,encryption=none',
+                {
+                    network: 'tcp',
+                    tls: true,
+                    flow: 'xtls-rprx-vision-udp443',
+                    encryption: 'none',
+                },
+            ],
+            [
+                'ws=true,ws-path=/edge,ws-headers=Host:cdn.example.com,tls=true',
+                {
+                    network: 'ws',
+                    tls: true,
+                    'ws-opts': {
+                        path: '/edge',
+                        headers: { Host: 'cdn.example.com' },
+                    },
+                },
+            ],
+            [
+                'grpc=true,grpc-service-name=/edge/tun|tunmulti,grpc-mode=multi,grpc-authority=grpc.example.com,reality-public-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=,reality-short-id="0012",sni=sni.example.com',
+                {
+                    network: 'grpc',
+                    tls: true,
+                    sni: 'sni.example.com',
+                    'grpc-opts': {
+                        'grpc-service-name': '/edge/tun|tunmulti',
+                        '_grpc-type': 'multi',
+                        '_grpc-authority': 'grpc.example.com',
+                    },
+                    'reality-opts': {
+                        'public-key':
+                            'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+                        'short-id': '0012',
+                    },
+                },
+            ],
+        ];
+        for (const [params, fields] of cases) {
+            const [proxy] = ProxyUtils.parse(
+                `Surge VLESS = vless,vless.example.com,443,username="${UUID}",${params}`,
+            );
+            const expected = {
+                type: 'vless',
+                uuid: UUID,
+                'packet-encoding': 'xudp',
+                ...fields,
+            };
+            expectSubset(proxy, expected);
+
+            for (const target of ['Surge', 'SurgeMac']) {
+                const output = produceExternal(target, proxy, {
+                    useMihomoExternal: true,
+                });
+                expect(output).to.match(/^Surge VLESS=vless,/);
+                expect(output).not.to.include('vmess-aead=');
+                expectSubset(ProxyUtils.parse(output)[0], expected);
+            }
+        }
+    });
+
+    it('produces native Surge VLESS from a RAW REALITY share link', function () {
+        const [proxy] = ProxyUtils.parse(
+            `vless://${UUID}@192.0.2.1:443?type=raw&security=reality&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&sid=0012&sni=sni.example.com&flow=xtls-rprx-vision#RAW`,
+        );
+        const output = produceExternal('Surge', proxy);
+
+        expect(output).to.equal(
+            `RAW=vless,192.0.2.1,443,username=${UUID},flow=xtls-rprx-vision,reality-public-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,reality-short-id=0012,sni="sni.example.com"`,
+        );
+    });
+
+    it('preserves gRPC authority from a VLESS share link without a service name', function () {
+        const [proxy] = ProxyUtils.parse(
+            `vless://${UUID}@edge.example.com:443?type=grpc&security=tls&authority=grpc.example.com#VLESS`,
+        );
+        const output = produceExternal('Surge', proxy);
+
+        expect(output).to.include(',grpc-authority=grpc.example.com');
+        expect(output).not.to.include('grpc-service-name=');
+    });
+
+    it('wraps unsupported SurgeMac VLESS transports with Mihomo external mode when requested', function () {
         const output = produceExternal(
             'SurgeMac',
             {
@@ -2282,13 +2430,8 @@ describe('Proxy text producers', function () {
                 port: 443,
                 uuid: UUID,
                 tls: true,
-                network: 'ws',
-                'ws-opts': {
-                    path: '/ws',
-                    headers: {
-                        Host: 'cdn.example.com',
-                    },
-                },
+                network: 'xhttp',
+                'xhttp-opts': { path: '/xhttp', host: 'cdn.example.com' },
             },
             { useMihomoExternal: true, localPort: 16666 },
         );

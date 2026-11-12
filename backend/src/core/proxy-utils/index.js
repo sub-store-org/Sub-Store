@@ -36,6 +36,7 @@ import Gist from '@/utils/gist';
 import {
     isShadowsocksOverTls,
     normalizeWireGuardInterface,
+    supportsTrustTunnelClientRandomAuth,
 } from './producers/utils';
 import { doh } from '@/utils/dns';
 import JSON5 from 'json5';
@@ -431,6 +432,9 @@ function produce(proxies, targetPlatform, type, opts = {}) {
 
     // filter unsupported proxies
     proxies = proxies.filter((proxy) => {
+        if (!supportsTrustTunnelClientRandomAuth(proxy, targetPlatform)) {
+            return false;
+        }
         const includeUnsupportedProxy = opts['include-unsupported-proxy'];
 
         // 检查代理是否支持目标平台
