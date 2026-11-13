@@ -2,7 +2,7 @@
 
 export const NODE_CORS_ALLOWED_ORIGINS_ENV = 'SUB_STORE_CORS_ALLOWED_ORIGINS';
 export const NON_NODE_CORS_DEFAULT =
-    'https://sub-store.vercel.app,http://substore.stash,https://substore.stash';
+    'https://sub-store.vercel.app,http://substore.stash,https://substore.stash,https://sub.xream.eu.org';
 export const NODE_CORS_DEFAULT = NON_NODE_CORS_DEFAULT;
 export const CORS_ARGUMENT_KEY = 'cors';
 

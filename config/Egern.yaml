@@ -14,14 +14,14 @@ compat_arguments:
   sync_success_notify: true
   produce_sub: "sub1,sub2"
   produce_col: "col1,col2"
-  cors: "https://sub-store.vercel.app,http://substore.stash,https://substore.stash"
+  cors: "https://sub-store.vercel.app,http://substore.stash,https://substore.stash,https://sub.xream.eu.org"
 compat_arguments_desc: |
   脚本超时(Egern 有问题, 不支持自定义, 本文件中固定为 900 秒)
 
   1️⃣ cors
 
   允许浏览器跨域访问 Sub-Store 后端的 origin.
-  默认为 https://sub-store.vercel.app,http://substore.stash,https://substore.stash.
+  默认为 https://sub-store.vercel.app,http://substore.stash,https://substore.stash,https://sub.xream.eu.org.
   多个用 , 连接.
 
   设为 * 可恢复旧的任意来源访问行为, 存在钓鱼网站读取配置的风险
@@ -95,7 +95,7 @@ scriptings:
         _compat.$argument: "cors={{{cors}}}"
   - schedule:
       name: "{{{sync}}}"
-      disabled: {{{sync_disabled}}}
+      disabled: { { { sync_disabled } } }
       cron: "{{{cronexp}}}"
       script_url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
       timeout: 900
@@ -103,7 +103,7 @@ scriptings:
         _compat.$argument: "sync_success_notify={{{sync_success_notify}}}"
   - schedule:
       name: "{{{produce}}}"
-      disabled: {{{produce_disabled}}}
+      disabled: { { { produce_disabled } } }
       cron: "{{{produce_cronexp}}}"
       script_url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
       timeout: 900
