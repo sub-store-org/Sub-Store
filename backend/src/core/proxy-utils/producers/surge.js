@@ -699,11 +699,11 @@ function appendVlessParams(result, proxy) {
     const network = proxy.network ?? 'tcp';
     const reality = proxy['reality-opts'];
     const tls = proxy.tls || reality;
-    if (!['tcp', 'raw', 'none', 'ws', 'grpc'].includes(network)) {
+    if (!['tcp', 'raw', 'none', 'ws', 'grpc', 'xhttp'].includes(network)) {
         throw unsupported(`VLESS network ${network} is unsupported`);
     }
-    if (proxy.encryption && proxy.encryption !== 'none') {
-        throw unsupported('VLESS encryption is unsupported');
+    if (proxy.encryption && /[,\r\n"']/.test(proxy.encryption)) {
+        throw unsupported('VLESS encryption contains unsupported characters');
     }
     if (
         (network === 'ws' && reality) ||
@@ -726,6 +726,27 @@ function appendVlessParams(result, proxy) {
             ['grpc-authority', grpc?.['_grpc-authority']],
         ]) {
             if (value) result.append(`,${key}=${value}`);
+        }
+    } else if (network === 'xhttp') {
+        result.append(',xhttp=true');
+        // shortcut: export path, host and mode, extend when more XHTTP fields have a Surge mapping.
+        const xhttp = proxy['xhttp-opts'];
+        for (const [key, field] of [
+            ['path', xhttp?.path],
+            ['host', xhttp?.host ?? xhttp?.headers?.Host ?? xhttp?.headers?.host],
+            ['mode', xhttp?.mode],
+        ]) {
+            const value = stripSurgeQuotes(String(field ?? ''));
+            if (!value) continue;
+            if (/[\r\n"]/.test(value)) {
+                throw unsupported(
+                    `VLESS xhttp-${key} contains unsupported characters`,
+                );
+            }
+            const parameter = value.includes(',')
+                ? quoteSurgeValue(value)
+                : value;
+            result.append(`,xhttp-${key}=${parameter}`);
         }
     }
 

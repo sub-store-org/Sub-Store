@@ -6,6 +6,7 @@ import { COLLECTIONS_KEY, FILES_KEY, SUBS_KEY } from '@/constants';
 const UUID = '11111111-1111-4111-8111-111111111111';
 const VLESS_WS = `vless://${UUID}@1.1.1.1:443?security=tls&type=ws&host=cdn.example.com&path=%2Fws&sni=sni.example.com#VLESS%20WS`;
 const VLESS_XHTTP = `vless://${UUID}@192.0.2.1:443?security=tls&type=xhttp&path=%2Fxhttp&sni=sni.example.com#VLESS%20XHTTP`;
+const VLESS_HTTP_UPGRADE = `vless://${UUID}@192.0.2.2:443?security=tls&type=httpupgrade&path=%2Fupgrade&sni=sni.example.com#VLESS%20HTTPUpgrade`;
 
 let $;
 let openApi;
@@ -581,59 +582,67 @@ describe('download routes', function () {
     });
 
     it('keeps SurgeMac Mihomo external output unmerged by default', async function () {
-        state[SUBS_KEY][0].content = [VLESS_WS, VLESS_XHTTP].join('\n');
+        state[SUBS_KEY][0].content = [
+            VLESS_WS,
+            VLESS_XHTTP,
+            VLESS_HTTP_UPGRADE,
+        ].join('\n');
         const output = await downloadSubscription({ target: 'SurgeMac' });
 
         expect(output).to.include('VLESS WS=vless,');
         expect(output).to.include(
-            'VLESS XHTTP=external,exec="/usr/local/bin/mihomo"',
+            `VLESS XHTTP=vless,192.0.2.1,443,username=${UUID},xhttp=true,xhttp-path=/xhttp,tls=true`,
         );
-        expect(output).to.not.include('VLESS XHTTP=socks5');
+        expect(output).to.include(
+            'VLESS HTTPUpgrade=external,exec="/usr/local/bin/mihomo"',
+        );
+        expect(output).to.not.include('VLESS HTTPUpgrade=socks5');
         expect(output).to.not.include('mihomo merged=external');
     });
 
     it('enables merged Mihomo external output when the query parameter is present', async function () {
-        state[SUBS_KEY][0].content = VLESS_XHTTP;
+        state[SUBS_KEY][0].content = VLESS_HTTP_UPGRADE;
         const output = await downloadSubscription({
             target: 'SurgeMac',
             mihomoMerge: 'true',
             mihomoMergeName: 'Shared Mihomo',
         });
 
-        expect(output).to.include('VLESS XHTTP=socks5,127.0.0.1,65535');
+        expect(output).to.include('VLESS HTTPUpgrade=socks5,127.0.0.1,65535');
         expect(output).to.include(
             'Shared Mihomo=external,exec="/usr/local/bin/mihomo"',
         );
         expect(output).to.not.include(
-            'VLESS XHTTP=external,exec="/usr/local/bin/mihomo"',
+            'VLESS HTTPUpgrade=external,exec="/usr/local/bin/mihomo"',
         );
     });
 
     it('treats mihomoMerge=false as enabled because query flags are presence-based', async function () {
-        state[SUBS_KEY][0].content = VLESS_XHTTP;
+        state[SUBS_KEY][0].content = VLESS_HTTP_UPGRADE;
         const output = await downloadSubscription({
             target: 'SurgeMac',
             mihomoMerge: 'false',
             mihomoMergeName: 'Shared Mihomo',
         });
 
-        expect(output).to.include('VLESS XHTTP=socks5,127.0.0.1,65535');
+        expect(output).to.include('VLESS HTTPUpgrade=socks5,127.0.0.1,65535');
         expect(output).to.include(
             'Shared Mihomo=external,exec="/usr/local/bin/mihomo"',
         );
         expect(output).to.not.include(
-            'VLESS XHTTP=external,exec="/usr/local/bin/mihomo"',
+            'VLESS HTTPUpgrade=external,exec="/usr/local/bin/mihomo"',
         );
     });
 
     it('keeps merged Mihomo process external when mihomoExternal is enabled', async function () {
+        state[SUBS_KEY][0].content = VLESS_XHTTP;
         const output = await downloadSubscription({
             target: 'SurgeMac',
             mihomoExternal: 'true',
             mihomoMerge: 'true',
         });
 
-        expect(output).to.include('VLESS WS=socks5,127.0.0.1,65535');
+        expect(output).to.include('VLESS XHTTP=socks5,127.0.0.1,65535');
         expect(output).to.include(
             'mihomo merged=external,exec="/usr/local/bin/mihomo",local-port=65534',
         );
@@ -641,14 +650,14 @@ describe('download routes', function () {
     });
 
     it('enables merged Mihomo external output for collection downloads', async function () {
-        state[SUBS_KEY][0].content = VLESS_XHTTP;
+        state[SUBS_KEY][0].content = VLESS_HTTP_UPGRADE;
         const output = await downloadCollection({
             target: 'SurgeMac',
             mihomoMerge: 'true',
             mihomoMergeName: 'Shared Mihomo',
         });
 
-        expect(output).to.include('VLESS XHTTP=socks5,127.0.0.1,65535');
+        expect(output).to.include('VLESS HTTPUpgrade=socks5,127.0.0.1,65535');
         expect(output).to.include(
             'Shared Mihomo=external,exec="/usr/local/bin/mihomo"',
         );
