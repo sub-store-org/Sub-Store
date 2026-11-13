@@ -27,6 +27,7 @@ import {
 
 const GIST_TOKEN_PATH = 'settings.gistToken';
 const GIST_DOWNLOAD_TOKEN_STRATEGY_PATH = 'settings.gistDownloadTokenStrategy';
+const DEFAULT_FRONTEND_URL = 'https://sub.xream.eu.org';
 
 export default function register($app) {
     // utils
@@ -101,10 +102,9 @@ export default function register($app) {
     if (ENV().isNode) {
         $app.get('/', getEnv);
     } else {
-        // Redirect sub.store to vercel webpage
+        // Redirect sub.store to the default frontend
         $app.get('/', async (req, res) => {
-            // 302 redirect
-            res.set('location', 'https://sub-store.vercel.app/')
+            res.set('location', `${DEFAULT_FRONTEND_URL}/`)
                 .status(302)
                 .end();
         });
@@ -133,7 +133,7 @@ function getEnv(req, res) {
             {
                 status: 'success',
                 data: {
-                    guide: '⚠️⚠️⚠️ 您当前看到的是后端的响应. 若想配合前端使用, 可访问官方前端 https://sub-store.vercel.app 后自行配置后端地址, 或一键配置后端 https://sub-store.vercel.app?api=https://a.com/xxx (假设 https://a.com 是你后端的域名, /xxx 是自定义路径). 需注意 HTTPS 前端无法请求非本地的 HTTP 后端(部分浏览器上也无法访问本地 HTTP 后端). 请配置反代或在局域网自建 HTTP 前端. 如果还有问题, 可查看此排查说明: https://telegram.me/zhetengsha/1068',
+                    guide: `⚠️⚠️⚠️ 您当前看到的是后端的响应. 若想配合前端使用, 可访问官方前端 ${DEFAULT_FRONTEND_URL} 后自行配置后端地址, 或一键配置后端 ${DEFAULT_FRONTEND_URL}?api=https://a.com/xxx (假设 https://a.com 是你后端的域名, /xxx 是自定义路径). 需注意 HTTPS 前端无法请求非本地的 HTTP 后端(部分浏览器上也无法访问本地 HTTP 后端). 请配置反代或在局域网自建 HTTP 前端. 如果还有问题, 可查看此排查说明: https://telegram.me/zhetengsha/1068`,
                     ...env,
                 },
             },

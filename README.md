@@ -26,6 +26,8 @@
 
 📚 [文档/Doc](https://sub-store-org.github.io/doc) 🆕, [Wiki](https://github.com/sub-store-org/Sub-Store/wiki)
 
+> **Frontend update:** Access to `sub-store.vercel.app` on Vercel is restricted. For now, use the default frontend at [sub.xream.eu.org](https://sub.xream.eu.org), hosted on Cloudflare Pages.
+
 ## sub.store Domain Safety Notice
 
 ### Statement
@@ -38,7 +40,7 @@ If a request does not go through the rewrite, the data will be sent to the publi
 
 You can map `sub.store` to `127.0.0.1` or another local address to prevent accidental access to the public `sub.store`. However, ordinary users may still send requests to the public `sub.store` after switching or toggling configuration modules.
 
-1. It could, in theory, redirect users to a fake frontend. This is only a possibility and does not imply that the owner of `sub.store` would do this. Note: The official frontend is `https://sub-store.vercel.app`.
+1. It could, in theory, redirect users to a fake frontend. This is only a possibility and does not imply that the owner of `sub.store` would do this. The current official frontend is [sub.xream.eu.org](https://sub.xream.eu.org).
 2. It could receive user data from `sub.store`.
 
 This creates a data leakage risk.
