@@ -95,7 +95,7 @@ scriptings:
         _compat.$argument: "cors={{{cors}}}"
   - schedule:
       name: "{{{sync}}}"
-      disabled: { { { sync_disabled } } }
+      disabled: {{{sync_disabled}}}
       cron: "{{{cronexp}}}"
       script_url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
       timeout: 900
@@ -103,7 +103,7 @@ scriptings:
         _compat.$argument: "sync_success_notify={{{sync_success_notify}}}"
   - schedule:
       name: "{{{produce}}}"
-      disabled: { { { produce_disabled } } }
+      disabled: {{{produce_disabled}}}
       cron: "{{{produce_cronexp}}}"
       script_url: https://github.com/sub-store-org/Sub-Store/releases/latest/download/cron-sync-artifacts.min.js
       timeout: 900
