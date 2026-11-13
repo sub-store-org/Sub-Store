@@ -40,6 +40,8 @@ export default function Loon_Producer() {
                 return socks5(proxy);
             case 'wireguard':
                 return wireguard(proxy);
+            case 'tailscale':
+                return tailscale(proxy);
             case 'hysteria2':
                 return hysteria2(proxy);
         }
@@ -697,6 +699,45 @@ function socks5(proxy) {
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 
+    return result.toString();
+}
+
+function tailscale(proxy) {
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=tailscale`);
+
+    let exitNode = proxy['exit-node'];
+    if (exitNode === 'auto:any') exitNode = 'auto';
+    if (exitNode === '') exitNode = 'none';
+    const stringOptions = {
+        'control-url': proxy['control-url'],
+        'auth-key': proxy['auth-key'],
+        hostname: proxy.hostname,
+        'exit-node': exitNode,
+    };
+    for (const [key, value] of Object.entries(stringOptions)) {
+        if (!value) continue;
+        const quoted =
+            key === 'control-url' || key === 'auth-key' || /[,\s]/.test(value);
+        result.append(`,${key}=${quoted ? `"${value}"` : value}`);
+    }
+    for (const key of [
+        'accept-routes',
+        'accept-dns',
+        'magic-dns',
+        'path-mode',
+        'mtu',
+        'idle-session-timeout',
+        'udp',
+    ]) {
+        result.appendIfPresent(`,${key}=${proxy[key]}`, key);
+    }
+    const ipVersion = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ipVersion}`, 'ip-version');
+    const blockQuic = proxy['block-quic'];
+    if (blockQuic === 'on' || blockQuic === 'off') {
+        result.append(`,block-quic=${blockQuic === 'on'}`);
+    }
     return result.toString();
 }
 

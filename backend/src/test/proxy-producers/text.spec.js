@@ -466,6 +466,63 @@ describe('Proxy text producers', function () {
         expect(output).to.equal(raw);
     });
 
+    it('round-trips Loon Tailscale with optional authentication and explicit settings', function () {
+        const proxies = ProxyUtils.parse(
+            [
+                'Tailnet=tailscale',
+                'Web Login = Tailscale, hostname="loon,device", exit-node=none',
+                'Exit=tailscale,control-url="https://headscale.example.com/?key=a,b",auth-key="test-key=",hostname=loon-device,exit-node=auto,accept-routes=false,accept-dns=true,magic-dns=false,path-mode=derp,mtu=1200,idle-session-timeout=0,ip-mode=v4-only ,server-dns="system,https://dns.example.com/dns-query",udp=false,block-quic=false',
+            ].join('\n'),
+        );
+        expect(proxies).to.deep.equal([
+            { name: 'Tailnet', type: 'tailscale', udp: true },
+            {
+                name: 'Web Login',
+                type: 'tailscale',
+                hostname: 'loon,device',
+                'exit-node': '',
+                udp: true,
+            },
+            {
+                name: 'Exit',
+                type: 'tailscale',
+                'control-url': 'https://headscale.example.com/?key=a,b',
+                'auth-key': 'test-key=',
+                hostname: 'loon-device',
+                'exit-node': 'auto:any',
+                'accept-routes': false,
+                'accept-dns': true,
+                'magic-dns': false,
+                'path-mode': 'derp',
+                mtu: 1200,
+                'idle-session-timeout': 0,
+                'ip-version': 'v4-only',
+                'server-dns': ['system', 'https://dns.example.com/dns-query'],
+                udp: false,
+                'block-quic': 'off',
+            },
+        ]);
+        expect(
+            ProxyUtils.parse(produceExternal('Loon', proxies)),
+        ).to.deep.equal(proxies);
+    });
+
+    it('exports a mihomo Tailscale node to Loon', function () {
+        const proxies = ProxyUtils.parse(`proxies:
+  - name: Tailnet
+    type: tailscale
+    control-url: https://headscale.example.com
+    auth-key: ""
+    exit-node: auto:any
+    accept-routes: false
+    udp: false
+    ip-version: ipv6-prefer`);
+
+        expect(produceExternal('Loon', proxies)).to.equal(
+            'Tailnet=tailscale,control-url="https://headscale.example.com",exit-node=auto,accept-routes=false,udp=false,ip-mode=prefer-v6',
+        );
+    });
+
     it('round-trips quoted and unquoted Loon server-dns for every protocol', function () {
         const inputs = [
             'SS=shadowsocks,ss.example.com,8388,aes-128-gcm,"secret"',
@@ -479,6 +536,7 @@ describe('Proxy text producers', function () {
             'HTTPS=https,https.example.com,443',
             'SOCKS5=socks5,socks.example.com,1080',
             'WG=wireguard,interface-ip=10.0.0.2,private-key=private-key,peers=[{endpoint=wg.example.com:51820,public-key=public-key,allowed-ips="0.0.0.0/0"}]',
+            'Tailnet=tailscale',
         ];
         const serverDns = [
             'system',

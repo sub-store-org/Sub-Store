@@ -2806,6 +2806,13 @@ function Loon_Socks5() {
     return { name, test, parse };
 }
 
+function Loon_Tailscale() {
+    const name = 'Loon Tailscale Parser';
+    const test = (line) => /^[^=,]*=\s*tailscale\s*(?:,|$)/i.test(line);
+    const parse = (line) => getLoonParser().parse(line);
+    return { name, test, parse };
+}
+
 function Loon_WireGuard() {
     const name = 'Loon WireGuard Parser';
     const test = (line) => {
@@ -3203,6 +3210,7 @@ export default [
     Loon_Http(),
     Loon_Socks5(),
     Loon_WireGuard(),
+    Loon_Tailscale(),
     QX_SS(),
     QX_SSR(),
     QX_VMess(),

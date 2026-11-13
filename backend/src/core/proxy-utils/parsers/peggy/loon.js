@@ -72,7 +72,7 @@ const grammars = String.raw`
     }
 }
 
-start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2/anytls) {
+start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2/anytls/tailscale) {
     return proxy;
 }
 
@@ -124,6 +124,22 @@ http = tag equals "http"i address (username password)? (fast_open/udp_relay/ip_m
 socks5 = tag equals "socks5"i address (username password)? (over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/block_quic/others)* {
     proxy.type = "socks5";
 }
+tailscale = tag equals "tailscale"i (tailscale_string/tailscale_bool/tailscale_mtu/idle_session_timeout/udp_relay/block_quic/others)* {
+    proxy.type = "tailscale";
+    if (proxy["exit-node"] === "auto") proxy["exit-node"] = "auto:any";
+    if (proxy["exit-node"] === "none") proxy["exit-node"] = "";
+}
+
+tailscale_string = comma key:("auth-key"/"control-url"/"hostname"/"exit-node"/"path-mode"/"ip-mode") equals value:(
+    '"' match:$[^"]* '"' { return match; }
+    / match:$[^,"]* { return match.trim(); }
+) {
+    if (value !== "" || key === "exit-node") {
+        proxy[key === "ip-mode" ? "ip-version" : key] = value;
+    }
+}
+tailscale_bool = comma key:("accept-routes"/"accept-dns"/"magic-dns") equals flag:bool { proxy[key] = flag; }
+tailscale_mtu = comma "mtu" equals match:$[0-9]+ { proxy.mtu = Number(match); }
 
 address = comma server:server comma port:port {
     proxy.server = server;
