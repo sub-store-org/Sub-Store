@@ -11,6 +11,7 @@ sync_success_notify=switch, true, tag=同步成功通知, desc=同步配置全�
 cors=input, "https://sub-store.vercel.app,http://substore.stash,https://substore.stash,https://sub.xream.eu.org", tag=CORS允许来源, desc=允许浏览器跨域访问 Sub-Store 后端的 origin. 多个用 , 连接. 设为 * 可恢复旧行为
 
 [Rule]
+DOMAIN,sub.xream.eu.org,PROXY
 DOMAIN,sub-store.vercel.app,PROXY
 
 [MITM]
