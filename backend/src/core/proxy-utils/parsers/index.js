@@ -1884,7 +1884,11 @@ function URI_VLESS() {
         }
         proxy['client-fingerprint'] = params.fp;
         proxy.alpn = params.alpn ? params.alpn.split(',') : undefined;
-        proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.allowInsecure);
+        proxy['skip-cert-verify'] =
+            /(TRUE)|1/i.test(params.allowInsecure) ||
+            (protocol === 'vless' &&
+                params.allowInsecure == null &&
+                params.insecure === '1');
         proxy._echConfigList = getIfPresent(params.ech);
         const echOpts = buildMihomoEchOptsFromXrayFields({
             echConfigList: params.ech,
@@ -1950,6 +1954,8 @@ function URI_VLESS() {
         }
         if (['websocket'].includes(proxy.network)) {
             proxy.network = 'ws';
+        } else if (protocol === 'vless' && proxy.network === 'splithttp') {
+            proxy.network = 'xhttp';
         }
 
         if (proxy.network && !['tcp', 'none'].includes(proxy.network)) {
@@ -1987,7 +1993,7 @@ function URI_VLESS() {
             if (params.serviceName) {
                 opts[`${proxy.network}-service-name`] = params.serviceName;
             } else if (isShadowrocket && params.path) {
-                if (!['ws', 'http', 'h2'].includes(proxy.network)) {
+                if (!['ws', 'http', 'h2', 'xhttp'].includes(proxy.network)) {
                     opts[`${proxy.network}-service-name`] = params.path;
                     delete params.path;
                 }

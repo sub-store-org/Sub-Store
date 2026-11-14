@@ -1,6 +1,8 @@
+import _ from 'lodash';
 import { Result, isPresent } from './utils';
-import { isNotBlank, getIfNotBlank } from '@/utils';
+import { isNotBlank, getIfNotBlank, isPlainObject } from '@/utils';
 import $ from '@/core/app';
+import { SURGE_XHTTP_FIELDS } from '../surge-xhttp';
 import { formatSurgeVmessEncryptMethod } from '../vmess-security';
 
 const targetPlatform = 'Surge';
@@ -699,16 +701,21 @@ function appendVlessParams(result, proxy) {
     const network = proxy.network ?? 'tcp';
     const reality = proxy['reality-opts'];
     const tls = proxy.tls || reality;
+    const encrypted =
+        isNotBlank(proxy.encryption) && proxy.encryption.trim() !== 'none';
     if (!['tcp', 'raw', 'none', 'ws', 'grpc', 'xhttp'].includes(network)) {
         throw unsupported(`VLESS network ${network} is unsupported`);
     }
     if (proxy.encryption && /[,\r\n"']/.test(proxy.encryption)) {
         throw unsupported('VLESS encryption contains unsupported characters');
     }
+    const supportsVision =
+        network !== 'grpc' &&
+        (encrypted || (tls && network !== 'ws' && network !== 'xhttp'));
     if (
         (network === 'ws' && reality) ||
         (network === 'grpc' && !tls) ||
-        (proxy.flow && (!tls || network === 'ws' || network === 'grpc'))
+        (proxy.flow && !supportsVision)
     ) {
         throw unsupported(
             'Unsupported VLESS transport, TLS or flow combination',
@@ -728,26 +735,7 @@ function appendVlessParams(result, proxy) {
             if (value) result.append(`,${key}=${value}`);
         }
     } else if (network === 'xhttp') {
-        result.append(',xhttp=true');
-        // shortcut: export path, host and mode, extend when more XHTTP fields have a Surge mapping.
-        const xhttp = proxy['xhttp-opts'];
-        for (const [key, field] of [
-            ['path', xhttp?.path],
-            ['host', xhttp?.host ?? xhttp?.headers?.Host ?? xhttp?.headers?.host],
-            ['mode', xhttp?.mode],
-        ]) {
-            const value = stripSurgeQuotes(String(field ?? ''));
-            if (!value) continue;
-            if (/[\r\n"]/.test(value)) {
-                throw unsupported(
-                    `VLESS xhttp-${key} contains unsupported characters`,
-                );
-            }
-            const parameter = value.includes(',')
-                ? quoteSurgeValue(value)
-                : value;
-            result.append(`,xhttp-${key}=${parameter}`);
-        }
+        appendXhttpParams(result, proxy);
     }
 
     if (proxy.flow) result.append(`,flow=${proxy.flow}`);
@@ -763,6 +751,48 @@ function appendVlessParams(result, proxy) {
         result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
         appendTlsProxyParams(result, proxy, Boolean(tls));
     }
+}
+
+function appendXhttpParams(result, proxy) {
+    const xhttp = proxy['xhttp-opts'];
+    // A single Surge policy cannot represent a separate XHTTP download transport.
+    if (xhttp?.['download-settings']) {
+        throw unsupported('VLESS XHTTP download-settings are unsupported');
+    }
+
+    result.append(',xhttp=true');
+    const headers = isPlainObject(xhttp?.headers)
+        ? Object.entries(xhttp.headers)
+        : [];
+    const host =
+        xhttp?.host ?? headers.find(([key]) => /^host$/i.test(key))?.[1];
+    for (const [key, field] of Object.entries(SURGE_XHTTP_FIELDS)) {
+        const rawValue = key === 'host' ? host : _.get(xhttp, field);
+        if (rawValue == null) continue;
+        const rawText = String(rawValue);
+        const value = stripSurgeQuotes(rawText);
+        if (!value && key !== 'session-table') continue;
+        if (/[\r\n]/.test(rawText) || value.includes('"')) {
+            throw unsupported(
+                `VLESS xhttp-${key} contains unsupported characters`,
+            );
+        }
+        const parameter =
+            !value || /[,'\s]/.test(value) ? quoteSurgeValue(value) : value;
+        result.append(`,xhttp-${key}=${parameter}`);
+    }
+
+    const extraHeaders = headers.filter(([key]) => !/^host$/i.test(key));
+    if (
+        extraHeaders.some(
+            ([key, value]) =>
+                /[,="':|\r\n]/.test(key) || /[\r\n]/.test(String(value)),
+        )
+    ) {
+        throw unsupported('VLESS xhttp-headers contain unsupported characters');
+    }
+    const value = formatHeaderMap(Object.fromEntries(extraHeaders), '|');
+    if (value) result.append(`,xhttp-headers=${quoteSurgeValue(value)}`);
 }
 
 function ssh(proxy) {

@@ -1,4 +1,6 @@
 import peggy from 'peggy';
+import { setSurgeXhttpOption } from '../../surge-xhttp';
+
 const grammars = String.raw`
 // global initializer
 {{
@@ -398,7 +400,7 @@ vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_path/ws_headers/
     handleWebsocket();
     handleShadowTLS();
 }
-vless = tag equals "vless" address (vless_username/vless_option/reality_option/ws/ws_path/ws_headers/grpc/grpc_service_name/grpc_mode/grpc_authority/xhttp/xhttp_option/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/tls_verification/client_cert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+vless = tag equals "vless" address (vless_username/vless_option/reality_option/ws/ws_path/ws_headers/grpc/grpc_service_name/grpc_mode/grpc_authority/xhttp/xhttp_headers/xhttp_option/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/tls_verification/client_cert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "vless";
     proxy["packet-encoding"] = "xudp";
     if (proxy["reality-opts"] && proxy["reality-opts"]["public-key"]) proxy.tls = true;
@@ -587,21 +589,30 @@ vmess_method = comma "encrypt-method" equals cipher:$[^,]+ {
 cipher = ("aes-128-cfb"/"aes-128-ctr"/"aes-128-gcm"/"aes-192-cfb"/"aes-192-ctr"/"aes-192-gcm"/"aes-256-cfb"/"aes-256-ctr"/"aes-256-gcm"/"bf-cfb"/"camellia-128-cfb"/"camellia-192-cfb"/"camellia-256-cfb"/"cast5-cfb"/"chacha20-ietf-poly1305"/"chacha20-ietf"/"chacha20-poly1305"/"chacha20"/"des-cfb"/"idea-cfb"/"none"/"rc2-cfb"/"rc4-md5"/"rc4"/"salsa20"/"seed-cfb"/"xchacha20-ietf-poly1305"/"2022-blake3-aes-128-gcm"/"2022-blake3-aes-256-gcm");
 
 ws = comma "ws" equals flag:bool { if (flag) obfs.type = "ws"; }
-ws_headers = comma "ws-headers" equals & {
+ws_headers = comma "ws-headers" equals value:pipe_headers { obfs["ws-headers"] = value; }
+pipe_headers = & {
     const start = peg$currPos;
     const index = readHeadersEnd(input, start, "|");
 
     $.headers = input.substring(start, index);
     peg$currPos = index;
     return $.headers.trim().length > 0;
-} { obfs["ws-headers"] = parseHeaders($.headers, "|"); }
+} { return parseHeaders($.headers, "|"); }
 ws_path = comma "ws-path" equals path:uri { obfs.path = path.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
 grpc = comma "grpc" equals flag:bool { if (flag) proxy.network = "grpc"; }
 grpc_service_name = comma "grpc-service-name" equals value:quoted_value { $set(proxy, "grpc-opts.grpc-service-name", value.trim()); }
 grpc_mode = comma "grpc-mode" equals value:quoted_value { $set(proxy, "grpc-opts._grpc-type", value.trim()); }
 grpc_authority = comma "grpc-authority" equals value:quoted_value { $set(proxy, "grpc-opts._grpc-authority", value.trim()); }
 xhttp = comma "xhttp" equals flag:bool { xhttpEnabled = flag; }
-xhttp_option = comma "xhttp-" key:("path"/"host"/"mode") equals value:quoted_value { xhttpOpts[key] = value.trim(); }
+xhttp_headers = comma "xhttp-headers" equals value:pipe_headers {
+    for (const key of Object.keys(value)) {
+        if (/^host$/i.test(key)) delete value[key];
+    }
+    xhttpOpts.headers = value;
+}
+xhttp_option = comma "xhttp-" key:$[a-z0-9-]+ equals value:quoted_value {
+    options.setSurgeXhttpOption(xhttpOpts, key, value.trim());
+}
 headers = comma "headers" equals & {
     const start = peg$currPos;
     const index = readHeadersEnd(input, start, ";");
@@ -664,7 +675,10 @@ others = comma [^=,]+ equals [^=,]+
 let parser;
 export default function getParser() {
     if (!parser) {
-        parser = peggy.generate(grammars);
+        const generated = peggy.generate(grammars);
+        parser = {
+            parse: (input) => generated.parse(input, { setSurgeXhttpOption }),
+        };
     }
     return parser;
 }
