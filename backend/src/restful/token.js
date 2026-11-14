@@ -11,6 +11,8 @@ import { insertByPosition } from '@/utils/database';
 import { getCreateItemPosition } from '@/utils/create-item-position';
 import { archiveShare } from '@/utils/archive';
 import { normalizeAgePublicKeyConfig } from '@/utils/age';
+import ms from 'ms';
+import { customAlphabet, urlAlphabet } from 'nanoid';
 
 export default function register($app) {
     if (!$.read(TOKENS_KEY)) $.write([], TOKENS_KEY);
@@ -20,6 +22,26 @@ export default function register($app) {
     $app.route('/api/token/:token').delete(deleteToken);
 
     $app.route('/api/tokens').get(getAllTokens);
+}
+
+const generateNanoId = customAlphabet(urlAlphabet);
+
+function generateShareToken() {
+    if (ENV().isNode) {
+        const nanoid = eval(`require("nanoid")`);
+        return nanoid.customAlphabet(nanoid.urlAlphabet)();
+    }
+
+    if (
+        typeof globalThis.crypto === 'undefined' ||
+        typeof globalThis.crypto.getRandomValues !== 'function'
+    ) {
+        throw new RequestInvalidError(
+            'SECURE_RANDOM_UNAVAILABLE',
+            '无法自动签发分享令牌：当前运行环境不支持安全随机数',
+        );
+    }
+    return generateNanoId();
 }
 
 function deleteToken(req, res) {
@@ -50,24 +72,15 @@ function getAllTokens(req, res) {
         res,
         type || name
             ? allTokens.filter(
-                  (item) =>
-                      (type ? item.type === type : true) &&
-                      (name ? item.name === name : true),
-              )
+                (item) =>
+                    (type ? item.type === type : true) &&
+                    (name ? item.name === name : true),
+            )
             : allTokens,
     );
 }
 
 async function signToken(req, res) {
-    if (!ENV().isNode) {
-        return failed(
-            res,
-            new RequestInvalidError(
-                'INVALID_ENV',
-                `This endpoint is only available in Node.js environment`,
-            ),
-        );
-    }
     try {
         const tokenData = createTokenItem(req.body.payload, req.body.options);
         return success(res, {
@@ -80,10 +93,10 @@ async function signToken(req, res) {
             e instanceof RequestInvalidError
                 ? e
                 : new InternalServerError(
-                      'TOKEN_SIGN_FAILED',
-                      `Failed to sign token`,
-                      `Reason: ${e.message ?? e}`,
-                  ),
+                    'TOKEN_SIGN_FAILED',
+                    `Failed to sign token`,
+                    `Reason: ${e.message ?? e}`,
+                ),
         );
     }
 }
@@ -157,8 +170,10 @@ function resolveDurationExpiration(options = {}, { required = false } = {}) {
         return null;
     }
 
-    const ms = eval(`require("ms")`);
-    const expiresIn = ms(rawExpiresIn);
+    const expiresIn = ENV().isNode
+        ? eval(`require("ms")`)(rawExpiresIn)
+        : ms(rawExpiresIn);
+
     if (expiresIn == null || isNaN(expiresIn) || expiresIn <= 0) {
         throw new RequestInvalidError(
             'INVALID_EXPIRES_IN',
@@ -372,11 +387,10 @@ function createTokenItem(payload, options = {}) {
         exp = durationExpiration?.exp;
     }
 
-    const nanoid = eval(`require("nanoid")`);
     const tokens = $.read(TOKENS_KEY) || [];
     if (!token) {
         do {
-            token = nanoid.customAlphabet(nanoid.urlAlphabet)();
+            token = generateShareToken();
         } while (
             tokens.find(
                 (item) =>
@@ -390,10 +404,10 @@ function createTokenItem(payload, options = {}) {
         expirationMode === 'datetime'
             ? 'datetime'
             : expirationMode === 'count'
-              ? 'count'
-            : durationExpiration || lifetimeDuration
-              ? 'duration'
-              : undefined;
+                ? 'count'
+                : durationExpiration || lifetimeDuration
+                    ? 'duration'
+                    : undefined;
     const safePayload = { ...payload };
     delete safePayload.mode;
     delete safePayload.exp;
@@ -411,19 +425,19 @@ function createTokenItem(payload, options = {}) {
         ...(normalizedMode === 'datetime'
             ? { exp }
             : normalizedMode === 'count'
-              ? {
+                ? {
                     count: countExpiration.count,
                     usedCount: countExpiration.usedCount,
                 }
-            : lifetimeDuration
-              ? { ...lifetimeDuration }
-            : durationExpiration
-              ? {
-                    expiresIn: durationExpiration.rawExpiresIn,
-                    ...(durationInput || {}),
-                    exp,
-                }
-              : {}),
+                : lifetimeDuration
+                    ? { ...lifetimeDuration }
+                    : durationExpiration
+                        ? {
+                            expiresIn: durationExpiration.rawExpiresIn,
+                            ...(durationInput || {}),
+                            exp,
+                        }
+                        : {}),
     };
     insertByPosition(tokens, tokenData, getCreateItemPosition());
     $.write(tokens, TOKENS_KEY);
@@ -456,7 +470,7 @@ function matchesShareToken(item, { token, type, name, pathname }) {
         (name ? item.name === name : true) &&
         (pathname
             ? `/share/${item.type}/${item.name}` === pathname ||
-              pathname.startsWith(`/share/${item.type}/${item.name}/`)
+            pathname.startsWith(`/share/${item.type}/${item.name}/`)
             : true)
     );
 }
@@ -504,6 +518,28 @@ function consumeShareToken(query) {
     return nextToken;
 }
 
+function consumeShareTokenForRequest(req, type) {
+    const query = {
+        token: req.query?.token,
+        type,
+        name: req.params?.name,
+    };
+    if (
+        req.subStoreShareToken &&
+        req.subStoreShareToken.token === query.token &&
+        req.subStoreShareToken.type === type &&
+        req.subStoreShareToken.name === query.name
+    ) {
+        return req.subStoreShareToken;
+    }
+
+    const token = consumeShareToken(query);
+    if (token) {
+        req.subStoreShareToken = token;
+    }
+    return token;
+}
+
 function findShareToken(query) {
     const allTokens = $.read(TOKENS_KEY) || [];
     return (
@@ -526,4 +562,10 @@ function shouldArchiveDeletion(mode) {
     );
 }
 
-export { createTokenItem, deleteTokenItem, consumeShareToken, findShareToken };
+export {
+    createTokenItem,
+    deleteTokenItem,
+    consumeShareToken,
+    consumeShareTokenForRequest,
+    findShareToken,
+};

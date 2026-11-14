@@ -8,7 +8,7 @@
 hostname = %APPEND% sub.store
 
 [Script]
-Sub-Store Core=type=http-request,pattern=^https?:\/\/sub\.store\/((download)|api\/(preview|sync|(utils\/node-info))),script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js,requires-body=true,timeout={{{timeout}}},ability="{{{ability}}}",engine={{{engine}}},max-size={{{max_size}}},argument="cors={{{cors}}}"
+Sub-Store Core=type=http-request,pattern=^https?:\/\/sub\.store\/((download)|share\/(sub|col|file)|api\/(preview|sync|(utils\/node-info))),script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-1.min.js,requires-body=true,timeout={{{timeout}}},ability="{{{ability}}}",engine={{{engine}}},max-size={{{max_size}}},argument="cors={{{cors}}}"
 
 Sub-Store Simple=type=http-request,pattern=^https?:\/\/sub\.store,script-path=https://github.com/sub-store-org/Sub-Store/releases/latest/download/sub-store-0.min.js,requires-body=true,timeout={{{timeout}}},engine={{{engine}}},max-size={{{max_size}}},argument="cors={{{cors}}}"
 

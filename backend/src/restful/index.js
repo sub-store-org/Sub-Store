@@ -31,7 +31,7 @@ import registerNodeInfoRoutes from './node-info';
 import registerParserRoutes from './parser';
 import registerLogRoutes from './logs';
 import registerAgeRoutes from './age';
-import { consumeShareToken } from './token';
+import { consumeShareToken, findShareToken } from './token';
 import { AGE_PUBLIC_KEY } from '@/utils/age';
 import getFs from '@/runtime/fs';
 import getPath from '@/runtime/path';
@@ -93,7 +93,7 @@ export default function serve() {
                     decodeURIComponent(req._parsedUrl.pathname) || '/';
                 if (
                     be_merge &&
-                    req.path.startsWith('/share/') &&
+              req.path.startsWith('/share/') &&
                     req.query.token
                 ) {
                     if (req.method.toLowerCase() !== 'get') {
@@ -405,7 +405,7 @@ export default function serve() {
                         pathRewrite: async (path, req) => {
                             if (req.method.toLowerCase() !== 'get')
                                 throw new Error('Method not allowed');
-                            const token = consumeShareToken({
+                            const token = findShareToken({
                                 token: req.query.token,
                                 type: req.params.type,
                                 name: req.params.name,
