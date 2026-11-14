@@ -796,7 +796,8 @@ const snellParser = (proxy = {}, includeUnsupportedProxy = false) => {
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (outputVersion != null) parsedProxy.version = outputVersion;
-    if (proxy._userkey) parsedProxy.userkey = proxy._userkey;
+    if (proxy.userkey || proxy._userkey)
+        parsedProxy.userkey = proxy.userkey || proxy._userkey;
     if (outputVersion === 6) {
         if (proxy.mode) parsedProxy.mode = proxy.mode;
         if (includeUnsupportedProxy && proxy['quic-proxy-mode'])
