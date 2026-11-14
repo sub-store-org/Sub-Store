@@ -2393,6 +2393,42 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('round-trips Surge HTTPUpgrade for VMess, Trojan and VLESS', function () {
+        for (const [type, credentials] of [
+            ['vmess', `username=${UUID},vmess-aead=true`],
+            ['trojan', 'password=test-password'],
+            ['vless', `username=${UUID}`],
+        ]) {
+            const prefix = `Upgrade = ${type}, example.com, 443, ${credentials}, tls=true`;
+            const [proxy] = ProxyUtils.parse(
+                `${prefix}, ws-http-upgrade=true, ws=true, ws-path=/upgrade?x=1, ws-headers=Host:cdn.example.com`,
+            );
+            const expected = {
+                type,
+                network: 'ws',
+                tls: true,
+                'ws-opts': {
+                    'v2ray-http-upgrade': true,
+                    path: '/upgrade?x=1',
+                    headers: { Host: 'cdn.example.com' },
+                },
+            };
+            expectSubset(proxy, expected);
+            expectSubset(
+                ProxyUtils.parse(produceExternal('URI', proxy))[0],
+                expected,
+            );
+
+            for (const target of ['Surge', 'SurgeMac']) {
+                const output = produceExternal(target, proxy, {
+                    useMihomoExternal: true,
+                });
+                expect(output).to.include(',ws=true,ws-http-upgrade=true,');
+                expectSubset(ProxyUtils.parse(output)[0], expected);
+            }
+        }
+    });
+
     it('round-trips Surge VLESS with RAW, WebSocket, gRPC and REALITY', function () {
         const cases = [
             [
@@ -2711,6 +2747,18 @@ describe('Proxy text producers', function () {
         expect(output).not.to.include('grpc-service-name=');
     });
 
+    it('keeps ws-http-upgrade disabled unless both Surge options are true', function () {
+        const prefix = `Upgrade=vless,example.com,443,username=${UUID}`;
+        const [tcp, ws] = ProxyUtils.parse(
+            `${prefix},ws=false,ws-http-upgrade=true\n${prefix},ws=true,ws-http-upgrade=false`,
+        );
+        expect(tcp.network).to.equal('tcp');
+        expect(ws.network).to.equal('ws');
+        expect(produceExternal('Surge', [tcp, ws])).not.to.include(
+            'ws-http-upgrade=',
+        );
+    });
+
     it('wraps unsupported SurgeMac VLESS transports with Mihomo external mode when requested', function () {
         const output = produceExternal(
             'SurgeMac',
@@ -2721,8 +2769,8 @@ describe('Proxy text producers', function () {
                 port: 443,
                 uuid: UUID,
                 tls: true,
-                network: 'ws',
-                'ws-opts': { path: '/upgrade', 'v2ray-http-upgrade': true },
+                network: 'h2',
+                'h2-opts': { path: '/edge' },
             },
             { useMihomoExternal: true, localPort: 16666 },
         );

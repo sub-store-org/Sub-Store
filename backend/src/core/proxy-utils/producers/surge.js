@@ -166,8 +166,9 @@ function isUnsupportedSnellV6Obfs(proxy) {
 export default function Surge_Producer() {
     const produce = (proxy, type, opts = {}) => {
         if (
-            ['ws'].includes(proxy.network) &&
-            proxy['ws-opts']?.['v2ray-http-upgrade']
+            proxy.network === 'ws' &&
+            proxy['ws-opts']?.['v2ray-http-upgrade'] &&
+            !['vmess', 'trojan', 'vless'].includes(proxy.type)
         ) {
             throw unsupported(
                 `Platform ${targetPlatform} does not support network ${proxy.network} with http upgrade`,
@@ -1436,6 +1437,9 @@ function handleTransport(result, proxy, includeUnsupportedProxy) {
         if (proxy.network === 'ws') {
             result.append(`,ws=true`);
             if (isPresent(proxy, 'ws-opts')) {
+                if (proxy['ws-opts']['v2ray-http-upgrade']) {
+                    result.append(',ws-http-upgrade=true');
+                }
                 result.appendIfPresent(
                     `,ws-path=${proxy['ws-opts'].path}`,
                     'ws-opts.path',
