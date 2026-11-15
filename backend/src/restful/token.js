@@ -11,6 +11,9 @@ import { insertByPosition } from '@/utils/database';
 import { getCreateItemPosition } from '@/utils/create-item-position';
 import { archiveShare } from '@/utils/archive';
 import { normalizeAgePublicKeyConfig } from '@/utils/age';
+import ms from 'ms';
+import { customAlphabet, urlAlphabet } from 'nanoid';
+import { nanoid as nonSecureNanoid } from 'nanoid/non-secure';
 
 export default function register($app) {
     if (!$.read(TOKENS_KEY)) $.write([], TOKENS_KEY);
@@ -20,6 +23,21 @@ export default function register($app) {
     $app.route('/api/token/:token').delete(deleteToken);
 
     $app.route('/api/tokens').get(getAllTokens);
+}
+
+function generateShareToken() {
+    if (ENV().isNode) {
+        // The Node bundle inherits nanoid's browser entry from the first build pass.
+        const nanoid = eval(`require("nanoid")`);
+        return nanoid.customAlphabet(nanoid.urlAlphabet)();
+    }
+
+    try {
+        return customAlphabet(urlAlphabet)();
+    } catch {
+        // shortcut: Math.random tokens can be predictable, remove when script hosts have working Web Crypto.
+        return nonSecureNanoid();
+    }
 }
 
 function deleteToken(req, res) {
@@ -59,7 +77,7 @@ function getAllTokens(req, res) {
 }
 
 async function signToken(req, res) {
-    if (!ENV().isNode) {
+    if (!ENV().isNode && !ENV().isSubsCheckPro) {
         return failed(
             res,
             new RequestInvalidError(
@@ -157,7 +175,6 @@ function resolveDurationExpiration(options = {}, { required = false } = {}) {
         return null;
     }
 
-    const ms = eval(`require("ms")`);
     const expiresIn = ms(rawExpiresIn);
     if (expiresIn == null || isNaN(expiresIn) || expiresIn <= 0) {
         throw new RequestInvalidError(
@@ -372,11 +389,10 @@ function createTokenItem(payload, options = {}) {
         exp = durationExpiration?.exp;
     }
 
-    const nanoid = eval(`require("nanoid")`);
     const tokens = $.read(TOKENS_KEY) || [];
     if (!token) {
         do {
-            token = nanoid.customAlphabet(nanoid.urlAlphabet)();
+            token = generateShareToken();
         } while (
             tokens.find(
                 (item) =>
@@ -504,6 +520,28 @@ function consumeShareToken(query) {
     return nextToken;
 }
 
+function consumeShareTokenForRequest(req, type) {
+    const query = {
+        token: req.query?.token,
+        type,
+        name: req.params?.name,
+    };
+    if (
+        req.subStoreShareToken &&
+        req.subStoreShareToken.token === query.token &&
+        req.subStoreShareToken.type === type &&
+        req.subStoreShareToken.name === query.name
+    ) {
+        return req.subStoreShareToken;
+    }
+
+    const token = consumeShareToken(query);
+    if (token) {
+        req.subStoreShareToken = token;
+    }
+    return token;
+}
+
 function findShareToken(query) {
     const allTokens = $.read(TOKENS_KEY) || [];
     return (
@@ -526,4 +564,10 @@ function shouldArchiveDeletion(mode) {
     );
 }
 
-export { createTokenItem, deleteTokenItem, consumeShareToken, findShareToken };
+export {
+    createTokenItem,
+    deleteTokenItem,
+    consumeShareToken,
+    consumeShareTokenForRequest,
+    findShareToken,
+};
