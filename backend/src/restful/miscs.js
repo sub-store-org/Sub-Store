@@ -127,8 +127,6 @@ function getEnv(req, res) {
     env.feature.archive = true;
     if (ENV().isSubsCheckPro || req.query.share) {
         env.feature.share = true;
-    } else {
-        delete env.feature.share;
     }
     res.set('Content-Type', 'application/json;charset=UTF-8').send(
         JSON.stringify(

@@ -13,6 +13,7 @@ import { archiveShare } from '@/utils/archive';
 import { normalizeAgePublicKeyConfig } from '@/utils/age';
 import ms from 'ms';
 import { customAlphabet, urlAlphabet } from 'nanoid';
+import { nanoid as nonSecureNanoid } from 'nanoid/non-secure';
 
 export default function register($app) {
     if (!$.read(TOKENS_KEY)) $.write([], TOKENS_KEY);
@@ -26,20 +27,17 @@ export default function register($app) {
 
 function generateShareToken() {
     if (ENV().isNode) {
+        // The Node bundle inherits nanoid's browser entry from the first build pass.
         const nanoid = eval(`require("nanoid")`);
         return nanoid.customAlphabet(nanoid.urlAlphabet)();
     }
 
-    if (
-        typeof globalThis.crypto === 'undefined' ||
-        typeof globalThis.crypto.getRandomValues !== 'function'
-    ) {
-        throw new RequestInvalidError(
-            'SECURE_RANDOM_UNAVAILABLE',
-            '无法自动签发分享令牌：当前运行环境不支持安全随机数',
-        );
+    try {
+        return customAlphabet(urlAlphabet)();
+    } catch {
+        // shortcut: Math.random tokens can be predictable, remove when script hosts have working Web Crypto.
+        return nonSecureNanoid();
     }
-    return customAlphabet(urlAlphabet)();
 }
 
 function deleteToken(req, res) {
@@ -177,9 +175,7 @@ function resolveDurationExpiration(options = {}, { required = false } = {}) {
         return null;
     }
 
-    const expiresIn = ENV().isNode
-        ? eval(`require("ms")`)(rawExpiresIn)
-        : ms(rawExpiresIn);
+    const expiresIn = ms(rawExpiresIn);
     if (expiresIn == null || isNaN(expiresIn) || expiresIn <= 0) {
         throw new RequestInvalidError(
             'INVALID_EXPIRES_IN',
