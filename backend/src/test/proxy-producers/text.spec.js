@@ -6472,3 +6472,334 @@ describe('Proxy text producers', function () {
         );
     });
 });
+
+describe('Ring proxy producer', function () {
+    it('produces shadowsocks lines with cipher, password and options', function () {
+        const output = produceExternal('Ring', {
+            type: 'ss',
+            name: 'SS Node',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-128-gcm',
+            password: 'secret',
+            tfo: true,
+            'ip-version': 'prefer-v4',
+        });
+        expect(output).to.equal(
+            'SS Node = shadowsocks, ss.example.com, 8388, encrypt-method=aes-128-gcm, password=secret, tfo=true, ip-version=prefer-ipv4',
+        );
+    });
+
+    it('quotes shadowsocks password with special characters', function () {
+        const output = produceExternal('Ring', {
+            type: 'ss',
+            name: 'SS Special',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'chacha20-ietf-poly1305',
+            password: 'pass, word=1#2',
+        });
+        expect(output).to.equal(
+            'SS Special = shadowsocks, ss.example.com, 8388, encrypt-method=chacha20-ietf-poly1305, password="pass, word=1#2"',
+        );
+    });
+
+    it('produces shadowsocks with obfs and shadow-tls plugins', function () {
+        const obfsOutput = produceExternal('Ring', {
+            type: 'ss',
+            name: 'SS Obfs',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-256-gcm',
+            password: 'secret',
+            plugin: 'obfs',
+            'plugin-opts': {
+                mode: 'http',
+                host: 'obfs.example.com',
+                path: '/obfs-path',
+            },
+        });
+        expect(obfsOutput).to.equal(
+            'SS Obfs = shadowsocks, ss.example.com, 8388, encrypt-method=aes-256-gcm, password=secret, obfs=http, obfs-host=obfs.example.com, obfs-path=/obfs-path',
+        );
+
+        const stOutput = produceExternal('Ring', {
+            type: 'ss',
+            name: 'SS ShadowTLS',
+            server: 'ss.example.com',
+            port: 8388,
+            cipher: 'aes-256-gcm',
+            password: 'secret',
+            plugin: 'shadow-tls',
+            'plugin-opts': {
+                password: 'st-password',
+                host: 'st.example.com',
+                version: 3,
+            },
+        });
+        expect(stOutput).to.equal(
+            'SS ShadowTLS = shadowsocks, ss.example.com, 8388, encrypt-method=aes-256-gcm, password=secret, shadow-tls=true, shadow-tls-version=3, shadow-tls-password=st-password, shadow-tls-sni=st.example.com',
+        );
+    });
+
+    it('produces vmess lines with ws, tls, alpn and aead', function () {
+        const output = produceExternal('Ring', {
+            type: 'vmess',
+            name: 'VMess WS TLS',
+            server: 'vmess.example.com',
+            port: 443,
+            uuid: UUID,
+            network: 'ws',
+            'ws-opts': {
+                path: '/ws-path',
+                headers: {
+                    Host: 'ws.example.com',
+                },
+            },
+            tls: true,
+            sni: 'sni.example.com',
+            alpn: ['h2', 'http/1.1'],
+            aead: true,
+            'skip-cert-verify': true,
+        });
+        expect(output).to.equal(
+            `VMess WS TLS = vmess, vmess.example.com, 443, uuid=${UUID}, ws=true, ws-path=/ws-path, headers=Host:ws.example.com, tls=true, sni=sni.example.com, skip-cert-verify=true, alpns="h2,http/1.1", aead=true`,
+        );
+    });
+
+    it('produces vless lines with reality, ws, grpc, xhttp and xhttp-download', function () {
+        const realityOutput = produceExternal('Ring', {
+            type: 'vless',
+            name: 'VLESS Reality Vision',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+            tls: true,
+            sni: 'cover.example.com',
+            flow: 'xtls-rprx-vision',
+            'reality-opts': {
+                'public-key': 'reality-pubkey',
+                'short-id': '01ab',
+            },
+            'client-fingerprint': 'chrome',
+        });
+        expect(realityOutput).to.equal(
+            `VLESS Reality Vision = vless, vless.example.com, 443, uuid=${UUID}, flow=xtls-rprx-vision, security=reality, sni=cover.example.com, reality-public-key=reality-pubkey, reality-short-id=01ab, fingerprint=chrome`,
+        );
+
+        const xhttpOutput = produceExternal('Ring', {
+            type: 'vless',
+            name: 'VLESS XHTTP Split',
+            server: 'up.example.com',
+            port: 443,
+            uuid: UUID,
+            network: 'xhttp',
+            tls: true,
+            sni: 'up.example.com',
+            alpn: ['h2'],
+            'xhttp-opts': {
+                path: '/ring/',
+                mode: 'auto',
+                'download-settings': {
+                    server: 'down.example.com',
+                    port: 443,
+                    tls: true,
+                    servername: 'down.example.com',
+                    alpn: ['h3'],
+                },
+            },
+        });
+        expect(xhttpOutput).to.equal(
+            `VLESS XHTTP Split = vless, up.example.com, 443, uuid=${UUID}, transport=xhttp, path=/ring/, xhttp-mode=auto, security=tls, sni=up.example.com, alpns=h2, xhttp-download=true, xhttp-download-address=down.example.com, xhttp-download-port=443, xhttp-download-security=tls, xhttp-download-sni=down.example.com, xhttp-download-alpns=h3, xhttp-download-path=/ring/`,
+        );
+    });
+
+    it('produces trojan lines with tls and ws options', function () {
+        const output = produceExternal('Ring', {
+            type: 'trojan',
+            name: 'Trojan Node',
+            server: 'trojan.example.com',
+            port: 443,
+            password: 'trojan-secret',
+            network: 'ws',
+            'ws-opts': {
+                path: '/trojan-ws',
+            },
+            sni: 'tr.example.com',
+            'skip-cert-verify': true,
+        });
+        expect(output).to.equal(
+            'Trojan Node = trojan, trojan.example.com, 443, password=trojan-secret, tls=true, sni=tr.example.com, skip-cert-verify=true, ws=true, ws-path=/trojan-ws',
+        );
+    });
+
+    it('produces hysteria and hysteria2 lines', function () {
+        const hyOutput = produceExternal('Ring', {
+            type: 'hysteria',
+            name: 'Hysteria Node',
+            server: 'hy.example.com',
+            port: 443,
+            auth: 'hy-secret',
+            down: 100,
+            sni: 'hy.example.com',
+            alpn: ['h3'],
+        });
+        expect(hyOutput).to.equal(
+            'Hysteria Node = hysteria, hy.example.com, 443, auth=hy-secret, down=100, sni=hy.example.com, alpns=h3',
+        );
+
+        const hy2Output = produceExternal('Ring', {
+            type: 'hysteria2',
+            name: 'Hysteria2 Node',
+            server: 'hy2.example.com',
+            port: 443,
+            password: 'hy2-secret',
+            down: '200',
+            sni: 'hy2.example.com',
+            'skip-cert-verify': true,
+        });
+        expect(hy2Output).to.equal(
+            'Hysteria2 Node = hysteria, hy2.example.com, 443, auth=hy2-secret, down=200, sni=hy2.example.com, skip-cert-verify=true',
+        );
+    });
+
+    it('produces tuic v5 lines', function () {
+        const output = produceExternal('Ring', {
+            type: 'tuic',
+            name: 'TUIC Node',
+            server: 'tuic.example.com',
+            port: 8443,
+            uuid: UUID,
+            password: 'tuic-password',
+            'udp-relay-mode': 'native',
+            sni: 'tuic.example.com',
+            'congestion-controller': 'bbr',
+        });
+        expect(output).to.equal(
+            `TUIC Node = tuic, tuic.example.com, 8443, uuid=${UUID}, password=tuic-password, udp-relay-mode=native, sni=tuic.example.com`,
+        );
+        expect(output).not.to.include('congestion-controller');
+    });
+
+    it('produces wireguard lines with addresses, private-key, mtu and peers', function () {
+        const output = produceExternal('Ring', {
+            type: 'wireguard',
+            name: 'WG Node',
+            addresses: ['10.0.0.1, fd00::1'],
+            'private-key': 'privkey',
+            mtu: 1280,
+            peers: [
+                {
+                    'public-key': 'pubkey',
+                    endpoint: 'wg.example.com:51820',
+                    'allowed-ips': '0.0.0.0/0, ::/0',
+                },
+            ],
+        });
+        expect(output).to.equal(
+            'WG Node = wireguard, addresses="10.0.0.1, fd00::1", private-key=privkey, mtu=1280, peers=[{public-key=pubkey,endpoint=wg.example.com:51820,allowed-ips="0.0.0.0/0, ::/0"}]',
+        );
+    });
+
+    it('produces http and socks5 lines', function () {
+        const httpOutput = produceExternal('Ring', {
+            type: 'http',
+            name: 'HTTP Node',
+            server: 'http.example.com',
+            port: 8080,
+            username: 'admin',
+            password: 'password',
+            tls: true,
+            sni: 'http.example.com',
+        });
+        expect(httpOutput).to.equal(
+            'HTTP Node = http, http.example.com, 8080, username=admin, password=password, tls=true, sni=http.example.com',
+        );
+
+        const socksOutput = produceExternal('Ring', {
+            type: 'socks5',
+            name: 'Socks Node',
+            server: 'socks.example.com',
+            port: 1080,
+            username: 'user',
+            password: 'pass',
+        });
+        expect(socksOutput).to.equal(
+            'Socks Node = socks, socks.example.com, 1080, username=user, password=pass',
+        );
+    });
+
+    it('转换 AnyTLS、SSH 和基本策略，并过滤独立 ShadowTLS', function () {
+        const anytlsOutput = produceExternal('Ring', {
+            type: 'anytls',
+            name: 'AnyTLS Node',
+            server: 'any.example.com',
+            port: 443,
+            password: 'secret',
+            sni: 'any.example.com',
+        });
+        expect(anytlsOutput).to.equal(
+            'AnyTLS Node = anytls, any.example.com, 443, password=secret, sni=any.example.com',
+        );
+
+        expect(
+            ProxyUtils.produce(
+                [
+                    {
+                        type: 'shadowtls',
+                        name: 'ShadowTLS Node',
+                        server: 'st.example.com',
+                        port: 443,
+                        password: '<SECRET>',
+                    },
+                ],
+                'Ring',
+                'external',
+            ),
+        ).to.equal('');
+
+        const sshOutput = produceExternal('Ring', {
+            type: 'ssh',
+            name: 'SSH Node',
+            server: 'ssh.example.com',
+            port: 22,
+            username: 'root',
+            password: 'password',
+        });
+        expect(sshOutput).to.equal(
+            'SSH Node = ssh, ssh.example.com, 22, username=root, password=password',
+        );
+
+        const directOutput = produceExternal('Ring', {
+            type: 'direct',
+            name: 'Direct Node',
+        });
+        expect(directOutput).to.equal('Direct Node = direct');
+
+        const strategies = [
+            'reject',
+            'reject-drop',
+            'reject-tinygif',
+            'reject-no-drop',
+        ];
+        expect(
+            ProxyUtils.produce(
+                [
+                    { type: 'direct', name: 'Direct Node' },
+                    ...strategies.map((type) => ({ type, name: type })),
+                ],
+                'Ring',
+                'external',
+            ),
+        ).to.equal(directOutput);
+    });
+
+    it('cleans illegal characters from node name', function () {
+        const output = produceExternal('Ring', {
+            type: 'direct',
+            name: 'Direct=Node,Name',
+        });
+        expect(output).to.equal('DirectNodeName = direct');
+    });
+});
+
