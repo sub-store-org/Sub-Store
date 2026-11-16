@@ -34,7 +34,6 @@ export default function Surfboard_Producer() {
                 `Platform ${targetPlatform} does not support network ${proxy.network} with http upgrade`,
             );
         }
-        proxy.name = proxy.name.replace(/=|,/g, '');
         switch (proxy.type) {
             case 'ss':
                 return shadowsocks(proxy);

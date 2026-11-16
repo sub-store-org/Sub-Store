@@ -1123,6 +1123,35 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('removes comment markers from Surge and Surfboard proxy names', function () {
+        const names = [
+            ['HK=, #1 /=,/Backup ;VIP', 'HK 1 Backup VIP'],
+            [' // #JP', 'JP'],
+            ['JP#2//A;B / C', 'JP#2//A;B / C'],
+            ['#//;', 'http example.com:443'],
+        ];
+        const targets = [
+            'Surge',
+            'surge',
+            'SurgeMac',
+            'Surfboard',
+            'surfboard',
+        ];
+        for (const target of targets) {
+            for (const [name, expected] of names) {
+                const output = produceExternal(target, {
+                    type: 'http',
+                    name,
+                    server: 'example.com',
+                    port: 443,
+                });
+                expect(output, target).to.equal(
+                    `${expected}=http,example.com,443`,
+                );
+            }
+        }
+    });
+
     it('emits udp-relay only for applicable Surge policies', function () {
         // https://manual.nssurge.com/policies/udp.html
         const proxies = [
@@ -2377,7 +2406,7 @@ describe('Proxy text producers', function () {
     it('produces SurgeMac external lines', function () {
         const output = produceExternal('SurgeMac', {
             type: 'external',
-            name: 'External',
+            name: 'External #1',
             exec: '/usr/bin/ssh',
             'local-port': 1080,
             args: ['-D', 'localhost:1080'],
@@ -2389,7 +2418,7 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            'External=external,exec="/usr/bin/ssh",local-port=1080,args="-D",args="localhost:1080",addresses=1.1.1.1,addresses=2001:db8::1,udp-relay=true,tfo=true,test-url=https://test.example.com,block-quic=on',
+            'External 1=external,exec="/usr/bin/ssh",local-port=1080,args="-D",args="localhost:1080",addresses=1.1.1.1,addresses=2001:db8::1,udp-relay=true,tfo=true,test-url=https://test.example.com,block-quic=on',
         );
     });
 
@@ -2851,7 +2880,10 @@ describe('Proxy text producers', function () {
             _config: override,
         }));
 
-        const output = ProxyUtils.produce(proxies, 'SurgeMac', 'external', {});
+        const output = ProxyUtils.produce(proxies, 'SurgeMac', 'external', {
+            mergeName: 'Merged //Proxy',
+        });
+        expect(output).to.include('\nMerged Proxy=external,');
 
         const args = [...output.matchAll(/args="([^"]+)"/g)].map((m) => m[1]);
         const config = JSON.parse(Base64.decode(args[args.length - 1]));
