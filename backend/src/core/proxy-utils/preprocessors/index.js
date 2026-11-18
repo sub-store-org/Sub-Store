@@ -3,8 +3,105 @@ import { Base64 } from 'js-base64';
 import { isAlias, isScalar, isSeq, parseDocument, visit } from 'yaml';
 import $ from '@/core/app';
 
+const YAML_SHORT_ID_KEY_ANCHOR_RE = /&\S+\s+['"]?short-id['"]?/;
+
+function isSafeShortIdScalar(val) {
+    if (!val) return false;
+    const first = val[0];
+    if (first === '"' || first === "'") {
+        return val.length >= 2 && val[val.length - 1] === first;
+    }
+    if (!/^[0-9a-fA-F]+$/.test(val)) return false;
+    if (/^[0-9]+$/.test(val)) return false;
+    if (/^0[xXbBoO]/.test(val)) return false;
+    if (/^[0-9]+[eE][0-9]+$/.test(val)) return false;
+    return true;
+}
+
+function needsShortIdNormalization(raw) {
+    if (YAML_SHORT_ID_KEY_ANCHOR_RE.test(raw)) {
+        return true;
+    }
+
+    for (
+        let idx = raw.indexOf('short-id');
+        idx !== -1;
+        idx = raw.indexOf('short-id', idx + 8)
+    ) {
+        let i = idx + 8;
+        if (raw[i] === '"' || raw[i] === "'") i++;
+        while (i < raw.length && (raw[i] === ' ' || raw[i] === '\t')) i++;
+        if (raw[i] !== ':') continue;
+
+        i++;
+        while (i < raw.length && (raw[i] === ' ' || raw[i] === '\t')) i++;
+        if (i >= raw.length || raw[i] === '\r' || raw[i] === '\n') {
+            return true;
+        }
+
+        const quote = raw[i];
+        if (quote === '"' || quote === "'") {
+            let j = i + 1;
+            let closed = false;
+            while (j < raw.length && raw[j] !== '\r' && raw[j] !== '\n') {
+                if (quote === '"' && raw[j] === '\\') {
+                    j += 2;
+                    continue;
+                }
+                if (quote === "'" && raw[j] === "'" && raw[j + 1] === "'") {
+                    j += 2;
+                    continue;
+                }
+                if (raw[j] === quote) {
+                    closed = true;
+                    j++;
+                    break;
+                }
+                j++;
+            }
+            if (!closed) return true;
+            while (j < raw.length && (raw[j] === ' ' || raw[j] === '\t')) j++;
+            if (
+                j < raw.length &&
+                raw[j] !== ',' &&
+                raw[j] !== '}' &&
+                raw[j] !== '\r' &&
+                raw[j] !== '\n' &&
+                raw[j] !== '#'
+            ) {
+                return true;
+            }
+            continue;
+        }
+
+        let j = i;
+        while (j < raw.length) {
+            const ch = raw[j];
+            if (
+                ch === ',' ||
+                ch === '}' ||
+                ch === '\r' ||
+                ch === '\n' ||
+                ch === '#'
+            ) {
+                break;
+            }
+            j++;
+        }
+        const val = raw.slice(i, j).trim();
+        if (!isSafeShortIdScalar(val)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 export function normalizeClashYaml(raw) {
     if (typeof raw !== 'string' || !raw.includes('short-id')) {
+        return raw;
+    }
+    if (!needsShortIdNormalization(raw)) {
         return raw;
     }
 
@@ -83,6 +180,10 @@ export function normalizeClashYaml(raw) {
         } else if (needsQuotes(node)) {
             replacements.set(node, JSON.stringify(node.source));
         }
+    }
+
+    if (replacements.size === 0) {
+        return raw;
     }
 
     const chunks = [];
@@ -165,22 +266,94 @@ function fallbackBase64Encoded() {
     return { name, test, parse };
 }
 
+function parseClashJsonLines(raw) {
+    if (!raw.startsWith('proxies:\n') && !raw.startsWith('proxies:\r\n')) {
+        return null;
+    }
+    if (
+        raw.includes('short-id') &&
+        /["']?short-id["']?\s*:\s*[^"'\s]/.test(raw)
+    ) {
+        return null;
+    }
+    const lines = raw.split(/\r?\n/);
+    const proxies = [];
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
+        if (!line.startsWith('  - {') || !line.endsWith('}')) {
+            return null;
+        }
+        try {
+            proxies.push(JSON.parse(line.slice(4)));
+        } catch (e) {
+            return null;
+        }
+    }
+    return proxies;
+}
+
 function Clash() {
     const name = 'Clash Pre-processor';
+    let lastRaw = null;
+    let lastProxies = null;
+    let lastIsValid = false;
+
     const test = function (raw) {
-        if (!/proxies/.test(raw)) return false;
+        if (!/proxies/.test(raw)) {
+            lastRaw = null;
+            lastProxies = null;
+            lastIsValid = false;
+            return false;
+        }
+        const jsonProxies = parseClashJsonLines(raw);
+        if (jsonProxies) {
+            lastRaw = raw;
+            lastProxies = jsonProxies;
+            lastIsValid = true;
+            return true;
+        }
         const content = safeLoad(raw);
-        return (
-            Array.isArray(content.proxies) ||
-            Array.isArray(content['proxy-groups'])
+        const valid = Boolean(
+            content &&
+                (Array.isArray(content.proxies) ||
+                    Array.isArray(content['proxy-groups'])),
         );
+        if (valid) {
+            lastRaw = raw;
+            lastProxies = Array.isArray(content.proxies) ? content.proxies : [];
+            lastIsValid = true;
+        } else {
+            lastRaw = null;
+            lastProxies = null;
+            lastIsValid = false;
+        }
+        return valid;
     };
     const parse = function (raw, includeProxies) {
         // Clash YAML format
-
-        const afterReplace = normalizeClashYaml(raw);
-
-        const { proxies } = safeLoad(afterReplace);
+        let proxies;
+        if (lastIsValid && lastRaw === raw) {
+            proxies = lastProxies;
+            lastRaw = null;
+            lastProxies = null;
+            lastIsValid = false;
+            if (raw.includes('short-id')) {
+                const afterReplace = normalizeClashYaml(raw);
+                if (afterReplace !== raw) {
+                    proxies = safeLoad(afterReplace)?.proxies;
+                }
+            }
+        } else {
+            lastRaw = null;
+            lastProxies = null;
+            lastIsValid = false;
+            proxies = parseClashJsonLines(raw);
+            if (!proxies) {
+                const afterReplace = normalizeClashYaml(raw);
+                proxies = safeLoad(afterReplace)?.proxies;
+            }
+        }
         return (
             (includeProxies ? 'proxies:\n' : '') +
             (Array.isArray(proxies) ? proxies : [])
