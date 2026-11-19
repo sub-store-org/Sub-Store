@@ -5,6 +5,26 @@ export const ECH_FORCE_QUERY_FIELD = '_force-query';
 export const ECH_SOCKOPT_FIELD = '_sockopt';
 export const DEFAULT_XRAY_ECH_DNS = 'https://dns.alidns.com/dns-query';
 
+export function normalizeInlineEchConfigList(value) {
+    if (typeof value !== 'string') return undefined;
+
+    const match = /^([A-Za-z0-9+/]+|[A-Za-z0-9_-]+)(={0,2})$/.exec(
+        value.trim(),
+    );
+    if (!match) return undefined;
+
+    const [, config, padding] = match;
+    const paddingLength = (4 - (config.length % 4)) % 4;
+    if (paddingLength === 3 || (padding && padding.length !== paddingLength)) {
+        return undefined;
+    }
+
+    // Mihomo expects standard padded Base64.
+    return (
+        config.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat(paddingLength)
+    );
+}
+
 export function parseXrayEchConfigList(echConfigList) {
     if (!isNotBlank(echConfigList)) {
         return undefined;
@@ -44,7 +64,7 @@ export function isSupportedXrayEchForceQuery(forceQuery) {
     return ['none', 'half', 'full'].includes(forceQuery);
 }
 
-function isMihomoEchEnabled(value) {
+export function isMihomoEchEnabled(value) {
     // Match mihomo's current `ech-opts.enable` handling:
     // - adapter/parser.go decodes proxies with WeaklyTypedInput=true.
     // - common/structure/structure.go decodeBool accepts bool directly and

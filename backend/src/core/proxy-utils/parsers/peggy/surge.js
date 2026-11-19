@@ -1,4 +1,5 @@
 import peggy from 'peggy';
+import { normalizeInlineEchConfigList } from '../../ech-utils';
 import { setSurgeXhttpOption } from '../../surge-xhttp';
 
 const grammars = String.raw`
@@ -24,6 +25,7 @@ const grammars = String.raw`
     const xhttpOpts = { mode: "auto" };
     let xhttpEnabled = false;
     let clientFingerprint;
+    let echConfig;
     const $ = {};
 
     function handleWebsocket() {
@@ -385,6 +387,15 @@ start = (masque/anytls/shadowsocks/vmess/vless/trojan/h2_connect/https/http/snel
         if (clientFingerprint === "apple-26") proxy["client-fingerprint"] = "ios";
         if (clientFingerprint === "chromium-155") proxy["client-fingerprint"] = "chrome";
     }
+    if (
+        echConfig !== undefined &&
+        (proxy.tls || ["trojan", "tuic", "hysteria2"].includes(proxy.type))
+    ) {
+        if (proxy["reality-opts"]) error("ECH cannot be combined with REALITY");
+        // Preserve malformed ECH for export validation so another parser cannot discard it.
+        const config = options.normalizeInlineEchConfigList(echConfig) ?? echConfig;
+        proxy["ech-opts"] = { enable: true, config };
+    }
     return proxy;
 }
 
@@ -399,7 +410,7 @@ shadowsocks = tag equals "ss" address (method/passwordk/obfs/obfs_host/obfs_uri/
     }
     handleShadowTLS();
 }
-vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_http_upgrade/ws_path/ws_headers/vmess_method/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_http_upgrade/ws_path/ws_headers/vmess_method/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "auto";
     // Surfboard 与 Surge 默认不一致, 不管 Surfboard https://getsurfboard.com/docs/profile-format/proxy/external-proxy/vmess
@@ -411,7 +422,7 @@ vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_http_upgrade/ws_
     handleWebsocket();
     handleShadowTLS();
 }
-vless = tag equals "vless" address (vless_username/vless_option/reality_option/ws/ws_http_upgrade/ws_path/ws_headers/grpc/grpc_service_name/grpc_mode/grpc_authority/xhttp/xhttp_headers/xhttp_option/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+vless = tag equals "vless" address (vless_username/vless_option/reality_option/ws/ws_http_upgrade/ws_path/ws_headers/grpc/grpc_service_name/grpc_mode/grpc_authority/xhttp/xhttp_headers/xhttp_option/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "vless";
     proxy["packet-encoding"] = "xudp";
     if (proxy["reality-opts"] && proxy["reality-opts"]["public-key"]) proxy.tls = true;
@@ -423,17 +434,17 @@ vless = tag equals "vless" address (vless_username/vless_option/reality_option/w
     }
     handleShadowTLS();
 }
-trojan = tag equals "trojan" address (passwordk/ws/ws_http_upgrade/ws_path/ws_headers/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+trojan = tag equals "trojan" address (passwordk/ws/ws_http_upgrade/ws_path/ws_headers/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "trojan";
     handleWebsocket();
     handleShadowTLS();
 }
-https = tag equals "https" address (username password)? (usernamek passwordk)? (headers/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+https = tag equals "https" address (username password)? (usernamek passwordk)? (headers/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "http";
     proxy.tls = true;
     handleShadowTLS();
 }
-h2_connect = tag equals "h2-connect" address (username password)? (usernamek passwordk)? (headers/max_streams/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+h2_connect = tag equals "h2-connect" address (username password)? (usernamek passwordk)? (headers/max_streams/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "h2-connect";
     proxy.tls = true;
     handleShadowTLS();
@@ -456,11 +467,11 @@ snell = tag equals ("snell"i/"opensnell"i) address (snell_version/snell_mode/sne
     }
     handleShadowTLS();
 }
-tuic = tag equals "tuic" address (alpn/token/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/fast_open/tfo/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/port_hopping_interval/others)* {
+tuic = tag equals "tuic" address (alpn/token/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/ech_config/sni/cert_verify_name/fast_open/tfo/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/port_hopping_interval/others)* {
     proxy.type = "tuic";
     handleShadowTLS();
 }
-tuic_v5 = tag equals "tuic-v5" address (alpn/passwordk/uuidk/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/fast_open/tfo/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/port_hopping_interval/others)* {
+tuic_v5 = tag equals "tuic-v5" address (alpn/passwordk/uuidk/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/ech_config/sni/cert_verify_name/fast_open/tfo/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/port_hopping_interval/others)* {
     proxy.type = "tuic";
     proxy.version = 5;
     handleShadowTLS();
@@ -469,7 +480,7 @@ wireguard = tag equals "wireguard" (section_name/no_error_alert/ip_version/under
     proxy.type = "wireguard-surge";
     handleShadowTLS();
 }
-hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/sni/cert_verify_name/alpn/tls_verification/client_cert/passwordk/tls_fingerprint/download_bandwidth/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/port_hopping_interval/salamander_password/gecko_password/others)* {
+hysteria2 = tag equals "hysteria2" address (no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/sni/cert_verify_name/alpn/tls_verification/client_cert/ech_config/passwordk/tls_fingerprint/download_bandwidth/ecn/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/port_hopping_interval/salamander_password/gecko_password/others)* {
     proxy.type = "hysteria2";
     handleShadowTLS();
 }
@@ -477,20 +488,20 @@ socks5 = tag equals "socks5" address (username password)? (usernamek passwordk)?
     proxy.type = "socks5";
     handleShadowTLS();
 }
-socks5_tls = tag equals "socks5-tls" address (username password)? (usernamek passwordk)? (udp_relay/no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
+socks5_tls = tag equals "socks5-tls" address (username password)? (usernamek passwordk)? (udp_relay/no_error_alert/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "socks5";
     proxy.tls = true;
     handleShadowTLS();
 }
-anytls = tag equals "anytls" address (passwordk/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/client_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/fast_open/tfo/block_quic/others)* {
+anytls = tag equals "anytls" address (passwordk/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/sni/cert_verify_name/alpn/fast_open/tfo/block_quic/others)* {
     proxy.type = "anytls";
     proxy.tls = true;
 }
-trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/client_random_auth_key/headers/max_streams/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/client_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/h3/fast_open/tfo/block_quic/others)* {
+trust_tunnel = tag equals "trust-tunnel" address (usernamek/passwordk/client_random_auth_key/headers/max_streams/reuse/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/sni/cert_verify_name/alpn/h3/fast_open/tfo/block_quic/others)* {
     proxy.type = "trusttunnel";
     proxy.tls = true;
 }
-masque = tag equals "masque" address (usernamek/passwordk/port_hopping_interval/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/sni/cert_verify_name/alpn/fast_open/tfo/udp_relay/ecn/block_quic/others)* {
+masque = tag equals "masque" address (usernamek/passwordk/port_hopping_interval/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls_fingerprint/tls_verification/client_cert/ech_config/sni/cert_verify_name/alpn/fast_open/tfo/udp_relay/ecn/block_quic/others)* {
     proxy.type = "masque-surge";
     proxy.tls = true;
 }
@@ -572,6 +583,7 @@ tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-
 tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:$[^,]+ { proxy["tls-fingerprint"] = tls_fingerprint.trim(); }
 client_fingerprint = comma "client-fingerprint" equals value:quoted_value { clientFingerprint = value.trim().toLowerCase(); }
 client_cert = comma "client-cert" equals match:[^,]+ { proxy["keystore-client-cert"] = stripQuotes(match.join("")); }
+ech_config = comma "ech-config" equals value:quoted_value { echConfig = value; }
 
 snell_psk = comma "psk" equals value:quoted_value { proxy.psk = value; }
 snell_version = comma "version" equals match:$[0-9]+ { proxy.version = parseInt(match.trim()); }
@@ -690,7 +702,11 @@ export default function getParser() {
     if (!parser) {
         const generated = peggy.generate(grammars);
         parser = {
-            parse: (input) => generated.parse(input, { setSurgeXhttpOption }),
+            parse: (input) =>
+                generated.parse(input, {
+                    normalizeInlineEchConfigList,
+                    setSurgeXhttpOption,
+                }),
         };
     }
     return parser;

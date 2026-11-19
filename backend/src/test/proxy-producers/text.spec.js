@@ -1643,6 +1643,110 @@ describe('Proxy text producers', function () {
         }
     });
 
+    it('round-trips Surge ech-config for TLS and QUIC proxies', function () {
+        const config = 'AQID+///AA==';
+        const echOpts = { enable: true, config };
+        const cases = [
+            ['https', '', config],
+            ['socks5-tls', '', '"AQID-___AA"'],
+            ['h2-connect', '', `'${config}'`],
+            ['trust-tunnel', ',h3=true', config],
+            ['trojan', ',password=secret', config],
+            ['anytls', ',password=secret', config],
+            ['vmess', `,username=${UUID},tls=true`, config],
+            ['vless', `,username=${UUID},tls=true`, config],
+            ['tuic', ',token=secret', config],
+            ['tuic-v5', `,uuid=${UUID},password=secret`, config],
+            ['hysteria2', ',password=secret', config],
+            ['masque', '', config],
+        ];
+
+        for (const [type, params, value] of cases) {
+            const [proxy] = ProxyUtils.parse(
+                `ECH=${type},example.com,443,ech-config=${value},sni=sni.example.com${params}`,
+            );
+            expectSubset(proxy, {
+                'ech-opts': echOpts,
+                sni: 'sni.example.com',
+            });
+
+            for (const target of ['Surge', 'SurgeMac']) {
+                const output = produceExternal(target, proxy);
+                expect(output).to.include(`,ech-config=${config}`);
+                expect(ProxyUtils.parse(output)[0]['ech-opts']).to.deep.equal(
+                    echOpts,
+                );
+            }
+        }
+    });
+
+    it('emits Surge ech-config from a VLESS share link with a static list', function () {
+        const [proxy] = ProxyUtils.parse(
+            `vless://${UUID}@example.com:443?security=tls&ech=AQID-___AA`,
+        );
+
+        expect(produceExternal('Surge', proxy)).to.include(
+            ',ech-config=AQID+///AA==',
+        );
+    });
+
+    it('honors TLS, ECH enablement, and REALITY when producing Surge proxies', function () {
+        const config = 'AQID+///AA==';
+        const echOpts = { enable: true, config };
+        const [tls] = ProxyUtils.parse(
+            `Test=vless,example.com,443,username=${UUID},tls=true`,
+        );
+        const realityKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+        const reality = { 'public-key': realityKey };
+
+        expect(
+            produceExternal('Surge', {
+                ...tls,
+                'ech-opts': { enable: false, config },
+                _echConfigList: config,
+            }),
+        ).to.not.include('ech-config=');
+        expect(
+            produceExternal('Surge', {
+                ...tls,
+                tls: false,
+                'ech-opts': echOpts,
+            }),
+        ).to.not.include('ech-config=');
+
+        const realityOutput = produceExternal('Surge', {
+            ...tls,
+            'reality-opts': reality,
+            'ech-opts': echOpts,
+        });
+        expect(realityOutput).to.include(`,reality-public-key=${realityKey}`);
+        expect(realityOutput).to.not.include('ech-config=');
+        expect(ProxyUtils.parse(`${realityOutput},ech-config=${config}`)).to.be
+            .empty;
+    });
+
+    it('filters ECH-enabled nodes without a static list from Surge output', function () {
+        const [proxy] = ProxyUtils.parse('ECH=https,example.com,443');
+        const [invalid] = ProxyUtils.parse(
+            'ECH=https,example.com,443,ech-config=bad!',
+        );
+        const dns = { enable: true, 'query-server-name': 'ech.example.com' };
+        const unsafe = { enable: true, config: 'AQID,skip-cert-verify=true' };
+
+        for (const candidate of [
+            invalid,
+            { ...proxy, 'ech-opts': dns },
+            { ...proxy, 'ech-opts': unsafe },
+        ]) {
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Surge', candidate),
+            );
+
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include('requires an inline ECHConfigList');
+        }
+    });
+
     it('round-trips Surge TrustTunnel h3 as network', function () {
         const [proxy] = ProxyUtils.parse(
             'Surge TrustTunnel H3 = trust-tunnel,trust.example.com,443,h3=true',

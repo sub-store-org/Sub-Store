@@ -2,6 +2,7 @@ import _ from 'lodash';
 import { Result, isPresent } from './utils';
 import { isNotBlank, getIfNotBlank, isPlainObject } from '@/utils';
 import $ from '@/core/app';
+import { isMihomoEchEnabled, normalizeInlineEchConfigList } from '../ech-utils';
 import { SURGE_XHTTP_FIELDS } from '../surge-xhttp';
 import { formatSurgeVmessEncryptMethod } from '../vmess-security';
 
@@ -167,6 +168,24 @@ function appendTlsProxyParams(result, proxy, enabled = true) {
         result.append(`,client-cert=${quoteSurgeValue(clientCert)}`);
     }
     appendClientFingerprint(result, proxy);
+
+    const echOpts = isPlainObject(proxy['ech-opts'])
+        ? proxy['ech-opts']
+        : undefined;
+    const echEnabled = echOpts
+        ? isMihomoEchEnabled(echOpts.enable)
+        : isNotBlank(proxy._echConfigList);
+    if (echEnabled && !proxy['reality-opts']) {
+        const config = normalizeInlineEchConfigList(
+            echOpts ? echOpts.config : proxy._echConfigList,
+        );
+        if (!config) {
+            throw unsupported(
+                'Surge ECH requires an inline ECHConfigList in base64 or base64url',
+            );
+        }
+        result.append(`,ech-config=${config}`);
+    }
 }
 
 function appendSshPrivateKey(result, proxy) {
