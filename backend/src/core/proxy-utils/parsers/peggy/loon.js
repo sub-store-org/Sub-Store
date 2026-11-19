@@ -1,4 +1,6 @@
 import peggy from 'peggy';
+import { setLoonXhttpOption } from '../../loon-xhttp';
+
 const grammars = String.raw`
 // global initializer
 {{
@@ -19,6 +21,8 @@ const grammars = String.raw`
     const proxy = {};
     const obfs = {};
     const transport = {};
+    const xhttpOpts = {};
+    const xhttpHeaders = [];
     const shadowTLS = {};
     const $ = {};
 
@@ -32,6 +36,16 @@ const grammars = String.raw`
             proxy.network = "http";
             $set(proxy, "http-opts.path", transport.path);
             $set(proxy, "http-opts.headers.Host", transport.host);
+        } else if (transport.type === "xhttp") {
+            if (proxy.type === "vmess" && proxy.alterId !== 0) {
+                throw new Error("VMess XHTTP requires AEAD");
+            }
+            proxy.network = "xhttp";
+            proxy.udp ??= false;
+            if (transport.path != null) xhttpOpts.path = transport.path;
+            if (transport.host != null) xhttpOpts.host = transport.host;
+            if (xhttpHeaders.length) xhttpOpts.headers = Object.fromEntries(xhttpHeaders);
+            proxy["xhttp-opts"] = xhttpOpts;
         }
     }
 
@@ -72,7 +86,7 @@ const grammars = String.raw`
     }
 }
 
-start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2/anytls/tailscale) {
+start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2/anytls/tailscale/snell) {
     return proxy;
 }
 
@@ -93,17 +107,17 @@ shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs
     }
     handleShadowTLS();
 }
-vmess = tag equals "vmess"i address vmess_method uuid (transport/transport_host/transport_path/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/vmess_alterId/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
+vmess = tag equals "vmess"i address vmess_method uuid (xhttp_transport/transport/transport_host/transport_path/xhttp_header/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/vmess_alterId/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "auto";
     proxy.alterId = proxy.alterId || 0;
     handleTransport();
 }
-vless = tag equals "vless"i address uuid (transport/transport_host/transport_path/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/flow/public_key/short_id/block_quic/others)* {
+vless = tag equals "vless"i address uuid (xhttp_transport/transport/transport_host/transport_path/xhttp_header/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/flow/public_key/short_id/block_quic/others)* {
     proxy.type = "vless";
     handleTransport();
 }
-trojan = tag equals "trojan"i address password (transport/transport_host/transport_path/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
+trojan = tag equals "trojan"i address password (xhttp_transport/transport/transport_host/transport_path/xhttp_header/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
     proxy.type = "trojan";
     handleTransport();
 }
@@ -128,6 +142,15 @@ tailscale = tag equals "tailscale"i (tailscale_string/tailscale_bool/tailscale_m
     proxy.type = "tailscale";
     if (proxy["exit-node"] === "auto") proxy["exit-node"] = "auto:any";
     if (proxy["exit-node"] === "none") proxy["exit-node"] = "";
+}
+snell = tag equals ("snell"i/"opensnell"i) address snell_positional_psk? (snell_psk/snell_version/snell_obfs/obfs_host/obfs_uri/udp_relay/ip_mode/block_quic/others)* {
+    if (!proxy.psk) throw new Error("Missing Snell PSK");
+    proxy.type = "snell";
+    proxy.version ??= 4;
+    proxy.udp ??= false;
+    if (obfs.type === "http") {
+        proxy["obfs-opts"] = { mode: obfs.type, host: obfs.host, path: obfs.path };
+    }
 }
 
 tailscale_string = comma key:("auth-key"/"control-url"/"hostname"/"exit-node"/"path-mode"/"ip-mode") equals value:(
@@ -218,13 +241,29 @@ obfs_ss = comma "obfs-name" equals type:("http"/"tls") { obfs.type = type; }
 obfs_ssr = comma "obfs" equals type:("plain"/"http_simple"/"http_post"/"random_head"/"tls1.2_ticket_auth"/"tls1.2_ticket_fastauth") { obfs.type = type; }
 obfs_ssr_param = comma "obfs-param" equals match:$[^,]+ { proxy["obfs-param"] = match; }
 
-obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").replace(/^"(.*)"$/, '$1'); }
-obfs_uri = comma "obfs-uri" equals uri:uri { obfs.path = uri; }
-uri = $[^,]+
+obfs_host = comma "obfs-host" equals value:option_value { obfs.host = value; }
+obfs_uri = comma "obfs-uri" equals value:option_value { obfs.path = value; }
+
+snell_positional_psk = comma psk:quoted_value { proxy.psk = psk; }
+snell_psk = comma "psk" equals psk:option_value { proxy.psk = psk; }
+snell_version = comma "version" equals version:$[0-9]+ { proxy.version = Number(version); }
+snell_obfs = comma ("obfs-name"/"obfs") equals type:("none"/"http") { obfs.type = type; }
 
 transport = comma "transport" equals type:("tcp"/"ws"/"http") { transport.type = type; }
-transport_host = comma "host" equals match:[^,]+ { transport.host = match.join("").replace(/^"(.*)"$/, '$1'); }
-transport_path = comma "path" equals path:uri { transport.path = path; }
+transport_host = comma "host" equals value:option_value { transport.host = value; }
+transport_path = comma "path" equals value:option_value { transport.path = value; }
+
+xhttp_transport = comma "transport" equals "xhttp" { transport.type = "xhttp"; }
+xhttp_header = comma "xhttp-header" equals value:option_value {
+    const colon = value.indexOf(":");
+    const name = value.slice(0, colon).trim();
+    if (colon > 0 && name && !/^host$/i.test(name)) {
+        xhttpHeaders.push([name, value.slice(colon + 1).trim()]);
+    }
+}
+xhttp_option = comma "xhttp-" key:$[a-z0-9-]+ equals value:option_value {
+    options.setLoonXhttpOption(xhttpOpts, key, value);
+}
 
 ssr_protocol = comma "protocol" equals protocol:("origin"/"auth_sha1_v4"/"auth_aes128_md5"/"auth_aes128_sha1"/"auth_chain_a"/"auth_chain_b") { proxy.protocol = protocol; }
 ssr_protocol_param = comma "protocol-param" equals param:$[^=,]+ { proxy["protocol-param"] = param; }
@@ -248,7 +287,7 @@ tls_profile = comma "tls-profile" equals match:[^,]+ {
     const clientFingerprint = loonClientFingerprint(tlsProfile);
     if (clientFingerprint) proxy["client-fingerprint"] = clientFingerprint;
 }
-alpn = comma "alpn" equals '"' match:$[^"]* '"' {
+alpn = comma "alpn" equals match:option_value {
     const values = match
         .split(",")
         .map((item) => item.trim())
@@ -258,7 +297,7 @@ alpn = comma "alpn" equals '"' match:$[^"]* '"' {
 
 flow = comma "flow" equals match:[^,]+ { proxy["flow"] = match.join("").replace(/^"(.*)"$/, '$1'); }
 public_key = comma "public-key" equals match:[^,]+ { proxy["reality-opts"] = proxy["reality-opts"] || {}; proxy["reality-opts"]["public-key"] = match.join("").replace(/^"(.*)"$/, '$1'); }
-short_id = comma "short-id" equals match:[^,]+ { proxy["reality-opts"] = proxy["reality-opts"] || {}; proxy["reality-opts"]["short-id"] = match.join("").replace(/^"(.*)"$/, '$1'); }
+short_id = comma "short-id" equals value:option_value { proxy["reality-opts"] = proxy["reality-opts"] || {}; proxy["reality-opts"]["short-id"] = value; }
 
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 udp_relay = comma "udp" equals flag:bool { proxy.udp = flag; }
@@ -287,6 +326,8 @@ server_dns = comma "server-dns" equals value:(
 }
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
+quoted_value = '"' match:$[^"]* '"' { return match; }
+option_value = quoted_value / match:$[^,"]* { return match.trim(); }
 comma = _ "," _
 equals = _ "=" _
 _ = [ \r\t]*
@@ -296,7 +337,10 @@ others = server_dns / (comma [^=,]+ equals [^=,]+)
 let parser;
 export default function getParser() {
     if (!parser) {
-        parser = peggy.generate(grammars);
+        const generated = peggy.generate(grammars);
+        parser = {
+            parse: (input) => generated.parse(input, { setLoonXhttpOption }),
+        };
     }
     return parser;
 }

@@ -629,6 +629,7 @@ describe('Proxy text producers', function () {
             'Trojan=trojan,trojan.example.com,443,"secret"',
             'AnyTLS=anytls,anytls.example.com,443,"secret"',
             'Hysteria2=hysteria2,hy2.example.com,443,"secret"',
+            'Snell=snell,snell.example.com,6160,psk=secret,version=4',
             'HTTP=http,http.example.com,8080',
             'HTTPS=https,https.example.com,443',
             'SOCKS5=socks5,socks.example.com,1080',
@@ -710,6 +711,135 @@ describe('Proxy text producers', function () {
                 'server-dns=',
             );
         }
+    });
+
+    it('round-trips Loon XHTTP for VLESS, VMess AEAD, and Trojan', function () {
+        const input = [
+            `VLESS=vless,example.com,80,"${UUID}",transport=xhttp,path="/xhttp?route=a,b",host=cdn.example.com,over-tls=false,alpn=http/1.1,xhttp-mode=packet-up,xhttp-max-post-bytes=0,xhttp-min-post-interval-ms=30-60,xhttp-padding-obfs-mode=false,xhttp-session-id-table=Base62,xhttp-session-id-length=16-32,xhttp-header="X-Trace: a, b",xhttp-header="X-Origin: https://example.org",udp=true`,
+            `VMess=vmess,example.com,443,aes-128-gcm,"${UUID}",transport=xhttp,path=/xhttp?username=test,over-tls=true,alpn=h2,xhttp-mode=stream-up,xhttp-no-grpc-header=true,alterId=0`,
+            'Trojan=trojan,example.com,443,"dGVzdA==",transport=xhttp,sni=cdn.example.com,public-key=pubkey,short-id="",alpn=h2,xhttp-mode=stream-one',
+        ].join('\n');
+        const proxies = ProxyUtils.parse(input);
+        expect(proxies.map(({ type }) => type)).to.deep.equal([
+            'vless',
+            'vmess',
+            'trojan',
+        ]);
+        expect(proxies.every(({ network }) => network === 'xhttp')).to.be.true;
+        const [vless, vmess, trojan] = proxies;
+        expectSubset(vless, {
+            tls: false,
+            alpn: ['http/1.1'],
+            udp: true,
+            'xhttp-opts': {
+                path: '/xhttp?route=a,b',
+                host: 'cdn.example.com',
+                mode: 'packet-up',
+                'sc-max-each-post-bytes': 0,
+                'sc-min-posts-interval-ms': '30-60',
+                'x-padding-obfs-mode': false,
+                'session-table': 'Base62',
+                'session-length': '16-32',
+                headers: {
+                    'X-Trace': 'a, b',
+                    'X-Origin': 'https://example.org',
+                },
+            },
+        });
+        expectSubset(vmess, {
+            alterId: 0,
+            tls: true,
+            alpn: ['h2'],
+            'xhttp-opts': { mode: 'stream-up', 'no-grpc-header': true },
+        });
+        expectSubset(trojan, {
+            password: 'dGVzdA==',
+            tls: true,
+            'reality-opts': { 'public-key': 'pubkey', 'short-id': '' },
+            'xhttp-opts': { mode: 'stream-one' },
+        });
+
+        const output = produceExternal('Loon', proxies);
+        expect(output).to.include(',xhttp-header="X-Trace: a, b"');
+        expect(output).to.include(
+            ',xhttp-header="X-Origin: https://example.org"',
+        );
+        expect(output).not.to.include(',block-quic=');
+        expect(ProxyUtils.parse(output)).to.deep.equal(proxies);
+    });
+
+    it('rejects non-AEAD VMess over Loon XHTTP', function () {
+        const input = `VMess=vmess,example.com,443,auto,"${UUID}",transport=xhttp,alterId=1`;
+        expect(captureErrors(() => ProxyUtils.parse(input)).result).to.be.empty;
+        expect(
+            captureErrors(() =>
+                produceInternal('Loon', {
+                    name: 'VMess',
+                    type: 'vmess',
+                    server: 'example.com',
+                    port: 443,
+                    uuid: UUID,
+                    aead: false,
+                    network: 'xhttp',
+                }),
+            ).result,
+        ).to.be.empty;
+    });
+
+    it('distinguishes Loon Snell v4/v5 inputs from Surge and emits Loon Snell', function () {
+        const input = [
+            'Surge v4=opensnell,example.com,6160,psk=secret,version=4,reuse=true,udp-relay=true,block-quic=off',
+            'Loon v4=Snell,example.com,6160,"key,with=comma"',
+            'Loon v5=OpenSnell,example.com,6161,psk="secret",version=5,obfs-name=http,obfs-host=cdn.example.com,obfs-uri="/a,b?c=d",udp=true,block-quic=false,ip-mode=prefer-v4,server-dns="system,2001:db8::53"',
+            'Loon block=snell,example.com,6161,psk=secret,version=5,block-quic=true',
+            'Surge default=snell,example.com,6161,psk="key,udp=true",reuse=true,obfs=http,obfs-uri=/obfs',
+        ].join('\n');
+        const proxies = ProxyUtils.parse(input);
+        expect(proxies).to.have.length(5);
+        const [surgeV4, loonV4, loonV5, loonBlock, surgeDefault] = proxies;
+        expect(surgeV4).to.include({
+            type: 'snell',
+            reuse: true,
+            udp: true,
+            'block-quic': 'off',
+        });
+        expect(loonV4).to.include({
+            type: 'snell',
+            psk: 'key,with=comma',
+            version: 4,
+            udp: false,
+        });
+        expect(loonV4).not.to.have.property('block-quic');
+        expectSubset(loonV5, {
+            type: 'snell',
+            version: 5,
+            udp: true,
+            'block-quic': 'off',
+            'ip-version': 'prefer-v4',
+            'server-dns': ['system', '2001:db8::53'],
+            'obfs-opts': {
+                mode: 'http',
+                host: 'cdn.example.com',
+                path: '/a,b?c=d',
+            },
+        });
+        expect(loonBlock).to.include({ udp: false, 'block-quic': 'on' });
+        expect(surgeDefault).to.include({ reuse: true, psk: 'key,udp=true' });
+        expect(surgeDefault).not.to.have.property('version');
+        expect(surgeDefault).not.to.have.property('block-quic');
+
+        const { result: output } = captureErrors(() =>
+            produceExternal('Loon', proxies),
+        );
+        expect(output.split('\n')).to.deep.equal([
+            'Surge v4=snell,example.com,6160,"secret",version=4,udp=true,block-quic=false',
+            'Loon v4=snell,example.com,6160,"key,with=comma",version=4,udp=false',
+            'Loon v5=snell,example.com,6161,"secret",version=5,obfs=http,obfs-host=cdn.example.com,obfs-uri="/a,b?c=d",udp=true,block-quic=false,ip-mode=prefer-v4,server-dns="system,2001:db8::53"',
+            'Loon block=snell,example.com,6161,"secret",version=5,udp=false,block-quic=true',
+        ]);
+        expect(ProxyUtils.parse(output).slice(1)).to.deep.equal(
+            proxies.slice(1, 4),
+        );
     });
 
     it('produces Loon VLESS reality websocket lines', function () {

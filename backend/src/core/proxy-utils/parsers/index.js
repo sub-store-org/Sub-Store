@@ -2750,15 +2750,11 @@ function Loon_SSR() {
     return { name, test, parse };
 }
 
+const LOON_VMESS = /^[^=,]*=\s*vmess\s*,[^,]*,[^,]*,[^,]*,\s*"/i;
+
 function Loon_VMess() {
     const name = 'Loon VMess Parser';
-    const test = (line) => {
-        // distinguish between surge vmess
-        return (
-            /^.*=\s*vmess/i.test(line.split(',')[0]) &&
-            line.indexOf('username') === -1
-        );
-    };
+    const test = (line) => LOON_VMESS.test(line);
     const parse = (line) => getLoonParser().parse(line);
     return { name, test, parse };
 }
@@ -3008,7 +3004,8 @@ function Surge_VMess() {
     const test = (line) => {
         return (
             /^.*=\s*vmess/.test(line.split(',')[0]) &&
-            line.indexOf('username') !== -1
+            line.indexOf('username') !== -1 &&
+            !LOON_VMESS.test(line)
         );
     };
     const parse = (line) => getSurgeParser().parse(line);
@@ -3027,7 +3024,10 @@ function Surge_VLESS() {
 function Surge_Trojan() {
     const name = 'Surge Trojan Parser';
     const test = (line) => {
-        return /^.*=\s*trojan/.test(line.split(',')[0]);
+        return (
+            /^.*=\s*trojan/.test(line.split(',')[0]) &&
+            !/^[^=,]*=\s*trojan\s*,[^,]*,[^,]*,\s*"/.test(line)
+        );
     };
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
@@ -3133,12 +3133,18 @@ function Surge_External() {
     return { name, test, parse };
 }
 
-function Surge_Snell() {
-    const name = 'Surge Snell Parser';
-    const test = (line) => {
-        return /^.*=\s*snell/.test(line.split(',')[0]);
+function Snell() {
+    const name = 'Snell Parser';
+    const test = (line) => /^[^=,]*=\s*(?:snell|opensnell)\s*,/i.test(line);
+    const parse = (line) => {
+        const fields = line.match(/(?:[^",]+|"[^"]*")+/g).slice(3);
+        const loonOption =
+            /^(?:(?:udp|obfs-name|ip-mode|server-dns)\s*=|block-quic\s*=\s*(?:true|false)$)/;
+        const isLoon =
+            fields[0]?.trim().startsWith('"') ||
+            fields.some((field) => loonOption.test(field.trim()));
+        return (isLoon ? getLoonParser() : getSurgeParser()).parse(line);
     };
-    const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
 
@@ -3207,7 +3213,7 @@ export default [
     Surge_VLESS(),
     Surge_Trojan(),
     Surge_Http(),
-    Surge_Snell(),
+    Snell(),
     Surge_Tuic(),
     Surge_WireGuard(),
     Surge_Hysteria2(),

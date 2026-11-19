@@ -1,8 +1,9 @@
 /* eslint-disable no-case-declarations */
 const targetPlatform = 'Loon';
 import { isPresent, Result } from './utils';
-import { isIPv4, isIPv6 } from '@/utils';
+import { isIPv4, isIPv6, isPlainObject } from '@/utils';
 import $ from '@/core/app';
+import { LOON_XHTTP_FIELDS } from '../loon-xhttp';
 import { formatLoonVmessSecurity } from '../vmess-security';
 
 const ipVersions = {
@@ -28,6 +29,8 @@ export default function Loon_Producer() {
                 return shadowsocks(proxy);
             case 'ssr':
                 return shadowsocksr(proxy);
+            case 'snell':
+                return snell(proxy);
             case 'trojan':
                 return trojan(proxy);
             case 'vmess':
@@ -77,6 +80,46 @@ function appendTlsProfile(result, proxy) {
 function appendAlpn(result, proxy) {
     const alpn = getLoonAlpn(proxy);
     if (alpn) result.append(`,alpn="${alpn}"`);
+}
+
+function formatLoonValue(value, quoted = false) {
+    const text = String(value);
+    if (/["\r\n]/.test(text)) {
+        throw new Error('Unsupported characters in Loon option');
+    }
+    return quoted || !text || /[,\s]/.test(text) ? `"${text}"` : text;
+}
+
+function appendXhttp(result, proxy) {
+    const xhttp = proxy['xhttp-opts'];
+    if (xhttp?.['download-settings']) {
+        throw new Error('Loon XHTTP does not support download-settings');
+    }
+
+    const headers = isPlainObject(xhttp?.headers)
+        ? Object.entries(xhttp.headers)
+        : [];
+    const host =
+        xhttp?.host ?? headers.find(([key]) => /^host$/i.test(key))?.[1];
+    result.append(',transport=xhttp');
+    for (const [key, value] of [
+        ['path', xhttp?.path],
+        ['host', host],
+    ]) {
+        if (value != null) result.append(`,${key}=${formatLoonValue(value)}`);
+    }
+    for (const [key, field] of Object.entries(LOON_XHTTP_FIELDS)) {
+        const value = xhttp?.[field];
+        if (value != null)
+            result.append(`,xhttp-${key}=${formatLoonValue(value)}`);
+    }
+    for (const [key, value] of headers) {
+        if (!/^host$/i.test(key) && value != null) {
+            result.append(
+                `,xhttp-header=${formatLoonValue(`${key}: ${value}`, true)}`,
+            );
+        }
+    }
 }
 
 function getLoonShadowTLSAlpn(proxy) {
@@ -296,8 +339,48 @@ function shadowsocksr(proxy) {
     return result.toString();
 }
 
+function snell(proxy) {
+    const version = Number(proxy.version);
+    if (![4, 5].includes(version)) {
+        throw new Error(
+            `Loon does not support Snell version ${proxy.version ?? 1}`,
+        );
+    }
+    if (proxy.psk == null || proxy.psk === '') {
+        throw new Error('Missing Snell PSK');
+    }
+    const obfs = proxy['obfs-opts'];
+    if (proxy.plugin || (obfs?.mode && !['none', 'http'].includes(obfs.mode))) {
+        throw new Error('Loon Snell only supports HTTP obfs');
+    }
+
+    const result = new Result(proxy);
+    result.append(
+        `${proxy.name}=snell,${proxy.server},${proxy.port},${formatLoonValue(
+            proxy.psk,
+            true,
+        )},version=${version}`,
+    );
+    if (obfs?.mode === 'http') {
+        result.append(',obfs=http');
+        if (obfs.host != null)
+            result.append(`,obfs-host=${formatLoonValue(obfs.host)}`);
+        if (obfs.path != null)
+            result.append(`,obfs-uri=${formatLoonValue(obfs.path)}`);
+    }
+    result.appendIfPresent(`,udp=${proxy.udp}`, 'udp');
+    const blockQuic = proxy['block-quic'];
+    if (blockQuic === 'on' || blockQuic === 'off') {
+        result.append(`,block-quic=${blockQuic === 'on'}`);
+    }
+    const ipVersion = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ipVersion}`, 'ip-version');
+    return result.toString();
+}
+
 function trojan(proxy) {
     const isReality = !!proxy['reality-opts'];
+    const isXhttp = proxy.network === 'xhttp';
     const result = new Result(proxy);
     result.append(
         `${proxy.name}=trojan,${proxy.server},${proxy.port},"${proxy.password}"`,
@@ -317,6 +400,8 @@ function trojan(proxy) {
                 `,host=${proxy['ws-opts']?.headers?.Host}`,
                 'ws-opts.headers.Host',
             );
+        } else if (isXhttp) {
+            appendXhttp(result, proxy);
         } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
@@ -334,7 +419,10 @@ function trojan(proxy) {
         appendReality(result, proxy);
     } else {
         // sni
-        result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,${isXhttp ? 'sni' : 'tls-name'}=${proxy.sni}`,
+            'sni',
+        );
         result.appendIfPresent(
             `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
             'tls-fingerprint',
@@ -429,6 +517,7 @@ function anytls(proxy) {
 
 function vmess(proxy) {
     const isReality = !!proxy['reality-opts'];
+    const isXhttp = proxy.network === 'xhttp';
     const security = formatLoonVmessSecurity(proxy.cipher);
 
     const result = new Result(proxy);
@@ -462,6 +551,8 @@ function vmess(proxy) {
                 `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
+        } else if (isXhttp) {
+            appendXhttp(result, proxy);
         } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
@@ -477,16 +568,17 @@ function vmess(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
-    if (proxy.tls || isReality) {
-        appendTlsProfile(result, proxy);
-        appendAlpn(result, proxy);
-    }
+    if (proxy.tls || isReality) appendTlsProfile(result, proxy);
+    if (proxy.tls || isReality || isXhttp) appendAlpn(result, proxy);
 
     if (isReality) {
         appendReality(result, proxy);
     } else {
         // sni
-        result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,${isXhttp ? 'sni' : 'tls-name'}=${proxy.sni}`,
+            'sni',
+        );
         result.appendIfPresent(
             `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
             'tls-fingerprint',
@@ -498,11 +590,13 @@ function vmess(proxy) {
     }
 
     // AEAD
-    if (isPresent(proxy, 'aead')) {
-        result.append(`,alterId=${proxy.aead ? 0 : 1}`);
-    } else {
-        result.append(`,alterId=${proxy.alterId}`);
+    let alterId = proxy.alterId;
+    if (isPresent(proxy, 'aead')) alterId = proxy.aead ? 0 : 1;
+    if (isXhttp) {
+        alterId ??= 0;
+        if (Number(alterId) !== 0) throw new Error('VMess XHTTP requires AEAD');
     }
+    result.append(`,alterId=${alterId}`);
 
     // tfo
     result.appendIfPresent(`,fast-open=${proxy.tfo}`, 'tfo');
@@ -528,8 +622,11 @@ function vless(proxy) {
         throw new Error(`VLESS encryption is not supported`);
     let isXtls = false;
     const isReality = !!proxy['reality-opts'];
+    const isXhttp = proxy.network === 'xhttp';
 
-    if (typeof proxy.flow !== 'undefined') {
+    if (isXhttp && proxy.flow)
+        throw new Error('VLESS XHTTP does not support flow');
+    if (!isXhttp && typeof proxy.flow !== 'undefined') {
         if (['xtls-rprx-vision'].includes(proxy.flow)) {
             isXtls = true;
         } else {
@@ -568,6 +665,8 @@ function vless(proxy) {
                 `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
+        } else if (isXhttp) {
+            appendXhttp(result, proxy);
         } else {
             throw new Error(`network ${proxy.network} is unsupported`);
         }
@@ -583,10 +682,8 @@ function vless(proxy) {
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
     );
-    if (proxy.tls || isReality || isXtls) {
-        appendTlsProfile(result, proxy);
-        appendAlpn(result, proxy);
-    }
+    if (proxy.tls || isReality || isXtls) appendTlsProfile(result, proxy);
+    if (proxy.tls || isReality || isXtls || isXhttp) appendAlpn(result, proxy);
 
     if (isXtls) {
         result.appendIfPresent(`,flow=${proxy.flow}`, 'flow');
@@ -595,7 +692,10 @@ function vless(proxy) {
         appendReality(result, proxy);
     } else {
         // sni
-        result.appendIfPresent(`,tls-name=${proxy.sni}`, 'sni');
+        result.appendIfPresent(
+            `,${isXhttp ? 'sni' : 'tls-name'}=${proxy.sni}`,
+            'sni',
+        );
         result.appendIfPresent(
             `,tls-cert-sha256=${proxy['tls-fingerprint']}`,
             'tls-fingerprint',
