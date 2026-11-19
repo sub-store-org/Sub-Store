@@ -71,7 +71,7 @@ const grammars = String.raw`
     }
 }
 
-start = (trojan/shadowsocks/vmess/vless/anytls/http/socks5) {
+start = (trojan/shadowsocks/vmess/vless/anytls/hysteria2/http/socks5) {
     return proxy
 }
 
@@ -143,6 +143,12 @@ anytls = "anytls" equals address
     proxy.tls = true;
 }
 
+hysteria2 = "hysteria2" equals address
+    (password/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/udp_relay/download_bandwidth/salamander_password/port_hopping/port_hopping_interval/server_check_url/tag/others)* {
+    proxy.type = "hysteria2";
+    proxy.tls = true;
+}
+
 http = "http" equals address 
     (username/password/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/fast_open/udp_relay/udp_over_tcp/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)*{
     proxy.type = "http";
@@ -201,6 +207,22 @@ aead = comma "aead" equals flag:bool { proxy.aead = flag; }
 udp_relay = comma "udp-relay" equals flag:bool { proxy.udp = flag; }
 udp_over_tcp = comma "udp-over-tcp" equals flag:bool { throw new Error("UDP over TCP is not supported"); }
 udp_over_tcp_new = comma "udp-over-tcp" equals param:$[^=,]+ { if (param === "sp.v1") { proxy["udp-over-tcp"] = true; proxy["udp-over-tcp-version"] = 1; } else if (param === "sp.v2") { proxy["udp-over-tcp"] = true; proxy["udp-over-tcp-version"] = 2; } else if (param === "true") { proxy["_ssr_python_uot"] = true; } else { throw new Error("Invalid value for udp-over-tcp"); } }
+
+download_bandwidth = comma "download-bandwidth" equals value:$[^,]+ { proxy.down = value.trim(); }
+salamander_password = comma "salamander-password" equals value:$((!next_parameter .)+) {
+    proxy.obfs = "salamander";
+    proxy["obfs-password"] = value.trim();
+}
+port_hopping = comma "port-hopping" equals ports:$(hopping_port (comma hopping_port)*) {
+    proxy.ports = ports.replace(/\s/g, "");
+}
+hopping_port = [0-9]+ (_ "-" _ [0-9]+)?
+port_hopping_interval = comma "port-hopping-interval" equals interval:$[0-9]+ {
+    const seconds = Number(interval);
+    if (seconds >= 5 && seconds <= 3600) {
+        proxy["hop-interval"] = seconds;
+    }
+}
 
 fast_open = comma "fast-open" equals flag:bool { proxy.tfo = flag; }
 
@@ -265,7 +287,7 @@ reality_hex_shortid = comma "reality-hex-shortid" equals param:$[^=,]+ {
 }
 
 vless_flow = comma "vless-flow" equals param:$[^=,]+ { proxy["flow"] = param; }
-server_check_url = comma "server_check_url" equals param:$[^=,]+ { proxy["test-url"] = param; }
+server_check_url = comma "server_check_url" equals param:$[^,]+ { proxy["test-url"] = param.trim(); }
 
 uri = $[^,]+
 

@@ -53,30 +53,53 @@ describe('Proxy text producers', function () {
         }
     });
 
-    it('encodes canonical ALPN for every Quantumult X TLS producer', function () {
+    it('round-trips ALPN and TLS session options for every Quantumult X TLS protocol', function () {
         const credentials = {
             ss: { cipher: 'aes-128-gcm', password: 'secret' },
             trojan: { password: 'secret' },
             vmess: { cipher: 'none', uuid: UUID },
             vless: { uuid: UUID },
             anytls: { password: 'secret' },
+            hysteria2: { password: 'secret' },
             http: {},
             socks5: {},
         };
 
         for (const [type, fields] of Object.entries(credentials)) {
+            const alpn = type === 'hysteria2' ? ['h3'] : ['h2', 'http/1.1'];
+            const tlsAlpn =
+                type === 'hysteria2' ? '026833' : '02683208687474702f312e31';
             const output = produceExternal('QX', {
                 type,
                 name: type,
                 server: 'example.com',
                 port: 443,
                 tls: true,
-                alpn: ['h2', 'http/1.1'],
+                alpn,
+                'tls-no-session-ticket': true,
+                'tls-no-session-reuse': false,
                 ...fields,
             });
 
-            expect(output).to.include('tls-alpn=02683208687474702f312e31');
+            expectSubset(
+                ProxyUtils.parse(output)[0],
+                {
+                    type,
+                    alpn,
+                    'tls-alpn': tlsAlpn,
+                    'tls-no-session-ticket': true,
+                    'tls-no-session-reuse': false,
+                },
+                type,
+            );
         }
+    });
+
+    it('round-trips TLS options for Quantumult X Shadowsocks WSS', function () {
+        const raw =
+            'shadowsocks=example.com:443,method=aes-128-gcm,password=secret,obfs=wss,tls-alpn=026832,tls-no-session-ticket=true,tls-no-session-reuse=false,udp-relay=true,tag=SS WSS';
+
+        expect(produceExternal('QX', ProxyUtils.parse(raw))).to.equal(raw);
     });
 
     it('uses name-cert-verify as Quantumult X tls-verification', function () {
@@ -464,6 +487,80 @@ describe('Proxy text producers', function () {
         const output = ProxyUtils.produce([proxy], 'QX', 'external');
 
         expect(output).to.equal(raw);
+    });
+
+    it('round-trips Quantumult X Hysteria 2 options', function () {
+        const [proxy] = ProxyUtils.parse(
+            'hysteria2=example.com:443, password=pwd, port-hopping=443, 20000-50000, port-hopping-interval=30, salamander-password=obfskey, tls-host=apple.com, tls-verification=false, download-bandwidth=100, udp-relay=false, tag=hy2',
+        );
+
+        expectSubset(proxy, {
+            type: 'hysteria2',
+            name: 'hy2',
+            server: 'example.com',
+            port: 443,
+            password: 'pwd',
+            tls: true,
+            sni: 'apple.com',
+            'skip-cert-verify': true,
+            udp: false,
+            ports: '443,20000-50000',
+            'hop-interval': 30,
+            obfs: 'salamander',
+            'obfs-password': 'obfskey',
+            down: '100',
+        });
+        const output =
+            'hysteria2=example.com:443,password=pwd,port-hopping=443,20000-50000,port-hopping-interval=30,salamander-password=obfskey,tls-host=apple.com,tls-verification=false,download-bandwidth=100,udp-relay=false,tag=hy2';
+        expect(produceExternal('QX', proxy)).to.equal(output);
+        expect(
+            produceExternal('QX', { ...proxy, ports: '443;20000-50000' }),
+        ).to.equal(output);
+        expect(
+            produceExternal('QX', {
+                ...proxy,
+                ports: ' ',
+                'hop-interval': ' ',
+            }),
+        ).not.to.include(',port-hopping');
+    });
+
+    it('limits Quantumult X Hysteria 2 port hopping intervals to 5–3600 seconds', function () {
+        const prefix =
+            'hysteria2=example.com:443,password=pwd,port-hopping=2000-3000';
+        for (const interval of [1, 5, 3600, 3601]) {
+            const option = `port-hopping-interval=${interval}`;
+            const [proxy] = ProxyUtils.parse(`${prefix},${option},tag=hy2`);
+            const output = produceExternal('QX', {
+                ...proxy,
+                'hop-interval': interval,
+            });
+
+            expect(output).to.include(',port-hopping=2000-3000,');
+            if (interval === 5 || interval === 3600) {
+                expect(proxy['hop-interval']).to.equal(interval);
+                expect(output).to.include(`,${option},`);
+            } else {
+                expect(proxy).not.to.have.property('hop-interval');
+                expect(output).not.to.include(',port-hopping-interval=');
+            }
+        }
+    });
+
+    it('preserves TLS pins and the check URL in Quantumult X Hysteria 2', function () {
+        const fingerprint = 'ab'.repeat(32);
+        const pubkey = 'cd'.repeat(32);
+        const checkUrl = 'https://check.example.com/ping?status=204';
+        const raw = `hysteria2=example.com:443,password=pwd,tls-host=peer.example.com,tls-pubkey-sha256=${pubkey},tls-cert-sha256=${fingerprint},tls-verification=verify.example.com,udp-relay=true,server_check_url=${checkUrl},tag=hy2`;
+        const [proxy] = ProxyUtils.parse(raw);
+
+        expectSubset(proxy, {
+            'tls-fingerprint': fingerprint,
+            'tls-pubkey-sha256': pubkey,
+            'name-cert-verify': 'verify.example.com',
+            'test-url': checkUrl,
+        });
+        expect(produceExternal('QX', proxy)).to.equal(raw);
     });
 
     it('round-trips Loon Tailscale with optional authentication and explicit settings', function () {

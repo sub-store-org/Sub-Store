@@ -2692,6 +2692,13 @@ function QX_AnyTLS() {
     return { name, test, parse };
 }
 
+function QX_Hysteria2() {
+    const name = 'QX Hysteria2 Parser';
+    const test = (line) => /^hysteria2\s*=/.test(line);
+    const parse = (line) => getQXParser().parse(line);
+    return { name, test, parse };
+}
+
 function QX_Trojan() {
     const name = 'QX Trojan Parser';
     const test = (line) => {
@@ -3222,6 +3229,7 @@ export default [
     QX_VMess(),
     QX_VLESS(),
     QX_AnyTLS(),
+    QX_Hysteria2(),
     QX_Trojan(),
     QX_Http(),
     QX_Socks5(),
