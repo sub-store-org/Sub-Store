@@ -67,6 +67,46 @@ function appendAlpn(result, proxy) {
     if (alpn) result.append(`,alpn="${alpn}"`);
 }
 
+function appendClientFingerprint(result, proxy) {
+    if (
+        proxy.network === 'h3' ||
+        ['tuic', 'hysteria2', 'masque-surge'].includes(proxy.type)
+    ) {
+        return;
+    }
+
+    const value =
+        proxy._surge_client_fingerprint ?? proxy['client-fingerprint'];
+    if (typeof value !== 'string') return;
+
+    let fingerprint = value.trim().toLowerCase();
+    if (!['auto', 'none', 'apple-26', 'chromium-155'].includes(fingerprint)) {
+        const family = fingerprint
+            .replace(/^hello/, '')
+            .split(/[-_]/, 1)[0]
+            .replace(/([a-z])\d+$/, '$1');
+        if (['chrome', 'edge', 'android', '360', 'qq'].includes(family)) {
+            fingerprint = 'chromium-155';
+        } else if (['safari', 'ios'].includes(family)) {
+            fingerprint = 'apple-26';
+        } else if (
+            [
+                'firefox',
+                'golang',
+                'random',
+                'randomized',
+                'randomizedalpn',
+                'randomizednoalpn',
+            ].includes(family)
+        ) {
+            fingerprint = 'auto';
+        } else {
+            return;
+        }
+    }
+    result.append(`,client-fingerprint=${fingerprint}`);
+}
+
 function getShadowTLSAlpn(proxy) {
     return formatSurgeAlpn(proxy?.['plugin-opts']?.alpn ?? proxy?.alpn);
 }
@@ -126,6 +166,7 @@ function appendTlsProxyParams(result, proxy, enabled = true) {
     ) {
         result.append(`,client-cert=${quoteSurgeValue(clientCert)}`);
     }
+    appendClientFingerprint(result, proxy);
 }
 
 function appendSshPrivateKey(result, proxy) {
@@ -747,6 +788,7 @@ function appendVlessParams(result, proxy) {
         }
         result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
         appendAlpn(result, proxy);
+        appendClientFingerprint(result, proxy);
     } else {
         result.appendIfPresent(`,tls=${proxy.tls}`, 'tls');
         appendTlsProxyParams(result, proxy, Boolean(tls));

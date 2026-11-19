@@ -1539,6 +1539,110 @@ describe('Proxy text producers', function () {
         });
     });
 
+    it('round-trips Surge client-fingerprint for TLS proxies', function () {
+        const cases = [
+            ['https', '', 'auto'],
+            ['socks5-tls', '', 'none'],
+            ['h2-connect', '', 'apple-26', 'ios'],
+            ['trust-tunnel', '', 'chromium-155', 'chrome'],
+            ['trojan', ',password=secret', 'chromium-155', 'chrome'],
+            ['anytls', ',password=secret', 'none'],
+            ['vmess', `,username=${UUID},tls=true`, 'apple-26', 'ios'],
+            ['vless', `,username=${UUID},tls=true`, 'auto'],
+            [
+                'vless',
+                `,username=${UUID},reality-public-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`,
+                'chromium-155',
+                'chrome',
+            ],
+        ];
+
+        for (const [type, params, fingerprint, generic] of cases) {
+            const [proxy] = ProxyUtils.parse(
+                `Fingerprint=${type},example.com,443,client-fingerprint="${fingerprint}"${params}`,
+            );
+            expect(proxy, type).to.have.property(
+                '_surge_client_fingerprint',
+                fingerprint,
+            );
+            expect(proxy['client-fingerprint'], type).to.equal(generic);
+
+            for (const target of ['Surge', 'SurgeMac']) {
+                const output = produceExternal(target, proxy);
+                expect(output).to.match(
+                    new RegExp(`,client-fingerprint=${fingerprint}(?:,|$)`),
+                );
+                expect(ProxyUtils.parse(output)[0]).to.have.property(
+                    '_surge_client_fingerprint',
+                    fingerprint,
+                );
+            }
+        }
+    });
+
+    it('maps share links to Surge client-fingerprint values', function () {
+        const trojan = 'trojan://secret@example.com:443';
+        const cases = [
+            [`${trojan}?fp=chrome`, 'chromium-155'],
+            [`${trojan}?fp=edge`, 'chromium-155'],
+            [`${trojan}?fp=360`, 'chromium-155'],
+            [`${trojan}?fp=qq`, 'chromium-155'],
+            [`${trojan}?fp=chrome120`, 'chromium-155'],
+            [`${trojan}?fp=HelloChrome_120`, 'chromium-155'],
+            [`${trojan}?fp=HelloIOS_14`, 'apple-26'],
+            [`${trojan}?fp=firefox`, 'auto'],
+            [`${trojan}?fp=golang`, 'auto'],
+            [`${trojan}?fp=HelloRandomizedNoALPN`, 'auto'],
+            [`${trojan}?fp=unknown`, undefined],
+            [trojan, undefined],
+            ['https://example.com:443?fp=android', 'chromium-155'],
+            [
+                'socks5+tls://example.com:443?client-fingerprint=safari',
+                'apple-26',
+            ],
+            ['anytls://secret@example.com:443?fp=none', 'none'],
+            [`vmess://${UUID}@example.com:443?security=tls&fp=ios`, 'apple-26'],
+            [
+                `vless://${UUID}@example.com:443?security=reality&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&fp=chrome`,
+                'chromium-155',
+            ],
+        ];
+
+        for (const [link, fingerprint] of cases) {
+            const output = produceExternal('Surge', ProxyUtils.parse(link));
+            expect(
+                output.match(/,client-fingerprint=([^,]+)/)?.[1],
+                link,
+            ).to.equal(fingerprint);
+        }
+    });
+
+    it('omits Surge client-fingerprint for plaintext and QUIC proxies', function () {
+        for (const [type, params] of [
+            ['http', ''],
+            ['socks5', ''],
+            ['vmess', `,username=${UUID},tls=false`],
+            ['vless', `,username=${UUID}`],
+            ['trust-tunnel', ',h3=true'],
+            ['tuic', ',token=secret'],
+            ['hysteria2', ',password=secret'],
+            ['masque', ''],
+        ]) {
+            const [proxy] = ProxyUtils.parse(
+                `Fingerprint=${type},example.com,443,client-fingerprint=apple-26${params}`,
+            );
+            expect(proxy, type).to.not.have.property(
+                '_surge_client_fingerprint',
+            );
+            expect(proxy, type).to.not.have.property('client-fingerprint');
+            const output = produceExternal('Surge', {
+                ...proxy,
+                'client-fingerprint': 'chrome',
+            });
+            expect(output).to.not.include('client-fingerprint=');
+        }
+    });
+
     it('round-trips Surge TrustTunnel h3 as network', function () {
         const [proxy] = ProxyUtils.parse(
             'Surge TrustTunnel H3 = trust-tunnel,trust.example.com,443,h3=true',

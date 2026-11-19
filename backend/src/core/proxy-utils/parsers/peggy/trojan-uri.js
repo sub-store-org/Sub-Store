@@ -106,7 +106,7 @@ function parseTrojan(url) {
     params.sni || params.peer;
 
   proxy["client-fingerprint"] =
-    params.fp;
+    params.fp ?? params["client-fingerprint"];
 
   proxy["tls-fingerprint"] =
     params.pcs;

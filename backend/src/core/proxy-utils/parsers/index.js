@@ -192,6 +192,13 @@ function URI_PROXY() {
                 password != null ? decodeURIComponent(password) : undefined,
         };
 
+        if (tls && query) {
+            const fingerprint =
+                getPathQueryParam(query, 'fp') ||
+                getPathQueryParam(query, 'client-fingerprint');
+            if (fingerprint) proxy['client-fingerprint'] = fingerprint;
+        }
+
         return proxy;
     };
     return { name, test, parse };
@@ -900,7 +907,8 @@ function URI_VMess() {
                 }
             }
 
-            proxy['client-fingerprint'] = params.fp;
+            proxy['client-fingerprint'] =
+                params.fp ?? params['client-fingerprint'];
             proxy.alpn = params.alpn ? params.alpn.split(',') : undefined;
             // 然而 wiki 和 app 实测中都没有字段表示这个
             // proxy['skip-cert-verify'] = /(TRUE)|1/i.test(params.allowInsecure);
@@ -1882,7 +1890,7 @@ function URI_VLESS() {
                 proxy.flow = flow;
             }
         }
-        proxy['client-fingerprint'] = params.fp;
+        proxy['client-fingerprint'] = params.fp ?? params['client-fingerprint'];
         proxy.alpn = params.alpn ? params.alpn.split(',') : undefined;
         proxy['skip-cert-verify'] =
             /(TRUE)|1/i.test(params.allowInsecure) ||
