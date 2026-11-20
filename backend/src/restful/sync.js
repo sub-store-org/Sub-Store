@@ -34,6 +34,8 @@ import { applyAgeOutputEncryption } from '@/restful/age-output';
 import { maskAgeSecretInUrl } from '@/utils/age';
 import { isMihomoConfigFile, normalizeFileConfig } from '@/utils/file-type';
 
+const MIHOMO_CONFIG_STATE_KEY = Symbol.for('sub-store.mihomo-config-state');
+
 export default function register($app) {
     // Initialization
     if (!$.read(ARTIFACTS_KEY)) $.write({}, ARTIFACTS_KEY);
@@ -225,16 +227,18 @@ async function resolveFileRawContent(
 }
 
 async function prepareMihomoProfileContent(file, sourceOptions = {}) {
+    const { returnConfig = false, ...rawSourceOptions } = sourceOptions;
     const config = {};
     const sourceType = normalizeMihomoConfigSourceType(file);
     if (sourceType === 'none') {
-        return ProxyUtils.yaml.safeDump(config);
+        return returnConfig ? { config } : ProxyUtils.yaml.safeDump(config);
     }
 
     if (MIHOMO_PROFILE_FILE_SOURCE_TYPES.includes(sourceType)) {
-        const raw = await resolveFileRawContent(file, sourceOptions);
+        const raw = await resolveFileRawContent(file, rawSourceOptions);
         if (file?.mode !== 'proxy') {
-            return joinRawFileContent(raw);
+            const content = joinRawFileContent(raw);
+            return returnConfig ? { content } : content;
         }
 
         const proxies = normalizeRawFiles(raw)
@@ -262,10 +266,10 @@ async function prepareMihomoProfileContent(file, sourceOptions = {}) {
                 'delete-underscore-fields': true,
                 'include-unsupported-proxy': file?.includeUnsupportedProxy,
             },
-            noFlow: sourceOptions.noFlow,
+            noFlow: rawSourceOptions.noFlow,
         });
     }
-    return ProxyUtils.yaml.safeDump(config);
+    return returnConfig ? { config } : ProxyUtils.yaml.safeDump(config);
 }
 
 async function produceArtifact({
@@ -892,18 +896,35 @@ async function produceArtifact({
             sourceFile || findByName(allFiles, name),
         );
         if (!file) throw new Error(`找不到文件 ${name}`);
+        const hasProcess =
+            Array.isArray(file.process) && file.process.length > 0;
         let raw = '';
+        let preparedMihomo;
         if (isMihomoConfigFile(file)) {
-            raw = await prepareMihomoProfileContent(file, {
-                url,
-                ua,
-                content,
-                mergeSources,
-                ignoreFailedRemoteFile,
-                proxy,
-                noCache,
-                noFlow,
-            });
+            if (hasProcess && produceType !== 'raw') {
+                preparedMihomo = await prepareMihomoProfileContent(file, {
+                    url,
+                    ua,
+                    content,
+                    mergeSources,
+                    ignoreFailedRemoteFile,
+                    proxy,
+                    noCache,
+                    noFlow,
+                    returnConfig: true,
+                });
+            } else {
+                raw = await prepareMihomoProfileContent(file, {
+                    url,
+                    ua,
+                    content,
+                    mergeSources,
+                    ignoreFailedRemoteFile,
+                    proxy,
+                    noCache,
+                    noFlow,
+                });
+            }
         } else {
             raw = await resolveFileRawContent(file, {
                 url,
@@ -919,31 +940,69 @@ async function produceArtifact({
         if (produceType === 'raw') {
             return JSON.stringify(normalizeRawFiles(raw));
         }
-        const files = normalizeRawFiles(raw);
-        let filesContent = joinRawFileContent(files);
+
+        let processInput;
+        if (preparedMihomo?.config) {
+            const state = { config: preparedMihomo.config, content: null };
+            const getLazyContent = () => {
+                if (state.content == null && state.config != null) {
+                    state.content = ProxyUtils.yaml.safeDump(state.config);
+                }
+                return state.content ?? '';
+            };
+            const lazyFiles = [undefined];
+            Object.defineProperty(lazyFiles, 0, {
+                enumerable: true,
+                configurable: true,
+                get: getLazyContent,
+            });
+            processInput = {
+                $files: lazyFiles,
+                $options,
+                $file: file,
+                [MIHOMO_CONFIG_STATE_KEY]: state,
+            };
+            Object.defineProperty(processInput, '$content', {
+                enumerable: true,
+                configurable: true,
+                get: getLazyContent,
+                set(val) {
+                    state.content = val;
+                    state.config = null;
+                },
+            });
+        } else {
+            const files = normalizeRawFiles(
+                preparedMihomo ? preparedMihomo.content : raw,
+            );
+            const filesContent = joinRawFileContent(files);
+            processInput = {
+                $files: files,
+                $content: filesContent,
+                $options,
+                $file: file,
+            };
+        }
 
         // apply processors
-        const processed =
-            Array.isArray(file.process) && file.process.length > 0
-                ? await ProxyUtils.process(
-                      {
-                          $files: files,
-                          $content: filesContent,
-                          $options,
-                          $file: file,
-                      },
-                      file.process,
-                      undefined,
-                      undefined,
-                      undefined,
-                      undefined,
-                      { noFlow },
-                  )
-                : { $content: filesContent, $files: files, $options };
+        const processed = hasProcess
+            ? await ProxyUtils.process(
+                  processInput,
+                  file.process,
+                  undefined,
+                  undefined,
+                  undefined,
+                  undefined,
+                  { noFlow },
+              )
+            : processInput;
 
-        processed.$content = normalizeClashYaml(processed?.$content ?? '');
+        const finalContent = normalizeClashYaml(processed?.$content ?? '');
+        if (processed && typeof processed === 'object') {
+            processed.$content = finalContent;
+        }
 
-        return (all ? processed : processed?.$content) ?? '';
+        return (all ? processed : finalContent) ?? '';
     }
 }
 
