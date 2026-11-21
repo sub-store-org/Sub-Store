@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { Base64 } from 'js-base64';
 import { describe, it } from 'mocha';
-import { Alias } from 'yaml';
+import { Alias, Document } from 'yaml';
 
 import PREPROCESSORS, {
     normalizeClashYaml,
@@ -376,9 +376,12 @@ proxies: [{reality-opts: *opts}]
 
         it('keeps non-clash or invalid yaml input untouched', function () {
             const invalid = 'proxies:\n  - name: broken\n    short-id: [';
+            const unresolved =
+                'proxies: [{reality-opts: {short-id: 0088}, other: *missing}]';
             const unrelated = 'ss://YWVzLTEyOC1nY206c2VjcmV0@example.com:8388';
 
             expect(normalizeClashYaml(invalid)).to.equal(invalid);
+            expect(normalizeClashYaml(unresolved)).to.equal(unresolved);
             expect(normalizeClashYaml(unrelated)).to.equal(unrelated);
         });
     });
@@ -441,6 +444,28 @@ proxies: [{reality-opts: *opts}]
     });
 
     describe('Clash preprocessor', function () {
+        it('reuses the parsed YAML when REALITY short-ids are already strings', function () {
+            const processor = getPreprocessor('Clash Pre-processor');
+            const input = 'proxies: [{reality-opts: {short-id: "0088"}}]';
+            const toJS = Document.prototype.toJS;
+            let conversions = 0;
+            Document.prototype.toJS = function (...args) {
+                conversions++;
+                return toJS.apply(this, args);
+            };
+
+            try {
+                const match = processor.test(input);
+                const proxy = JSON.parse(processor.parse(input, false, match));
+                expect(proxy['reality-opts']['short-id']).to.equal('0088');
+                expect(conversions).to.equal(1);
+                expect(normalizeClashYaml(input)).to.equal(input);
+                expect(conversions).to.equal(1);
+            } finally {
+                Document.prototype.toJS = toJS;
+            }
+        });
+
         it('preserves short-ids when REALITY field names are aliases', function () {
             const processor = getPreprocessor('Clash Pre-processor');
             const input = `proxies:
@@ -524,7 +549,7 @@ proxies:
       short-id: 0088
 `;
 
-            expect(processor.test(raw)).to.equal(true);
+            expect(processor.test(raw)).to.be.ok;
             expect(normalizeClashYaml(raw)).to.equal(
                 raw.replace('short-id: 0088', 'short-id: "0088"'),
             );
@@ -546,7 +571,7 @@ proxy-groups:
       - DIRECT
 `;
 
-            expect(processor.test(raw)).to.equal(true);
+            expect(processor.test(raw)).to.be.ok;
             expect(processor.parse(raw)).to.equal('');
             expect(processor.parse(raw, true)).to.equal('proxies:\n');
         });
@@ -558,7 +583,7 @@ proxy-groups:
   - test
 `;
 
-            expect(processor.test(raw)).to.equal(true);
+            expect(processor.test(raw)).to.be.ok;
             expect(processor.parse(raw)).to.equal('');
             expect(
                 processor.test('proxies: invalid\nproxy-groups: {}'),
@@ -586,10 +611,11 @@ proxy-groups:
       short-id: 08
 `;
 
-            expect(processor.test(raw)).to.equal(true);
+            const match = processor.test(raw);
+            expect(match).to.be.ok;
 
-            const output = processor.parse(raw);
-            const wrapped = processor.parse(raw, true);
+            const output = processor.parse(raw, false, match);
+            const wrapped = processor.parse(raw, true, match);
 
             expect(output).to.include('"name":"Clash SS"');
             expect(output).to.include('"name":"Clash VLESS"');

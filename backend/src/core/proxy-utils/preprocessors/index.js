@@ -3,29 +3,24 @@ import { Base64 } from 'js-base64';
 import { isAlias, isScalar, isSeq, parseDocument, visit } from 'yaml';
 import $ from '@/core/app';
 
-export function normalizeClashYaml(raw) {
-    if (typeof raw !== 'string' || !raw.includes('short-id')) {
-        return raw;
-    }
+const CLASH_YAML_PARSE_OPTIONS = { merge: true, logLevel: 'error' };
 
-    let document;
+function mayContainShortIds(raw) {
+    return typeof raw === 'string' && raw.includes('short-id');
+}
+
+export function normalizeClashYaml(raw) {
+    if (!mayContainShortIds(raw)) return raw;
+
     try {
-        document = parseDocument(raw, {
-            merge: true,
-            logLevel: 'error',
-        });
-        // legacy !<str> 可由 safeLoad 恢复；AST 仅用于定位原文。
-        const content =
-            document.errors.length > 0 ? safeLoad(raw) : document.toJS();
-        if (
-            ![content.proxies, content.listeners].some(
-                (items) => Array.isArray(items) && items.length > 0,
-            )
-        )
-            return raw;
+        const document = parseDocument(raw, CLASH_YAML_PARSE_OPTIONS);
+        return normalizeClashYamlDocument(raw, document);
     } catch (e) {
         return raw;
     }
+}
+
+function normalizeClashYamlDocument(raw, document, content) {
     const anchors = new Map();
     const aliases = new Map();
     visit(document, {
@@ -54,26 +49,21 @@ export function normalizeClashYaml(raw) {
             }
         },
     });
+    const shortIds = new Set();
     // alias 和 merge 引用的节点也属于 REALITY 上下文。
     for (const config of realityConfigs) {
         visit(config, {
             Alias(_, alias) {
                 realityConfigs.add(resolveAlias(alias));
             },
+            Pair(_, { key, value }) {
+                if (resolveAlias(key)?.value === 'short-id') {
+                    shortIds.add(value);
+                }
+            },
         });
     }
 
-    const shortIds = new Set();
-    visit(document, {
-        Pair(_, { key, value }, path) {
-            if (
-                resolveAlias(key)?.value === 'short-id' &&
-                path.some((node) => realityConfigs.has(node))
-            ) {
-                shortIds.add(value);
-            }
-        },
-    });
     const replacements = new Map();
     // shortcut: 直接修改 anchor；跨字段共享时若需保留原类型，再隔离引用。
     for (const value of shortIds) {
@@ -84,6 +74,18 @@ export function normalizeClashYaml(raw) {
             replacements.set(node, JSON.stringify(node.source));
         }
     }
+    if (replacements.size === 0) return raw;
+
+    // 需要改写时才校验全文，保留旧式 !<str> 的恢复行为。
+    if (content === undefined) {
+        content = document.errors.length > 0 ? safeLoad(raw) : document.toJS();
+    }
+    if (
+        ![content?.proxies, content?.listeners].some(
+            (items) => Array.isArray(items) && items.length > 0,
+        )
+    )
+        return raw;
 
     const chunks = [];
     let offset = 0;
@@ -167,20 +169,44 @@ function fallbackBase64Encoded() {
 
 function Clash() {
     const name = 'Clash Pre-processor';
-    const test = function (raw) {
-        if (!/proxies/.test(raw)) return false;
-        const content = safeLoad(raw);
-        return (
-            Array.isArray(content.proxies) ||
-            Array.isArray(content['proxy-groups'])
-        );
+    const prepare = function (raw, detect) {
+        if (detect && !/proxies/.test(raw)) return false;
+
+        let document;
+        let content;
+        if (mayContainShortIds(raw)) {
+            try {
+                document = parseDocument(raw, CLASH_YAML_PARSE_OPTIONS);
+                if (document.errors.length === 0) content = document.toJS();
+            } catch (e) {
+                document = undefined;
+            }
+        }
+        if (content === undefined) content = safeLoad(raw);
+
+        if (
+            detect &&
+            !Array.isArray(content.proxies) &&
+            !Array.isArray(content['proxy-groups'])
+        )
+            return false;
+
+        if (document) {
+            const normalized = normalizeClashYamlDocument(
+                raw,
+                document,
+                content,
+            );
+            if (normalized !== raw) return { normalized };
+        }
+        return { content };
     };
-    const parse = function (raw, includeProxies) {
-        // Clash YAML format
-
-        const afterReplace = normalizeClashYaml(raw);
-
-        const { proxies } = safeLoad(afterReplace);
+    const test = (raw) => prepare(raw, true);
+    const parse = function (raw, includeProxies, match = prepare(raw)) {
+        const { proxies } =
+            match.normalized === undefined
+                ? match.content
+                : safeLoad(match.normalized);
         return (
             (includeProxies ? 'proxies:\n' : '') +
             (Array.isArray(proxies) ? proxies : [])

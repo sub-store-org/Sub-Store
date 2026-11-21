@@ -52,9 +52,10 @@ const ageUtils = {
 function preprocess(raw) {
     for (const processor of PROXY_PREPROCESSORS) {
         try {
-            if (processor.test(raw)) {
+            const match = processor.test(raw);
+            if (match) {
                 $.info(`Pre-processor [${processor.name}] activated`);
-                return processor.parse(raw);
+                return processor.parse(raw, false, match);
             }
         } catch (e) {
             $.error(`Parser [${processor.name}] failed\n Reason: ${e}`);

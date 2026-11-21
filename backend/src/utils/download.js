@@ -78,8 +78,9 @@ async function finalizeDownloadedBody(body, { ageSecretKey, preprocess, url }) {
 
     if (preprocess) {
         try {
-            if (clashPreprocessor.test(result)) {
-                result = clashPreprocessor.parse(result, true);
+            const match = clashPreprocessor.test(result);
+            if (match) {
+                result = clashPreprocessor.parse(result, true, match);
             }
         } catch (e) {
             $.error(`Clash Pre-processor error: ${e}`);
