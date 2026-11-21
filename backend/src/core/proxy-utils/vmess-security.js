@@ -72,6 +72,15 @@ export function formatLoonVmessSecurity(security) {
         : normalized;
 }
 
+export function formatRingVmessCipher(security) {
+    if (security == null || `${security}`.trim() === '') return undefined;
+    const normalized = normalizeClashVmessSecurity(security);
+
+    return normalized === 'chacha20-poly1305'
+        ? 'chacha20-ietf-poly1305'
+        : normalized;
+}
+
 export function formatSurgeVmessEncryptMethod(security) {
     const normalized = normalizeVmessSecurity(security, [
         'aes-128-gcm',

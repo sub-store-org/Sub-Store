@@ -11,6 +11,7 @@ import Shadowrocket_Producer from './shadowrocket';
 import Surfboard_Producer from './surfboard';
 import singbox_Producer from './sing-box';
 import Egern_Producer from './egern';
+import Ring_Producer from './ring';
 
 function JSON_Producer() {
     const type = 'ALL';
@@ -54,4 +55,6 @@ export default {
     'sing-box': singbox_Producer(),
     egern: Egern_Producer(),
     Egern: Egern_Producer(),
+    ring: Ring_Producer(),
+    Ring: Ring_Producer(),
 };

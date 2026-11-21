@@ -42,6 +42,7 @@ import { doh } from '@/utils/dns';
 import JSON5 from 'json5';
 import { hex_md5 } from '@/vendor/md5';
 import SurgeMac_Producer from './producers/surgemac';
+import { hasRingTransportPlugin } from './producers/ring';
 
 const ageUtils = {
     encrypt: encryptArmor,
@@ -476,6 +477,7 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         if (
             !includeUnsupportedProxy &&
             isShadowsocksOverTls(proxy) &&
+            !(normalizedTarget === 'ring' && hasRingTransportPlugin(proxy)) &&
             !['qx', 'quantumultx', 'shadowrocket'].includes(normalizedTarget)
         ) {
             return false;
@@ -679,7 +681,7 @@ function supportsRootProxyHeaders(proxy, targetPlatform) {
         return ['http', 'h2-connect', 'trusttunnel'].includes(proxy.type);
     }
 
-    if (normalizedTarget === 'egern') {
+    if (['egern', 'ring'].includes(normalizedTarget)) {
         return proxy.type === 'http';
     }
 
