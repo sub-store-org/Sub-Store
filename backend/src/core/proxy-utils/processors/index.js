@@ -347,9 +347,18 @@ function RegexSortOperator(input) {
         name: 'Regex Sort Operator',
         func: (proxies) => {
             expressions = expressions.map((expr) => buildRegex(expr));
+            const orderCache = new Map();
+            const getOrder = (name) => {
+                let cached = orderCache.get(name);
+                if (cached === undefined) {
+                    cached = getRegexOrder(expressions, name);
+                    orderCache.set(name, cached);
+                }
+                return cached;
+            };
             return proxies.sort((a, b) => {
-                const oA = getRegexOrder(expressions, a.name);
-                const oB = getRegexOrder(expressions, b.name);
+                const oA = getOrder(a.name);
+                const oB = getOrder(b.name);
                 if (oA && !oB) return -1;
                 if (oB && !oA) return 1;
                 if (oA && oB) return oA < oB ? -1 : 1;
@@ -1672,8 +1681,26 @@ async function ApplyFilter(filter, objs) {
     return objs.filter((_, i) => selected[i]);
 }
 
-async function ApplyOperator(operator, objs) {
-    let output = clone(objs);
+const SORT_OPERATORS = new Set(['Sort Operator', 'Regex Sort Operator']);
+
+async function ApplyOperator(operator, objs, { cloneInput = true } = {}) {
+    const isFileObj =
+        objs &&
+        !Array.isArray(objs) &&
+        (objs.$files ||
+            Object.prototype.hasOwnProperty.call(objs, '$content') ||
+            objs[MIHOMO_CONFIG_STATE_KEY]);
+
+    let output;
+    if (isFileObj) {
+        output = cloneFileInput(objs);
+    } else if (!cloneInput) {
+        output = objs;
+    } else if (SORT_OPERATORS.has(operator.name) && Array.isArray(objs)) {
+        output = [...objs];
+    } else {
+        output = clone(objs);
+    }
     try {
         const output_ = await operator.func(output);
         if (output_) output = output_;
@@ -1715,11 +1742,11 @@ async function ApplyOperator(operator, objs) {
     return output;
 }
 
-export async function ApplyProcessor(processor, objs) {
+export async function ApplyProcessor(processor, objs, options) {
     if (processor.name.indexOf('Filter') !== -1) {
         return ApplyFilter(processor, objs);
     } else if (processor.name.indexOf('Operator') !== -1) {
-        return ApplyOperator(processor, objs);
+        return ApplyOperator(processor, objs, options);
     }
 }
 
@@ -1749,6 +1776,22 @@ function clone(object) {
     return JSON.parse(JSON.stringify(object));
 }
 
+let dynamicFuncCache;
+
+function compileDynamicFunction(isLoon, name, script, params) {
+    if (!dynamicFuncCache) dynamicFuncCache = new Map();
+    const key = `${isLoon ? 1 : 0}\x00${name}\x00${script}`;
+    let factory = dynamicFuncCache.get(key);
+    if (!factory) {
+        factory = new Function(...params, `${script}\n return ${name}`);
+        if (dynamicFuncCache.size >= 64) {
+            dynamicFuncCache.delete(dynamicFuncCache.keys().next().value);
+        }
+        dynamicFuncCache.set(key, factory);
+    }
+    return factory;
+}
+
 function createDynamicFunction(name, script, $arguments, $options) {
     const flowUtils = {
         getFlowField,
@@ -1760,7 +1803,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
         normalizeFlowHeader,
     };
     if ($.env.isLoon) {
-        return new Function(
+        return compileDynamicFunction(true, name, script, [
             '$arguments',
             '$options',
             '$substore',
@@ -1778,8 +1821,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
             'flowUtils',
             'produceArtifact',
             'require',
-            `${script}\n return ${name}`,
-        )(
+        ])(
             $arguments,
             $options,
             $,
@@ -1802,7 +1844,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
             eval(`typeof require !== "undefined"`) ? require : undefined,
         );
     } else {
-        return new Function(
+        return compileDynamicFunction(false, name, script, [
             '$arguments',
             '$options',
             '$substore',
@@ -1817,8 +1859,7 @@ function createDynamicFunction(name, script, $arguments, $options) {
             'flowUtils',
             'produceArtifact',
             'require',
-            `${script}\n return ${name}`,
-        )(
+        ])(
             $arguments,
             $options,
             $,

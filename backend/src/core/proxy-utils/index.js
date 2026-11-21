@@ -145,6 +145,7 @@ async function processFn(
     raw,
     executionContext = {},
 ) {
+    let canMutateInPlace = Boolean(executionContext.mutateInPlace);
     let context = {};
     if (raw !== undefined) {
         context.raw =
@@ -217,7 +218,17 @@ async function processFn(
                 executionContext,
             );
         }
-        proxies = await ApplyProcessor(processor, proxies);
+        proxies = await ApplyProcessor(processor, proxies, {
+            cloneInput: !canMutateInPlace,
+        });
+        if (
+            !canMutateInPlace &&
+            Array.isArray(proxies) &&
+            processor.name.indexOf('Operator') !== -1 &&
+            !['Sort Operator', 'Regex Sort Operator'].includes(processor.name)
+        ) {
+            canMutateInPlace = true;
+        }
     }
     return proxies;
 }
@@ -773,6 +784,8 @@ function formatTransportPath(path) {
     return path;
 }
 
+let caFingerprintCache;
+
 function lastParse(proxy) {
     // normalize keys to lowercase for all -opts keys and their subkeys
     // 通常来说够用了, 在重构之前暂不考虑引入更复杂的逻辑
@@ -1191,7 +1204,18 @@ function lastParse(proxy) {
         $.error(`Read ca file failed\nReason: ${e}`);
     }
     if (!proxy['tls-fingerprint'] && caStr) {
-        proxy['tls-fingerprint'] = rs.generateFingerprint(caStr);
+        if (!caFingerprintCache) caFingerprintCache = new Map();
+        let fp = caFingerprintCache.get(caStr);
+        if (fp === undefined) {
+            fp = rs.generateFingerprint(caStr);
+            if (caFingerprintCache.size >= 64) {
+                caFingerprintCache.delete(
+                    caFingerprintCache.keys().next().value,
+                );
+            }
+            caFingerprintCache.set(caStr, fp);
+        }
+        proxy['tls-fingerprint'] = fp;
     }
     if (['tuic'].includes(proxy.type)) {
         proxy.alpn = Array.isArray(proxy.alpn)
