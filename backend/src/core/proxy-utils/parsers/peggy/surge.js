@@ -71,13 +71,26 @@ const grammars = String.raw`
 
         return trimmed;
     }
+    function isQuotedEscape(text, index) {
+        return text[index] === "\\" &&
+            (text[index + 1] === '"' || text[index + 1] === "\\");
+    }
+    function unescapeQuotedValue(value) {
+        return value.replace(/\\(["\\])/g, "$1");
+    }
     function readQuotedHeaderKey(text, start) {
         const quote = text[start];
+        const withEscapes = proxy.type === "vless" && quote === '"';
         let index = start + 1;
         let hasKey = false;
 
         while (index < text.length) {
             const char = text[index];
+            if (withEscapes && isQuotedEscape(text, index)) {
+                hasKey = true;
+                index += 2;
+                continue;
+            }
             if (char === quote) {
                 return hasKey ? index + 1 : -1;
             }
@@ -238,6 +251,7 @@ const grammars = String.raw`
     }
     function readQuotedHeadersEnd(text, start, pairSeparator) {
         const quote = text[start];
+        const withEscapes = proxy.type === "vless";
         let index = start + 1;
         let innerQuote = "";
         let quoteRole = "";
@@ -245,6 +259,10 @@ const grammars = String.raw`
 
         while (index < text.length) {
             const char = text[index];
+            if (withEscapes && isQuotedEscape(text, index)) {
+                index += 2;
+                continue;
+            }
 
             if (innerQuote) {
                 if (char === innerQuote) {
@@ -304,7 +322,7 @@ const grammars = String.raw`
 
         return readUnquotedHeadersEnd(text, start, pairSeparator);
     }
-    function splitHeaders(headers, pairSeparator) {
+    function splitHeaders(headers, pairSeparator, withEscapes) {
         const result = [];
         let start = 0;
         let quote = "";
@@ -313,6 +331,10 @@ const grammars = String.raw`
 
         for (let index = 0; index < headers.length; index++) {
             const char = headers[index];
+            if (withEscapes && isQuotedEscape(headers, index)) {
+                index++;
+                continue;
+            }
 
             if (quote) {
                 if (char === quote) {
@@ -350,7 +372,10 @@ const grammars = String.raw`
     }
     function parseHeaders(headers, pairSeparator) {
         const result = {};
-        splitHeaders(stripOuterHeadersQuotes(headers), pairSeparator).forEach((pair) => {
+        const trimmed = headers.trim();
+        const content = stripOuterHeadersQuotes(trimmed);
+        const withEscapes = proxy.type === "vless" && content !== trimmed;
+        splitHeaders(content, pairSeparator, withEscapes).forEach((pair) => {
             const index = findHeaderSeparator(pair);
             if (index === -1) return;
 
@@ -358,7 +383,7 @@ const grammars = String.raw`
             const value = stripQuotes(pair.slice(index + 1));
 
             if (key) {
-                result[key] = value;
+                result[key] = withEscapes ? unescapeQuotedValue(value) : value;
             }
         });
         return result;
@@ -422,8 +447,7 @@ vmess = tag equals "vmess" address (vmess_uuid/vmess_aead/ws/ws_http_upgrade/ws_
     handleWebsocket();
     handleShadowTLS();
 }
-vless = tag equals "vless" address (vless_username/vless_option/reality_option/ws/ws_http_upgrade/ws_path/ws_headers/grpc/grpc_service_name/grpc_mode/grpc_authority/xhttp/xhttp_headers/xhttp_option/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/fast_open/tfo/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
-    proxy.type = "vless";
+vless = tag equals vless_address (vless_username/vless_option/reality_option/ws/ws_http_upgrade/ws_path/ws_headers/grpc/grpc_service_name/grpc_mode/grpc_authority/xhttp/xhttp_headers/xhttp_option/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy["packet-encoding"] = "xudp";
     if (proxy["reality-opts"] && proxy["reality-opts"]["public-key"]) proxy.tls = true;
     if (xhttpEnabled) {
@@ -434,6 +458,7 @@ vless = tag equals "vless" address (vless_username/vless_option/reality_option/w
     }
     handleShadowTLS();
 }
+vless_address = "vless" address { proxy.type = "vless"; }
 trojan = tag equals "trojan" address (passwordk/ws/ws_http_upgrade/ws_path/ws_headers/tls/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/ip_version/underlying_proxy/tos/allow_other_interface/interface/test_url/test_udp/test_timeout/hybrid/no_error_alert/fast_open/tfo/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/block_quic/others)* {
     proxy.type = "trojan";
     handleWebsocket();
@@ -623,7 +648,7 @@ pipe_headers = & {
     peg$currPos = index;
     return $.headers.trim().length > 0;
 } { return parseHeaders($.headers, "|"); }
-ws_path = comma "ws-path" equals path:uri { obfs.path = path.trim().replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); }
+ws_path = comma "ws-path" equals path:(vless_quoted_value / value:uri { return stripQuotes(value); }) { obfs.path = path; }
 grpc = comma "grpc" equals flag:bool { if (flag) proxy.network = "grpc"; }
 grpc_service_name = comma "grpc-service-name" equals value:quoted_value { $set(proxy, "grpc-opts.grpc-service-name", value.trim()); }
 grpc_mode = comma "grpc-mode" equals value:quoted_value { $set(proxy, "grpc-opts._grpc-type", value.trim()); }
@@ -660,7 +685,7 @@ tfo = comma "tfo" equals flag:bool { proxy.tfo = flag; }
 ip_version = comma "ip-version" equals match:[^,]+ { proxy["ip-version"] = match.join(""); }
 section_name = comma "section-name" equals match:[^,]+ { proxy["section-name"] = match.join(""); }
 no_error_alert = comma "no-error-alert" equals match:[^,]+ { proxy["no-error-alert"] = match.join(""); }
-underlying_proxy = comma "underlying-proxy" equals match:[^,]+ { proxy["underlying-proxy"] = match.join(""); }
+underlying_proxy = comma "underlying-proxy" equals value:(vless_quoted_value / uri) { proxy["underlying-proxy"] = value; }
 download_bandwidth = comma "download-bandwidth" equals match:[^,]+ { proxy.down = match.join(""); }
 test_url = comma "test-url" equals match:[^,]+ { proxy["test-url"] = match.join(""); }
 test_udp = comma "test-udp" equals match:[^,]+ { proxy["test-udp"] = match.join(""); }
@@ -685,7 +710,13 @@ alpn = comma "alpn" equals match:quoted_value {
     if (values.length > 0) proxy.alpn = values;
 }
 h3 = comma "h3" equals flag:bool { if (flag) proxy.network = "h3"; }
-quoted_value = '"' match:$[^"]* '"' { return match; } / "'" match:$[^']* "'" { return match; } / match:$[^,]+ { return match; }
+quoted_value
+    = double_quoted_vless_value
+    / '"' match:$[^"]* '"' { return match; }
+    / "'" match:$[^']* "'" { return proxy.type === "vless" ? unescapeQuotedValue(match) : match; }
+    / uri
+vless_quoted_value = &{ return proxy.type === "vless"; } value:quoted_value { return value.trim(); }
+double_quoted_vless_value = &{ return proxy.type === "vless"; } '"' value:$(("\\" ('"' / "\\") / [^"])*) '"' &(_ ("," / !.)) { return unescapeQuotedValue(value); }
 uuidk = comma "uuid" equals match:[^,]+ { proxy.uuid = match.join(""); }
 salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); proxy.obfs = 'salamander'; }
 gecko_password = comma "gecko-password" equals match:[^,]+ { proxy['obfs-password'] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); proxy.obfs = 'gecko'; }

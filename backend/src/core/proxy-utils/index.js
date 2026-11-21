@@ -561,7 +561,10 @@ function produce(proxies, targetPlatform, type, opts = {}) {
         }
         if (proxy['disable-sni']) {
             if (
-                ['surge', 'surgemac', 'shadowrocket'].includes(normalizedTarget)
+                ['surge', 'surgemac', 'shadowrocket'].includes(
+                    normalizedTarget,
+                ) ||
+                (normalizedTarget === 'surfboard' && proxy.type === 'vless')
             ) {
                 proxy.sni = 'off';
             } else if (

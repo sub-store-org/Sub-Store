@@ -2491,6 +2491,183 @@ describe('Proxy text producers', function () {
         );
     });
 
+    it('round-trips Surfboard VLESS transport options', function () {
+        const prefix = `VLESS=vless,vless.example.com,443,username=${UUID}`;
+        for (const params of [
+            'tls=true,skip-cert-verify=false,sni=off,alpn="h2,http/1.1",udp-relay=false,block-quic=off,underlying-proxy=Relay',
+            'ws=true,ws-path=/ws,ws-headers=Host:cdn.example.com,tls=true',
+            'ws=true,ws-http-upgrade=true,ws-path=/upgrade,tls=true',
+            'grpc=true,grpc-service-name=/edge/tunnel,grpc-mode=multi,grpc-authority=grpc.example.com,tls=true',
+            'xhttp=true,xhttp-path="/edge?a=1,2",xhttp-host=cdn.example.com,xhttp-mode=packet-up,xhttp-padding-obfs=false,xhttp-xmux-keep-alive=0,xhttp-headers=X-Test:demo,tls=true',
+        ]) {
+            const line = `${prefix},${params}`;
+            const [proxy] = ProxyUtils.parse(line);
+            const output = produceExternal('Surfboard', proxy);
+
+            expect(output).to.include(line);
+            expectSubset(ProxyUtils.parse(output)[0], proxy);
+        }
+    });
+
+    it('produces Surfboard VLESS from a RAW REALITY share link', function () {
+        const key = 'A'.repeat(43);
+        const [proxy] = ProxyUtils.parse(
+            `vless://${UUID}@192.0.2.1:443?type=raw&security=reality&pbk=${key}&sid=0012&sni=sni.example.com&flow=xtls-rprx-vision#VLESS`,
+        );
+
+        expect(produceExternal('Surfboard', proxy)).to.equal(
+            `VLESS=vless,192.0.2.1,443,username=${UUID},flow=xtls-rprx-vision,reality-public-key=${key},reality-short-id=0012,sni=sni.example.com,udp-relay=true`,
+        );
+    });
+
+    describe('Surfboard VLESS export and reparse', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'VLESS',
+            server: 'vless.example.com',
+            port: 443,
+            uuid: UUID,
+        };
+
+        it('skips incompatible Surfboard VLESS security and transport combinations', function () {
+            const flow = 'xtls-rprx-vision';
+            const reality = {
+                'reality-opts': { 'public-key': 'A'.repeat(43) },
+            };
+            const unsupported = [
+                { network: 'grpc' },
+                { network: 'grpc', flow, ...reality },
+                { network: 'ws', ...reality },
+                { network: 'ws', tls: true, flow, encryption: 'none' },
+                { network: 'xhttp', flow, ...reality },
+                { network: 'tcp', flow },
+            ];
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Surfboard', [
+                    {
+                        ...proxy,
+                        name: 'Supported',
+                        network: 'grpc',
+                        ...reality,
+                    },
+                    ...unsupported.map((options) => ({ ...proxy, ...options })),
+                ]),
+            );
+
+            expect(result).to.have.length(1);
+            expect(result[0]).to.match(/^Supported=vless,/);
+            expect(errors).to.have.length(unsupported.length);
+        });
+
+        it('allows only documented Surfboard VLESS flow values', function () {
+            const supported = ['xtls-rprx-vision', 'xtls-rprx-vision-udp443'];
+            const { result, errors } = captureErrors(() =>
+                produceInternal(
+                    'Surfboard',
+                    [...supported, 'typo'].map((flow) => ({
+                        ...proxy,
+                        tls: true,
+                        flow,
+                    })),
+                ),
+            );
+
+            expect(
+                result.map((line) => line.match(/,flow=([^,]+)/)?.[1]),
+            ).to.deep.equal(supported);
+            expect(errors).to.have.length(1);
+            expect(errors[0]).to.include('Unsupported VLESS flow');
+        });
+
+        it('quotes Surfboard VLESS parameter values containing semicolons or whitespace', function () {
+            for (const path of ['/edge;a=1', '/edge?a=1 2']) {
+                const output = produceExternal('Surfboard', {
+                    ...proxy,
+                    network: 'xhttp',
+                    'xhttp-opts': { path },
+                    'underlying-proxy': 'Next Proxy',
+                });
+
+                expect(output).to.include(`,xhttp-path="${path}"`);
+                expect(output).to.include(',underlying-proxy="Next Proxy"');
+                expect(ProxyUtils.parse(output)[0]).to.have.property(
+                    'underlying-proxy',
+                    'Next Proxy',
+                );
+            }
+        });
+
+        it('skips Surfboard VLESS headers containing literal pipe separators', function () {
+            for (const network of ['ws', 'xhttp']) {
+                const { result, errors } = captureErrors(() =>
+                    produceInternal('Surfboard', {
+                        ...proxy,
+                        network,
+                        [`${network}-opts`]: {
+                            headers: { 'X-Token': 'alpha|beta' },
+                        },
+                    }),
+                );
+
+                expect(result).to.deep.equal([]);
+                expect(errors[0]).to.include('header');
+            }
+        });
+
+        it('reparses escaped Surfboard VLESS transport paths and headers', function () {
+            const path = String.raw`/edge?a=1,"2"\tail`;
+            const headers = {
+                'X-Test': String.raw`"a,b" \path`,
+                'X-Next': 'last',
+            };
+            for (const network of ['ws', 'xhttp']) {
+                const output = produceExternal('Surfboard', {
+                    ...proxy,
+                    network,
+                    tls: true,
+                    [`${network}-opts`]: { path, headers },
+                });
+
+                expect(output).to.include(
+                    String.raw`,${network}-path="/edge?a=1,\"2\"\\tail"`,
+                );
+                const [reparsed] = ProxyUtils.parse(output);
+                expectSubset(reparsed, {
+                    tls: true,
+                    [`${network}-opts`]: { path, headers },
+                });
+            }
+
+            const [reparsed] = ProxyUtils.parse(
+                String.raw`VLESS=vless,vless.example.com,443,username=${UUID},xhttp=true,xhttp-path="/\d"`,
+            );
+            expect(reparsed['xhttp-opts'].path).to.equal(String.raw`/\d`);
+
+            const legacyPath = '/edge with space\\';
+            const [legacy] = ProxyUtils.parse(
+                `VLESS=vless,vless.example.com,443,username=${UUID},xhttp=true,xhttp-path="${legacyPath}",xhttp-host="cdn.example.com"`,
+            );
+            expect(legacy['xhttp-opts'].path).to.equal(legacyPath);
+        });
+
+        it('decodes escapes in single-quoted Surfboard VLESS fields', function () {
+            const [parsed] = ProxyUtils.parse(
+                String.raw`VLESS=vless,vless.example.com,443,username=${UUID},xhttp=true,xhttp-path='/edge\\tail?value=\"one,two\"\d',xhttp-headers='X-Test:alpha\\beta \"demo\"\d|X-Next:last',tls=true`,
+            );
+
+            expectSubset(parsed, {
+                tls: true,
+                'xhttp-opts': {
+                    path: String.raw`/edge\tail?value="one,two"\d`,
+                    headers: {
+                        'X-Test': String.raw`alpha\beta "demo"\d`,
+                        'X-Next': 'last',
+                    },
+                },
+            });
+        });
+    });
+
     it('produces Surfboard Hysteria2 lines', function () {
         const output = produceExternal('Surfboard', {
             type: 'hysteria2',
@@ -2747,19 +2924,21 @@ describe('Proxy text producers', function () {
     });
 
     it('produces Surfboard Snell versions 1 through 5', function () {
+        const psk = String.raw`secret\\key`;
         for (const version of [1, 2, 3, 4, 5]) {
             const output = produceExternal('Surfboard', {
                 type: 'snell',
                 name: `Surfboard Snell ${version}`,
                 server: 'snell.example.com',
                 port: 443,
-                psk: 'secret',
+                psk,
                 version,
             });
 
             expect(output).to.equal(
-                `Surfboard Snell ${version}=snell,snell.example.com,443,version=${version},psk="secret"`,
+                `Surfboard Snell ${version}=snell,snell.example.com,443,version=${version},psk="${psk}"`,
             );
+            expect(ProxyUtils.parse(output)[0].psk).to.equal(psk);
         }
     });
 

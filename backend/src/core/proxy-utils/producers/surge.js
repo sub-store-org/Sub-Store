@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { Result, isPresent } from './utils';
+import { Result, isPresent, supportsVlessTransportSecurity } from './utils';
 import { isNotBlank, getIfNotBlank, isPlainObject } from '@/utils';
 import $ from '@/core/app';
 import { isMihomoEchEnabled, normalizeInlineEchConfigList } from '../ech-utils';
@@ -761,22 +761,13 @@ function appendVlessParams(result, proxy) {
     const network = proxy.network ?? 'tcp';
     const reality = proxy['reality-opts'];
     const tls = proxy.tls || reality;
-    const encrypted =
-        isNotBlank(proxy.encryption) && proxy.encryption.trim() !== 'none';
     if (!['tcp', 'raw', 'none', 'ws', 'grpc', 'xhttp'].includes(network)) {
         throw unsupported(`VLESS network ${network} is unsupported`);
     }
     if (proxy.encryption && /[,\r\n"']/.test(proxy.encryption)) {
         throw unsupported('VLESS encryption contains unsupported characters');
     }
-    const supportsVision =
-        network !== 'grpc' &&
-        (encrypted || (tls && network !== 'ws' && network !== 'xhttp'));
-    if (
-        (network === 'ws' && reality) ||
-        (network === 'grpc' && !tls) ||
-        (proxy.flow && !supportsVision)
-    ) {
+    if (!supportsVlessTransportSecurity(proxy)) {
         throw unsupported(
             'Unsupported VLESS transport, TLS or flow combination',
         );

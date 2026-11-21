@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import $ from '@/core/app';
 import YAML from '@/utils/yaml';
-import { isIPv4, isIPv6 } from '@/utils';
+import { isIPv4, isIPv6, isNotBlank } from '@/utils';
 import { normalizeClashYaml } from '@/core/proxy-utils/preprocessors';
 
 export class Result {
@@ -31,6 +31,19 @@ export class Result {
 export function isPresent(obj, attr) {
     const data = _.get(obj, attr);
     return typeof data !== 'undefined' && data !== null;
+}
+
+export function supportsVlessTransportSecurity(proxy) {
+    const { network, flow, encryption } = proxy;
+    const reality = proxy['reality-opts'];
+    const secure = Boolean(proxy.tls || reality);
+
+    if (network === 'ws' && reality) return false;
+    if (network === 'grpc') return secure && !flow;
+    if (!flow) return true;
+
+    const encrypted = isNotBlank(encryption) && encryption.trim() !== 'none';
+    return encrypted || (secure && !['ws', 'xhttp'].includes(network));
 }
 
 export function supportsTrustTunnelClientRandomAuth(proxy, targetPlatform) {

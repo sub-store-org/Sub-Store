@@ -1,5 +1,7 @@
-import { Result, isPresent } from './utils';
+import _ from 'lodash';
+import { Result, isPresent, supportsVlessTransportSecurity } from './utils';
 import { isNotBlank } from '@/utils';
+import { SURGE_XHTTP_FIELDS } from '../surge-xhttp';
 // import $ from '@/core/app';
 
 const targetPlatform = 'Surfboard';
@@ -27,7 +29,8 @@ function appendTlsProxyParams(result, proxy, enabled = true) {
 export default function Surfboard_Producer() {
     const produce = (proxy) => {
         if (
-            ['ws'].includes(proxy.network) &&
+            proxy.type !== 'vless' &&
+            proxy.network === 'ws' &&
             proxy['ws-opts']?.['v2ray-http-upgrade']
         ) {
             throw new Error(
@@ -41,6 +44,8 @@ export default function Surfboard_Producer() {
                 return trojan(proxy);
             case 'vmess':
                 return vmess(proxy);
+            case 'vless':
+                return vless(proxy);
             case 'http':
                 return http(proxy);
             case 'snell':
@@ -317,6 +322,111 @@ function vmess(proxy) {
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
     return result.toString();
+}
+
+function vless(proxy) {
+    if (!hasNonBlankValue(proxy.uuid)) {
+        throw new Error('VLESS username is missing');
+    }
+    if (
+        proxy.flow &&
+        !['xtls-rprx-vision', 'xtls-rprx-vision-udp443'].includes(proxy.flow)
+    ) {
+        throw new Error('Unsupported VLESS flow');
+    }
+    if (!supportsVlessTransportSecurity(proxy)) {
+        throw new Error('Unsupported VLESS transport, TLS or flow combination');
+    }
+
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=vless,${proxy.server},${proxy.port}`);
+    const append = (key, value) => {
+        if (value == null) return;
+        const text = String(value);
+        const param =
+            !text || /[,;"'\s\\]/.test(text)
+                ? `"${text.replace(/["\\]/g, '\\$&')}"`
+                : text;
+        result.append(`,${key}=${param}`);
+    };
+    append('username', proxy.uuid);
+
+    const network = proxy.network ?? 'tcp';
+    if (network === 'ws') {
+        const ws = proxy['ws-opts'];
+        append('ws', true);
+        if (ws?.['v2ray-http-upgrade']) append('ws-http-upgrade', true);
+        append('ws-path', ws?.path);
+        append(
+            'ws-headers',
+            formatVlessHeaders(Object.entries(ws?.headers ?? {})),
+        );
+    } else if (network === 'grpc') {
+        const grpc = proxy['grpc-opts'];
+        append('grpc', true);
+        append('grpc-service-name', grpc?.['grpc-service-name']);
+        append('grpc-mode', grpc?.['_grpc-type']);
+        append('grpc-authority', grpc?.['_grpc-authority']);
+    } else if (network === 'xhttp') {
+        const xhttp = proxy['xhttp-opts'];
+        if (xhttp?.['download-settings']) {
+            throw new Error('VLESS XHTTP download-settings are unsupported');
+        }
+
+        append('xhttp', true);
+        const headers = Object.entries(xhttp?.headers ?? {});
+        const host =
+            xhttp?.host ?? headers.find(([key]) => /^host$/i.test(key))?.[1];
+        for (const [key, field] of Object.entries(SURGE_XHTTP_FIELDS)) {
+            append(`xhttp-${key}`, key === 'host' ? host : _.get(xhttp, field));
+        }
+        append(
+            'xhttp-headers',
+            formatVlessHeaders(headers.filter(([key]) => !/^host$/i.test(key))),
+        );
+    } else if (!['tcp', 'raw', 'none'].includes(network)) {
+        throw new Error(`VLESS network ${network} is unsupported`);
+    }
+
+    if (proxy.flow) append('flow', proxy.flow);
+    if (proxy.encryption) append('encryption', proxy.encryption);
+    const reality = proxy['reality-opts'];
+    if (reality) {
+        append('reality-public-key', reality['public-key']);
+        append('reality-short-id', reality['short-id']);
+    } else {
+        append('tls', proxy.tls);
+        if (proxy.tls) {
+            append('server-cert-fingerprint-sha256', proxy['tls-fingerprint']);
+            append('server-cert-verify-name', proxy['name-cert-verify']);
+            append('skip-cert-verify', proxy['skip-cert-verify']);
+        }
+    }
+    if (proxy.tls || reality) {
+        append('sni', proxy.sni);
+        if (hasNonBlankValue(proxy.alpn)) append('alpn', proxy.alpn);
+    }
+    append('udp-relay', proxy.udp);
+    append('block-quic', proxy['block-quic']);
+    append('underlying-proxy', proxy['underlying-proxy']);
+
+    const line = result.toString();
+    if (/[\r\n]/.test(line))
+        throw new Error('VLESS proxy contains a line break');
+    return line;
+}
+
+function formatVlessHeaders(headers) {
+    const entries = [];
+    for (const [key, value] of headers) {
+        if (value == null) continue;
+        const text = String(value);
+        if (key.includes('|') || text.includes('|')) {
+            throw new Error('VLESS header names and values cannot contain "|"');
+        }
+        entries.push(`${key}:${text}`);
+    }
+    return entries.join('|') || undefined;
 }
 
 function http(proxy) {
