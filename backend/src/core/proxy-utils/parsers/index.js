@@ -2700,6 +2700,13 @@ function QX_AnyTLS() {
     return { name, test, parse };
 }
 
+function QX_Mieru() {
+    const name = 'QX Mieru Parser';
+    const test = (line) => /^mieru\s*=/.test(line);
+    const parse = (line) => getQXParser().parse(line);
+    return { name, test, parse };
+}
+
 function QX_Hysteria2() {
     const name = 'QX Hysteria2 Parser';
     const test = (line) => /^hysteria2\s*=/.test(line);
@@ -3243,6 +3250,7 @@ export default [
     QX_VMess(),
     QX_VLESS(),
     QX_AnyTLS(),
+    QX_Mieru(),
     QX_Hysteria2(),
     QX_Trojan(),
     QX_Http(),

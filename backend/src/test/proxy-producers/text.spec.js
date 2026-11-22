@@ -60,6 +60,7 @@ describe('Proxy text producers', function () {
             vmess: { cipher: 'none', uuid: UUID },
             vless: { uuid: UUID },
             anytls: { password: 'secret' },
+            mieru: { username: 'user', password: 'secret' },
             hysteria2: { password: 'secret' },
             http: {},
             socks5: {},
@@ -487,6 +488,59 @@ describe('Proxy text producers', function () {
         const output = ProxyUtils.produce([proxy], 'QX', 'external');
 
         expect(output).to.equal(raw);
+    });
+
+    it('round-trips Quantumult X mieru TCP, TLS and Reality nodes', function () {
+        const tcp = 'mieru=example.com:8964, username=name, password=pwd';
+        const tls =
+            'mieru=example.com:443, username=name, password=pwd, over-tls=true, tls-host=apple.com';
+        const udp = 'udp-relay=true, udp-over-tcp=true';
+        const proxies = ProxyUtils.parse(
+            [
+                `${tcp}, tag=mieru-plain`,
+                `${tcp}, udp-relay=true, tag=mieru-relay-only`,
+                `${tcp}, udp-over-tcp=true, tag=mieru-uot-only`,
+                `${tcp}, fast-open=false, ${udp}, tag=mieru-udp`,
+                `${tls}, tls-verification=true, udp-relay=true, udp-over-tcp=false, tag=mieru-tls`,
+                `${tls}, reality-base64-pubkey=pubkey, reality-hex-shortid=0123456789abcdef, ${udp}, tag=mieru-reality`,
+            ].join('\n'),
+        );
+
+        expect(proxies.map((proxy) => proxy.udp)).to.deep.equal([
+            false,
+            false,
+            false,
+            true,
+            false,
+            true,
+        ]);
+        expectSubset(proxies[5], {
+            type: 'mieru',
+            username: 'name',
+            password: 'pwd',
+            tls: true,
+            sni: 'apple.com',
+            'reality-opts': {
+                'public-key': 'pubkey',
+                'short-id': '0123456789abcdef',
+            },
+        });
+
+        const output = produceExternal('QX', proxies);
+        expect(output).to.include('udp-relay=true,udp-over-tcp=true');
+        expect(ProxyUtils.parse(output)).to.deep.equal(proxies);
+    });
+
+    it('rejects invalid Quantumult X mieru udp-over-tcp values', function () {
+        for (const value of ['sp.v1', 'sp.v2', '1', 'true=invalid', '']) {
+            const input = `mieru=example.com:8964,username=name,password=pwd,udp-relay=true,udp-over-tcp=${value},tag=mieru`;
+            const { result, errors } = captureErrors(() =>
+                ProxyUtils.parse(input),
+            );
+
+            expect(result, JSON.stringify(value)).to.be.empty;
+            expect(errors).to.have.length(1);
+        }
     });
 
     it('round-trips Quantumult X Hysteria 2 options', function () {

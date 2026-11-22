@@ -37,6 +37,7 @@ const grammars = String.raw`
 	const proxy = {};
     const obfs = {};
     const $ = {};
+    let mieruUdpOverTcp = false;
 
     function setQxHttpObfs(type) {
         // Preserve the original QX http-obfs token for round-trip output,
@@ -71,7 +72,7 @@ const grammars = String.raw`
     }
 }
 
-start = (trojan/shadowsocks/vmess/vless/anytls/hysteria2/http/socks5) {
+start = (trojan/shadowsocks/vmess/vless/anytls/mieru/hysteria2/http/socks5) {
     return proxy
 }
 
@@ -143,6 +144,12 @@ anytls = "anytls" equals address
     proxy.tls = true;
 }
 
+mieru = "mieru" equals address
+    (username/password/over_tls/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/tag/udp_relay/mieru_udp_over_tcp/fast_open/server_check_url/reality_base64_pubkey/reality_hex_shortid/others)* {
+    proxy.type = "mieru";
+    proxy.udp = proxy.udp === true && mieruUdpOverTcp;
+}
+
 hysteria2 = "hysteria2" equals address
     (password/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/udp_relay/download_bandwidth/salamander_password/port_hopping/port_hopping_interval/server_check_url/tag/others)* {
     proxy.type = "hysteria2";
@@ -207,6 +214,13 @@ aead = comma "aead" equals flag:bool { proxy.aead = flag; }
 udp_relay = comma "udp-relay" equals flag:bool { proxy.udp = flag; }
 udp_over_tcp = comma "udp-over-tcp" equals flag:bool { throw new Error("UDP over TCP is not supported"); }
 udp_over_tcp_new = comma "udp-over-tcp" equals param:$[^=,]+ { if (param === "sp.v1") { proxy["udp-over-tcp"] = true; proxy["udp-over-tcp-version"] = 1; } else if (param === "sp.v2") { proxy["udp-over-tcp"] = true; proxy["udp-over-tcp-version"] = 2; } else if (param === "true") { proxy["_ssr_python_uot"] = true; } else { throw new Error("Invalid value for udp-over-tcp"); } }
+mieru_udp_over_tcp = comma "udp-over-tcp" equals raw:$[^,]* {
+    const value = raw.trim();
+    if (value !== "true" && value !== "false") {
+        throw new Error("mieru udp-over-tcp must be true or false");
+    }
+    mieruUdpOverTcp = value === "true";
+}
 
 download_bandwidth = comma "download-bandwidth" equals value:$[^,]+ { proxy.down = value.trim(); }
 salamander_password = comma "salamander-password" equals value:$((!next_parameter .)+) {
