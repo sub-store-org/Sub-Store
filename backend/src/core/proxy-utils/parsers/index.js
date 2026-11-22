@@ -25,7 +25,11 @@ import {
     normalizeXhttpStrictPositiveRangeString,
     normalizeXhttpStrictPositiveRangeValue,
 } from '../xhttp-utils';
-import { extractPathQueryParam, getPathQueryParam } from '../transport-path';
+import {
+    extractPathQueryParam,
+    getPathQueryParam,
+    splitQueryPart,
+} from '../transport-path';
 import {
     buildMihomoEchOptsFromXrayFields,
     isSupportedXrayEchConfigList,
@@ -2191,6 +2195,74 @@ function URI_AnyTLS() {
     };
     return { name, test, parse };
 }
+function URI_Mieru() {
+    const name = 'URI Mieru Parser';
+    const test = (line) => /^mierus:\/\//i.test(line);
+    const parse = (line) => {
+        const { content, fragment } = splitURIFragment(line);
+        const match =
+            /^mierus:\/\/([^:@/?]+):([^@/?]+)@(\[[^\]]+\]|[^:/?@\s]+)\/?\?(.+)$/i.exec(
+                content,
+            );
+        if (!match) throw new Error('Invalid Mieru URI');
+        const [, username, password, server, query] = match;
+
+        const params = new Map();
+        for (const part of query.split('&')) {
+            const { key, value } = splitQueryPart(part);
+            if (!params.has(key)) params.set(key, []);
+            params.get(key).push(value);
+        }
+        const ports = params.get('port') || [];
+        const protocols = params.get('protocol') || [];
+        if (ports.length === 0 || ports.length !== protocols.length) {
+            throw new Error('Mieru URI requires matching ports and protocols');
+        }
+
+        const baseName = fragment || params.get('profile')?.[0] || server;
+        const proxy = {
+            type: 'mieru',
+            server,
+            username: decodeURIComponent(username),
+            password: decodeURIComponent(password),
+        };
+        // shortcut: 只映射 mihomo 支持的字段，需要保留完整 Mieru profile 时再透传 MTU。
+        for (const key of [
+            'multiplexing',
+            'handshake-mode',
+            'traffic-pattern',
+        ]) {
+            const value = params.get(key)?.[0];
+            if (value) proxy[key] = value;
+        }
+
+        return ports.map((port, index) => {
+            const transport = protocols[index];
+            const [, first, last = first] =
+                /^(\d+)(?:-(\d+))?$/.exec(port) || [];
+            const start = Number(first);
+            const end = Number(last);
+            if (
+                !(1 <= start && start <= end && end <= 65535) ||
+                (transport !== 'TCP' && transport !== 'UDP')
+            ) {
+                throw new Error('Invalid Mieru port binding');
+            }
+            const binding = {
+                ...proxy,
+                name:
+                    ports.length === 1
+                        ? baseName
+                        : `${baseName}:${port}/${transport}`,
+                transport,
+            };
+            if (port.includes('-')) binding['port-range'] = port;
+            else binding.port = start;
+            return binding;
+        });
+    };
+    return { name, test, parse };
+}
 function URI_Hysteria2() {
     const name = 'URI Hysteria2 Parser';
     const test = (line) => {
@@ -3216,6 +3288,7 @@ export default [
     URI_Hysteria2(),
     URI_Trojan(),
     URI_AnyTLS(),
+    URI_Mieru(),
     Clash_All(),
     Surge_Direct(),
     Surge_AnyTLS(),

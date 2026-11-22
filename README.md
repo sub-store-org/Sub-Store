@@ -95,7 +95,7 @@ Push URLs may contain secrets: treat `SUB_STORE_PUSH_SERVICE` as privileged conf
 
   example: `socks5+tls://user:pass@ip:port#name`
 
-- [x] URI(AnyTLS, SOCKS, SS, SSR, VMess, VLESS, Trojan, Hysteria, Hysteria 2, TUIC v5, WireGuard)
+- [x] URI(AnyTLS, SOCKS, SS, SSR, VMess, VLESS, Trojan, Hysteria, Hysteria 2, TUIC v5, WireGuard, mieru)
   > Please note, HTTP(s) does not have a standard URI format, so it is not supported. Please use other formats.
 - [x] Clash Proxies YAML
 - [x] Clash Proxy JSON/JSON5/YAML(single line)

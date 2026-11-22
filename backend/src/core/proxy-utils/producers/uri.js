@@ -1563,6 +1563,33 @@ export default function URI_Producer() {
                 //     proxy.name,
                 // )}`;
                 break;
+            case 'mieru': {
+                const port = proxy['port-range'] || proxy.port;
+                const username = encodeURIComponent(proxy.username ?? '');
+                const password = encodeURIComponent(proxy.password ?? '');
+                if (!proxy.server || !port || !username || !password) {
+                    throw new Error(
+                        'Mieru URI requires a server, port and credentials',
+                    );
+                }
+                const params = [
+                    `port=${encodeURIComponent(port)}`,
+                    `protocol=${encodeURIComponent(proxy.transport || 'TCP')}`,
+                    `profile=${encodeURIComponent(proxy.name || proxy.server)}`,
+                ];
+                for (const key of [
+                    'multiplexing',
+                    'handshake-mode',
+                    'traffic-pattern',
+                ]) {
+                    if (proxy[key])
+                        params.push(`${key}=${encodeURIComponent(proxy[key])}`);
+                }
+                result = `mierus://${username}:${password}@${
+                    proxy.server
+                }?${params.join('&')}`;
+                break;
+            }
             case 'wireguard':
                 let wireguardParams = [];
 

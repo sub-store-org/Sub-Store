@@ -7033,6 +7033,44 @@ describe('Proxy text producers', function () {
         });
     }
 
+    it('round-trips Mieru through URI and V2Ray exports', function () {
+        const proxies = [
+            {
+                type: 'mieru',
+                name: 'Mieru #1',
+                server: '2001:db8::1',
+                username: 'user:name',
+                password: 'p@ss:w/rd#1?',
+                'port-range': '8000-8002',
+                transport: 'UDP',
+                multiplexing: 'MULTIPLEXING_HIGH',
+                'handshake-mode': 'HANDSHAKE_NO_WAIT',
+                'traffic-pattern': 'CI+/AQ==',
+            },
+            {
+                type: 'mieru',
+                name: 'Mieru TCP',
+                server: 'example.com',
+                username: 'user',
+                password: 'pass',
+                port: 443,
+            },
+        ];
+        const uri = produceExternal('URI', proxies);
+        const v2ray = produceExternal('V2Ray', proxies);
+
+        expect(uri.split('\n')).to.deep.equal([
+            'mierus://user%3Aname:p%40ss%3Aw%2Frd%231%3F@[2001:db8::1]?port=8000-8002&protocol=UDP&profile=Mieru%20%231&multiplexing=MULTIPLEXING_HIGH&handshake-mode=HANDSHAKE_NO_WAIT&traffic-pattern=CI%2B%2FAQ%3D%3D',
+            'mierus://user:pass@example.com?port=443&protocol=TCP&profile=Mieru%20TCP',
+        ]);
+        expect(Base64.decode(v2ray)).to.equal(uri);
+
+        const parsed = ProxyUtils.parse(v2ray);
+        expect(parsed).to.have.length(2);
+        expectSubset(parsed[0], proxies[0]);
+        expectSubset(parsed[1], { ...proxies[1], transport: 'TCP' });
+    });
+
     it('keeps every h2 host in URI VMess links', function () {
         const output = produceExternal('URI', {
             type: 'vmess',

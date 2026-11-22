@@ -6,7 +6,7 @@ function decodeQueryComponent(value) {
     }
 }
 
-function splitQueryPart(part) {
+export function splitQueryPart(part) {
     const separatorIndex = part.indexOf('=');
     if (separatorIndex === -1) {
         return {
