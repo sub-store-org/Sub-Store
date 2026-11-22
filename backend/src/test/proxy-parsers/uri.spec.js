@@ -617,12 +617,14 @@ describe('Proxy URI parser coverage', function () {
             });
         });
 
-        it('rejects Hysteria2 salamander obfs without obfs-password', function () {
-            const proxies = parseAll(
-                'hy2://hy2-secret@hy2.example.com:443?obfs=salamander#Hy2%20Missing%20Password',
-            );
+        it('rejects Hysteria2 obfs modes without obfs-password', function () {
+            for (const obfs of ['salamander', 'gecko']) {
+                const proxies = parseAll(
+                    `hy2://hy2-secret@hy2.example.com:443?obfs=${obfs}#Hy2%20Missing%20Password`,
+                );
 
-            expect(proxies).to.deep.equal([]);
+                expect(proxies).to.be.empty;
+            }
         });
 
         it('parses TUIC URIs with colon-containing passwords and booleans', function () {

@@ -579,6 +579,77 @@ describe('Proxy text producers', function () {
         ).not.to.include(',port-hopping');
     });
 
+    it('round-trips Quantumult X Hysteria 2 Gecko obfuscation', function () {
+        const raw =
+            'hysteria2=example.com:443,password=pwd,gecko-password=obfskey,tls-host=apple.com,tls-verification=true,udp-relay=true,tag=hy2-05';
+        const [proxy] = ProxyUtils.parse(raw);
+
+        expectSubset(proxy, { obfs: 'gecko', 'obfs-password': 'obfskey' });
+        expect(produceExternal('QX', proxy)).to.equal(raw);
+    });
+
+    it('rejects short Quantumult X Hysteria 2 obfuscation passwords on import', function () {
+        for (const obfs of ['gecko', 'salamander']) {
+            const prefix = `hysteria2=example.com:443,password=pwd,${obfs}-password=`;
+            const input = ['x', '中', '', '中x']
+                .map((key) => `${prefix}${key},tag=hy2`)
+                .join('\n');
+            const { result } = captureErrors(() => ProxyUtils.parse(input));
+
+            expect(result).to.have.length(1);
+            expectSubset(result[0], { obfs, 'obfs-password': '中x' });
+        }
+    });
+
+    it('requires Quantumult X Hysteria 2 obfuscation passwords to be at least 4 bytes', function () {
+        for (const obfs of ['gecko', 'salamander']) {
+            const proxies = ['x', '中', '中x'].map((obfsPassword) => ({
+                type: 'hysteria2',
+                name: 'hy2',
+                server: 'example.com',
+                port: 443,
+                password: 'pwd',
+                obfs,
+                'obfs-password': obfsPassword,
+            }));
+            const { result, errors } = captureErrors(() =>
+                produceExternal('QX', proxies),
+            );
+
+            expect(result).to.equal(
+                `hysteria2=example.com:443,password=pwd,${obfs}-password=中x,tag=hy2`,
+            );
+            expect(errors).to.have.length(2);
+        }
+    });
+
+    it('rejects Quantumult X Hysteria 2 Gecko export without a key', function () {
+        const proxy = {
+            type: 'hysteria2',
+            name: 'hy2',
+            server: 'example.com',
+            port: 443,
+            password: 'pwd',
+            obfs: 'gecko',
+        };
+        const { result, errors } = captureErrors(() =>
+            ProxyUtils.produce([proxy], 'QX', 'external'),
+        );
+
+        expect(result).to.equal('');
+        expect(errors[0]).to.include('requires gecko-password');
+    });
+
+    it('rejects combined Gecko and Salamander in Quantumult X Hysteria 2', function () {
+        const { result } = captureErrors(() =>
+            ProxyUtils.parse(
+                'hysteria2=example.com:443,password=pwd,salamander-password=obfskey,gecko-password=obfskey,udp-relay=true,tag=hy2',
+            ),
+        );
+
+        expect(result).to.be.empty;
+    });
+
     it('limits Quantumult X Hysteria 2 port hopping intervals to 5–3600 seconds', function () {
         const prefix =
             'hysteria2=example.com:443,password=pwd,port-hopping=2000-3000';

@@ -151,7 +151,7 @@ mieru = "mieru" equals address
 }
 
 hysteria2 = "hysteria2" equals address
-    (password/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/udp_relay/download_bandwidth/salamander_password/port_hopping/port_hopping_interval/server_check_url/tag/others)* {
+    (password/tls_host/tls_pubkey_sha256/tls_alpn/tls_no_session_ticket/tls_no_session_reuse/tls_fingerprint/tls_verification/udp_relay/download_bandwidth/hysteria2_obfs_password/port_hopping/port_hopping_interval/server_check_url/tag/others)* {
     proxy.type = "hysteria2";
     proxy.tls = true;
 }
@@ -223,9 +223,16 @@ mieru_udp_over_tcp = comma "udp-over-tcp" equals raw:$[^,]* {
 }
 
 download_bandwidth = comma "download-bandwidth" equals value:$[^,]+ { proxy.down = value.trim(); }
-salamander_password = comma "salamander-password" equals value:$((!next_parameter .)+) {
-    proxy.obfs = "salamander";
-    proxy["obfs-password"] = value.trim();
+hysteria2_obfs_password = comma type:("salamander"/"gecko") "-password" equals value:$((!next_parameter .)*) {
+    if (proxy.obfs && proxy.obfs !== type) {
+        throw new Error("QX Hysteria 2 cannot combine salamander-password and gecko-password");
+    }
+    const password = value.trim();
+    if (options.byteLength(password, "utf8") < 4) {
+        throw new Error("QX Hysteria 2 " + type + "-password must be at least 4 bytes");
+    }
+    proxy.obfs = type;
+    proxy["obfs-password"] = password;
 }
 port_hopping = comma "port-hopping" equals ports:$(hopping_port (comma hopping_port)*) {
     proxy.ports = ports.replace(/\s/g, "");
@@ -318,7 +325,10 @@ export default function getParser() {
         const generated = peggy.generate(grammars);
         parser = {
             parse(input, options) {
-                const proxy = generated.parse(input, options);
+                const proxy = generated.parse(input, {
+                    ...options,
+                    byteLength: Buffer.byteLength,
+                });
                 const alpn = decodeQxAlpn(proxy['tls-alpn']);
                 if (alpn) proxy.alpn = alpn;
                 return proxy;

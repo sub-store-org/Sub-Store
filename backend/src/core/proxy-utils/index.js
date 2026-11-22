@@ -1093,7 +1093,7 @@ function lastParse(proxy) {
     if (
         ['hysteria2'].includes(proxy.type) &&
         proxy.obfs &&
-        !['salamander'].includes(proxy.obfs) &&
+        !['salamander', 'gecko'].includes(proxy.obfs) &&
         !proxy['obfs-password']
     ) {
         proxy['obfs-password'] = proxy.obfs;

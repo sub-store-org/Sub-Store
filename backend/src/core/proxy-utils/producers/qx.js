@@ -618,8 +618,11 @@ function anytls(proxy) {
 }
 
 function hysteria2(proxy) {
-    if (proxy.obfs && proxy.obfs !== 'salamander') {
-        throw new Error('QX Hysteria 2 only supports Salamander obfuscation');
+    const obfs = proxy.obfs || 'salamander';
+    if (!['salamander', 'gecko'].includes(obfs)) {
+        throw new Error(
+            'QX Hysteria 2 only supports Salamander and Gecko obfuscation',
+        );
     }
 
     const result = new Result(proxy);
@@ -632,10 +635,19 @@ function hysteria2(proxy) {
     if (Number.isInteger(interval) && interval >= 5 && interval <= 3600) {
         result.append(`,port-hopping-interval=${interval}`);
     }
-    result.appendIfPresent(
-        `,salamander-password=${proxy['obfs-password']}`,
-        'obfs-password',
-    );
+    if (isPresent(proxy, 'obfs-password')) {
+        const obfsPassword = String(proxy['obfs-password']);
+        if (Buffer.byteLength(obfsPassword, 'utf8') < 4) {
+            throw new Error(
+                `QX Hysteria 2 ${obfs}-password must be at least 4 bytes`,
+            );
+        }
+        result.append(`,${obfs}-password=${obfsPassword}`);
+    } else if (obfs === 'gecko') {
+        throw new Error(
+            'QX Hysteria 2 Gecko obfuscation requires gecko-password',
+        );
+    }
     result.appendIfPresent(`,tls-host=${proxy.sni}`, 'sni');
     result.appendIfPresent(
         `,tls-pubkey-sha256=${proxy['tls-pubkey-sha256']}`,
