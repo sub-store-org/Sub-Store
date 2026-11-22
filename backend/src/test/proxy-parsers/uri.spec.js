@@ -474,6 +474,23 @@ describe('Proxy URI parser coverage', function () {
             expect(proxies[1]).not.to.have.property('port');
         });
 
+        it('normalizes Mieru protocols and falls back to transport', function () {
+            const proxies = parseAll(
+                [
+                    'mierus://user:pass@example.com?udp=1&transport=tcp&port=44147&profile=🇰🇷kr_mieru&user-hint-is-mandatory=1',
+                    'mierus://user:pass@example.com?port=443&transport=tcp&protocol=udp&profile=Explicit',
+                ].join('\n'),
+            );
+
+            expect(proxies).to.have.length(2);
+            expectSubset(proxies[0], {
+                name: '🇰🇷kr_mieru',
+                port: 44147,
+                transport: 'TCP',
+            });
+            expectSubset(proxies[1], { transport: 'UDP' });
+        });
+
         it('rejects an entire Mieru link if any port binding is invalid', function () {
             const before =
                 'mierus://user:pass@example.com?port=1&protocol=TCP&profile=First';
