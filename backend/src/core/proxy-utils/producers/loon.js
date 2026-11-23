@@ -1189,7 +1189,11 @@ function hysteria2(proxy) {
         'down',
     );
 
-    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
+    if ([true, 'true', 'on'].includes(proxy.ecn)) {
+        result.append(',ecn=true');
+    } else if ([false, 'false', 'off'].includes(proxy.ecn)) {
+        result.append(',ecn=false');
+    }
     const ip_version = ipVersions[proxy['ip-version']] || proxy['ip-version'];
     result.appendIfPresent(`,ip-mode=${ip_version}`, 'ip-version');
 

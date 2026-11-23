@@ -390,6 +390,7 @@ function shadowsocks(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -448,6 +449,7 @@ function trojan(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -498,6 +500,7 @@ function anytls(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -567,6 +570,7 @@ function trusttunnel(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -681,6 +685,7 @@ function h2Connect(proxy) {
     appendShadowTLS(result, proxy);
 
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
     result.appendIfPresent(
         `,underlying-proxy=${proxy['underlying-proxy']}`,
         'underlying-proxy',
@@ -747,6 +752,7 @@ function v2ray(proxy, includeUnsupportedProxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -898,6 +904,7 @@ function ssh(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -952,6 +959,7 @@ function http(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -1057,6 +1065,7 @@ function socks5(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -1153,6 +1162,7 @@ function snell(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -1296,6 +1306,7 @@ function wireguard(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(
@@ -1385,6 +1396,7 @@ function wireguard_surge(proxy) {
 
     // block-quic
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
+    result.appendIfPresent(`,ecn=${proxy.ecn}`, 'ecn');
 
     // underlying-proxy
     result.appendIfPresent(

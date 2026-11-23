@@ -38,6 +38,68 @@ function captureErrors(fn) {
 }
 
 describe('Proxy text producers', function () {
+    it('round-trips Surge ECN modes and converts them to Loon booleans', function () {
+        for (const [input, mode, loonEcn] of [
+            ['auto', 'auto', undefined],
+            ['on', 'on', true],
+            ['off', 'off', false],
+            ['true', true, true],
+            ['false', false, false],
+        ]) {
+            const proxies = ProxyUtils.parse(
+                `TCP=ss,example.com,443,encrypt-method=aes-128-gcm,password=secret,ecn=${input} ,tfo=true\n` +
+                    `QUIC=hysteria2,example.com,443,password=secret,ecn=${input}`,
+            );
+            expect(proxies.map((proxy) => proxy.ecn)).to.deep.equal([
+                mode,
+                mode,
+            ]);
+            expect(proxies[0].tfo).to.equal(true);
+
+            for (const target of ['Surge', 'SurgeMac']) {
+                const output = produceExternal(target, proxies);
+                expect(
+                    ProxyUtils.parse(output).map((proxy) => proxy.ecn),
+                ).to.deep.equal([mode, mode]);
+            }
+
+            const [tcp, quic] = produceExternal('Loon', proxies).split('\n');
+            expect(tcp).not.to.include(',ecn=');
+            if (loonEcn === undefined) {
+                expect(quic).not.to.include(',ecn=');
+            } else {
+                expect(quic).to.include(`,ecn=${loonEcn}`);
+            }
+            const mihomo = produceInternal('Mihomo', proxies);
+            expect(mihomo).to.have.lengthOf(2);
+            for (const proxy of mihomo) {
+                expect(proxy).not.to.have.property('ecn');
+            }
+        }
+    });
+
+    it('applies ECN quick settings to TCP proxies and accepts saved toggles', async function () {
+        const raw =
+            'TCP=ss,example.com,443,encrypt-method=aes-128-gcm,password=secret,ecn=off';
+        for (const [ecn, expected] of [
+            ['DEFAULT', 'off'],
+            ['auto', 'auto'],
+            ['on', 'on'],
+            ['off', 'off'],
+            ['ENABLED', true],
+            ['DISABLED', false],
+        ]) {
+            const [proxy] = await ProxyUtils.process(
+                ProxyUtils.parse(raw),
+                [{ type: 'Quick Setting Operator', args: { ecn } }],
+                'Surge',
+            );
+            expect(produceExternal('Surge', proxy)).to.include(
+                `,ecn=${expected}`,
+            );
+        }
+    });
+
     it('decodes and preserves Quantumult X tls-alpn forms', function () {
         for (const tlsAlpn of [
             '02683208687474702f312e31',

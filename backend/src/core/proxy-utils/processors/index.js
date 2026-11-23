@@ -144,6 +144,7 @@ function QuickSettingOperator(args) {
                 );
             }
 
+            const ecn = getSwitchMode(args.ecn, get(args.ecn));
             return proxies.map((proxy) => {
                 proxy.udp = get(args.udp, proxy.udp);
                 proxy.tfo = get(args.tfo, proxy.tfo);
@@ -158,10 +159,14 @@ function QuickSettingOperator(args) {
                 if (['snell', 'anytls', 'trusttunnel'].includes(proxy.type)) {
                     proxy.reuse = get(args.reuse, proxy.reuse);
                 }
-                if (['tuic', 'hysteria2'].includes(proxy.type)) {
-                    proxy.ecn = get(args.ecn, proxy.ecn);
+                if (
+                    ecn !== undefined &&
+                    proxy.type !== 'direct' &&
+                    proxy.type !== 'external'
+                ) {
+                    proxy.ecn = ecn;
                 }
-                proxy['block-quic'] = getBlockQuic(
+                proxy['block-quic'] = getSwitchMode(
                     args['block-quic'],
                     proxy['block-quic'],
                 );
@@ -185,7 +190,7 @@ function QuickSettingOperator(args) {
         }
     }
 
-    function getBlockQuic(value, defaultValue) {
+    function getSwitchMode(value, defaultValue) {
         switch (value) {
             case 'auto':
             case 'on':

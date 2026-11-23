@@ -215,6 +215,14 @@ export function getWireGuardAddressWithCIDR(proxy = {}, family = 'ipv4') {
 }
 
 export function produceProxyListOutput(list, type, opts = {}) {
+    // These formats have no per-proxy ECN setting.
+    list = list.map((proxy) => {
+        if (!Object.hasOwn(proxy, 'ecn')) return proxy;
+        const config = { ...proxy };
+        delete config.ecn;
+        return config;
+    });
+
     if (type === 'internal') return list;
 
     if (opts.prettyYaml || opts['pretty-yaml']) {
