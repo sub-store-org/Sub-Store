@@ -1,10 +1,13 @@
 /* eslint-disable no-case-declarations */
 const targetPlatform = 'Loon';
+import { Buffer } from 'buffer';
+import _ from 'lodash';
 import { isPresent, Result } from './utils';
-import { isIPv4, isIPv6, isPlainObject } from '@/utils';
+import { getIfNotBlank, isIPv4, isIPv6, isPlainObject } from '@/utils';
 import $ from '@/core/app';
-import { LOON_XHTTP_FIELDS } from '../loon-xhttp';
+import { LOON_XHTTP_FIELDS, validateLoonXhttpXmux } from '../loon-xhttp';
 import { formatLoonVmessSecurity } from '../vmess-security';
+import { normalizeXhttpIntegerValue } from '../xhttp-utils';
 
 const ipVersions = {
     dual: 'dual',
@@ -47,6 +50,8 @@ export default function Loon_Producer() {
                 return tailscale(proxy);
             case 'hysteria2':
                 return hysteria2(proxy);
+            case 'mieru':
+                return mieru(proxy);
         }
         if (proxy.type === 'anytls') {
             if (proxy.network && !['tcp'].includes(proxy.network)) {
@@ -77,8 +82,8 @@ function appendTlsProfile(result, proxy) {
     if (tlsProfile) result.append(`,tls-profile=${tlsProfile}`);
 }
 
-function appendAlpn(result, proxy) {
-    const alpn = getLoonAlpn(proxy);
+function appendAlpn(result, proxy, isXhttp = false) {
+    const alpn = isXhttp ? getLoonXhttpAlpn(proxy) : getLoonAlpn(proxy);
     if (alpn) result.append(`,alpn="${alpn}"`);
 }
 
@@ -92,33 +97,107 @@ function formatLoonValue(value, quoted = false) {
 
 function appendXhttp(result, proxy) {
     const xhttp = proxy['xhttp-opts'];
-    if (xhttp?.['download-settings']) {
-        throw new Error('Loon XHTTP does not support download-settings');
+    const download = xhttp?.['download-settings'];
+    if (download?.plugin || download?.['shadow-tls-opts']) {
+        throw new Error('Loon XHTTP download-settings do not support plugins');
+    }
+    validateLoonXhttpXmux(xhttp);
+
+    let options = xhttp;
+    if (download) {
+        const server =
+            getIfNotBlank(download.server) ?? getIfNotBlank(proxy.server);
+        if (server == null) {
+            throw new Error(
+                'Loon xhttp-download-server requires a server address',
+            );
+        }
+
+        const port = normalizeXhttpIntegerValue(download.port ?? proxy.port);
+        if (port == null || port < 1 || port > 65535) {
+            throw new Error(
+                'Loon xhttp-download-port must be an integer from 1 to 65535',
+            );
+        }
+
+        const reality = download['reality-opts'];
+        const hasReality = Boolean(getIfNotBlank(reality?.['public-key']));
+        if (reality && !hasReality) {
+            throw new Error(
+                'Loon XHTTP download REALITY requires a non-blank public-key',
+            );
+        }
+        if (hasReality && [false, 'false'].includes(download.tls)) {
+            throw new Error(
+                'Loon XHTTP download REALITY conflicts with xhttp-download-over-tls=false',
+            );
+        }
+
+        const alpn = getLoonXhttpAlpn(download, true);
+
+        const fingerprint = download.fingerprint ?? download['tls-fingerprint'];
+        const pubkeyFingerprint = download['tls-pubkey-sha256'];
+        const skipCertVerify = download['skip-cert-verify'];
+        if (
+            hasReality &&
+            (fingerprint ||
+                pubkeyFingerprint ||
+                [true, 'true'].includes(skipCertVerify))
+        ) {
+            throw new Error(
+                'Loon XHTTP download REALITY conflicts with skip-cert-verify=true or TLS certificate fingerprints',
+            );
+        }
+
+        options = {
+            ...xhttp,
+            'download-settings': {
+                ...download,
+                server: server.trim(),
+                port,
+                host: getXhttpHost(download),
+                alpn: alpn || undefined,
+                servername: download.servername ?? download.sni,
+                fingerprint: hasReality ? undefined : fingerprint,
+                'tls-pubkey-sha256': hasReality ? undefined : pubkeyFingerprint,
+                'skip-cert-verify': hasReality ? undefined : skipCertVerify,
+                _loon_tls_profile: getLoonTlsProfile(download),
+            },
+        };
     }
 
-    const headers = isPlainObject(xhttp?.headers)
-        ? Object.entries(xhttp.headers)
-        : [];
-    const host =
-        xhttp?.host ?? headers.find(([key]) => /^host$/i.test(key))?.[1];
     result.append(',transport=xhttp');
     for (const [key, value] of [
         ['path', xhttp?.path],
-        ['host', host],
+        ['host', getXhttpHost(xhttp)],
     ]) {
         if (value != null) result.append(`,${key}=${formatLoonValue(value)}`);
     }
     for (const [key, field] of Object.entries(LOON_XHTTP_FIELDS)) {
-        const value = xhttp?.[field];
+        const value = _.get(options, field);
         if (value != null)
             result.append(`,xhttp-${key}=${formatLoonValue(value)}`);
     }
-    for (const [key, value] of headers) {
-        if (!/^host$/i.test(key) && value != null) {
+    for (const [option, headers] of [
+        ['xhttp-header', xhttp?.headers],
+        ['xhttp-download-header', download?.headers],
+    ]) {
+        if (!isPlainObject(headers)) continue;
+        for (const [key, value] of Object.entries(headers)) {
+            if (/^host$/i.test(key) || value == null) continue;
             result.append(
-                `,xhttp-header=${formatLoonValue(`${key}: ${value}`, true)}`,
+                `,${option}=${formatLoonValue(`${key}: ${value}`, true)}`,
             );
         }
+    }
+}
+
+function getXhttpHost(opts) {
+    if (opts?.host != null) return opts.host;
+    if (isPlainObject(opts?.headers)) {
+        return Object.entries(opts.headers).find(([key]) =>
+            /^host$/i.test(key),
+        )?.[1];
     }
 }
 
@@ -175,6 +254,34 @@ function getLoonAlpn(proxy) {
         .map((item) => `${item}`.trim())
         .filter((item) => item !== '')
         .join(',');
+}
+
+function getLoonXhttpAlpn(endpoint, isDownload = false) {
+    const alpn = getLoonAlpn(endpoint);
+    if (!alpn) return alpn;
+    if (alpn.includes(',')) {
+        const scope = isDownload ? ' download' : '';
+        throw new Error(`Loon XHTTP${scope} supports only a single ALPN`);
+    }
+
+    const hasReality = Boolean(endpoint['reality-opts']?.['public-key']);
+    const hasTls =
+        (!isDownload && endpoint.type === 'trojan') ||
+        [true, 'true'].includes(endpoint.tls);
+    const allowed = hasReality
+        ? ['h2']
+        : hasTls
+        ? ['http/1.1', 'h2', 'h3']
+        : ['http/1.1'];
+    if (!allowed.includes(alpn)) {
+        const field = isDownload ? 'xhttp-download-alpn' : 'XHTTP alpn';
+        throw new Error(
+            `Loon ${field} must be ${allowed.join(
+                ' or ',
+            )} for the configured security`,
+        );
+    }
+    return alpn;
 }
 
 function getLoonTlsProfile(proxy) {
@@ -413,7 +520,7 @@ function trojan(proxy) {
         'skip-cert-verify',
     );
     appendTlsProfile(result, proxy);
-    appendAlpn(result, proxy);
+    appendAlpn(result, proxy, isXhttp);
 
     if (isReality) {
         appendReality(result, proxy);
@@ -569,7 +676,7 @@ function vmess(proxy) {
         'skip-cert-verify',
     );
     if (proxy.tls || isReality) appendTlsProfile(result, proxy);
-    if (proxy.tls || isReality || isXhttp) appendAlpn(result, proxy);
+    if (proxy.tls || isReality || isXhttp) appendAlpn(result, proxy, isXhttp);
 
     if (isReality) {
         appendReality(result, proxy);
@@ -617,21 +724,76 @@ function vmess(proxy) {
     return result.toString();
 }
 
-function vless(proxy) {
-    if (proxy.encryption && proxy.encryption !== 'none')
-        throw new Error(`VLESS encryption is not supported`);
-    let isXtls = false;
-    const isReality = !!proxy['reality-opts'];
-    const isXhttp = proxy.network === 'xhttp';
+function appendVlessEncryption(result, encryption) {
+    if (!encryption || encryption === 'none') return;
 
-    if (isXhttp && proxy.flow)
-        throw new Error('VLESS XHTTP does not support flow');
-    if (!isXhttp && typeof proxy.flow !== 'undefined') {
-        if (['xtls-rprx-vision'].includes(proxy.flow)) {
-            isXtls = true;
-        } else {
-            throw new Error(`VLESS flow(${proxy.flow}) is not supported`);
+    const [method, mode, rtt, ...settings] = encryption.split('.');
+    const paddingGroup = /^(-?\d+)-(-?\d+)-(-?\d+)$/;
+    const keyIndex = settings.findIndex((part) => !paddingGroup.test(part));
+    if (
+        method !== 'mlkem768x25519plus' ||
+        !['native', 'xorpub', 'random'].includes(mode) ||
+        !['0rtt', '1rtt'].includes(rtt) ||
+        !settings[keyIndex]
+    ) {
+        throw new Error('Unsupported VLESS encryption format');
+    }
+
+    const padding = settings.slice(0, keyIndex);
+    for (const [index, group] of padding.entries()) {
+        const [, probability, min, max] = paddingGroup.exec(group).map(Number);
+        if (index === 0 && (probability !== 100 || min < 35 || max < 35)) {
+            throw new Error(
+                'Loon VLESS encryption-padding first group requires probability 100 and lengths of at least 35',
+            );
         }
+        if (
+            probability < 0 ||
+            probability > 100 ||
+            min < 0 ||
+            min > max ||
+            !Number.isSafeInteger(max)
+        ) {
+            throw new Error(
+                'Loon VLESS encryption-padding requires probabilities from 0 to 100 and ordered non-negative integer bounds',
+            );
+        }
+    }
+
+    const publicKeys = settings.slice(keyIndex).join('.');
+    result.append(`,encryption-mode=${mode},encryption-rtt=${rtt}`);
+    result.append(
+        `,encryption-public-keys=${formatLoonValue(publicKeys, true)}`,
+    );
+    if (padding.length) {
+        result.append(
+            `,encryption-padding=${formatLoonValue(padding.join('.'))}`,
+        );
+    }
+}
+
+function vless(proxy) {
+    const isXtls = !!proxy.flow;
+    const reality = proxy['reality-opts'];
+    const isReality = Boolean(getIfNotBlank(reality?.['public-key']));
+    const isXhttp = proxy.network === 'xhttp';
+    const isTcp = (proxy.network ?? 'tcp') === 'tcp';
+    const isSecure = isReality || [true, 'true'].includes(proxy.tls);
+    const encryptionEnabled = proxy.encryption && proxy.encryption !== 'none';
+
+    if (reality && !isReality) {
+        throw new Error('Loon VLESS REALITY requires a non-blank public-key');
+    }
+    if (
+        isXtls &&
+        !['xtls-rprx-vision', 'xtls-rprx-vision-udp443'].includes(proxy.flow)
+    ) {
+        throw new Error(`VLESS flow(${proxy.flow}) is not supported`);
+    }
+    if (isXtls && !encryptionEnabled && (!isTcp || !isSecure)) {
+        throw new Error(
+            'Loon VLESS Vision without encryption requires TCP with TLS or REALITY',
+        );
     }
 
     const result = new Result(proxy);
@@ -683,11 +845,11 @@ function vless(proxy) {
         'skip-cert-verify',
     );
     if (proxy.tls || isReality || isXtls) appendTlsProfile(result, proxy);
-    if (proxy.tls || isReality || isXtls || isXhttp) appendAlpn(result, proxy);
+    if (proxy.tls || isReality || isXtls || isXhttp)
+        appendAlpn(result, proxy, isXhttp);
 
-    if (isXtls) {
-        result.appendIfPresent(`,flow=${proxy.flow}`, 'flow');
-    }
+    appendVlessEncryption(result, proxy.encryption);
+    if (isXtls) result.append(`,flow=${proxy.flow}`);
     if (isReality) {
         appendReality(result, proxy);
     } else {
@@ -912,6 +1074,56 @@ function wireguard(proxy) {
         result.append(',block-quic=false');
     }
 
+    return result.toString();
+}
+
+function mieru(proxy) {
+    if (proxy.transport && String(proxy.transport).toUpperCase() !== 'TCP') {
+        throw new Error('Loon Mieru requires TCP transport');
+    }
+    if (proxy.tls || proxy['reality-opts']) {
+        throw new Error('Loon Mieru does not support TLS or REALITY');
+    }
+    const server = getIfNotBlank(proxy.server)?.trim();
+    if (!server) throw new Error('Loon Mieru requires a server');
+
+    const portText = String(proxy.port ?? '').trim();
+    const port = Number(portText);
+    if (!/^\d+$/.test(portText) || port < 1 || port > 65535) {
+        throw new Error('Loon Mieru port must be an integer from 1 to 65535');
+    }
+
+    const credentials = [proxy.username, proxy.password].map((value) =>
+        String(value ?? ''),
+    );
+    if (
+        credentials.some(
+            (value) => !value || Buffer.byteLength(value, 'utf8') > 64,
+        )
+    ) {
+        throw new Error(
+            'Loon Mieru username and password must each be 1-64 UTF-8 bytes',
+        );
+    }
+
+    const result = new Result(proxy);
+    const address = isIPv6(server) ? `[${server}]` : server;
+    const [username, password] = credentials.map((value) =>
+        formatLoonValue(value, true),
+    );
+    result.append(
+        `${proxy.name}=mieru,${address},${port},${username},${password}`,
+    );
+    if (proxy.udp) result.append(',udp=true');
+
+    const blockQuic = proxy['block-quic'];
+    if (['on', 'off', true, false].includes(blockQuic)) {
+        result.append(
+            `,block-quic=${blockQuic === 'on' || blockQuic === true}`,
+        );
+    }
+    const ipVersion = ipVersions[proxy['ip-version']] || proxy['ip-version'];
+    result.appendIfPresent(`,ip-mode=${ipVersion}`, 'ip-version');
     return result.toString();
 }
 

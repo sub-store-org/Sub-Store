@@ -2910,6 +2910,13 @@ function Loon_Tailscale() {
     return { name, test, parse };
 }
 
+function Loon_Mieru() {
+    const name = 'Loon Mieru Parser';
+    const test = (line) => /^[^=,]*=\s*mieru\s*,/i.test(line);
+    const parse = (line) => getLoonParser().parse(line);
+    return { name, test, parse };
+}
+
 function Loon_WireGuard() {
     const name = 'Loon WireGuard Parser';
     const test = (line) => {
@@ -3319,6 +3326,7 @@ export default [
     Loon_Socks5(),
     Loon_WireGuard(),
     Loon_Tailscale(),
+    Loon_Mieru(),
     QX_SS(),
     QX_SSR(),
     QX_VMess(),

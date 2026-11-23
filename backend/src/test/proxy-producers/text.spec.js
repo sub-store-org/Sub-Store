@@ -4,6 +4,7 @@ import { describe, it } from 'mocha';
 
 import $ from '@/core/app';
 import { ProxyUtils } from '@/core/proxy-utils';
+import Loon_Producer from '@/core/proxy-utils/producers/loon';
 import QX_Producer from '@/core/proxy-utils/producers/qx';
 import {
     expectSubset,
@@ -841,7 +842,7 @@ describe('Proxy text producers', function () {
     it('round-trips Loon XHTTP for VLESS, VMess AEAD, and Trojan', function () {
         const input = [
             `VLESS=vless,example.com,80,"${UUID}",transport=xhttp,path="/xhttp?route=a,b",host=cdn.example.com,over-tls=false,alpn=http/1.1,xhttp-mode=packet-up,xhttp-max-post-bytes=0,xhttp-min-post-interval-ms=30-60,xhttp-padding-obfs-mode=false,xhttp-session-id-table=Base62,xhttp-session-id-length=16-32,xhttp-header="X-Trace: a, b",xhttp-header="X-Origin: https://example.org",udp=true`,
-            `VMess=vmess,example.com,443,aes-128-gcm,"${UUID}",transport=xhttp,path=/xhttp?username=test,over-tls=true,alpn=h2,xhttp-mode=stream-up,xhttp-no-grpc-header=true,alterId=0`,
+            `VMess=vmess,example.com,443,aes-128-gcm,"${UUID}",transport=xhttp,path=/xhttp?username=test,over-tls=true,alpn=h3,xhttp-mode=stream-up,xhttp-no-grpc-header=true,alterId=0`,
             'Trojan=trojan,example.com,443,"dGVzdA==",transport=xhttp,sni=cdn.example.com,public-key=pubkey,short-id="",alpn=h2,xhttp-mode=stream-one',
         ].join('\n');
         const proxies = ProxyUtils.parse(input);
@@ -874,7 +875,7 @@ describe('Proxy text producers', function () {
         expectSubset(vmess, {
             alterId: 0,
             tls: true,
-            alpn: ['h2'],
+            alpn: ['h3'],
             'xhttp-opts': { mode: 'stream-up', 'no-grpc-header': true },
         });
         expectSubset(trojan, {
@@ -891,6 +892,537 @@ describe('Proxy text producers', function () {
         );
         expect(output).not.to.include(',block-quic=');
         expect(ProxyUtils.parse(output)).to.deep.equal(proxies);
+    });
+
+    it('round-trips Loon XHTTP XMUX and independent download options', function () {
+        const input = [
+            'Split=trojan,upload.example.com,443,"secret",transport=xhttp,alpn=h3,xhttp-mode=stream-up',
+            'xhttp-xmux-max-connections=3,xhttp-xmux-http-max-requests=600-900,xhttp-xmux-http-keepalive-secs=0',
+            'xhttp-download-server=download.example.com,xhttp-download-port=8443,xhttp-download-host=cdn.example.com,xhttp-download-path="/down?route=a,b"',
+            'xhttp-download-alpn=h2,xhttp-download-over-tls=true,xhttp-download-sni=peer.example.com,xhttp-download-skip-cert-verify=false,xhttp-download-tls-profile=chrome,xhttp-download-tls-cert-sha256=cert-pin,xhttp-download-tls-pubkey-sha256=key-pin',
+            'xhttp-download-xmux-max-concurrency=8-16,xhttp-download-xmux-max-reuse-times=0,xhttp-download-xmux-http-max-reusable-secs=1800-3000,xhttp-download-xmux-http-keepalive-secs=-1',
+            'xhttp-download-padding-bytes=100-300,xhttp-download-padding-obfs-mode=false,xhttp-download-session-id-placement=header,xhttp-download-session-id-key=X-Session',
+            'xhttp-download-header="X-Trace: a,b",xhttp-download-header="X-Origin: https://example.org"',
+        ].join(',');
+        const [proxy] = ProxyUtils.parse(input);
+        expectSubset(proxy, {
+            alpn: ['h3'],
+            'xhttp-opts': {
+                'reuse-settings': {
+                    'max-connections': '3',
+                    'h-max-request-times': '600-900',
+                    'h-keep-alive-period': 0,
+                },
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    host: 'cdn.example.com',
+                    path: '/down?route=a,b',
+                    alpn: ['h2'],
+                    tls: true,
+                    servername: 'peer.example.com',
+                    'skip-cert-verify': false,
+                    'client-fingerprint': 'chrome',
+                    fingerprint: 'cert-pin',
+                    'tls-pubkey-sha256': 'key-pin',
+                    'reuse-settings': {
+                        'max-concurrency': '8-16',
+                        'c-max-reuse-times': '0',
+                        'h-max-reusable-secs': '1800-3000',
+                        'h-keep-alive-period': -1,
+                    },
+                    'x-padding-bytes': '100-300',
+                    'x-padding-obfs-mode': false,
+                    'session-placement': 'header',
+                    'session-key': 'X-Session',
+                    headers: {
+                        'X-Trace': 'a,b',
+                        'X-Origin': 'https://example.org',
+                    },
+                },
+            },
+        });
+        const output = produceExternal('Loon', proxy);
+        expect(output).to.include(',xhttp-download-header="X-Trace: a,b"');
+        expect(ProxyUtils.parse(output)).to.deep.equal([proxy]);
+
+        const [reality] = ProxyUtils.parse(
+            `Split=vless,upload.example.com,443,"${UUID}",transport=xhttp,over-tls=true,alpn=h3,xhttp-download-server=download.example.com,xhttp-download-port=8443,xhttp-download-sni=peer.example.com,xhttp-download-public-key="public-key",xhttp-download-short-id=""`,
+        );
+        expectSubset(reality['xhttp-opts']['download-settings'], {
+            tls: true,
+            'reality-opts': { 'public-key': 'public-key', 'short-id': '' },
+        });
+        expect(
+            ProxyUtils.parse(produceExternal('Loon', reality)),
+        ).to.deep.equal([reality]);
+    });
+
+    it('validates Loon XHTTP XMUX quotas per endpoint', function () {
+        const input = `Split=vless,upload.example.com,443,"${UUID}",transport=xhttp,over-tls=true,alpn=h2,xhttp-mode=stream-up`;
+        const split = `${input},xhttp-download-server=download.example.com,xhttp-download-port=8443,xhttp-download-over-tls=true,xhttp-download-alpn=h2`;
+        for (const [line, prefix, concurrency, connections] of [
+            [input, 'xhttp-xmux', '8', '3'],
+            [split, 'xhttp-download-xmux', '0-8', '3-4'],
+        ]) {
+            const proxies = ProxyUtils.parse(
+                `${line},${prefix}-max-concurrency=${concurrency},${prefix}-max-connections=${connections}`,
+            );
+            expect(proxies).to.have.length(1);
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', proxies),
+            );
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include(
+                `${prefix}-max-concurrency and ${prefix}-max-connections`,
+            );
+
+            const valid = ProxyUtils.parse(
+                `${line},${prefix}-max-concurrency=0,${prefix}-max-connections=${connections}`,
+            );
+            expect(produceExternal('Loon', valid)).to.include(
+                `,${prefix}-max-connections=${connections}`,
+            );
+        }
+    });
+
+    it('validates the range of every Loon XHTTP XMUX field on both endpoints', function () {
+        const input = `Split=vless,upload.example.com,443,"${UUID}",transport=xhttp,over-tls=true,alpn=h2,xhttp-mode=stream-up`;
+        const split = `${input},xhttp-download-server=download.example.com,xhttp-download-port=8443,xhttp-download-over-tls=true,xhttp-download-alpn=h2`;
+        for (const [line, prefix] of [
+            [input, 'xhttp-xmux'],
+            [split, 'xhttp-download-xmux'],
+        ]) {
+            for (const [key, invalid, valid] of [
+                ['max-concurrency', '8-2', '8-16'],
+                ['max-connections', '-1', '3'],
+                ['max-reuse-times', 'invalid', '0'],
+                ['http-max-requests', '1.5', '600-900'],
+                ['http-max-reusable-secs', '-5', '1800'],
+                ['http-keepalive-secs', '-2', '-1'],
+                ['http-keepalive-secs', '10-20', '0'],
+                ['http-keepalive-secs', '1.5', '15'],
+            ]) {
+                const option = `${prefix}-${key}`;
+                const proxies = ProxyUtils.parse(
+                    `${line},${option}=${invalid}`,
+                );
+                expect(proxies).to.have.length(1);
+                const { result, errors } = captureErrors(() =>
+                    produceInternal('Loon', proxies),
+                );
+                expect(result, option).to.be.empty;
+                expect(errors[0]).to.include(`${option} must be`);
+
+                const accepted = ProxyUtils.parse(`${line},${option}=${valid}`);
+                expect(produceExternal('Loon', accepted)).to.include(
+                    `,${option}=${valid}`,
+                );
+            }
+        }
+    });
+
+    it('uses a non-blank server for Loon XHTTP downloads', function () {
+        const input = `Split=vless,upload.example.com,443,"${UUID}",transport=xhttp,xhttp-download-port=8443`;
+        for (const [option, expected] of [
+            ['', 'upload.example.com'],
+            [',xhttp-download-server=""', 'upload.example.com'],
+            [',xhttp-download-server="  "', 'upload.example.com'],
+            [
+                ',xhttp-download-server=" download.example.com "',
+                'download.example.com',
+            ],
+        ]) {
+            const proxies = ProxyUtils.parse(input + option);
+            expect(produceExternal('Loon', proxies)).to.include(
+                `,xhttp-download-server=${expected}`,
+            );
+        }
+
+        const [proxy] = ProxyUtils.parse(`${input},xhttp-download-server=" "`);
+        const { result, errors } = captureErrors(() =>
+            produceInternal('Loon', { ...proxy, server: ' ' }),
+        );
+        expect(result).to.be.empty;
+        expect(errors[0]).to.include(
+            'xhttp-download-server requires a server address',
+        );
+    });
+
+    it('validates Loon XHTTP download port boundaries on export', function () {
+        const input = `Split=vless,upload.example.com,443,"${UUID}",transport=xhttp,xhttp-download-server=download.example.com`;
+        for (const port of [0, -1, 70000, 443.5, 'invalid']) {
+            const proxies = ProxyUtils.parse(
+                `${input},xhttp-download-port=${port}`,
+            );
+            expect(proxies).to.have.length(1);
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', proxies),
+            );
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include(
+                'xhttp-download-port must be an integer',
+            );
+        }
+
+        for (const port of [1, 65535]) {
+            const proxies = ProxyUtils.parse(
+                `${input},xhttp-download-port=${port}`,
+            );
+            expect(produceExternal('Loon', proxies)).to.include(
+                `,xhttp-download-port=${port}`,
+            );
+        }
+        expect(produceExternal('Loon', ProxyUtils.parse(input))).to.include(
+            ',xhttp-download-port=443',
+        );
+    });
+
+    it('enforces Loon XHTTP main ALPN by security', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'Main',
+            server: 'example.com',
+            port: 443,
+            uuid: UUID,
+            network: 'xhttp',
+        };
+        const reality = { 'reality-opts': { 'public-key': 'A'.repeat(43) } };
+        const trojan = { type: 'trojan', password: 'secret' };
+        for (const [settings, reason] of [
+            [{ tls: false, alpn: ['h2'] }, 'XHTTP alpn must be http/1.1'],
+            [{ type: 'vmess', alpn: ['h3'] }, 'XHTTP alpn must be http/1.1'],
+            [{ ...reality, tls: true, alpn: ['h3'] }, 'XHTTP alpn must be h2'],
+            [{ ...trojan, ...reality, alpn: ['h3'] }, 'XHTTP alpn must be h2'],
+            [{ tls: true, alpn: ['h2', 'h3'] }, 'only a single ALPN'],
+        ]) {
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', { ...proxy, ...settings }),
+            );
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include(reason);
+        }
+
+        expect(
+            produceExternal('Loon', { ...proxy, tls: false }),
+        ).not.to.include(',alpn=');
+        expect(
+            produceExternal('Loon', { ...proxy, ...trojan, alpn: ['h3'] }),
+        ).to.include(',alpn="h3"');
+    });
+
+    it('rejects incomplete REALITY for Loon XHTTP downloads', function () {
+        const key = 'A'.repeat(43);
+        const options =
+            'transport=xhttp,xhttp-mode=stream-up,xhttp-download-server=down.example.com,xhttp-download-port=8443';
+        for (const input of [
+            `Split=vless,example.com,443,"${UUID}",over-tls=true,public-key="${key}",${options},xhttp-download-public-key=""`,
+            `Split=vmess,example.com,443,aes-128-gcm,"${UUID}",alterId=0,${options},xhttp-download-public-key=" "`,
+            `Split=trojan,example.com,443,"secret",${options},xhttp-download-short-id=08`,
+        ]) {
+            const proxies = ProxyUtils.parse(input);
+            expect(proxies).to.have.length(1);
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', proxies),
+            );
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include(
+                'Loon XHTTP download REALITY requires a non-blank public-key',
+            );
+        }
+    });
+
+    it('enforces Loon XHTTP download ALPN and certificate settings by security', function () {
+        const reality = { 'reality-opts': { 'public-key': 'A'.repeat(43) } };
+        const realityConflict = 'conflicts with xhttp-download-over-tls=false';
+        const certificateConflict = 'or TLS certificate fingerprints';
+        const makeProxy = (settings) => ({
+            type: 'vless',
+            name: 'Split',
+            server: 'upload.example.com',
+            port: 443,
+            uuid: UUID,
+            network: 'xhttp',
+            tls: true,
+            'xhttp-opts': {
+                mode: 'stream-up',
+                'download-settings': {
+                    server: 'download.example.com',
+                    port: 8443,
+                    ...settings,
+                },
+            },
+        });
+        for (const [settings, reason] of [
+            [{ ...reality, tls: false }, realityConflict],
+            [{ ...reality, tls: 'false' }, realityConflict],
+            [{ alpn: ['h2', 'http/1.1'] }, 'a single ALPN'],
+            [{ alpn: ['h2,http/1.1'] }, 'a single ALPN'],
+            [{ alpn: 'h2,http/1.1' }, 'a single ALPN'],
+            [{ alpn: ['h2'] }, 'xhttp-download-alpn must be http/1.1'],
+            [
+                { tls: false, alpn: ['h3'] },
+                'xhttp-download-alpn must be http/1.1',
+            ],
+            [{ ...reality, alpn: ['h3'] }, 'xhttp-download-alpn must be h2'],
+            [
+                { tls: true, alpn: ['unknown'] },
+                'xhttp-download-alpn must be http/1.1 or h2 or h3',
+            ],
+            [{ ...reality, 'skip-cert-verify': true }, certificateConflict],
+            [{ ...reality, 'skip-cert-verify': 'true' }, certificateConflict],
+            [{ ...reality, fingerprint: 'cert-pin' }, certificateConflict],
+            [
+                { ...reality, 'tls-fingerprint': 'cert-pin' },
+                certificateConflict,
+            ],
+            [
+                { ...reality, 'tls-pubkey-sha256': 'key-pin' },
+                certificateConflict,
+            ],
+        ]) {
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', makeProxy(settings)),
+            );
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include(reason);
+        }
+
+        for (const settings of [
+            { alpn: ['http/1.1'] },
+            { tls: true, alpn: ['http/1.1'] },
+            { tls: true, alpn: ['h2'] },
+            { tls: 'true', alpn: ['h3'] },
+            { ...reality, alpn: ['h2'] },
+        ]) {
+            expect(produceExternal('Loon', makeProxy(settings))).to.include(
+                `,xhttp-download-alpn=${settings.alpn[0]}`,
+            );
+        }
+
+        const output = produceExternal(
+            'Loon',
+            makeProxy({
+                ...reality,
+                'skip-cert-verify': false,
+                fingerprint: '',
+                'tls-pubkey-sha256': '',
+            }),
+        );
+        expect(output).to.include(',xhttp-download-public-key=');
+        expect(output).not.to.match(
+            /xhttp-download-(skip-cert-verify|tls-cert-sha256|tls-pubkey-sha256)=/,
+        );
+    });
+
+    it('requires TCP with TLS or REALITY for Loon VLESS Vision without encryption', function () {
+        const proxy = {
+            type: 'vless',
+            name: 'Vision',
+            server: 'example.com',
+            port: 443,
+            uuid: UUID,
+            flow: 'xtls-rprx-vision',
+        };
+        for (const settings of [
+            { network: 'ws', tls: true },
+            { network: 'http', tls: true, encryption: 'none' },
+            { network: 'xhttp', tls: true },
+            { network: 'tcp', tls: false },
+            { tls: 'false', flow: 'xtls-rprx-vision-udp443' },
+        ]) {
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', { ...proxy, ...settings }),
+            );
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include('requires TCP with TLS or REALITY');
+        }
+
+        for (const settings of [
+            { network: 'tcp', tls: true },
+            { 'reality-opts': { 'public-key': 'A'.repeat(43) } },
+        ]) {
+            expect(
+                produceExternal('Loon', { ...proxy, ...settings }),
+            ).to.include(',flow=xtls-rprx-vision');
+        }
+    });
+
+    it('rejects incomplete REALITY in the Loon VLESS Vision producer', function () {
+        const { produce } = Loon_Producer();
+        const proxy = {
+            type: 'vless',
+            name: 'Vision',
+            server: 'example.com',
+            port: 443,
+            uuid: UUID,
+            network: 'tcp',
+            tls: false,
+            flow: 'xtls-rprx-vision',
+        };
+        for (const reality of [
+            { 'short-id': '08' },
+            { 'public-key': '' },
+            { 'public-key': ' \t ' },
+        ]) {
+            expect(() =>
+                produce({ ...proxy, 'reality-opts': reality }, 'external'),
+            ).to.throw('Loon VLESS REALITY requires a non-blank public-key');
+        }
+    });
+
+    it('converts Loon VLESS Encryption and Vision through VLESS links', function () {
+        const keys = `${'A'.repeat(43)}.${'B'.repeat(43)}`;
+        const padding = '100-128-128.75-0-111.50-0-3333';
+        for (const [network, mode, rtt] of [
+            ['tcp', 'native'],
+            ['ws', 'xorpub', '1rtt'],
+            ['http', 'random', '0rtt'],
+            ['xhttp', 'native', '1rtt'],
+        ]) {
+            const flow = 'xtls-rprx-vision-udp443';
+            const rttOption = rtt ? `,encryption-rtt=${rtt}` : '';
+            const expectedRtt = rtt ?? '0rtt';
+            const [proxy] = ProxyUtils.parse(
+                `Encrypted=vless,example.com,443,"${UUID}",transport=${network},flow=${flow},encryption-mode=${mode},encryption-public-keys="${keys}",encryption-padding=${padding}${rttOption}`,
+            );
+            const encryption = `mlkem768x25519plus.${mode}.${expectedRtt}.${padding}.${keys}`;
+            expect(proxy).to.include({ network, encryption, flow });
+
+            const uri = produceExternal('URI', proxy);
+            const output = produceExternal('Loon', ProxyUtils.parse(uri));
+            expect(output).to.include(`,encryption-mode=${mode}`);
+            expect(output).to.include(`,encryption-rtt=${expectedRtt}`);
+            expect(output).to.include(`,encryption-public-keys="${keys}"`);
+            expect(output).to.include(`,encryption-padding=${padding}`);
+            expect(ProxyUtils.parse(output)[0]).to.include({
+                network,
+                encryption,
+                flow,
+            });
+        }
+    });
+
+    it('validates Loon VLESS Encryption padding probabilities and ranges', function () {
+        const key = 'A'.repeat(43);
+        const input = `Encrypted=vless,example.com,443,"${UUID}",transport=tcp,encryption-mode=native,encryption-public-keys="${key}"`;
+        for (const [padding, reason] of [
+            ['100-1-1', 'lengths of at least 35'],
+            ['99-35-35', 'first group requires probability 100'],
+            ['100-35-34', 'lengths of at least 35'],
+            ['100--1-35', 'lengths of at least 35'],
+            ['100-36-35', 'ordered non-negative integer bounds'],
+            ['100-35-35.50-5-1', 'ordered non-negative integer bounds'],
+            ['100-35-35.50--1-1', 'ordered non-negative integer bounds'],
+            ['100-35-35.101-0-1', 'probabilities from 0 to 100'],
+        ]) {
+            const proxies = ProxyUtils.parse(
+                `${input},encryption-padding=${padding}`,
+            );
+            expect(proxies).to.have.length(1);
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', proxies),
+            );
+            expect(result, padding).to.be.empty;
+            expect(errors[0]).to.include(reason);
+        }
+
+        for (const padding of ['100-35-35', '100-35-36.75-0-1.50-0-0']) {
+            const proxies = ProxyUtils.parse(
+                `${input},encryption-padding=${padding}`,
+            );
+            expect(produceExternal('Loon', proxies)).to.include(
+                `,encryption-padding=${padding}`,
+            );
+        }
+    });
+
+    it('round-trips Loon Mieru TCP nodes with quoted credentials', function () {
+        const input =
+            'Mieru=mieru,[2001:db8::1],8443," user,name "," pass,word ",udp=true,block-quic=false,ip-mode=prefer-v4,server-dns="system,2001:db8::53"';
+        const [proxy] = ProxyUtils.parse(input);
+        expectSubset(proxy, {
+            type: 'mieru',
+            server: '2001:db8::1',
+            port: 8443,
+            transport: 'TCP',
+            username: ' user,name ',
+            password: ' pass,word ',
+            udp: true,
+            'block-quic': 'off',
+            'ip-version': 'prefer-v4',
+            'server-dns': ['system', '2001:db8::53'],
+        });
+        expect(produceExternal('Loon', proxy)).to.equal(input);
+        const [plain] = ProxyUtils.parse(
+            'Plain=mieru,example.com,8443,"user","pass"',
+        );
+        expect(plain.udp).to.be.false;
+        const uri = 'mierus://user:pass@example.com?port=8443&protocol=TCP#URI';
+        expect(produceExternal('Loon', ProxyUtils.parse(uri))).to.equal(
+            'URI=mieru,example.com,8443,"user","pass",udp=true',
+        );
+    });
+
+    it('requires and trims the server address for Loon Mieru', function () {
+        const proxy = {
+            type: 'mieru',
+            name: 'Mieru',
+            port: 8443,
+            username: 'user',
+            password: 'pass',
+        };
+        for (const server of ['', ' ', '\t ']) {
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', { ...proxy, server }),
+            );
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include('Loon Mieru requires a server');
+        }
+
+        for (const [server, address] of [
+            [' example.com ', 'example.com'],
+            [' 2001:db8::1 ', '[2001:db8::1]'],
+        ]) {
+            expect(produceExternal('Loon', { ...proxy, server })).to.equal(
+                `Mieru=mieru,${address},8443,"user","pass"`,
+            );
+        }
+    });
+
+    it('validates Loon Mieru port and UTF-8 credential ranges', function () {
+        const proxy = {
+            type: 'mieru',
+            name: 'Mieru',
+            server: 'example.com',
+            port: 1,
+            username: '密'.repeat(21) + 'a',
+            password: '🔒'.repeat(16),
+        };
+        for (const port of [1, '65535']) {
+            expect(produceExternal('Loon', { ...proxy, port })).to.include(
+                `,${port},"${proxy.username}","${proxy.password}"`,
+            );
+        }
+
+        for (const settings of [
+            { port: 0 },
+            { port: 65536 },
+            { port: 443.5 },
+            { port: '0x1bb' },
+            { username: '' },
+            { password: '' },
+            { username: '密'.repeat(22) },
+            { password: 'a'.repeat(65) },
+        ]) {
+            const { result, errors } = captureErrors(() =>
+                produceInternal('Loon', { ...proxy, ...settings }),
+            );
+            expect(result).to.be.empty;
+            expect(errors[0]).to.include(
+                'port' in settings ? 'from 1 to 65535' : '1-64 UTF-8 bytes',
+            );
+        }
     });
 
     it('rejects non-AEAD VMess over Loon XHTTP', function () {
@@ -967,7 +1499,8 @@ describe('Proxy text producers', function () {
         );
     });
 
-    it('produces Loon VLESS reality websocket lines', function () {
+    it('produces Loon VLESS reality websocket lines with encryption and Vision', function () {
+        const publicKey = 'A'.repeat(43);
         const output = produceExternal('Loon', {
             type: 'vless',
             name: 'Loon Reality',
@@ -977,6 +1510,7 @@ describe('Proxy text producers', function () {
             tls: true,
             sni: 'sni.example.com',
             flow: 'xtls-rprx-vision',
+            encryption: `mlkem768x25519plus.native.1rtt.${publicKey}`,
             network: 'ws',
             'ws-opts': {
                 path: '/ws',
@@ -992,7 +1526,7 @@ describe('Proxy text producers', function () {
         });
 
         expect(output).to.equal(
-            `Loon Reality=vless,vless.example.com,443,"${UUID}",transport=ws,path=/ws,host=cdn.example.com,over-tls=true,skip-cert-verify=true,flow=xtls-rprx-vision,sni=sni.example.com,public-key="pubkey",short-id=08`,
+            `Loon Reality=vless,vless.example.com,443,"${UUID}",transport=ws,path=/ws,host=cdn.example.com,over-tls=true,skip-cert-verify=true,encryption-mode=native,encryption-rtt=1rtt,encryption-public-keys="${publicKey}",flow=xtls-rprx-vision,sni=sni.example.com,public-key="pubkey",short-id=08`,
         );
     });
 
@@ -1227,6 +1761,7 @@ describe('Proxy text producers', function () {
                 server: 'vless-xtls.example.com',
                 port: 443,
                 uuid: UUID,
+                tls: true,
                 flow: 'xtls-rprx-vision',
                 sni: 'sni.example.com',
                 'client-fingerprint': 'chrome',

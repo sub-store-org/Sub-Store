@@ -22,7 +22,7 @@ const grammars = String.raw`
     const obfs = {};
     const transport = {};
     const xhttpOpts = {};
-    const xhttpHeaders = [];
+    const vlessEncryption = {};
     const shadowTLS = {};
     const $ = {};
 
@@ -44,7 +44,12 @@ const grammars = String.raw`
             proxy.udp ??= false;
             if (transport.path != null) xhttpOpts.path = transport.path;
             if (transport.host != null) xhttpOpts.host = transport.host;
-            if (xhttpHeaders.length) xhttpOpts.headers = Object.fromEntries(xhttpHeaders);
+            const download = xhttpOpts["download-settings"];
+            if (download) {
+                download.tls ??= Boolean(download["reality-opts"]?.["public-key"]);
+                const fingerprint = loonClientFingerprint(download._loon_tls_profile);
+                if (fingerprint) download["client-fingerprint"] = fingerprint;
+            }
             proxy["xhttp-opts"] = xhttpOpts;
         }
     }
@@ -86,7 +91,7 @@ const grammars = String.raw`
     }
 }
 
-start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2/anytls/tailscale/snell) {
+start = (shadowsocksr/shadowsocks/vmess/vless/trojan/https/http/socks5/hysteria2/anytls/tailscale/snell/mieru) {
     return proxy;
 }
 
@@ -107,17 +112,22 @@ shadowsocks = tag equals "shadowsocks"i address method password (obfs_typev obfs
     }
     handleShadowTLS();
 }
-vmess = tag equals "vmess"i address vmess_method uuid (xhttp_transport/transport/transport_host/transport_path/xhttp_header/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/vmess_alterId/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
+vmess = tag equals "vmess"i address vmess_method uuid (xhttp_transport/transport/transport_host/transport_path/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/vmess_alterId/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
     proxy.type = "vmess";
     proxy.cipher = proxy.cipher || "auto";
     proxy.alterId = proxy.alterId || 0;
     handleTransport();
 }
-vless = tag equals "vless"i address uuid (xhttp_transport/transport/transport_host/transport_path/xhttp_header/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/flow/public_key/short_id/block_quic/others)* {
+vless = tag equals "vless"i address uuid (xhttp_transport/transport/transport_host/transport_path/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/flow/vless_encryption/public_key/short_id/block_quic/others)* {
     proxy.type = "vless";
+    const { mode, rtt, padding, "public-keys": publicKeys } = vlessEncryption;
+    if (mode && mode !== "none") {
+        if (!publicKeys) throw new Error("VLESS encryption requires public keys");
+        proxy.encryption = ["mlkem768x25519plus", mode, rtt || "0rtt", padding, publicKeys].filter(Boolean).join(".");
+    }
     handleTransport();
 }
-trojan = tag equals "trojan"i address password (xhttp_transport/transport/transport_host/transport_path/xhttp_header/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
+trojan = tag equals "trojan"i address password (xhttp_transport/transport/transport_host/transport_path/xhttp_option/over_tls/tls_name/sni/tls_verification/tls_cert_sha256/tls_pubkey_sha256/tls_profile/alpn/fast_open/udp_relay/ip_mode/public_key/short_id/block_quic/others)* {
     proxy.type = "trojan";
     handleTransport();
 }
@@ -151,6 +161,13 @@ snell = tag equals ("snell"i/"opensnell"i) address snell_positional_psk? (snell_
     if (obfs.type === "http") {
         proxy["obfs-opts"] = { mode: obfs.type, host: obfs.host, path: obfs.path };
     }
+}
+mieru = tag equals "mieru"i address comma user:option_value comma pass:option_value (udp_relay/ip_mode/block_quic/others)* {
+    proxy.type = "mieru";
+    proxy.transport = "TCP";
+    proxy.username = user;
+    proxy.password = pass;
+    proxy.udp ??= false;
 }
 
 tailscale_string = comma key:("auth-key"/"control-url"/"hostname"/"exit-node"/"path-mode"/"ip-mode") equals value:(
@@ -254,13 +271,6 @@ transport_host = comma "host" equals value:option_value { transport.host = value
 transport_path = comma "path" equals value:option_value { transport.path = value; }
 
 xhttp_transport = comma "transport" equals "xhttp" { transport.type = "xhttp"; }
-xhttp_header = comma "xhttp-header" equals value:option_value {
-    const colon = value.indexOf(":");
-    const name = value.slice(0, colon).trim();
-    if (colon > 0 && name && !/^host$/i.test(name)) {
-        xhttpHeaders.push([name, value.slice(colon + 1).trim()]);
-    }
-}
 xhttp_option = comma "xhttp-" key:$[a-z0-9-]+ equals value:option_value {
     options.setLoonXhttpOption(xhttpOpts, key, value);
 }
@@ -296,6 +306,9 @@ alpn = comma "alpn" equals match:option_value {
 }
 
 flow = comma "flow" equals match:[^,]+ { proxy["flow"] = match.join("").replace(/^"(.*)"$/, '$1'); }
+vless_encryption = comma "encryption-" key:("mode"/"rtt"/"public-keys"/"padding") equals value:option_value {
+    vlessEncryption[key] = value;
+}
 public_key = comma "public-key" equals match:[^,]+ { proxy["reality-opts"] = proxy["reality-opts"] || {}; proxy["reality-opts"]["public-key"] = match.join("").replace(/^"(.*)"$/, '$1'); }
 short_id = comma "short-id" equals value:option_value { proxy["reality-opts"] = proxy["reality-opts"] || {}; proxy["reality-opts"]["short-id"] = value; }
 
