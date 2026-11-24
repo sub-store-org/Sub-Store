@@ -762,9 +762,7 @@ function appendVlessEncryption(result, encryption) {
 
     const publicKeys = settings.slice(keyIndex).join('.');
     result.append(`,encryption-mode=${mode},encryption-rtt=${rtt}`);
-    result.append(
-        `,encryption-public-keys=${formatLoonValue(publicKeys, true)}`,
-    );
+    result.append(`,encryption-public-keys=${formatLoonValue(publicKeys)}`);
     if (padding.length) {
         result.append(
             `,encryption-padding=${formatLoonValue(padding.join('.'))}`,
