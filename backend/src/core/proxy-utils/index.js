@@ -810,14 +810,21 @@ function lastParse(proxy) {
         }
         normalizeOpts(proxy[normalizedKey]);
     }
-    if (
-        proxy['reality-opts']?.['public-key'] &&
-        !hasOwn(proxy['reality-opts'], 'support-x25519mlkem768') &&
-        ['safari-ios-26', 'chrome147'].includes(
-            `${proxy._loon_tls_profile || ''}`.trim(),
-        )
-    ) {
-        proxy['reality-opts']['support-x25519mlkem768'] = true;
+    const inferLoonRealityMlkem = (endpoint) => {
+        const realityOpts = endpoint?.['reality-opts'];
+        if (
+            isNotBlank(realityOpts?.['public-key']) &&
+            !hasOwn(realityOpts, 'support-x25519mlkem768') &&
+            ['safari-ios-26', 'chrome147'].includes(
+                `${endpoint._loon_tls_profile || ''}`.trim(),
+            )
+        ) {
+            realityOpts['support-x25519mlkem768'] = true;
+        }
+    };
+    inferLoonRealityMlkem(proxy);
+    if (proxy.network === 'xhttp') {
+        inferLoonRealityMlkem(proxy['xhttp-opts']?.['download-settings']);
     }
     proxy.udp = ![false, 0, '0', 'false', 'off'].includes(
         typeof proxy.udp === 'string' ? proxy.udp.toLowerCase() : proxy.udp,

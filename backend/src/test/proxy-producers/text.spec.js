@@ -1020,6 +1020,45 @@ describe('Proxy text producers', function () {
         ).to.deep.equal([reality]);
     });
 
+    it('maps REALITY ML-KEM independently for Loon XHTTP uploads and downloads', function () {
+        const flag = 'support-x25519mlkem768';
+        const input = `Split=vless,upload.example.com,443,"${UUID}",transport=xhttp,over-tls=true,xhttp-download-server=down.example.com,xhttp-download-over-tls=true`;
+        for (const [upload, download, uploadFlag, downloadFlag] of [
+            [undefined, 'chrome147', undefined, true],
+            ['chrome', 'safari-ios-26', undefined, true],
+            ['chrome147', 'chrome', true, undefined],
+        ]) {
+            const line = [
+                input,
+                upload && `public-key=up-key,tls-profile=${upload}`,
+                `xhttp-download-tls-profile=${download}`,
+            ]
+                .filter(Boolean)
+                .join(',');
+            const [tlsOnly] = ProxyUtils.parse(line);
+            expect(
+                tlsOnly['xhttp-opts']['download-settings'],
+            ).not.to.have.property('reality-opts');
+
+            const [proxy] = ProxyUtils.parse(
+                `${line},xhttp-download-public-key=down-key`,
+            );
+            const [mihomo] = produceInternal('Mihomo', proxy);
+            const downloadReality =
+                mihomo['xhttp-opts']['download-settings']['reality-opts'];
+            expect(mihomo['reality-opts']?.[flag]).to.equal(uploadFlag);
+            expect(downloadReality[flag]).to.equal(downloadFlag);
+
+            downloadReality[flag] = false;
+            const [reparsed] = ProxyUtils.parse(JSON.stringify(mihomo));
+            expect(
+                reparsed['xhttp-opts']['download-settings']['reality-opts'][
+                    flag
+                ],
+            ).to.equal(false);
+        }
+    });
+
     it('validates Loon XHTTP XMUX quotas per endpoint', function () {
         const input = `Split=vless,upload.example.com,443,"${UUID}",transport=xhttp,over-tls=true,alpn=h2,xhttp-mode=stream-up`;
         const split = `${input},xhttp-download-server=download.example.com,xhttp-download-port=8443,xhttp-download-over-tls=true,xhttp-download-alpn=h2`;
