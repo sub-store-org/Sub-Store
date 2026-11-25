@@ -24,7 +24,7 @@
 </tbody>
 </table>
 
-📚 [文档/Doc](https://sub-store-org.github.io/doc) 🆕, [Wiki](https://github.com/sub-store-org/Sub-Store/wiki)
+📚 [文档/Doc](https://sub-store-org.github.io/doc) 🆕, [Wiki](https://github.com/sub-store-org/Sub-Store/wiki), [Cloudflare Workers 部署文档](./CF_WORKERS.md)
 
 > **Frontend update:** Access to `sub-store.vercel.app` on Vercel is restricted. For now, use the default frontend at [sub.xream.eu.org](https://sub.xream.eu.org), hosted on Cloudflare Pages.
 
