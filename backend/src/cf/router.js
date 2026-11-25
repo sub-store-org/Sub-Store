@@ -178,12 +178,15 @@ export function createCFRouter({ substore: $, defaultHeaders = {} }) {
             headersObj[key.toLowerCase()] = value;
         });
 
+        const parsedUrl = new URL(request.url);
         const method = request.method.toUpperCase();
         const origin = headersObj.origin;
-        const corsAllowed = isOriginAllowed(corsPolicy, origin);
-        const corsHeaders = corsAllowed
-            ? getCorsHeaders(corsPolicy, origin)
-            : {};
+        const isSameOrigin = Boolean(origin) && origin === parsedUrl.origin;
+        const corsAllowed = isSameOrigin || isOriginAllowed(corsPolicy, origin);
+        const corsHeaders =
+            corsAllowed && !isSameOrigin
+                ? getCorsHeaders(corsPolicy, origin)
+                : {};
 
         const baseHeaders = {
             ...defaultHeaders,
@@ -208,7 +211,6 @@ export function createCFRouter({ substore: $, defaultHeaders = {} }) {
             });
         }
 
-        const parsedUrl = new URL(request.url);
         let parsedBody;
         try {
             parsedBody = await parseRequestBody(request, headersObj);

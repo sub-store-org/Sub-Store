@@ -166,6 +166,33 @@ function initApp() {
     return $app;
 }
 
+async function serveFrontendAsset(request, env) {
+    if (!env?.ASSETS || typeof env.ASSETS.fetch !== 'function') {
+        return null;
+    }
+    const method = request.method.toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD') {
+        return null;
+    }
+
+    const assetResponse = await env.ASSETS.fetch(request);
+    if (assetResponse && assetResponse.status !== 404) {
+        return assetResponse;
+    }
+
+    const indexUrl = new URL('/index.html', request.url);
+    const indexResponse = await env.ASSETS.fetch(
+        new Request(indexUrl.toString(), {
+            method,
+            headers: request.headers,
+        }),
+    );
+    if (indexResponse && indexResponse.status !== 404) {
+        return indexResponse;
+    }
+    return null;
+}
+
 export async function handleFetch(request, env, ctx) {
     const app = initApp();
 
@@ -180,12 +207,17 @@ export async function handleFetch(request, env, ctx) {
                 return await app.handleRequest(request);
             }
 
-            // Fast-path reject unmatched paths when a secret prefix is configured
-            // so bots/scanners/favicon requests never consume D1 reads.
+            const parsedUrl = new URL(request.url);
+            const pathname = parsedUrl.pathname;
             const feBePath = resolveBackendPath();
+            const isReservedBackendRoute = matchesBackendPath(
+                pathname,
+                '/',
+                false,
+            );
+
+            // Fast-path frontend & unmatched paths without touching D1.
             if (feBePath !== '/') {
-                const parsedUrl = new URL(request.url);
-                const pathname = parsedUrl.pathname;
                 const matchesPrefix =
                     pathname === feBePath ||
                     pathname.startsWith(`${feBePath}/`);
@@ -193,8 +225,18 @@ export async function handleFetch(request, env, ctx) {
                     pathname.startsWith('/share/') &&
                     Boolean(parsedUrl.searchParams.get('token'));
                 if (!matchesPrefix && !isShareWithToken) {
+                    if (!isReservedBackendRoute) {
+                        const frontendRes = await serveFrontendAsset(
+                            request,
+                            env,
+                        );
+                        if (frontendRes) return frontendRes;
+                    }
                     return new Response('', { status: 404 });
                 }
+            } else if (!isReservedBackendRoute && env?.ASSETS) {
+                const frontendRes = await serveFrontendAsset(request, env);
+                if (frontendRes) return frontendRes;
             }
 
             const db = resolveD1Database(env);

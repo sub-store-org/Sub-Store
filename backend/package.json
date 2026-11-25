@@ -13,7 +13,8 @@
     "dev:run": "nodemon -w sub-store.min.js sub-store.min.js",
     "esbuild:dev": "node esbuild-dev.js",
     "bundle:esbuild": "node bundle-esbuild.js",
-    "bundle:cf": "node bundle-cf.js",
+    "fetch:frontend": "node fetch-frontend.js",
+    "bundle:cf": "node fetch-frontend.js --opt-in --if-missing && node bundle-cf.js",
     "changelog": "conventional-changelog -p cli -i CHANGELOG.md -s"
   },
   "author": "Peng-YM",
