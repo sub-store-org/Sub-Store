@@ -186,8 +186,8 @@ SUB_STORE_CF_CRON_TASKS = sync,upload
 
 以下功能已在 Cloudflare Workers 版本中完整实现并通过集成测试验证：
 
-1. **前后端合一静态托管（`/` 路径）**
-   - 构建时自动拉取官方 `Sub-Store-Front-End` 发布包并随 Worker 一起部署至 **Cloudflare Workers Static Assets**，直接托管在 `/` 路径下，自动配置 `_headers` 静态缓存策略并剔除冗余 `.gz` 副本。
+1. **可选前后端合一静态托管（`/` 路径）**
+   - 默认仅部署后端；在构建期设置环境变量 `SUB_STORE_CF_FRONTEND=true` 后，构建时会自动拉取官方 `Sub-Store-Front-End` 发布包并随 Worker 一起部署至 **Cloudflare Workers Static Assets**，直接托管在 `/` 路径下，自动配置 `_headers` 静态缓存策略并剔除冗余 `.gz` 副本。
    - 静态文件（HTML / JS / CSS / 图片 / PWA 资源）由 Cloudflare 边缘节点直接响应，**零 Worker 调用、零 D1 读取**；Vue Router History 模式路径（如 `/subs`、`/files`、`/edit/...`）由 Worker 自动回退到 `/index.html`，同样**零 D1 读取**。
    - 同源请求自动放行 CORS，开箱即用；未携带私密前缀的 `/api/*`、`/download/*`、`/share/*` 请求保持 `404` 隔离，不会泄露或误返回前端页面。
 2. **核心订阅管理与格式转换**
@@ -252,8 +252,9 @@ SUB_STORE_CF_CRON_TASKS = sync,upload
 
 ## 七、常见问题排查
 
+- **访问 `/` 根路径没有显示前端（返回 `404` 或 JSON）**：默认构建仅部署后端；如需同时部署前端，请确认是在 Cloudflare Dashboard 的 **Build → Variables and secrets（构建变量）** 中设置 `SUB_STORE_CF_FRONTEND = true`（注意不是运行时的 Variables and Secrets），并重新触发一次构建部署。
 - **访问接口一直返回 `404`**：检查是否配置了 `SUB_STORE_FRONTEND_BACKEND_PATH` / `SUB_STORE_TOKEN`，请求 URL 必须包含该前缀（例如 `https://<域名>/<前缀>/api/utils/env`）。
-- **前端提示跨域错误（HTTP `403 CORS origin not allowed`）**：将前端所在域名（含协议，不含末尾 `/`）加入 `SUB_STORE_CORS_ALLOWED_ORIGINS`。
+- **外部前端提示跨域错误（HTTP `403 CORS origin not allowed`）**：内置 `/` 前端同源已自动放行；若使用其他独立域名自建前端，请将其所在域名（含协议，不含末尾 `/`）加入 `SUB_STORE_CORS_ALLOWED_ORIGINS`。
 - **提示 `Cloudflare D1 binding not found`**：检查 Worker 的 D1 绑定变量名是否为 `SUB_STORE_DB`（或 `DB`）。
 - **出现 `Error 1102`（Worker exceeded resource limits）**：通常是免费版 10ms CPU 上限被脚本操作或超大订阅触发；可尝试精简脚本、减少单次转换节点数、开启远程缓存，或升级 Workers Paid 计划。
 - **订阅拉取超时或被拦截**：确认订阅源未屏蔽 Cloudflare IP、未使用自签名 HTTPS 证书，且未依赖出站代理。
