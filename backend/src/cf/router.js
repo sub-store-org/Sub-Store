@@ -1,9 +1,18 @@
 import {
     getCorsHeaders,
     isOriginAllowed,
-    resolveRuntimeCorsPolicy,
+    NODE_CORS_ALLOWED_ORIGINS_ENV,
+    resolveCorsPolicy,
 } from '@/utils/cors';
 import { getCFEnvVar } from '@/cf/env';
+
+const DEFAULT_CF_HEADERS = {
+    'Content-Type': 'text/plain;charset=UTF-8',
+    'Access-Control-Allow-Methods': 'POST,GET,OPTIONS,PATCH,PUT,DELETE',
+    'Access-Control-Allow-Headers':
+        'Origin, X-Requested-With, Content-Type, Accept',
+    'X-Powered-By': 'Sub-Store',
+};
 
 const METHODS_NAMES = [
     'GET',
@@ -159,9 +168,10 @@ export function createCFRouter({ substore: $, defaultHeaders = {} }) {
     });
 
     app.handleRequest = async (request) => {
-        const corsPolicy = resolveRuntimeCorsPolicy({
-            isNode: false,
-            isCFWorker: true,
+        const corsPolicy = resolveCorsPolicy({
+            isNode: true,
+            envValue: getCFEnvVar(NODE_CORS_ALLOWED_ORIGINS_ENV),
+            customBackendName: getCFEnvVar('SUB_STORE_BACKEND_CUSTOM_NAME'),
         });
         const headersObj = {};
         request.headers.forEach((value, key) => {
@@ -447,3 +457,11 @@ export function createCFRouter({ substore: $, defaultHeaders = {} }) {
 
     return app;
 }
+
+export default function express({ substore: $ }) {
+    return createCFRouter({
+        substore: $,
+        defaultHeaders: DEFAULT_CF_HEADERS,
+    });
+}
+

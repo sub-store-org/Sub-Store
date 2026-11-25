@@ -7,21 +7,18 @@ import {
     NODE_CORS_ALLOWED_ORIGINS_ENV,
     resolveRuntimeCorsPolicy,
 } from '@/utils/cors';
-import { createCFRouter } from '@/cf/router';
 
 export default function express({ substore: $, port, host }) {
-    const { isNode, isCFWorker } = ENV();
-    const corsPolicy = resolveRuntimeCorsPolicy({ isNode, isCFWorker });
-    if (!isCFWorker) {
-        $.info(
-            isNode &&
-                corsPolicy.source === 'default:node' &&
-                !corsPolicy.wildcard &&
-                !corsPolicy.allowLocalOrigins
-                ? `[CORS] ${NODE_CORS_ALLOWED_ORIGINS_ENV} is not set; using default allowed origins: ${corsPolicy.value}`
-                : `[CORS] allowed origins: ${describeCorsPolicy(corsPolicy)}`,
-        );
-    }
+    const { isNode } = ENV();
+    const corsPolicy = resolveRuntimeCorsPolicy({ isNode });
+    $.info(
+        isNode &&
+            corsPolicy.source === 'default:node' &&
+            !corsPolicy.wildcard &&
+            !corsPolicy.allowLocalOrigins
+            ? `[CORS] ${NODE_CORS_ALLOWED_ORIGINS_ENV} is not set; using default allowed origins: ${corsPolicy.value}`
+            : `[CORS] allowed origins: ${describeCorsPolicy(corsPolicy)}`,
+    );
 
     const DEFAULT_HEADERS = {
         'Content-Type': 'text/plain;charset=UTF-8',
@@ -32,13 +29,6 @@ export default function express({ substore: $, port, host }) {
             ? eval('process.env.SUB_STORE_X_POWERED_BY') || 'Sub-Store'
             : 'Sub-Store',
     };
-
-    if (isCFWorker) {
-        return createCFRouter({
-            substore: $,
-            defaultHeaders: DEFAULT_HEADERS,
-        });
-    }
 
     // node support
     if (isNode) {

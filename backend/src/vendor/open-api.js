@@ -1,33 +1,19 @@
 /* eslint-disable no-undef */
 import { installConsoleLogCapture } from '@/utils/debug-logs';
 import getFs from '@/runtime/fs';
-import { getCFEnvVar, waitUntilCF } from '@/cf/env';
 
-const isCFWorker =
-    (typeof __SUB_STORE_CF_WORKER__ !== 'undefined' &&
-        __SUB_STORE_CF_WORKER__ === true) ||
-    (typeof globalThis !== 'undefined' &&
-        (globalThis.__SUB_STORE_CF_WORKER__ === true ||
-            (typeof navigator !== 'undefined' &&
-                navigator.userAgent === 'Cloudflare-Workers')));
-const isQX = !isCFWorker && typeof $task !== 'undefined';
-const isLoon = !isCFWorker && typeof $loon !== 'undefined';
-const isEgern = !isCFWorker && 'undefined' !== typeof Egern;
+const isQX = typeof $task !== 'undefined';
+const isLoon = typeof $loon !== 'undefined';
+const isEgern = 'undefined' !== typeof Egern;
 // 可能有一些兼容环境依赖于这个, 先不改成 $environment.surge-version
-const isSurge =
-    !isCFWorker && typeof $httpClient !== 'undefined' && !isLoon && !isEgern;
-const isNode =
-    !isCFWorker &&
-    typeof process !== 'undefined' &&
-    Boolean(process?.versions?.node);
+const isSurge = typeof $httpClient !== 'undefined' && !isLoon && !isEgern;
+const isNode = eval(`typeof process !== "undefined"`); // eval is needed in order to avoid browserify processing
 const isStash =
-    !isCFWorker &&
-    'undefined' !== typeof $environment &&
-    $environment['stash-version'];
-const isShadowRocket = !isCFWorker && 'undefined' !== typeof $rocket;
+    'undefined' !== typeof $environment && $environment['stash-version'];
+const isShadowRocket = 'undefined' !== typeof $rocket;
 
-const isLanceX = !isCFWorker && 'undefined' != typeof $native;
-const isGUIforCores = !isCFWorker && typeof $Plugins !== 'undefined';
+const isLanceX = 'undefined' != typeof $native;
+const isGUIforCores = typeof $Plugins !== 'undefined';
 const isSubsCheckPro =
     isLoon &&
     typeof $loon === 'object' &&
@@ -124,11 +110,6 @@ export class OpenAPI {
     // persistence
     // initialize cache
     initCache() {
-        if (isCFWorker) {
-            this.cache = {};
-            this.root = {};
-            return;
-        }
         if (isQX)
             this.cache = JSON.parse($prefs.valueForKey(this.name) || '{}');
         if (isLoon || isSurge || isEgern)
@@ -206,12 +187,6 @@ export class OpenAPI {
 
     // store cache
     persistCache() {
-        if (isCFWorker) {
-            if (typeof this._onPersistAll === 'function') {
-                this._onPersistAll();
-            }
-            return;
-        }
         const data = JSON.stringify(this.cache, null, 2);
         if (isQX) $prefs.setValueForKey(data, this.name);
         if (isLoon || isSurge || isEgern)
@@ -240,13 +215,6 @@ export class OpenAPI {
         this.log(`SET ${key}`);
         if (key.indexOf('#') !== -1) {
             key = key.substr(1);
-            if (isCFWorker) {
-                this.root[key] = data;
-                if (typeof this._onWrite === 'function') {
-                    this._onWrite('root', key);
-                }
-                return;
-            }
             if (isSurge || isLoon || isEgern) {
                 return $persistentStore.write(data, key);
             }
@@ -261,12 +229,6 @@ export class OpenAPI {
             }
         } else {
             this.cache[key] = data;
-            if (isCFWorker) {
-                if (typeof this._onWrite === 'function') {
-                    this._onWrite('cache', key);
-                }
-                return;
-            }
         }
         this.persistCache();
     }
@@ -275,9 +237,6 @@ export class OpenAPI {
         this.log(`READ ${key}`);
         if (key.indexOf('#') !== -1) {
             key = key.substr(1);
-            if (isCFWorker) {
-                return this.root[key];
-            }
             if (isSurge || isLoon || isEgern) {
                 return $persistentStore.read(key);
             }
@@ -299,13 +258,6 @@ export class OpenAPI {
         this.log(`DELETE ${key}`);
         if (key.indexOf('#') !== -1) {
             key = key.substr(1);
-            if (isCFWorker) {
-                delete this.root[key];
-                if (typeof this._onDelete === 'function') {
-                    this._onDelete('root', key);
-                }
-                return;
-            }
             if (isSurge || isLoon || isEgern) {
                 return $persistentStore.write(null, key);
             }
@@ -320,12 +272,6 @@ export class OpenAPI {
             }
         } else {
             delete this.cache[key];
-            if (isCFWorker) {
-                if (typeof this._onDelete === 'function') {
-                    this._onDelete('cache', key);
-                }
-                return;
-            }
         }
         this.persistCache();
     }
@@ -414,40 +360,6 @@ export class OpenAPI {
                 }
             }
         }
-        if (isCFWorker) {
-            const content_ =
-                content +
-                (openURL ? `\n点击跳转: ${openURL}` : '') +
-                (mediaURL ? `\n多媒体: ${mediaURL}` : '');
-            console.log(`[Notify] ${title}\n${subtitle}\n${content_}\n\n`);
-
-            const push = getCFEnvVar('SUB_STORE_PUSH_SERVICE');
-            if (push && /^https?:\/\//.test(push)) {
-                const url = push
-                    .replace(
-                        '[推送标题]',
-                        encodeURIComponent(title || 'Sub-Store'),
-                    )
-                    .replace(
-                        '[推送内容]',
-                        encodeURIComponent(
-                            [subtitle, content_].map((i) => i).join('\n'),
-                        ),
-                    );
-                const $http = HTTP();
-                const task = $http
-                    .get({ url })
-                    .then((resp) => {
-                        console.log(
-                            `[Push Service] URL: ${url}\nRES: ${resp.statusCode} ${resp.body}`,
-                        );
-                    })
-                    .catch((e) => {
-                        console.log(`[Push Service] URL: ${url}\nERROR: ${e}`);
-                    });
-                waitUntilCF(task);
-            }
-        }
         if (isGUIforCores) {
             $Plugins.Notify(title, subtitle + '\n' + content);
         }
@@ -493,7 +405,6 @@ export function ENV() {
         isLoon,
         isSurge,
         isNode,
-        isCFWorker,
         isStash,
         isShadowRocket,
         isEgern,
@@ -537,15 +448,7 @@ function createNotificationTransport(client) {
 }
 
 export function HTTP(defaultOptions = { baseURL: '' }) {
-    const {
-        isQX,
-        isLoon,
-        isSurge,
-        isNode,
-        isCFWorker,
-        isGUIforCores,
-        isEgern,
-    } = ENV();
+    const { isQX, isLoon, isSurge, isNode, isGUIforCores, isEgern } = ENV();
     const methods = [
         'GET',
         'POST',
@@ -779,80 +682,6 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
                     }
                 }
             });
-        } else if (isCFWorker) {
-            worker = (async () => {
-                const requestMethod = method.toUpperCase();
-                const fetchHeaders = new Headers();
-                const rawHeaders = normalizeNodeRequestHeaders(options.headers);
-                for (const [k, v] of Object.entries(rawHeaders)) {
-                    if (v != null) {
-                        fetchHeaders.set(k, String(v));
-                    }
-                }
-
-                const parsedUrl = new URL(options.url);
-                if (parsedUrl.username || parsedUrl.password) {
-                    if (!fetchHeaders.has('authorization')) {
-                        fetchHeaders.set(
-                            'authorization',
-                            `Basic ${Base64.encode(
-                                `${decodeURIComponent(
-                                    parsedUrl.username,
-                                )}:${decodeURIComponent(parsedUrl.password)}`,
-                            )}`,
-                        );
-                    }
-                    parsedUrl.username = '';
-                    parsedUrl.password = '';
-                }
-
-                const controller =
-                    typeof AbortController !== 'undefined'
-                        ? new AbortController()
-                        : null;
-                const reqTimeout = Number(options.timeout) || 8000;
-                const abortTimer =
-                    controller && reqTimeout > 0
-                        ? setTimeout(() => controller.abort(), reqTimeout)
-                        : null;
-
-                try {
-                    const init = {
-                        method: requestMethod,
-                        headers: fetchHeaders,
-                        redirect: 'follow',
-                        ...(controller ? { signal: controller.signal } : {}),
-                    };
-                    if (
-                        options.body != null &&
-                        requestMethod !== 'GET' &&
-                        requestMethod !== 'HEAD'
-                    ) {
-                        init.body = options.body;
-                    }
-
-                    const response = await fetch(parsedUrl.toString(), init);
-                    const responseHeaders = {};
-                    response.headers.forEach((value, key) => {
-                        responseHeaders[key.toLowerCase()] = value;
-                    });
-                    const responseBody =
-                        options.encoding === null
-                            ? await response.arrayBuffer()
-                            : await response.text();
-
-                    return {
-                        statusCode: response.status,
-                        headers: responseHeaders,
-                        body: responseBody,
-                        requestId,
-                    };
-                } finally {
-                    if (abortTimer !== null) {
-                        clearTimeout(abortTimer);
-                    }
-                }
-            })();
         } else if (isGUIforCores) {
             worker = new Promise(async (resolve, reject) => {
                 try {

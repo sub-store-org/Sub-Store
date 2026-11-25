@@ -42,7 +42,6 @@ import { doh } from '@/utils/dns';
 import JSON5 from 'json5';
 import { hex_md5 } from '@/vendor/md5';
 import SurgeMac_Producer from './producers/surgemac';
-import { getCFEnvVar } from '@/cf/env';
 
 const ageUtils = {
     encrypt: encryptArmor,
@@ -292,17 +291,6 @@ async function loadScriptItem(item, executionContext = {}) {
     ) {
         const message =
             'Node.js 环境下，脚本操作、脚本过滤和修改响应必须设置 SUB_STORE_FRONTEND_BACKEND_PATH 才能生效；若不想改变当前 path，可设置 SUB_STORE_FRONTEND_BACKEND_PATH=/';
-        $.error(message);
-        throw new Error(message);
-    }
-    if (
-        $.env.isCFWorker &&
-        !getCFEnvVar('SUB_STORE_FRONTEND_BACKEND_PATH')?.trim() &&
-        !getCFEnvVar('SUB_STORE_TOKEN')?.trim() &&
-        !getCFEnvVar('SUB_STORE_BACKEND_CUSTOM_NAME')
-    ) {
-        const message =
-            'Cloudflare Workers 环境下，脚本操作、脚本过滤和修改响应必须设置 SUB_STORE_FRONTEND_BACKEND_PATH 或 SUB_STORE_TOKEN 才能生效；若不想改变当前 path，可设置 SUB_STORE_FRONTEND_BACKEND_PATH=/';
         $.error(message);
         throw new Error(message);
     }

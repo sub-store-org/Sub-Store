@@ -3,7 +3,6 @@ import { ENV } from '@/vendor/open-api';
 
 const {
     isNode,
-    isCFWorker,
     isQX,
     isLoon,
     isSurge,
@@ -14,9 +13,7 @@ const {
     isGUIforCores,
 } = ENV();
 let backend = 'Node';
-if (isCFWorker) {
-    backend = 'Cloudflare Workers';
-} else if (isNode) {
+if (isNode) {
     backend = 'Node';
 } else if (isQX) {
     backend = 'QX';

@@ -48,26 +48,6 @@ export function matchesBackendPath(path, backendPath, merge) {
     );
 }
 
-export function registerAllRoutes($app) {
-    registerCollectionRoutes($app);
-    registerSubscriptionRoutes($app);
-    registerDownloadRoutes($app);
-    registerPreviewRoutes($app);
-    registerSortingRoutes($app);
-    registerSettingRoutes($app);
-    registerArtifactRoutes($app);
-    registerFileRoutes($app);
-    registerTokenRoutes($app);
-    registerArchiveRoutes($app);
-    registerModuleRoutes($app);
-    registerSyncRoutes($app);
-    registerNodeInfoRoutes($app);
-    registerMiscRoutes($app);
-    registerParserRoutes($app);
-    registerLogRoutes($app);
-    registerAgeRoutes($app);
-}
-
 export default function serve() {
     let port;
     let host;
@@ -151,7 +131,24 @@ export default function serve() {
             });
         }
     }
-    registerAllRoutes($app);
+    // register routes
+    registerCollectionRoutes($app);
+    registerSubscriptionRoutes($app);
+    registerDownloadRoutes($app);
+    registerPreviewRoutes($app);
+    registerSortingRoutes($app);
+    registerSettingRoutes($app);
+    registerArtifactRoutes($app);
+    registerFileRoutes($app);
+    registerTokenRoutes($app);
+    registerArchiveRoutes($app);
+    registerModuleRoutes($app);
+    registerSyncRoutes($app);
+    registerNodeInfoRoutes($app);
+    registerMiscRoutes($app);
+    registerParserRoutes($app);
+    registerLogRoutes($app);
+    registerAgeRoutes($app);
 
     $app.start();
 

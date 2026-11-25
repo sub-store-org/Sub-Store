@@ -4,14 +4,24 @@ import migrate from '@/utils/migration';
 import resourceCache from '@/utils/resource-cache';
 import headersResourceCache from '@/utils/headers-resource-cache';
 import scriptResourceCache from '@/utils/script-resource-cache';
-import {
-    matchesBackendPath,
-    registerAllRoutes,
-    stripBackendPath,
-} from '@/restful';
-import { syncArtifacts } from '@/restful/sync';
-import { gistBackupAction } from '@/restful/miscs';
-import { consumeShareToken } from '@/restful/token';
+import { matchesBackendPath, stripBackendPath } from '@/restful';
+import registerSubscriptionRoutes from '@/restful/subscriptions';
+import registerCollectionRoutes from '@/restful/collections';
+import registerArtifactRoutes from '@/restful/artifacts';
+import registerFileRoutes from '@/restful/file';
+import registerTokenRoutes, { consumeShareToken } from '@/restful/token';
+import registerArchiveRoutes from '@/restful/archives';
+import registerModuleRoutes from '@/restful/module';
+import registerSyncRoutes, { syncArtifacts } from '@/restful/sync';
+import registerDownloadRoutes from '@/restful/download';
+import registerSettingRoutes from '@/restful/settings';
+import registerPreviewRoutes from '@/restful/preview';
+import registerSortingRoutes from '@/restful/sort';
+import registerMiscRoutes, { gistBackupAction } from '@/restful/miscs';
+import registerNodeInfoRoutes from '@/restful/node-info';
+import registerParserRoutes from '@/restful/parser';
+import registerLogRoutes from '@/restful/logs';
+import registerAgeRoutes from '@/restful/age';
 import {
     ARTIFACTS_KEY,
     COLLECTIONS_KEY,
@@ -32,6 +42,26 @@ import {
     resolveD1Database,
     withStoreLock,
 } from '@/cf/d1-store';
+
+function registerAllRoutes($app) {
+    registerCollectionRoutes($app);
+    registerSubscriptionRoutes($app);
+    registerDownloadRoutes($app);
+    registerPreviewRoutes($app);
+    registerSortingRoutes($app);
+    registerSettingRoutes($app);
+    registerArtifactRoutes($app);
+    registerFileRoutes($app);
+    registerTokenRoutes($app);
+    registerArchiveRoutes($app);
+    registerModuleRoutes($app);
+    registerSyncRoutes($app);
+    registerNodeInfoRoutes($app);
+    registerMiscRoutes($app);
+    registerParserRoutes($app);
+    registerLogRoutes($app);
+    registerAgeRoutes($app);
+}
 
 let $app = null;
 
