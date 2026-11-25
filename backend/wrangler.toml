@@ -1,4 +1,4 @@
-name = "sub-store-backend"
+name = "sub-store"
 main = "dist/cf-worker.mjs"
 compatibility_date = "2025-05-01"
 
