@@ -1,4 +1,5 @@
 /* eslint-disable no-undef */
+import { getCFEnvVar } from '@/cf/env';
 
 export const NODE_CORS_ALLOWED_ORIGINS_ENV = 'SUB_STORE_CORS_ALLOWED_ORIGINS';
 export const NON_NODE_CORS_DEFAULT =
@@ -30,21 +31,25 @@ export function parseArgument(rawArgument) {
 
 export function resolveCorsPolicy({
     isNode,
+    isCFWorker,
     envValue,
     argument,
     customBackendName,
 } = {}) {
-    const defaultValue = isNode ? NODE_CORS_DEFAULT : NON_NODE_CORS_DEFAULT;
-    const configuredValue = isNode
+    const useEnv = Boolean(isNode || isCFWorker);
+    const defaultValue = useEnv ? NODE_CORS_DEFAULT : NON_NODE_CORS_DEFAULT;
+    const configuredValue = useEnv
         ? envValue
         : parseArgument(argument)?.[CORS_ARGUMENT_KEY];
     const hasConfiguredValue =
         configuredValue != null && `${configuredValue}`.trim() !== '';
     const rawValue = hasConfiguredValue ? configuredValue : defaultValue;
     const source = hasConfiguredValue
-        ? isNode
+        ? useEnv
             ? `env:${NODE_CORS_ALLOWED_ORIGINS_ENV}`
             : `argument:${CORS_ARGUMENT_KEY}`
+        : isCFWorker
+        ? 'default:cf-worker'
         : isNode
         ? 'default:node'
         : 'default:non-node';
@@ -54,23 +59,35 @@ export function resolveCorsPolicy({
         !parsedPolicy.wildcard && parsedPolicy.origins.length === 0
             ? parseAllowedOrigins(
                   defaultValue,
-                  isNode ? 'default:node' : 'default:non-node',
+                  isCFWorker
+                      ? 'default:cf-worker'
+                      : isNode
+                      ? 'default:node'
+                      : 'default:non-node',
               )
             : parsedPolicy;
 
-    return isNode && customBackendName && policy.source === 'default:node'
+    return useEnv &&
+        customBackendName &&
+        (policy.source === 'default:node' ||
+            policy.source === 'default:cf-worker')
         ? { ...policy, allowLocalOrigins: true }
         : policy;
 }
 
-export function resolveRuntimeCorsPolicy({ isNode } = {}) {
+export function resolveRuntimeCorsPolicy({ isNode, isCFWorker } = {}) {
     return resolveCorsPolicy({
         isNode,
-        envValue: isNode
+        isCFWorker,
+        envValue: isCFWorker
+            ? getCFEnvVar(NODE_CORS_ALLOWED_ORIGINS_ENV)
+            : isNode
             ? readNodeEnv(NODE_CORS_ALLOWED_ORIGINS_ENV)
             : undefined,
-        argument: isNode ? undefined : readScriptArgument(),
-        customBackendName: isNode
+        argument: isNode || isCFWorker ? undefined : readScriptArgument(),
+        customBackendName: isCFWorker
+            ? getCFEnvVar('SUB_STORE_BACKEND_CUSTOM_NAME')
+            : isNode
             ? readNodeEnv('SUB_STORE_BACKEND_CUSTOM_NAME')
             : undefined,
     });

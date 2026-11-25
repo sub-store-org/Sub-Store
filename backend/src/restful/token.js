@@ -77,7 +77,7 @@ function getAllTokens(req, res) {
 }
 
 async function signToken(req, res) {
-    if (!ENV().isNode && !ENV().isSubsCheckPro) {
+    if (!ENV().isNode && !ENV().isSubsCheckPro && !ENV().isCFWorker) {
         return failed(
             res,
             new RequestInvalidError(

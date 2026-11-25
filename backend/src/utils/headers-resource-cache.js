@@ -5,13 +5,33 @@ import {
     SETTINGS_KEY,
 } from '@/constants';
 
+const CF_CACHE_BUCKET = 'rc:headers';
+
 class ResourceCache {
     constructor() {
+        this.resourceCache = {};
+        if (!$.env.isCFWorker) {
+            this.reload();
+        }
+    }
+
+    reload() {
+        if ($.env.isCFWorker) {
+            this.resourceCache = {
+                ...($._cfCacheBuckets?.[CF_CACHE_BUCKET] || {}),
+            };
+            this._cleanup();
+            return;
+        }
         if (!$.read(HEADERS_RESOURCE_CACHE_KEY)) {
+            this.resourceCache = {};
             $.write('{}', HEADERS_RESOURCE_CACHE_KEY);
+            return;
         }
         try {
-            this.resourceCache = JSON.parse($.read(HEADERS_RESOURCE_CACHE_KEY));
+            const raw = $.read(HEADERS_RESOURCE_CACHE_KEY);
+            this.resourceCache =
+                typeof raw === 'string' ? JSON.parse(raw) : raw || {};
         } catch (e) {
             $.error(
                 `解析持久化缓存中的 ${HEADERS_RESOURCE_CACHE_KEY} 失败, 重置为 {}, 错误: ${
@@ -35,17 +55,25 @@ class ResourceCache {
             if (shouldDelete && (prefix ? id.startsWith(prefix) : true)) {
                 delete this.resourceCache[id];
                 clear = true;
+                if ($.env.isCFWorker) {
+                    $._onCacheEntryDelete?.(CF_CACHE_BUCKET, id);
+                }
             }
         });
-        if (clear) this._persist();
+        if (clear && !$.env.isCFWorker) this._persist();
     }
 
     revokeAll() {
         this.resourceCache = {};
+        if ($.env.isCFWorker) {
+            $._onCacheBucketClear?.(CF_CACHE_BUCKET);
+            return;
+        }
         this._persist();
     }
 
     _persist() {
+        if ($.env.isCFWorker) return;
         $.write(JSON.stringify(this.resourceCache), HEADERS_RESOURCE_CACHE_KEY);
     }
 
@@ -65,7 +93,11 @@ class ResourceCache {
             if (Date.now() + resolvedTTL <= time) return cached.data;
             if (remove) {
                 delete this.resourceCache[id];
-                this._persist();
+                if ($.env.isCFWorker) {
+                    $._onCacheEntryDelete?.(CF_CACHE_BUCKET, id);
+                } else {
+                    this._persist();
+                }
             }
         }
         return null;
@@ -73,10 +105,15 @@ class ResourceCache {
 
     set(id, value, ttl) {
         const resolvedTTL = normalizeTTL(ttl) ?? getTTL();
-        this.resourceCache[id] = {
+        const entry = {
             time: Date.now() + resolvedTTL,
             data: value,
         };
+        this.resourceCache[id] = entry;
+        if ($.env.isCFWorker) {
+            $._onCacheEntrySet?.(CF_CACHE_BUCKET, id, entry);
+            return;
+        }
         this._persist();
     }
 }

@@ -86,6 +86,9 @@ importers:
       shoutrrr-ts:
         specifier: https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.2.0/shoutrrr-ts-0.2.0.tgz
         version: https://github.com/Delusions6515/shoutrrr-ts/releases/download/v0.2.0/shoutrrr-ts-0.2.0.tgz
+      sval:
+        specifier: ^0.6.12
+        version: 0.6.12
       undici:
         specifier: ^8.12.3
         version: 8.12.3
@@ -2244,6 +2247,9 @@ packages:
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
+
+  sval@0.6.12:
+    resolution: {integrity: sha512-WtV5ENDCklPd7Gqqzo3SD50ykaXNv3FcsMjidnh0FpLzCAOqP3ac1sAGFUitF8yS53QyAgss0+JuWtNPvVl4fA==}
 
   text-table@0.2.0:
     resolution: {integrity: sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==}
@@ -4792,6 +4798,10 @@ snapshots:
       has-flag: 4.0.0
 
   supports-preserve-symlinks-flag@1.0.0: {}
+
+  sval@0.6.12:
+    dependencies:
+      acorn: 8.19.0
 
   text-table@0.2.0: {}
 
