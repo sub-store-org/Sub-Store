@@ -142,6 +142,31 @@ export async function handleFetch(request, env, ctx) {
     return withStoreLock(async () => {
         setCFContext(env, ctx);
         try {
+            // Fast-path CORS preflight without touching D1.
+            if (
+                request.method.toUpperCase() === 'OPTIONS' &&
+                request.headers.get('origin')
+            ) {
+                return await app.handleRequest(request);
+            }
+
+            // Fast-path reject unmatched paths when a secret prefix is configured
+            // so bots/scanners/favicon requests never consume D1 reads.
+            const feBePath = resolveBackendPath();
+            if (feBePath !== '/') {
+                const parsedUrl = new URL(request.url);
+                const pathname = parsedUrl.pathname;
+                const matchesPrefix =
+                    pathname === feBePath ||
+                    pathname.startsWith(`${feBePath}/`);
+                const isShareWithToken =
+                    pathname.startsWith('/share/') &&
+                    Boolean(parsedUrl.searchParams.get('token'));
+                if (!matchesPrefix && !isShareWithToken) {
+                    return new Response('', { status: 404 });
+                }
+            }
+
             const db = resolveD1Database(env);
             await loadFromD1(db, $);
             reloadResourceCaches();
