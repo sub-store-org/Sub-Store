@@ -47,7 +47,7 @@ export default function register($app) {
                     )}"`,
                 )
                 .send(
-                    $.env.isNode || $.env.isCFWorker
+                    $.env.isNode || $.env.isServer
                         ? JSON.stringify($.cache)
                         : $.read('#sub-store'),
                 );
@@ -78,7 +78,7 @@ export default function register($app) {
                     }
                 }
                 $.write(JSON.stringify(content, null, `  `), '#sub-store');
-                if ($.env.isNode || $.env.isCFWorker) {
+                if ($.env.isNode || $.env.isServer) {
                     $.cache = content;
                     $.persistCache();
                 }
@@ -99,7 +99,7 @@ export default function register($app) {
             }
         });
 
-    if (ENV().isNode || ENV().isCFWorker) {
+    if (ENV().isNode || ENV().isServer) {
         $app.get('/', getEnv);
     } else {
         // Redirect sub.store to the default frontend
@@ -158,7 +158,7 @@ async function refresh(_, res) {
 function readCurrentBackupContent() {
     let content = $.read('#sub-store');
     content = content ? JSON.parse(content) : {};
-    if ($.env.isNode || $.env.isCFWorker)
+    if ($.env.isNode || $.env.isServer)
         content = JSON.parse(JSON.stringify($.cache));
     return content;
 }
@@ -434,7 +434,7 @@ async function gistBackupAction(
             });
             // restore settings
             $.write(JSON.stringify(content, null, `  `), '#sub-store');
-            if ($.env.isNode || $.env.isCFWorker) {
+            if ($.env.isNode || $.env.isServer) {
                 $.cache = content;
                 $.persistCache();
             }
