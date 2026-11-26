@@ -1,6 +1,9 @@
 import { Base64 } from 'js-base64';
-import { Result, isPresent } from './utils';
-import Surge_Producer, { SurgeUnsupportedProxyError } from './surge';
+import { Result } from './utils';
+import Surge_Producer, {
+    appendSurgePolicyParameters,
+    SurgeUnsupportedProxyError,
+} from './surge';
 import ClashMeta_Producer from './clashmeta';
 import { isIPv4, isIPv6 } from '@/utils';
 import $ from '@/core/app';
@@ -70,27 +73,10 @@ function external(proxy) {
         });
     }
 
-    result.appendIfPresent(
-        `,no-error-alert=${proxy['no-error-alert']}`,
-        'no-error-alert',
-    );
-
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
 
-    // tfo
-    if (isPresent(proxy, 'tfo')) {
-        result.append(`,tfo=${proxy['tfo']}`);
-    } else if (isPresent(proxy, 'fast-open')) {
-        result.append(`,tfo=${proxy['fast-open']}`);
-    }
-
-    // test-url
-    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
-
-    // block-quic
-    result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
-
+    appendSurgePolicyParameters(result, proxy);
     return result.toString();
 }
 // eslint-disable-next-line no-unused-vars

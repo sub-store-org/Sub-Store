@@ -37,19 +37,6 @@ import {
 } from '../ech-utils';
 import { normalizeVmessSecurity } from '../vmess-security';
 
-function surge_port_hopping(raw) {
-    const [parts, port_hopping] =
-        raw.match(
-            /,\s*?port-hopping\s*?=\s*?["']?\s*?((\d+(-\d+)?)([,;]\d+(-\d+)?)*)\s*?["']?\s*?/,
-        ) || [];
-    return {
-        port_hopping: port_hopping
-            ? port_hopping.replace(/;/g, ',')
-            : undefined,
-        line: parts ? raw.replace(parts, '') : raw,
-    };
-}
-
 function splitURIFragment(raw) {
     const [__, content, fragment] = /^(.*?)(?:#(.*?))?$/.exec(raw);
     return {
@@ -2588,6 +2575,8 @@ function URI_WireGuard() {
                     proxy['public-key'] = value;
                 } else if (/privatekey/i.test(key)) {
                     proxy['private-key'] = value;
+                } else if (/^presharedkey$/i.test(key)) {
+                    proxy['preshared-key'] = value;
                 } else if (['udp'].includes(key)) {
                     proxy[key] = /(TRUE)|1/i.test(value);
                 } else if (![...Object.keys(proxy), 'flag'].includes(key)) {
@@ -3034,9 +3023,7 @@ function Loon_WireGuard() {
 
 function Surge_Direct() {
     const name = 'Surge Direct Parser';
-    const test = (line) => {
-        return /^.*=\s*direct/.test(line.split(',')[0]);
-    };
+    const test = (line) => /^[^=,]*=\s*direct\s*$/i.test(line.split(',')[0]);
     const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
@@ -3061,12 +3048,7 @@ function Surge_Masque() {
     const test = (line) => {
         return /^.*=\s*masque/.test(line.split(',')[0]);
     };
-    const parse = (raw) => {
-        const { port_hopping, line } = surge_port_hopping(raw);
-        const proxy = getSurgeParser().parse(line);
-        proxy.ports = port_hopping;
-        return proxy;
-    };
+    const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
 function Surge_H2Connect() {
@@ -3161,68 +3143,10 @@ function Surge_External() {
         return /^.*=\s*external/.test(line.split(',')[0]);
     };
     const parse = (line) => {
-        let parsed = /^\s*(.*?)\s*?=\s*?external\s*?,\s*(.*?)\s*$/.exec(line);
-
-        // eslint-disable-next-line no-unused-vars
-        let [_, name, other] = parsed;
-        line = other;
-
-        // exec = "/usr/bin/ssh" 或 exec = /usr/bin/ssh
-        let exec = /(,|^)\s*?exec\s*?=\s*"(.*?)"\s*?(,|$)/.exec(line)?.[2];
-        if (!exec) {
-            exec = /(,|^)\s*?exec\s*?=\s*(.*?)\s*?(,|$)/.exec(line)?.[2];
-        }
-
-        // local-port = "1080" 或 local-port = 1080
-        let localPort = /(,|^)\s*?local-port\s*?=\s*"(.*?)"\s*?(,|$)/.exec(
-            line,
-        )?.[2];
-        if (!localPort) {
-            localPort = /(,|^)\s*?local-port\s*?=\s*(.*?)\s*?(,|$)/.exec(
-                line,
-            )?.[2];
-        }
-        // args = "-m", args = "rc4-md5"
-        // args = -m, args = rc4-md5
-        const argsRegex = /(,|^)\s*?args\s*?=\s*("(.*?)"|(.*?))(?=\s*?(,|$))/g;
-        let argsMatch;
-        const args = [];
-        while ((argsMatch = argsRegex.exec(line)) !== null) {
-            if (argsMatch[3] != null) {
-                args.push(argsMatch[3]);
-            } else if (argsMatch[4] != null) {
-                args.push(argsMatch[4]);
-            }
-        }
-        // addresses = "[ipv6]",,addresses = "ipv6", addresses = "ipv4"
-        // addresses = [ipv6], addresses = ipv6, addresses = ipv4
-        const addressesRegex =
-            /(,|^)\s*?addresses\s*?=\s*("(.*?)"|(.*?))(?=\s*?(,|$))/g;
-        let addressesMatch;
-        const addresses = [];
-        while ((addressesMatch = addressesRegex.exec(line)) !== null) {
-            let ip;
-            if (addressesMatch[3] != null) {
-                ip = addressesMatch[3];
-            } else if (addressesMatch[4] != null) {
-                ip = addressesMatch[4];
-            }
-            if (ip != null) {
-                ip = `${ip}`.trim().replace(/^\[/, '').replace(/\]$/, '');
-            }
-            if (isIP(ip)) {
-                addresses.push(ip);
-            }
-        }
-
-        const proxy = {
-            type: 'external',
-            name,
-            exec,
-            'local-port': localPort,
-            args,
-            addresses,
-        };
+        const proxy = getSurgeParser().parse(line);
+        proxy.addresses = proxy.addresses
+            .map((ip) => ip.trim().replace(/^\[/, '').replace(/\]$/, ''))
+            .filter(isIP);
         return proxy;
     };
     return { name, test, parse };
@@ -3248,12 +3172,7 @@ function Surge_Tuic() {
     const test = (line) => {
         return /^.*=\s*tuic(-v5)?/.test(line.split(',')[0]);
     };
-    const parse = (raw) => {
-        const { port_hopping, line } = surge_port_hopping(raw);
-        const proxy = getSurgeParser().parse(line);
-        proxy['ports'] = port_hopping;
-        return proxy;
-    };
+    const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
 function Surge_WireGuard() {
@@ -3270,12 +3189,7 @@ function Surge_Hysteria2() {
     const test = (line) => {
         return /^.*=\s*hysteria2/.test(line.split(',')[0]);
     };
-    const parse = (raw) => {
-        const { port_hopping, line } = surge_port_hopping(raw);
-        const proxy = getSurgeParser().parse(line);
-        proxy['ports'] = port_hopping;
-        return proxy;
-    };
+    const parse = (line) => getSurgeParser().parse(line);
     return { name, test, parse };
 }
 

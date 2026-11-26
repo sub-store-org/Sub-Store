@@ -38,6 +38,128 @@ function captureErrors(fn) {
 }
 
 describe('Proxy text producers', function () {
+    it('round-trips documented Surge common policy parameters', function () {
+        const testUrl =
+            'https://check.example.com/status?list=one,port-hopping=3000';
+        const parameters = [
+            'interface = "en1"',
+            'allow-other-interface="false"',
+            'dns-follow-interface="true"',
+            'no-error-alert = false',
+            'ip-version = prefer-v6 ',
+            'hybrid="off"',
+            'tfo="false"',
+            'tos="0x88"',
+            'ecn="auto"',
+            'block-quic=adaptive',
+            `test-url="${testUrl}"`,
+            'test-timeout="0.75"',
+            'test-udp=check.example.com@192.0.2.53',
+            'underlying-proxy="Entry Group"',
+        ].join(',');
+        const expected = {
+            'interface-name': 'en1',
+            'allow-other-interface': false,
+            'dns-follow-interface': true,
+            'no-error-alert': 'false',
+            'ip-version': 'prefer-v6',
+            hybrid: 'off',
+            tfo: false,
+            tos: 136,
+            ecn: 'auto',
+            'block-quic': 'adaptive',
+            'test-url': testUrl,
+            'test-timeout': 0.75,
+            'test-udp': 'check.example.com@192.0.2.53',
+            'underlying-proxy': 'Entry Group',
+        };
+
+        for (const policy of [
+            'ss,example.com,443,encrypt-method=aes-128-gcm,password=secret',
+            'socks5,example.com,1080',
+            'socks5-tls,example.com,443',
+            'h2-connect,example.com,443',
+            `vless,example.com,443,username=${UUID}`,
+            'hysteria2,example.com,443,password=secret',
+            'external,exec="/usr/bin/ssh",local-port=1080,args="-o",args="Option=a,b",args="say \\"test\\""',
+        ]) {
+            const [proxy] = ProxyUtils.parse(`Proxy=${policy},${parameters}`);
+            expectSubset(proxy, expected, policy);
+            expect(proxy).to.not.have.property('ports');
+            const targets =
+                proxy.type === 'external'
+                    ? ['SurgeMac']
+                    : ['Surge', 'SurgeMac'];
+            for (const target of targets) {
+                const output = produceExternal(target, proxy);
+                expect(output).to.include(`,test-url="${testUrl}"`);
+                const [roundTripped] = ProxyUtils.parse(output);
+                expectSubset(roundTripped, expected, target);
+                if (proxy.type === 'external') {
+                    expect(roundTripped.args).to.deep.equal([
+                        '-o',
+                        'Option=a,b',
+                        'say \\"test\\"',
+                    ]);
+                }
+            }
+        }
+    });
+
+    it('applies Surge common parameters to Direct aliases', function () {
+        const proxyOnly = {
+            'no-error-alert': true,
+            ecn: true,
+            'underlying-proxy': 'Entry',
+        };
+        const [proxy] = ProxyUtils.parse(
+            'Alias=direct,interface=en1,dns-follow-interface=false,test-url=https://check.example.com,ecn=true',
+        );
+        expectSubset(proxy, {
+            type: 'direct',
+            'interface-name': 'en1',
+            'dns-follow-interface': false,
+            'test-url': 'https://check.example.com',
+        });
+        expect(proxy).to.not.have.property('ecn');
+
+        for (const target of ['Surge', 'SurgeMac']) {
+            const output = produceExternal(target, { ...proxy, ...proxyOnly });
+            expect(output).to.equal(
+                'Alias=direct,test-url=https://check.example.com,interface=en1,dns-follow-interface=false',
+            );
+        }
+    });
+
+    it('rejects Surge port hopping with an underlying proxy and out-of-range TOS', function () {
+        const proxies = ProxyUtils.parse(
+            [
+                'Hysteria=hysteria2,example.com,443,password=secret,port-hopping=443,2000-2005,underlying-proxy=Entry',
+                `TUIC=tuic-v5,example.com,443,uuid=${UUID},password=secret,port-hopping="443;2000-2005",underlying-proxy=Entry`,
+                "MASQUE=masque,example.com,443,password=secret,port-hopping='443;2000-2005',underlying-proxy=Entry",
+                'TOS=ss,example.com,443,encrypt-method=aes-128-gcm,password=secret,tos=0x100',
+            ].join('\n'),
+        );
+        expect(proxies.slice(0, 3).map(({ ports }) => ports)).to.deep.equal(
+            Array(3).fill('443,2000-2005'),
+        );
+        for (const target of ['Surge', 'SurgeMac']) {
+            const { result, errors } = captureErrors(() =>
+                ProxyUtils.produce(proxies, target, 'external'),
+            );
+            expect(result).to.equal('');
+            expect(errors).to.have.length(4);
+            for (const error of errors.slice(0, 3)) {
+                expect(error).to.include(
+                    'port-hopping cannot be combined with underlying-proxy',
+                );
+            }
+            expect(errors[3]).to.include(
+                'tos must be an integer between 0 and 255',
+            );
+        }
+    });
+
     it('round-trips Surge ECN modes and converts them to Loon booleans', function () {
         for (const [input, mode, loonEcn] of [
             ['auto', 'auto', undefined],
@@ -3227,6 +3349,42 @@ describe('Proxy text producers', function () {
         expect(output).to.not.include('ipv6-cidr');
     });
 
+    it('round-trips supported Surge WireGuard policy parameters', function () {
+        const [proxy] = ProxyUtils.parse(
+            'WG=wireguard,section-name="office,2",underlying-proxy=Entry,ip-version=dual,no-error-alert=true,' +
+                'test-url=http://10.0.0.1/check?a=b,test-timeout=8,test-udp=example.com@10.0.0.1,' +
+                'hybrid=on,tos=0x88,tfo=false,block-quic=adaptive,ecn=false,' +
+                'interface=en1,allow-other-interface=true,dns-follow-interface=true,' +
+                'shadow-tls-version=3,shadow-tls-password="unused,with=padding=="',
+        );
+        expectSubset(proxy, {
+            type: 'wireguard-surge',
+            'section-name': 'office,2',
+            'underlying-proxy': 'Entry',
+            'ip-version': 'dual',
+            'no-error-alert': 'true',
+            'test-url': 'http://10.0.0.1/check?a=b',
+            'test-timeout': 8,
+            'test-udp': 'example.com@10.0.0.1',
+            hybrid: 'on',
+            tos: 136,
+            tfo: false,
+            'block-quic': 'adaptive',
+            ecn: false,
+        });
+        expect(proxy).to.not.have.any.keys('interface-name', 'plugin');
+
+        for (const target of ['Surge', 'SurgeMac']) {
+            const output = produceExternal(target, proxy);
+            expect(output).to.equal(
+                'WG=wireguard,section-name="office,2",ip-version=dual,no-error-alert=true,tfo=false,' +
+                    'test-url=http://10.0.0.1/check?a=b,test-timeout=8,test-udp=example.com@10.0.0.1,' +
+                    'hybrid=on,tos=136,block-quic=adaptive,ecn=false,underlying-proxy=Entry',
+            );
+            expect(ProxyUtils.parse(output)).to.deep.equal([proxy]);
+        }
+    });
+
     it('produces Surge WireGuard sections without leaking CIDR metadata fields', function () {
         const output = produceExternal(
             'Surge',
@@ -3241,15 +3399,129 @@ describe('Proxy text producers', function () {
                 ipv6: 'fd00::2',
                 'ip-cidr': 24,
                 'ipv6-cidr': 64,
+                'allow-peer-access': false,
             },
             { 'include-unsupported-proxy': true },
         );
 
         expect(output).to.include('# > WireGuard Proxy Surge WG');
+        expect(output).to.include('\nprivate-key = private-key\n');
         expect(output).to.include('self-ip = 10.0.0.2');
         expect(output).to.include('self-ip-v6 = fd00::2');
+        expect(output).to.include('allow-peer-access = false');
+        expect(output).to.include('allowed-ips = "0.0.0.0/0,::/0"');
         expect(output).to.not.include('ip-cidr');
         expect(output).to.not.include('ipv6-cidr');
+    });
+
+    it('exports a Surge WireGuard keystore reference as the only private key field', function () {
+        for (const target of ['Surge', 'SurgeMac']) {
+            for (const privateKey of [undefined, 'inline-key']) {
+                const output = produceExternal(
+                    target,
+                    {
+                        type: 'wireguard',
+                        name: 'WG',
+                        server: 'wg.example.com',
+                        port: 51820,
+                        ip: '10.0.0.2',
+                        'public-key': 'peer-key',
+                        'private-key': privateKey,
+                        'private-key-keystore-name': 'office-key',
+                    },
+                    { 'include-unsupported-proxy': true },
+                );
+                expect(output).to.include(
+                    '[WireGuard WG]\nprivate-key-keystore-name = office-key\n',
+                );
+                expect(output).to.not.include('\nprivate-key =');
+                expect(output).to.not.include('inline-key');
+            }
+        }
+    });
+
+    it('exports Surge WireGuard listeners with every peer and its own fields', function () {
+        const proxy = {
+            type: 'wireguard',
+            name: 'Home WG',
+            'section-name': 'home-wg',
+            'private-key': 'private-key',
+            ip: '10.0.0.1/24',
+            ipv6: 'fd00::1/64',
+            'dns-server': ['10.0.0.53', '[fd00::53]:5353', 'system'],
+            'prefer-ipv6': false,
+            'ip-version': 'ipv6-prefer',
+            'allow-peer-access': false,
+            'accept-incoming': true,
+            'listen-port': '51820',
+            'underlying-proxy': 'Entry',
+            'interface-name': 'en1',
+            'allow-other-interface': true,
+            plugin: 'shadow-tls',
+            'plugin-opts': { version: 3, password: 'unused' },
+            ecn: false,
+            peers: [
+                {
+                    'public-key': 'phone-key',
+                    'allowed-ips': ['10.0.0.2/32'],
+                    'persistent-keepalive': 0,
+                    keepalive: 25,
+                    'client-id': 'aabbcc',
+                },
+                {
+                    'public-key': 'router-key',
+                    'allowed-ips': ['10.20.0.0/24', 'fd20::/64'],
+                    server: '2001:db8::10',
+                    port: 51821,
+                    reserved: [83, 12, 235],
+                    'pre-shared-key': 'shared-key',
+                },
+                {
+                    'public-key': 'laptop-key',
+                    'allowed-ips': '"10.0.0.3/32, fd00::3/128"',
+                    endpoint: 'laptop.example.com:51822',
+                    'client-id': 'AQID',
+                },
+            ],
+        };
+
+        for (const target of ['Surge', 'SurgeMac']) {
+            const output = produceExternal(target, proxy, {
+                'include-unsupported-proxy': true,
+            });
+            expect(output).to.include(
+                '# Home WG=wireguard,section-name=home-wg,ip-version=prefer-v6,ecn=false\n',
+            );
+            expect(output.split('[WireGuard home-wg]\n')[1]).to.equal(
+                [
+                    'private-key = private-key',
+                    'self-ip = 10.0.0.1',
+                    'self-ip-v6 = fd00::1',
+                    'dns-server = 10.0.0.53, [fd00::53]:5353, system',
+                    'prefer-ipv6 = false',
+                    'listen-port = 51820',
+                    'peer = (public-key = phone-key, allowed-ips = "10.0.0.2/32", keepalive = 0, client-id = 0xaabbcc)',
+                    'peer = (public-key = router-key, allowed-ips = "10.20.0.0/24,fd20::/64", endpoint = [2001:db8::10]:51821, client-id = 83/12/235, preshared-key = shared-key)',
+                    'peer = (public-key = laptop-key, allowed-ips = "10.0.0.3/32, fd00::3/128", endpoint = laptop.example.com:51822, client-id = AQID)',
+                ].join('\n'),
+            );
+        }
+    });
+
+    it('exports WireGuard URI preshared keys and normalizes legacy peer access for Surge', function () {
+        const [proxy] = ProxyUtils.parse(
+            'wireguard://private-key@wg.example.com:51820/?address=10.0.0.2&publickey=peer-key&presharedkey=shared%2Bkey%3D&allowed-ips=10.0.0.0%2F24&accept-incoming=true&ip-version=ipv6-prefer#WG',
+        );
+        const output = produceExternal('Surge', proxy, {
+            'include-unsupported-proxy': true,
+        });
+        expect(output).to.include(
+            'prefer-ipv6 = true\nallow-peer-access = true',
+        );
+        expect(output).to.include(
+            'peer = (public-key = peer-key, allowed-ips = "10.0.0.0/24", endpoint = wg.example.com:51820, preshared-key = shared+key=)',
+        );
+        expect(output).to.not.include('accept-incoming');
     });
 
     it('produces Surfboard trojan websocket lines', function () {
