@@ -26,6 +26,8 @@ import {
 
 export const RESPONSE_TRANSFORMER = 'Response Transformer';
 
+const MIHOMO_CONFIG_STATE_KEY = Symbol.for('sub-store.mihomo-config-state');
+
 export function isResponseTransformerType(type) {
     return type === RESPONSE_TRANSFORMER;
 }
@@ -442,27 +444,34 @@ function ScriptOperator(
 ) {
     context.source = source;
     context.env = env;
+    const usesRawContent = /\$content|\$files/.test(script);
     return {
         name: 'Script Operator',
         func: async (proxies) => {
             let output = proxies;
             if (isMihomoConfigFile(output?.$file)) {
                 try {
-                    let patch = YAML.safeLoad(script);
+                    const patch = YAML.safeLoad(script);
+                    if (!patch || typeof patch !== 'object')
+                        throw new Error('patch is not an object');
+                    const state = output?.[MIHOMO_CONFIG_STATE_KEY];
                     let config;
-                    if (output?.$content) {
+                    if (state?.config) {
+                        config = state.config;
+                    } else if (output?.$content) {
                         try {
-                            config = YAML.safeLoad(output?.$content);
+                            config = YAML.safeLoad(output.$content);
                         } catch (e) {
                             $.error(e.message ?? e);
                         }
                     }
-                    // if (typeof patch !== 'object') patch = {};
-                    if (typeof patch !== 'object')
-                        throw new Error('patch is not an object');
-                    output.$content = ProxyUtils.yaml.safeDump(
-                        deepMerge(config || {}, patch),
-                    );
+                    const merged = deepMerge(config || {}, patch);
+                    if (state) {
+                        state.config = merged;
+                        state.content = null;
+                    } else {
+                        output.$content = ProxyUtils.yaml.safeDump(merged);
+                    }
                     return output;
                 } catch (e) {
                     // console.log(e);
@@ -485,8 +494,31 @@ function ScriptOperator(
                 const operator = createDynamicFunction(
                     'operator',
                     `async function operator(input = [], targetPlatform, context) {
-                        if (input && (input.$files || input.$content)) {
-                            let { $content, $files, $options, $file } = input
+                        const __state = input?.[Symbol.for('sub-store.mihomo-config-state')];
+                        if (input && (__state || input.$files || input.$content)) {
+                            const { $options, $file } = input;
+                            if (__state && !${usesRawContent} && ['mihomoConfig', 'mihomoProfile'].includes($file?.type)) {
+                                ${script}
+                                if (typeof main === 'function') {
+                                    let config = __state.config;
+                                    if (!config && __state.content) {
+                                        try {
+                                            config = ProxyUtils.yaml.safeLoad(__state.content);
+                                        } catch (e) {
+                                            console.log(e.message ?? e);
+                                        }
+                                    }
+                                    const next = await main(config || {});
+                                    if (next && typeof next === 'object') {
+                                        __state.config = next;
+                                        __state.content = null;
+                                        return input;
+                                    }
+                                    return { $content: ProxyUtils.yaml.safeDump(next), $files: input.$files, $options, $file };
+                                }
+                                return input;
+                            }
+                            let { $content, $files } = input;
                             if (['mihomoConfig', 'mihomoProfile'].includes($file?.type)) {
                                 ${script}
                                 if(typeof main === 'function') {
@@ -550,7 +582,11 @@ function AddProxiesFromSubscriptionOperator(
     const apply = async (input) => {
         if (!isMihomoConfigFile(input?.$file)) return input;
 
-        const config = normalizeMihomoConfig(input.$content);
+        const state = input?.[MIHOMO_CONFIG_STATE_KEY];
+        const hasLazyConfig = Boolean(state?.config);
+        const config = hasLazyConfig
+            ? state.config
+            : normalizeMihomoConfig(input.$content);
         const currentProxies = getMihomoProfileProxies(config);
         const proxies = await produceArtifact({
             type: sourceType,
@@ -577,7 +613,12 @@ function AddProxiesFromSubscriptionOperator(
                 break;
         }
 
-        input.$content = ProxyUtils.yaml.safeDump(config);
+        if (hasLazyConfig) {
+            state.config = config;
+            state.content = null;
+        } else {
+            input.$content = ProxyUtils.yaml.safeDump(config);
+        }
         return input;
     };
 
@@ -1683,8 +1724,66 @@ async function ApplyFilter(filter, objs) {
     return objs.filter((_, i) => selected[i]);
 }
 
+function cloneFileInput(objs) {
+    const state = objs?.[MIHOMO_CONFIG_STATE_KEY];
+    if (!state) {
+        return {
+            ...objs,
+            ...(Array.isArray(objs.$files) ? { $files: [...objs.$files] } : {}),
+        };
+    }
+    const nextState = {
+        config: state.config,
+        content: state.content,
+    };
+    const next = {
+        $options: objs.$options,
+        $file: objs.$file,
+        [MIHOMO_CONFIG_STATE_KEY]: nextState,
+    };
+    const getLazyContent = () => {
+        if (nextState.content == null && nextState.config != null) {
+            nextState.content = ProxyUtils.yaml.safeDump(nextState.config);
+        }
+        return nextState.content ?? '';
+    };
+    Object.defineProperty(next, '$content', {
+        enumerable: true,
+        configurable: true,
+        get: getLazyContent,
+        set(val) {
+            nextState.content = val;
+            nextState.config = null;
+        },
+    });
+    if (Array.isArray(objs.$files)) {
+        if (
+            nextState.content == null &&
+            nextState.config != null &&
+            objs.$files.length === 1
+        ) {
+            const lazyFiles = [undefined];
+            Object.defineProperty(lazyFiles, 0, {
+                enumerable: true,
+                configurable: true,
+                get: getLazyContent,
+            });
+            next.$files = lazyFiles;
+        } else {
+            next.$files = [...objs.$files];
+        }
+    }
+    return next;
+}
+
 async function ApplyOperator(operator, objs) {
-    let output = clone(objs);
+    const isFileInput =
+        objs &&
+        !Array.isArray(objs) &&
+        (objs.$files ||
+            Object.prototype.hasOwnProperty.call(objs, '$content') ||
+            objs[MIHOMO_CONFIG_STATE_KEY]);
+    let output = isFileInput ? cloneFileInput(objs) : clone(objs);
     try {
         const output_ = await operator.func(output);
         if (output_) output = output_;
