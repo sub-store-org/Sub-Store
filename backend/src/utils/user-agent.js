@@ -18,6 +18,8 @@ export function getUserAgentFromHeaders(headers) {
 export function getPlatformFromUserAgent({ ua, UA, accept }) {
     if (UA.indexOf('Quantumult%20X') !== -1) {
         return 'QX';
+    } else if (ua.indexOf('ring') !== -1) {
+        return 'Ring';
     } else if (ua.indexOf('egern') !== -1) {
         return 'Egern';
     } else if (UA.indexOf('Surfboard') !== -1) {
