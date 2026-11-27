@@ -190,6 +190,25 @@ const wsParser = (proxy, parsedProxy) => {
     parsedProxy.transport = transport;
 };
 
+const uotParser = (proxy, parsedProxy) => {
+    if (proxy.uot) parsedProxy.udp_over_tcp = true;
+
+    let uot_version = 2;
+    if (
+        proxy['udp-over-tcp-version'] &&
+        [1, 2].includes(proxy['udp-over-tcp-version'])
+    ) {
+        uot_version = proxy['udp-over-tcp-version'];
+    }
+
+    if (proxy['udp-over-tcp']) {
+        parsedProxy.udp_over_tcp = {
+            enabled: true,
+            version: uot_version,
+        };
+    }
+};
+
 const h1Parser = (proxy, parsedProxy) => {
     const transport = { type: 'http', headers: {} };
     if (proxy['http-opts']) {
@@ -532,18 +551,8 @@ const socks5Parser = (proxy = {}) => {
         throw 'invalid port';
     if (proxy.username) parsedProxy.username = proxy.username;
     if (proxy.password) parsedProxy.password = proxy.password;
-    if (proxy.uot) parsedProxy.udp_over_tcp = true;
-    if (proxy['udp-over-tcp']) {
-        parsedProxy.udp_over_tcp = {
-            enabled: true,
-            version:
-                !proxy['udp-over-tcp-version'] ||
-                proxy['udp-over-tcp-version'] === 1
-                    ? 1
-                    : 2,
-        };
-    }
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
+    uotParser(proxy, parsedProxy);
     networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
@@ -561,17 +570,7 @@ const shadowTLSParser = (proxy = {}) => {
         password: proxy.password,
         detour: getShadowTLSTag(proxy),
     };
-    if (proxy.uot) ssPart.udp_over_tcp = true;
-    if (proxy['udp-over-tcp']) {
-        ssPart.udp_over_tcp = {
-            enabled: true,
-            version:
-                !proxy['udp-over-tcp-version'] ||
-                proxy['udp-over-tcp-version'] === 1
-                    ? 1
-                    : 2,
-        };
-    }
+    uotParser(proxy, ssPart);
     networkParser(proxy, ssPart);
     smuxParser(proxy.smux, ssPart);
     return {
@@ -656,18 +655,8 @@ const ssParser = (proxy = {}) => {
     };
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
-    if (proxy.uot) parsedProxy.udp_over_tcp = true;
-    if (proxy['udp-over-tcp']) {
-        parsedProxy.udp_over_tcp = {
-            enabled: true,
-            version:
-                !proxy['udp-over-tcp-version'] ||
-                proxy['udp-over-tcp-version'] === 1
-                    ? 1
-                    : 2,
-        };
-    }
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
+    uotParser(proxy, parsedProxy);
     networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
@@ -957,17 +946,6 @@ const naiveParser = (proxy = {}) => {
         throw 'invalid port';
     if (proxy.username) parsedProxy.username = proxy.username;
     if (proxy.password) parsedProxy.password = proxy.password;
-    if (proxy.uot) parsedProxy.udp_over_tcp = true;
-    if (proxy['udp-over-tcp']) {
-        parsedProxy.udp_over_tcp = {
-            enabled: true,
-            version:
-                !proxy['udp-over-tcp-version'] ||
-                proxy['udp-over-tcp-version'] === 1
-                    ? 1
-                    : 2,
-        };
-    }
     const insecure_concurrency = parseInt(
         `${proxy['insecure-concurrency']}`,
         10,
@@ -980,6 +958,7 @@ const naiveParser = (proxy = {}) => {
     if (proxy['quic-congestion-control'])
         parsedProxy.quic_congestion_control = proxy['quic-congestion-control'];
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
+    uotParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
     detourParser(proxy, parsedProxy);
     tlsParser(proxy, parsedProxy);
