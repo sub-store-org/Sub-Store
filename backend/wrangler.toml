@@ -1,0 +1,47 @@
+name = "sub-store"
+main = "dist/cf-worker.mjs"
+compatibility_date = "2025-05-01"
+
+# Keep Variables & Secrets configured in the Cloudflare Dashboard across Git deploys.
+keep_vars = true
+
+[build]
+command = "pnpm run bundle:cf"
+
+# Optional frontend static assets at "/".
+# By default, `pnpm run bundle:cf` leaves `./dist/frontend` empty (backend-only deploy).
+# Set build-time env var `SUB_STORE_CF_FRONTEND=true` to automatically download
+# the official Sub-Store-Front-End release into `./dist/frontend` and deploy it at "/".
+# Leaving `not_found_handling` as default ("none") ensures browser navigations to
+# secret backend paths (/<secret>/api/..., /<secret>/download/...) and /share/...
+# still reach the Worker, while SPA routes fall back to /index.html in the Worker.
+[assets]
+directory = "./dist/frontend"
+binding = "ASSETS"
+
+# Cloudflare Workers Automatic Provisioning:
+# Omitting `database_id` lets Cloudflare auto-create the D1 database on first deploy
+# and keep it linked across future Git deployments.
+# If you want to bind an existing D1 database, either add `database_id = "..."` here
+# or re-bind `SUB_STORE_DB` in Cloudflare Dashboard -> Worker -> Settings -> Bindings.
+[[d1_databases]]
+binding = "SUB_STORE_DB"
+database_name = "sub-store"
+
+# Recommended: configure sensitive values in Cloudflare Dashboard -> Settings -> Variables and Secrets
+# (instead of committing them to Git):
+#
+# - SUB_STORE_FRONTEND_BACKEND_PATH (Secret/Text): secret path prefix, e.g. "/my-secret-path"
+#   (You can also set SUB_STORE_TOKEN = "my-secret-path" without the leading slash.)
+#   Frontend URL: https://<your-worker-domain>/
+#   One-click Frontend + Backend URL: https://<your-worker-domain>/?api=https://<your-worker-domain>/my-secret-path
+#   Public share links (/share/sub/...?token=...) still work at the root path.
+#
+# - SUB_STORE_CORS_ALLOWED_ORIGINS (Text, optional): comma-separated allowed origins or "*"
+#   (Same-origin requests from the built-in "/" frontend are always allowed automatically.)
+# - SUB_STORE_PUSH_SERVICE (Secret, optional): HTTP webhook URL with [推送标题] and [推送内容]
+# - SUB_STORE_CF_CRON_TASKS (Text, optional): comma-separated tasks for Cron Triggers (sync, upload, download)
+
+# Optional Cron Triggers (uncomment to enable scheduled sync / backup):
+# [triggers]
+# crons = ["0 */6 * * *"]
