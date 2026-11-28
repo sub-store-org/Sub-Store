@@ -78,6 +78,9 @@ const grammars = String.raw`
     function unescapeQuotedValue(value) {
         return value.replace(/\\(["\\])/g, "$1");
     }
+    function supportsQuotedEscapes() {
+        return proxy.type === "vless" || proxy.type === "h2-connect";
+    }
     function readQuotedHeaderKey(text, start) {
         const quote = text[start];
         const withEscapes = proxy.type === "vless" && quote === '"';
@@ -469,10 +472,28 @@ https = tag equals "https" address (username password)? (usernamek passwordk)? (
     proxy.tls = true;
     handleShadowTLS();
 }
-h2_connect = tag equals "h2-connect" address (username password)? (usernamek passwordk)? (headers/max_streams/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/shadow_tls_version/shadow_tls_sni/shadow_tls_password/proxy_policy_parameter/others)* {
-    proxy.type = "h2-connect";
+h2_connect = tag equals h2_connect_address h2_credentials? (h2_credential/h2_headers/headers/max_streams/sni/cert_verify_name/alpn/tls_fingerprint/client_fingerprint/tls_verification/client_cert/ech_config/udp_relay/shadow_tls_version/shadow_tls_sni/shadow_tls_password/proxy_policy_parameter/others)* {
     proxy.tls = true;
     handleShadowTLS();
+}
+h2_connect_address = "h2-connect" address { proxy.type = "h2-connect"; }
+h2_credentials = comma !([a-zA-Z0-9-]+ equals) user:quoted_value comma pass:quoted_value {
+    proxy.username = user;
+    proxy.password = pass;
+}
+h2_credential = comma key:("username"/"password") equals value:quoted_value { proxy[key] = value; }
+// Keep nested single-quoted Surge header values in the shared header parser.
+h2_headers = comma "headers" equals value:double_quoted_value &{
+    return !/(?:^|;)\s*[^:;]+:\s*'.*?'\s*(?:;|$)/.test(value);
+} {
+    const entries = [];
+    for (const pair of value.split(";")) {
+        const separator = pair.indexOf(":");
+        if (separator <= 0) continue;
+        const key = pair.slice(0, separator).trim();
+        if (key) entries.push([key, unescapeQuotedValue(pair.slice(separator + 1).trim())]);
+    }
+    proxy.headers = Object.fromEntries(entries);
 }
 http = tag equals "http" address (username password)? (usernamek passwordk)? (headers/shadow_tls_version/shadow_tls_sni/shadow_tls_password/proxy_policy_parameter/others)* {
     proxy.type = "http";
@@ -505,7 +526,7 @@ wireguard = tag equals "wireguard" (section_name/common_policy_parameter/proxy_o
     if (!proxy["section-name"]) error("WireGuard requires section-name");
     proxy.type = "wireguard-surge";
 }
-hysteria2 = tag equals "hysteria2" address (sni/cert_verify_name/alpn/tls_verification/client_cert/ech_config/passwordk/tls_fingerprint/download_bandwidth/shadow_tls_version/shadow_tls_sni/shadow_tls_password/port_hopping/port_hopping_interval/salamander_password/gecko_password/proxy_policy_parameter/others)* {
+hysteria2 = tag equals "hysteria2" address (sni/cert_verify_name/alpn/tls_verification/client_cert/ech_config/passwordk/tls_fingerprint/download_bandwidth/shadow_tls_version/shadow_tls_sni/shadow_tls_password/port_hopping/port_hopping_interval/hysteria2_obfs_password/proxy_policy_parameter/others)* {
     proxy.type = "hysteria2";
     handleShadowTLS();
 }
@@ -635,7 +656,7 @@ sni = comma "sni" equals match:[^,]+ {
 }
 cert_verify_name = comma "server-cert-verify-name" equals match:[^,]+ { proxy["name-cert-verify"] = stripQuotes(match.join("")); }
 tls_verification = comma "skip-cert-verify" equals flag:bool { proxy["skip-cert-verify"] = flag; }
-tls_fingerprint = comma "server-cert-fingerprint-sha256" equals tls_fingerprint:$[^,]+ { proxy["tls-fingerprint"] = tls_fingerprint.trim(); }
+tls_fingerprint = comma "server-cert-fingerprint-sha256" equals value:quoted_value { proxy["tls-fingerprint"] = value.trim(); }
 client_fingerprint = comma "client-fingerprint" equals value:quoted_value { clientFingerprint = value.trim().toLowerCase(); }
 client_cert = comma "client-cert" equals match:[^,]+ { proxy["keystore-client-cert"] = stripQuotes(match.join("")); }
 ech_config = comma "ech-config" equals value:quoted_value { echConfig = value; }
@@ -707,7 +728,7 @@ obfs_host = comma "obfs-host" equals match:[^,]+ { obfs.host = match.join("").re
 obfs_uri = comma "obfs-uri" equals path:uri { obfs.path = path }
 uri = $[^,]+
 
-udp_relay = comma "udp-relay" equals flag:bool { proxy.udp = flag; }
+udp_relay = comma "udp-relay" equals flag:policy_bool { proxy.udp = flag; }
 fast_open = comma "fast-open" equals flag:policy_bool { proxy.tfo = flag; }
 reuse = comma "reuse" equals flag:bool { proxy.reuse = flag; }
 ecn = comma "ecn" equals mode:policy_toggle { if (mode !== undefined) proxy.ecn = mode; }
@@ -754,14 +775,21 @@ alpn = comma "alpn" equals match:quoted_value {
 }
 h3 = comma "h3" equals flag:bool { if (flag) proxy.network = "h3"; }
 quoted_value
-    = '"' value:$(("\\" ('"' / "\\") / [^"])*) '"' &(_ ("," / !.)) { return proxy.type === "vless" ? unescapeQuotedValue(value) : value; }
+    = value:double_quoted_value { return supportsQuotedEscapes() ? unescapeQuotedValue(value) : value; }
     / '"' match:$[^"]* '"' { return match; }
-    / "'" match:$[^']* "'" { return proxy.type === "vless" ? unescapeQuotedValue(match) : match; }
+    / "'" match:$[^']* "'" { return supportsQuotedEscapes() ? unescapeQuotedValue(match) : match; }
     / value:uri { return value.trim(); }
+double_quoted_value = '"' value:$(("\\" ('"' / "\\") / [^"])*) '"' &(_ ("," / !.)) { return value; }
 vless_quoted_value = &{ return proxy.type === "vless"; } value:quoted_value { return value.trim(); }
 uuidk = comma "uuid" equals match:[^,]+ { proxy.uuid = match.join(""); }
-salamander_password = comma "salamander-password" equals match:[^,]+ { proxy['obfs-password'] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); proxy.obfs = 'salamander'; }
-gecko_password = comma "gecko-password" equals match:[^,]+ { proxy['obfs-password'] = match.join("").replace(/^"(.*?)"$/, '$1').replace(/^'(.*?)'$/, '$1'); proxy.obfs = 'gecko'; }
+hysteria2_obfs_password = comma mode:("salamander"/"gecko") "-password" equals value:(
+    text:double_quoted_value { return unescapeQuotedValue(text); }
+    / quoted_value
+) {
+    if (proxy.obfs === "gecko" && mode === "salamander") return;
+    proxy.obfs = mode;
+    proxy["obfs-password"] = value;
+}
 
 tag = match:[^=,]* { proxy.name = match.join("").trim(); }
 comma = _ "," _

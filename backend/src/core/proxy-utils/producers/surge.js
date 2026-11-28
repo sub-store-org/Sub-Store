@@ -3,6 +3,7 @@ import {
     Result,
     isPresent,
     normalizeWireGuardInterface,
+    quoteProxyValue,
     supportsVlessTransportSecurity,
 } from './utils';
 import { isNotBlank, getIfNotBlank, isIPv6, isPlainObject } from '@/utils';
@@ -966,7 +967,9 @@ function hysteria2(proxy) {
     appendPortHopping(result, proxy);
 
     if (proxy['obfs-password'] && obfsPasswordField) {
-        result.append(`,${obfsPasswordField}="${proxy['obfs-password']}"`);
+        result.append(
+            `,${obfsPasswordField}=${quoteProxyValue(proxy['obfs-password'])}`,
+        );
     }
 
     // tls verification

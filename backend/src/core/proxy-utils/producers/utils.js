@@ -33,6 +33,10 @@ export function isPresent(obj, attr) {
     return typeof data !== 'undefined' && data !== null;
 }
 
+export function quoteProxyValue(value) {
+    return `"${String(value).replace(/["\\]/g, '\\$&')}"`;
+}
+
 export function supportsVlessTransportSecurity(proxy) {
     const { network, flow, encryption } = proxy;
     const reality = proxy['reality-opts'];

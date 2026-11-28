@@ -3186,14 +3186,14 @@ describe('Proxy text producers', function () {
     it('round-trips Surge max-streams for HTTP/2 CONNECT and TrustTunnel', function () {
         const proxies = ProxyUtils.parse(
             [
-                'Surge H2 Round Trip = h2-connect,h2.example.com,443,headers=X-Padding:<random-string(16-32)>,max-streams=1,sni=sni.example.com',
+                "Surge H2 Round Trip = h2-connect,h2.example.com,443,headers=\"X-Padding:<random-string(16-32)>;X-Client:'Surge;Legacy'\",max-streams=1,sni=sni.example.com",
                 'Surge Trust Round Trip = trust-tunnel,trust.example.com,443,username=user,password=pass,headers=X-Client:Surge,max-streams="3",sni=sni.example.com',
             ].join('\n'),
         );
         const output = ProxyUtils.produce(proxies, 'Surge', 'external');
 
         expect(output.split('\n')).to.deep.equal([
-            `Surge H2 Round Trip=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>"",max-streams=1,sni="sni.example.com",udp-relay=true`,
+            `Surge H2 Round Trip=h2-connect,h2.example.com,443,headers="X-Padding:"<random-string(16-32)>";X-Client:"Surge;Legacy"",max-streams=1,sni="sni.example.com"`,
             `Surge Trust Round Trip=trust-tunnel,trust.example.com,443,username="user",password="pass",headers="X-Client:"Surge"",max-streams=3,sni="sni.example.com"`,
         ]);
     });
@@ -3724,6 +3724,134 @@ describe('Proxy text producers', function () {
         });
     });
 
+    it('round-trips Surfboard HTTP/2 CONNECT options', function () {
+        const prefix = 'Surfboard H2=h2-connect,h2.example.com,443';
+        const headers = String.raw`headers="X-Padding:<random-string(16-32)>;X-Client:O'Reilly,\"agent\"\\path"`;
+        const fingerprints = ['a'.repeat(64), 'b'.repeat(64)].join(',');
+        const params = [
+            'max-streams=4',
+            `server-cert-fingerprint-sha256="${fingerprints}"`,
+            'sni="off"',
+            'skip-cert-verify=false',
+            'udp-relay=true',
+            'block-quic=on',
+            'underlying-proxy="Entry Group"',
+        ];
+        const [proxy] = ProxyUtils.parse(
+            [
+                prefix,
+                '"legacy,user"',
+                'legacy-password',
+                headers,
+                'password="pass,word"',
+                'username="proxy,user"',
+                ...params,
+            ].join(','),
+        );
+        for (const target of ['Surfboard', 'surfboard']) {
+            const output = produceExternal(target, proxy);
+            expect(output).to.equal(
+                [
+                    prefix,
+                    'username="proxy,user"',
+                    'password="pass,word"',
+                    headers,
+                    ...params,
+                ].join(','),
+            );
+            const [reparsed] = ProxyUtils.parse(output);
+            expectSubset(reparsed, {
+                type: 'h2-connect',
+                username: 'proxy,user',
+                password: 'pass,word',
+                headers: {
+                    'X-Padding': '<random-string(16-32)>',
+                    'X-Client': String.raw`O'Reilly,"agent"\path`,
+                },
+                'max-streams': 4,
+                'tls-fingerprint': fingerprints,
+                'disable-sni': true,
+                'skip-cert-verify': false,
+                udp: true,
+                'block-quic': 'on',
+                'underlying-proxy': 'Entry Group',
+            });
+        }
+    });
+
+    it('keeps omitted and disabled UDP off for Surfboard HTTP/2 CONNECT', function () {
+        const plain = 'Plain=h2-connect,h2.example.com,443';
+        const disabled = 'No UDP=h2-connect,h2.example.com,443,udp-relay="false"';
+        const proxies = ProxyUtils.parse(`${plain}\n${disabled}`);
+        expect(produceInternal('Surfboard', proxies)).to.deep.equal([
+            `${plain},sni="h2.example.com"`,
+            'No UDP=h2-connect,h2.example.com,443,sni="h2.example.com",udp-relay=false',
+        ]);
+    });
+
+    it('validates Surfboard HTTP/2 CONNECT header names as HTTP tokens', function () {
+        const proxy = {
+            type: 'h2-connect',
+            name: 'Surfboard H2 Headers',
+            server: 'h2.example.com',
+            port: 443,
+        };
+        const validName = "X!#$%&'*+-.^_`|~09";
+        const output = produceExternal('Surfboard', {
+            ...proxy,
+            headers: { [validName]: 'value' },
+        });
+        expect(output).to.include(`,headers="${validName}:value"`);
+        const [reparsed] = ProxyUtils.parse(output);
+        expect(reparsed.headers).to.deep.equal({ [validName]: 'value' });
+
+        const invalidNames = ['X@Client', 'X/Client', 'X Client', 'Xé', ''];
+        const { result, errors } = captureErrors(() =>
+            produceInternal(
+                'Surfboard',
+                invalidNames.map((name) => ({
+                    ...proxy,
+                    headers: { [name]: 'value' },
+                })),
+            ),
+        );
+        expect(result).to.deep.equal([]);
+        expect(errors).to.have.length(invalidNames.length);
+    });
+
+    it('rejects forbidden controls in Surfboard HTTP/2 CONNECT header values', function () {
+        const proxy = {
+            type: 'h2-connect',
+            name: 'Surfboard H2 Header Values',
+            server: 'h2.example.com',
+            port: 443,
+        };
+        const headers = { 'X-Test': 'a\tb' };
+        const output = produceExternal('Surfboard', { ...proxy, headers });
+        const [reparsed] = ProxyUtils.parse(output);
+        expect(reparsed.headers).to.deep.equal(headers);
+
+        const invalidValues = [
+            'a\0b',
+            'a\x1fb',
+            'a\x7fb',
+            'a\rb',
+            'a\nb',
+            'a;b',
+        ];
+        const { result, errors } = captureErrors(() =>
+            produceInternal(
+                'Surfboard',
+                invalidValues.map((value) => ({
+                    ...proxy,
+                    headers: { 'X-Test': value },
+                })),
+            ),
+        );
+        expect(result).to.deep.equal([]);
+        expect(errors).to.have.length(invalidValues.length);
+    });
+
     it('produces Surfboard Hysteria2 lines', function () {
         const output = produceExternal('Surfboard', {
             type: 'hysteria2',
@@ -3803,20 +3931,53 @@ describe('Proxy text producers', function () {
         );
     });
 
-    it('produces Surfboard Hysteria2 salamander obfs lines', function () {
-        const output = produceExternal('Surfboard', {
-            type: 'hysteria2',
-            name: 'Surfboard Hysteria2 Salamander',
-            server: 'hy2.example.com',
-            port: 443,
-            password: 'secret',
-            obfs: 'salamander',
-            'obfs-password': 'mask',
-        });
+    it('round-trips Surfboard and Surge Hysteria2 obfs passwords', function () {
+        const obfsPassword = String.raw`part1,part2"part3\part4`;
+        for (const obfs of ['salamander', 'gecko']) {
+            const proxy = {
+                type: 'hysteria2',
+                name: 'Hysteria2 Obfs',
+                server: 'hy2.example.com',
+                port: 443,
+                password: 'secret',
+                obfs,
+                'obfs-password': obfsPassword,
+                sni: 'peer.example.com',
+            };
+            for (const target of ['Surfboard', 'Surge']) {
+                const output = produceExternal(target, proxy);
+                expect(output).to.equal(
+                    String.raw`Hysteria2 Obfs=hysteria2,hy2.example.com,443,password="secret",${obfs}-password="part1,part2\"part3\\part4",sni="peer.example.com"`,
+                );
+                const [reparsed] = ProxyUtils.parse(output);
+                expectSubset(reparsed, {
+                    obfs,
+                    'obfs-password': obfsPassword,
+                    sni: 'peer.example.com',
+                });
+            }
+        }
+    });
 
-        expect(output).to.equal(
-            'Surfboard Hysteria2 Salamander=hysteria2,hy2.example.com,443,password="secret",salamander-password="mask"',
-        );
+    it('prefers Gecko in Surfboard Hysteria2 regardless of password order', function () {
+        const prefix =
+            'Hysteria2=hysteria2,hy2.example.com,443,password=secret';
+        const salamander = 'salamander-password=salamander-mask';
+        const gecko = 'gecko-password="gecko,mask"';
+        for (const fields of [
+            [gecko, salamander],
+            [salamander, gecko],
+        ]) {
+            const [proxy] = ProxyUtils.parse([prefix, ...fields].join(','));
+            expectSubset(proxy, {
+                obfs: 'gecko',
+                'obfs-password': 'gecko,mask',
+            });
+            const output = produceExternal('Surfboard', proxy);
+            expect(output)
+                .to.include(`,${gecko}`)
+                .and.not.include(',salamander-password=');
+        }
     });
 
     it('omits Surfboard Hysteria2 lines when unsupported obfs is present', function () {
@@ -3824,11 +3985,11 @@ describe('Proxy text producers', function () {
             [
                 {
                     type: 'hysteria2',
-                    name: 'Surfboard Hysteria2 Gecko',
+                    name: 'Surfboard Hysteria2 Unknown Obfs',
                     server: 'hy2.example.com',
                     port: 443,
                     password: 'secret',
-                    obfs: 'gecko',
+                    obfs: 'unknown',
                     'obfs-password': 'mask',
                 },
             ],
@@ -3837,6 +3998,52 @@ describe('Proxy text producers', function () {
         );
 
         expect(output).to.equal('');
+    });
+
+    it('outputs the documented Surfboard VMess encrypt methods', function () {
+        for (const [cipher, parameter] of [
+            ['aes-128-gcm', ',encrypt-method=aes-128-gcm'],
+            ['chacha20-poly1305', ',encrypt-method=chacha20-ietf-poly1305'],
+            ['auto', ''],
+            [undefined, ''],
+        ]) {
+            const output = produceExternal('Surfboard', {
+                type: 'vmess',
+                name: 'Surfboard VMess',
+                server: 'vmess.example.com',
+                port: 443,
+                uuid: UUID,
+                alterId: 0,
+                cipher,
+            });
+            expect(output).to.equal(
+                `Surfboard VMess=vmess,vmess.example.com,443,username=${UUID}${parameter},vmess-aead=true`,
+            );
+        }
+    });
+
+    it('filters Surfboard VMess nodes with unsupported ciphers', function () {
+        const proxies = ProxyUtils.parse(
+            ['none', 'zero']
+                .map((cipher) =>
+                    JSON.stringify({
+                        type: 'vmess',
+                        name: `VMess ${cipher}`,
+                        server: 'vmess.example.com',
+                        port: 443,
+                        uuid: UUID,
+                        cipher,
+                    }),
+                )
+                .join('\n'),
+        );
+        const { result, errors } = captureErrors(() =>
+            produceInternal('Surfboard', proxies),
+        );
+        expect(result).to.deep.equal([]);
+        expect(errors).to.have.length(2);
+        expect(errors[0]).to.include('VMess cipher none');
+        expect(errors[1]).to.include('VMess cipher zero');
     });
 
     it('produces Surfboard TLS server certificate fingerprints', function () {

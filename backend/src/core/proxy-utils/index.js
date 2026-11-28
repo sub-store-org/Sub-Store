@@ -569,7 +569,8 @@ function produce(proxies, targetPlatform, type, opts = {}) {
                 ['surge', 'surgemac', 'shadowrocket'].includes(
                     normalizedTarget,
                 ) ||
-                (normalizedTarget === 'surfboard' && proxy.type === 'vless')
+                (normalizedTarget === 'surfboard' &&
+                    ['h2-connect', 'vless'].includes(proxy.type))
             ) {
                 proxy.sni = 'off';
             } else if (
@@ -685,6 +686,10 @@ function supportsRootProxyHeaders(proxy, targetPlatform) {
 
     if (normalizedTarget.startsWith('surge')) {
         return ['http', 'h2-connect', 'trusttunnel'].includes(proxy.type);
+    }
+
+    if (normalizedTarget === 'surfboard') {
+        return proxy.type === 'h2-connect';
     }
 
     if (normalizedTarget === 'egern') {
@@ -826,9 +831,12 @@ function lastParse(proxy) {
     if (proxy.network === 'xhttp') {
         inferLoonRealityMlkem(proxy['xhttp-opts']?.['download-settings']);
     }
-    proxy.udp = ![false, 0, '0', 'false', 'off'].includes(
-        typeof proxy.udp === 'string' ? proxy.udp.toLowerCase() : proxy.udp,
-    );
+    // CONNECT-UDP is opt-in for HTTP/2 CONNECT.
+    if (proxy.type !== 'h2-connect' || proxy.udp != null) {
+        proxy.udp = ![false, 0, '0', 'false', 'off'].includes(
+            typeof proxy.udp === 'string' ? proxy.udp.toLowerCase() : proxy.udp,
+        );
+    }
     if (typeof proxy.cipher === 'string') {
         proxy.cipher = proxy.cipher.toLowerCase();
     }

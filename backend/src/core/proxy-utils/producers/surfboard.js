@@ -1,7 +1,16 @@
 import _ from 'lodash';
-import { Result, isPresent, supportsVlessTransportSecurity } from './utils';
+import {
+    Result,
+    isPresent,
+    quoteProxyValue,
+    supportsVlessTransportSecurity,
+} from './utils';
 import { isNotBlank } from '@/utils';
 import { SURGE_XHTTP_FIELDS } from '../surge-xhttp';
+import {
+    VMESS_SECURITY_AUTO,
+    formatSurgeVmessEncryptMethod,
+} from '../vmess-security';
 // import $ from '@/core/app';
 
 const targetPlatform = 'Surfboard';
@@ -15,11 +24,16 @@ function appendTlsProxyParams(result, proxy, enabled = true) {
         return;
     }
 
+    const fingerprint = String(proxy['tls-fingerprint']);
     result.appendIfPresent(
-        `,server-cert-fingerprint-sha256=${proxy['tls-fingerprint']}`,
+        `,server-cert-fingerprint-sha256=${
+            fingerprint.includes(',')
+                ? quoteProxyValue(fingerprint)
+                : fingerprint
+        }`,
         'tls-fingerprint',
     );
-    result.appendIfPresent(`,sni="${proxy.sni}"`, 'sni');
+    result.appendIfPresent(`,sni=${quoteProxyValue(proxy.sni)}`, 'sni');
     result.appendIfPresent(
         `,skip-cert-verify=${proxy['skip-cert-verify']}`,
         'skip-cert-verify',
@@ -48,6 +62,8 @@ export default function Surfboard_Producer() {
                 return vless(proxy);
             case 'http':
                 return http(proxy);
+            case 'h2-connect':
+                return h2Connect(proxy);
             case 'snell':
                 return snell(proxy);
             case 'tuic':
@@ -109,10 +125,12 @@ function tuic(proxy) {
 }
 function hysteria2(proxy) {
     if (
-        (proxy.obfs && proxy.obfs !== 'salamander') ||
-        (proxy['obfs-password'] && proxy.obfs !== 'salamander')
+        (proxy.obfs || proxy['obfs-password']) &&
+        !['salamander', 'gecko'].includes(proxy.obfs)
     ) {
-        throw new Error(`Surfboard Hysteria2 only supports salamander obfs`);
+        throw new Error(
+            'Surfboard Hysteria2 supports Salamander and Gecko obfs',
+        );
     }
 
     const result = new Result(proxy);
@@ -131,7 +149,11 @@ function hysteria2(proxy) {
     }
 
     if (proxy['obfs-password']) {
-        result.append(`,salamander-password="${proxy['obfs-password']}"`);
+        result.append(
+            `,${proxy.obfs}-password=${quoteProxyValue(
+                proxy['obfs-password'],
+            )}`,
+        );
     }
 
     // tls verification
@@ -296,9 +318,18 @@ function trojan(proxy) {
 }
 
 function vmess(proxy) {
+    const cipher = String(proxy.cipher ?? '')
+        .trim()
+        .toLowerCase();
+    const encryptMethod = formatSurgeVmessEncryptMethod(cipher);
+    if (cipher && cipher !== VMESS_SECURITY_AUTO && !encryptMethod) {
+        throw new Error(`Surfboard does not support VMess cipher ${cipher}`);
+    }
+
     const result = new Result(proxy);
     result.append(`${proxy.name}=${proxy.type},${proxy.server},${proxy.port}`);
     result.appendIfPresent(`,username=${proxy.uuid}`, 'uuid');
+    if (encryptMethod) result.append(`,encrypt-method=${encryptMethod}`);
 
     // transport
     handleTransport(result, proxy);
@@ -344,9 +375,7 @@ function vless(proxy) {
         if (value == null) return;
         const text = String(value);
         const param =
-            !text || /[,;"'\s\\]/.test(text)
-                ? `"${text.replace(/["\\]/g, '\\$&')}"`
-                : text;
+            !text || /[,;"'\s\\]/.test(text) ? quoteProxyValue(text) : text;
         result.append(`,${key}=${param}`);
     };
     append('username', proxy.uuid);
@@ -445,6 +474,70 @@ function http(proxy) {
     result.appendIfPresent(`,block-quic=${proxy['block-quic']}`, 'block-quic');
 
     return result.toString();
+}
+
+function h2Connect(proxy) {
+    if (proxy.plugin) {
+        throw new Error('Surfboard HTTP/2 CONNECT does not support plugins');
+    }
+    if ((proxy.username == null) !== (proxy.password == null)) {
+        throw new Error(
+            'HTTP/2 CONNECT authentication requires both username and password',
+        );
+    }
+
+    const result = new Result(proxy);
+    result.append(`${proxy.name}=h2-connect,${proxy.server},${proxy.port}`);
+    result.appendIfPresent(
+        `,username=${quoteProxyValue(proxy.username)}`,
+        'username',
+    );
+    result.appendIfPresent(
+        `,password=${quoteProxyValue(proxy.password)}`,
+        'password',
+    );
+
+    const headers = Object.entries(proxy.headers ?? {})
+        .filter(([, value]) => value != null)
+        .map(([key, value]) => {
+            if (
+                !/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(key) ||
+                // HTAB is allowed within HTTP field values.
+                // eslint-disable-next-line no-control-regex
+                /[;\x00-\x08\x0a-\x1f\x7f]/.test(String(value))
+            ) {
+                throw new Error('Invalid HTTP/2 CONNECT header name or value');
+            }
+            return `${key}:${value}`;
+        });
+    if (headers.length) {
+        result.append(`,headers=${quoteProxyValue(headers.join(';'))}`);
+    }
+
+    if (isPresent(proxy, 'max-streams')) {
+        const maxStreams = Number(String(proxy['max-streams']));
+        if (!Number.isSafeInteger(maxStreams) || maxStreams < 1) {
+            throw new Error(
+                'HTTP/2 CONNECT max-streams must be a positive integer',
+            );
+        }
+        result.append(`,max-streams=${maxStreams}`);
+    }
+    appendTlsProxyParams(result, proxy);
+    result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+    if (['auto', 'on', 'off'].includes(proxy['block-quic'])) {
+        result.append(`,block-quic=${proxy['block-quic']}`);
+    }
+    result.appendIfPresent(
+        `,underlying-proxy=${quoteProxyValue(proxy['underlying-proxy'])}`,
+        'underlying-proxy',
+    );
+
+    const line = result.toString();
+    if (/[\r\n]/.test(line)) {
+        throw new Error('HTTP/2 CONNECT proxy contains a line break');
+    }
+    return line;
 }
 
 function socks5(proxy) {
